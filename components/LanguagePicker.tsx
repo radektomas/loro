@@ -30,7 +30,13 @@ export function LanguagePicker({ languages, value, onChange }: LanguagePickerPro
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
+        // pointer-events-auto is load-bearing: this sheet renders inside the
+        // feed's pointer-events-none top chrome, which children inherit.
+        <div
+          className="pointer-events-auto fixed inset-0 z-40"
+          role="dialog"
+          aria-modal="true"
+        >
           <button
             type="button"
             aria-label="Close"

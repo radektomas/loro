@@ -10,7 +10,7 @@ Drops raw Spanish videos in, spits Loro's videos.json out.
 
 Usage:
     python transcribe.py                 # process everything in raw/
-    python transcribe.py --no-translate  # skip the Claude call (cheap dry run)
+    python transcribe.py --no-translate  # skip the OpenAI call (cheap dry run)
     python transcribe.py --check         # print cues to the terminal, write nothing
 """
 
@@ -39,12 +39,14 @@ TARGET_LANGS = {
     "fr": "French",
 }
 
-# Cue shape. Short cues = readable subtitles on a phone.
-MAX_WORDS_PER_CUE = 8
-MAX_SECONDS_PER_CUE = 3.5
+# Cue shape. Short cues = readable subtitles on a phone. The chunker treats
+# these as caps to break UNDER at a linguistic boundary, not marks to hit.
+MAX_WORDS_PER_CUE = 9
+MAX_SECONDS_PER_CUE = 4.2
+MIN_WORDS_PER_CUE = 3
 
 WHISPER_MODEL = "medium"   # switch to "medium" if your machine struggles
-CLAUDE_MODEL = "claude-sonnet-5"
+OPENAI_MODEL = "gpt-4o"
 
 # Per-file metadata. Anything not listed here falls back to the defaults.
 # Edit this as videos come in from the family.
@@ -92,6 +94,16 @@ def slugify(name: str) -> str:
     return s or "video"
 
 
+def normalize_word(text: str) -> str:
+    """
+    Normalised surface form used as the dictionary key: lowercase, strip
+    surrounding punctuation, KEEP accents and ñ ("Costa" and "costa," -> "costa").
+    Must stay byte-for-byte identical in behaviour to normalizeSurface()
+    in lib/dictionary.ts — the app looks words up by this key.
+    """
+    return re.sub(r"^[^a-z0-9áéíóúüñ]+|[^a-z0-9áéíóúüñ]+$", "", text.lower())
+
+
 # ---------------------------------------------------------------- transcribe
 
 def transcribe(wav: Path):
@@ -106,6 +118,14 @@ def transcribe(wav: Path):
         word_timestamps=True,     # <- the whole point
         vad_filter=True,          # trims silence, keeps timings honest
         beam_size=5,
+        # The chunker splits on punctuation and casing; without these two,
+        # Whisper hands back lowercase, punctuation-free text and starves it.
+        condition_on_previous_text=True,
+        initial_prompt=(
+            "Transcripción en español con puntuación y mayúsculas correctas. "
+            "Hola, ¿cómo estás? Hoy me levanté temprano, hice café y salí a "
+            "trabajar."
+        ),
     )
 
     words = []
@@ -122,52 +142,163 @@ def transcribe(wav: Path):
     return words
 
 
+def _is_sentence_end(text: str) -> bool:
+    return bool(text) and text[-1] in ".?!…"
+
+
+def _boundary_score(words, i: int) -> float:
+    """
+    How good a place is it to split AFTER words[i]? Higher = cleaner break.
+    Sentence enders beat clause punctuation beats a pause beats nothing.
+    """
+    text = words[i]["text"]
+    if _is_sentence_end(text):
+        return 100.0
+    if text and text[-1] in ",;:":
+        return 50.0
+    if i + 1 < len(words):
+        gap = words[i + 1]["start"] - words[i]["end"]
+        if gap > 0.5:
+            return 40.0 + gap * 20.0
+    return 0.0
+
+
 def group_into_cues(words):
     """
-    Chunk words into short cues. Break on sentence-ending punctuation,
-    on word count, on duration, or on a noticeable pause.
+    Chunk words into short cues by scoring linguistic boundaries instead of
+    flushing blindly at a cap. When the next word would overflow a cue, we
+    split at the highest-scoring boundary already inside the buffer — a comma
+    or a pause — rather than mid-phrase, and return the tail to the next cue.
+    Sentence-ending punctuation always closes a cue on the spot. Orphan cues
+    are merged into a neighbour afterwards.
     """
-    cues, current = [], []
+    if not words:
+        return []
 
-    def flush():
-        if not current:
-            return
+    cues = []
+
+    def emit(indices):
+        cue_words = [words[k] for k in indices]
         cues.append({
-            "start": current[0]["start"],
-            "end": current[-1]["end"],
-            "words": list(current),
+            "start": cue_words[0]["start"],
+            "end": cue_words[-1]["end"],
+            "words": cue_words,
             "translations": {},
         })
-        current.clear()
 
-    for i, w in enumerate(words):
-        current.append(w)
+    buffer = []  # indices into `words`
+    for i in range(len(words)):
+        buffer.append(i)
 
-        ends_sentence = w["text"][-1] in ".?!…"
-        too_many = len(current) >= MAX_WORDS_PER_CUE
-        too_long = (w["end"] - current[0]["start"]) >= MAX_SECONDS_PER_CUE
+        # End of sentence — always break right here.
+        if _is_sentence_end(words[i]["text"]):
+            emit(buffer)
+            buffer = []
+            continue
 
-        gap_next = False
-        if i + 1 < len(words):
-            gap_next = (words[i + 1]["start"] - w["end"]) > 0.6
+        nxt = i + 1
+        if nxt >= len(words):
+            continue
 
-        if ends_sentence or too_many or too_long or gap_next:
-            flush()
+        would_overflow = (
+            len(buffer) + 1 > MAX_WORDS_PER_CUE
+            or (words[nxt]["end"] - words[buffer[0]]["start"]) > MAX_SECONDS_PER_CUE
+        )
+        if not would_overflow:
+            continue
 
-    flush()
+        # Adding the next word overflows. Look back for the best boundary in
+        # the buffer; on ties prefer the latest, so cues pack fuller. Splitting
+        # after the last buffer word is the plain cap fallback.
+        best_pos, best_score = len(buffer) - 1, 0.0
+        for pos, gidx in enumerate(buffer):
+            score = _boundary_score(words, gidx)
+            if score >= best_score:
+                best_pos, best_score = pos, score
+
+        if best_score > 0:
+            emit(buffer[:best_pos + 1])
+            buffer = buffer[best_pos + 1:]
+        else:
+            emit(buffer)
+            buffer = []
+
+    if buffer:
+        emit(buffer)
+
+    return merge_orphans(cues)
+
+
+def merge_orphans(cues):
+    """
+    Post-pass: fold stubby cues (too few words, or under 0.8s) into a
+    neighbour, choosing whichever is closer in time. A merge is skipped only
+    when it would push the result past MAX_WORDS_PER_CUE + 3 words, so a lone
+    "plata" joins its neighbour instead of standing as its own cue.
+    """
+    HARD_CAP = MAX_WORDS_PER_CUE + 3
+    MIN_SECONDS = 0.8
+
+    def is_orphan(c) -> bool:
+        return (
+            len(c["words"]) < MIN_WORDS_PER_CUE
+            or (c["end"] - c["start"]) < MIN_SECONDS
+        )
+
+    def merged(a, b):
+        ws = a["words"] + b["words"]
+        return {
+            "start": ws[0]["start"],
+            "end": ws[-1]["end"],
+            "words": ws,
+            "translations": {},
+        }
+
+    # Each pass merges the first mergeable orphan and restarts; the cue count
+    # strictly drops, so this terminates. A merged cue that is still an orphan
+    # gets another shot on the next scan.
+    while len(cues) > 1:
+        target = None
+        for idx, cue in enumerate(cues):
+            if not is_orphan(cue):
+                continue
+
+            options = []  # (time gap, neighbour index)
+            if idx > 0:
+                prev_c = cues[idx - 1]
+                if len(prev_c["words"]) + len(cue["words"]) <= HARD_CAP:
+                    options.append((cue["start"] - prev_c["end"], idx - 1))
+            if idx + 1 < len(cues):
+                next_c = cues[idx + 1]
+                if len(cue["words"]) + len(next_c["words"]) <= HARD_CAP:
+                    options.append((next_c["start"] - cue["end"], idx + 1))
+            if not options:
+                continue  # can't merge without blowing the cap — leave it
+
+            options.sort(key=lambda o: o[0])
+            neighbour = options[0][1]
+            target = tuple(sorted((idx, neighbour)))
+            break
+
+        if target is None:
+            break
+
+        lo, hi = target
+        cues[lo:hi + 1] = [merged(cues[lo], cues[hi])]
+
     return cues
 
 
 # ---------------------------------------------------------------- translate
 
 def translate_cues(cues, video_name: str):
-    """One Claude call per video. Returns the cues with translations filled in."""
-    from anthropic import Anthropic
+    """One OpenAI call per video. Returns the cues with translations filled in."""
+    from openai import OpenAI
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        die("ANTHROPIC_API_KEY is not set. export it, or run with --no-translate")
+    if not os.environ.get("OPENAI_API_KEY"):
+        die("OPENAI_API_KEY is not set. export OPENAI_API_KEY, or run with --no-translate")
 
-    client = Anthropic()
+    client = OpenAI()
 
     lines = [
         {"i": i, "es": " ".join(w["text"] for w in c["words"])}
@@ -189,22 +320,22 @@ Rules:
 Input:
 {json.dumps(lines, ensure_ascii=False, indent=1)}
 
-Respond with ONLY a JSON array, no preamble, no markdown fences. One object per input line, in the same order:
-[{{"i": 0, "en": "...", "cs": "...", "de": "...", "fr": "..."}}]"""
+Respond with ONLY a JSON object, no preamble, no markdown fences. One object per input line, in the same order:
+{{"lines": [{{"i": 0, "en": "...", "cs": "...", "de": "...", "fr": "..."}}]}}"""
 
-    resp = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=8000,
+    resp = client.chat.completions.create(
+        model=OPENAI_MODEL,
         messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
     )
 
-    text = "".join(b.text for b in resp.content if b.type == "text").strip()
+    text = resp.choices[0].message.content.strip()
     text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
 
     try:
-        rows = json.loads(text)
-    except json.JSONDecodeError:
-        die(f"Claude did not return valid JSON for {video_name}:\n{text[:400]}")
+        rows = json.loads(text)["lines"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        die(f"OpenAI did not return valid JSON for {video_name}:\n{text[:400]}")
 
     by_index = {r["i"]: r for r in rows}
     for i, cue in enumerate(cues):
@@ -213,6 +344,90 @@ Respond with ONLY a JSON array, no preamble, no markdown fences. One object per 
             lang: row.get(lang, "") for lang in TARGET_LANGS
         }
     return cues
+
+
+def gloss_words(cues, video_name: str):
+    """
+    One extra OpenAI call per video: a per-word gloss for every unique word
+    across all cues. Returns the dictionary keyed by normalised surface form:
+    { "novia": {"lemma": ..., "pos": ..., "note": ..., "glosses": {en,cs,de,fr}} }
+    """
+    from openai import OpenAI
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        die("OPENAI_API_KEY is not set. export OPENAI_API_KEY, or run with --no-translate")
+
+    client = OpenAI()
+
+    unique, seen = [], set()
+    for c in cues:
+        for w in c["words"]:
+            n = normalize_word(w["text"])
+            if n and n not in seen:
+                seen.add(n)
+                unique.append(n)
+    if not unique:
+        return {}
+
+    context_lines = [
+        {
+            "es": " ".join(w["text"] for w in c["words"]),
+            "en": c["translations"].get("en", ""),
+        }
+        for c in cues
+    ]
+
+    langs = ", ".join(f'"{k}" ({v})' for k, v in TARGET_LANGS.items())
+
+    prompt = f"""These are the subtitle lines of one short Spanish video ("{video_name}"), with English translations for context:
+
+{json.dumps(context_lines, ensure_ascii=False, indent=1)}
+
+Produce a dictionary entry for EVERY word in this list (these are the normalised words of those lines):
+{json.dumps(unique, ensure_ascii=False)}
+
+For each word return an object with:
+- "w": the word exactly as it appears in the list above
+- "lemma": its dictionary form ("es" -> "ser", "novia" -> "novia")
+- "pos": one of: noun, verb, adj, adv, prep, pron, conj, det, other
+- one SHORT gloss per language — {langs} — translating THIS word AS USED in these sentences. 1-3 words. A translation, not a definition. Context matters: "como" is "like" in one sentence and "I eat" in another.
+- "note": max 8 words, ONLY when genuinely useful (irregular verb, false friend, gendered form, common idiom). Otherwise null.
+
+Gloss every single word, including function words — a beginner needs "de" and "que" as much as any noun. Do not skip any word from the list.
+
+Respond with ONLY a JSON object, no preamble, no markdown fences:
+{{"words": [{{"w": "novia", "lemma": "novia", "pos": "noun", "en": "girlfriend", "cs": "přítelkyně", "de": "Freundin", "fr": "copine", "note": null}}]}}"""
+
+    resp = client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
+    )
+
+    text = resp.choices[0].message.content.strip()
+    text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
+
+    try:
+        rows = json.loads(text)["words"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        die(f"OpenAI did not return valid gloss JSON for {video_name}:\n{text[:400]}")
+
+    dictionary = {}
+    for row in rows:
+        key = normalize_word(str(row.get("w", "")))
+        if not key:
+            continue
+        dictionary[key] = {
+            "lemma": row.get("lemma") or key,
+            "pos": row.get("pos") or "other",
+            "note": row.get("note") or None,
+            "glosses": {lang: row.get(lang, "") for lang in TARGET_LANGS},
+        }
+
+    missing = [w for w in unique if w not in dictionary]
+    if missing:
+        print(f"  ! {len(missing)} word(s) missing from gloss response: {missing[:8]}")
+    return dictionary
 
 
 # ---------------------------------------------------------------- main
@@ -241,9 +456,12 @@ def process(video: Path, translate: bool, check: bool):
             print(f"    [{c['start']:6.2f} → {c['end']:6.2f}]  {line}")
         return None
 
+    dictionary = {}
     if translate:
         print("  · translating")
         cues = translate_cues(cues, video.stem)
+        print("  · glossing words")
+        dictionary = gloss_words(cues, video.stem)
 
     vid = slugify(video.stem)
     meta = META.get(video.name, {})
@@ -259,6 +477,7 @@ def process(video: Path, translate: bool, check: bool):
         "creator": meta.get("creator", DEFAULT_CREATOR),
         "level": meta.get("level", DEFAULT_LEVEL),
         "cues": cues,
+        "dictionary": dictionary,
     }
 
 

@@ -10,13 +10,22 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import type { Cue, Video, Word } from '@/types';
+import type { Cue, SavedWord, Video, Word } from '@/types';
 import { storage } from '@/lib/storage';
+import { computeBlankPlan } from '@/lib/srs';
+import { glossText, lookupGloss } from '@/lib/dictionary';
+import type { LoroMascotState } from '@/components/LoroMascot';
 import { SubtitleTrack } from '@/components/SubtitleTrack';
 import { WordSheet, type WordSheetData } from '@/components/WordSheet';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { LoroMascot } from '@/components/LoroMascot';
-import { BookIcon, VolumeOnIcon } from '@/components/icons/Icons';
+import { ActionRail } from '@/components/ActionRail';
+import {
+  BookIcon,
+  ChartIcon,
+  PlayIcon,
+  VolumeOnIcon,
+} from '@/components/icons/Icons';
 
 const VISIBILITY_THRESHOLD = 0.6;
 
@@ -53,6 +62,14 @@ export function Feed({ videos }: { videos: Video[] }) {
     storage.setSessionUnmuted(true);
   }, []);
 
+  // Browsers reject unmuted autoplay without a fresh gesture (e.g. after a
+  // reload with the unmute choice persisted). When that happens the slide
+  // falls back to muted playback and we surface the sound overlay again.
+  const handleAutoMuted = useCallback(() => {
+    setUnmuted(false);
+    storage.setSessionUnmuted(false);
+  }, []);
+
   // Deep link from /vocab: /?v={videoId}&t={cueStart}
   const deepLinkVideoId = searchParams.get('v');
   const deepLinkTime = searchParams.get('t');
@@ -84,6 +101,7 @@ export function Feed({ videos }: { videos: Video[] }) {
             isFirst={index === 0}
             unmuted={unmuted}
             onUnmute={handleUnmute}
+            onAutoMuted={handleAutoMuted}
             seekRef={seekRef}
           />
         ))}
@@ -92,13 +110,22 @@ export function Feed({ videos }: { videos: Video[] }) {
       {/* Top chrome — over everything, respects the notch */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 pt-safe">
         <div className="flex items-center justify-between px-4 pt-4">
-          <Link
-            href="/vocab"
-            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-sm font-medium text-text backdrop-blur-md transition-colors hover:bg-black/55"
-          >
-            <BookIcon width={15} height={15} className="text-accent" />
-            My words
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/vocab"
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-sm font-medium text-text backdrop-blur-md transition-colors hover:bg-black/55"
+            >
+              <BookIcon width={15} height={15} className="text-accent" />
+              My words
+            </Link>
+            <Link
+              href="/progress"
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-sm font-medium text-text backdrop-blur-md transition-colors hover:bg-black/55"
+            >
+              <ChartIcon width={15} height={15} className="text-accent" />
+              Progress
+            </Link>
+          </div>
           {hydrated && (
             <LanguagePicker
               languages={languages}
@@ -118,6 +145,7 @@ type VideoSlideProps = {
   isFirst: boolean;
   unmuted: boolean;
   onUnmute: () => void;
+  onAutoMuted: () => void;
   seekRef: RefObject<{ videoId: string; time: number } | null>;
 };
 
@@ -127,15 +155,38 @@ function VideoSlide({
   isFirst,
   unmuted,
   onUnmute,
+  onAutoMuted,
   seekRef,
 }: VideoSlideProps) {
   const slideRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [active, setActive] = useState(false);
+  const activeRef = useRef(false);
+  const [paused, setPaused] = useState(false);
   const [sheet, setSheet] = useState<WordSheetData | null>(null);
   const [sheetSaved, setSheetSaved] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    mood: LoroMascotState;
+  } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // cueIndex -> due word rendered as a typed-recall blank
+  const [blanks, setBlanks] = useState<Map<number, SavedWord> | null>(null);
+
+  // play() that survives autoplay policy: if unmuted playback is rejected,
+  // drop to muted playback and tell the feed so the sound overlay returns.
+  const safePlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.play().catch(() => {
+      if (!el.muted) {
+        el.muted = true;
+        onAutoMuted();
+        el.play().catch(() => {});
+      }
+    });
+  }, [onAutoMuted]);
 
   // Play when >60% visible; pause and reset otherwise.
   useEffect(() => {
@@ -146,14 +197,16 @@ function VideoSlide({
         const el = videoRef.current;
         if (!el) return;
         if (entry.intersectionRatio > VISIBILITY_THRESHOLD) {
+          activeRef.current = true;
           setActive(true);
           const pending = seekRef.current;
           if (pending && pending.videoId === video.id) {
             el.currentTime = pending.time;
             seekRef.current = null;
           }
-          el.play().catch(() => {});
+          safePlay();
         } else {
+          activeRef.current = false;
           setActive(false);
           setSheet(null);
           el.pause();
@@ -164,41 +217,123 @@ function VideoSlide({
     );
     observer.observe(slide);
     return () => observer.disconnect();
-  }, [seekRef, video.id]);
+  }, [safePlay, seekRef, video.id]);
 
   // Keep the element's muted flag in sync with the session choice.
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = !unmuted;
   }, [unmuted]);
 
-  const handleWordTap = useCallback((word: Word, cue: Cue, cueIndex: number) => {
-    videoRef.current?.pause();
-    setSheetSaved(false);
-    setSheet({ word, cue, cueIndex });
+  // Mirror the element's play state so the paused indicator stays honest
+  // no matter what paused it (tap, word sheet, or the observer).
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const onPlay = () => setPaused(false);
+    const onPause = () => setPaused(true);
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', onPause);
+    return () => {
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', onPause);
+    };
   }, []);
+
+  // Watch tracking feeds the Progress screen's comprehension average.
+  useEffect(() => {
+    if (active) storage.markWatched(video.id);
+  }, [active, video.id]);
+
+  // Plan which cues become blanks each time this slide takes the screen.
+  // Graded words get a future dueAt, so replans never repeat them.
+  useEffect(() => {
+    if (active) {
+      setBlanks(computeBlankPlan(video, storage.getSavedWords(), Date.now()));
+    } else {
+      setBlanks(null);
+    }
+  }, [active, video]);
+
+  const handleBlankActive = useCallback(() => {
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    videoRef.current?.pause();
+  }, []);
+
+  const handleBlankGrade = useCallback(
+    (word: SavedWord, wasCorrect: boolean) => {
+      storage.gradeWord(word.text, word.videoId, wasCorrect);
+      // Correct-answer feedback lives in SubtitleTrack's celebration —
+      // no top-of-screen toast on top of it.
+      // Resume quickly on success; leave time to read the reveal on a miss.
+      if (resumeTimer.current) clearTimeout(resumeTimer.current);
+      resumeTimer.current = setTimeout(
+        () => {
+          if (activeRef.current) safePlay();
+        },
+        wasCorrect ? 600 : 1500
+      );
+    },
+    [safePlay]
+  );
+
+  const togglePlayback = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.paused) safePlay();
+    else el.pause();
+  }, [safePlay]);
+
+  const handleReplay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.currentTime = 0;
+    safePlay();
+  }, [safePlay]);
+
+  const handleWordTap = useCallback(
+    (word: Word, cue: Cue, cueIndex: number) => {
+      videoRef.current?.pause();
+      setSheetSaved(false);
+      setSheet({ word, cue, cueIndex, gloss: lookupGloss(video, word.text) });
+    },
+    [video]
+  );
 
   const handleSheetClose = useCallback(() => {
     setSheet(null);
-    if (active) videoRef.current?.play().catch(() => {});
-  }, [active]);
+    if (active) safePlay();
+  }, [active, safePlay]);
 
   const handleSave = useCallback(() => {
     if (!sheet) return;
-    storage.saveWord({
+    // Store the per-word gloss — it becomes the recall prompt in the SRS
+    // blanks. Sentence translation only as a last-resort fallback.
+    const wordGloss = sheet.gloss && glossText(sheet.gloss, language);
+    const { ok } = storage.saveWord({
       text: sheet.word.text,
       translation:
-        sheet.cue.translations[language] ?? sheet.cue.translations.en,
+        wordGloss ??
+        sheet.cue.translations[language] ??
+        sheet.cue.translations.en ??
+        '',
       videoId: video.id,
       cueIndex: sheet.cueIndex,
     });
-    setSheetSaved(true);
-    setToast(`"${sheet.word.text}" saved!`);
+    // Only celebrate a verified write — a failed save must look failed.
+    // Loro stays 'idle' here: 'happy' is earned by recalling, not saving.
+    if (ok) {
+      setSheetSaved(true);
+      setToast({ message: `"${sheet.word.text}" saved!`, mood: 'idle' });
+    } else {
+      setToast({ message: 'Could not save — storage unavailable', mood: 'idle' });
+    }
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
   }, [sheet, language, video.id]);
 
   useEffect(() => () => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
   }, []);
 
   return (
@@ -214,16 +349,32 @@ function VideoSlide({
         loop
         muted
         preload="metadata"
+        onClick={togglePlayback}
         className="absolute inset-0 h-full w-full object-cover"
       />
 
-      {/* Soft gradient so subtitles stay legible over any footage */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+      {/* Soft scrim so the subtitle track stays legible over bright footage —
+          transparent at the top, dark at the bottom, never a hard bar */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
 
       <ProgressBar videoRef={videoRef} active={active} />
 
-      {/* Creator + level */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 pb-safe">
+      {/* Paused indicator — taps fall through to the video, which resumes */}
+      {paused && active && !sheet && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center animate-fade-in">
+          <span className="rounded-full bg-black/40 p-5 text-text backdrop-blur-md">
+            <PlayIcon width={30} height={30} />
+          </span>
+        </div>
+      )}
+
+      {/* Bottom stack: action rail, then creator + subtitles. The wrapper is
+          pointer-events-none so taps between controls reach the video;
+          the rail and word buttons re-enable their own pointer events. */}
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 pb-safe">
+        <div className="flex justify-end px-3 pb-3">
+          <ActionRail video={video} onReplay={handleReplay} />
+        </div>
         <div className="px-5 pb-3">
           <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-bold tracking-wide text-accent">
             {video.level}
@@ -232,13 +383,16 @@ function VideoSlide({
             {video.creator}
           </span>
         </div>
-        <div className="pb-6">
+        <div className="pb-10">
           <SubtitleTrack
             videoRef={videoRef}
             cues={video.cues}
             language={language}
             active={active && !sheet}
             onWordTap={handleWordTap}
+            blanks={blanks ?? undefined}
+            onBlankActive={handleBlankActive}
+            onBlankGrade={handleBlankGrade}
           />
         </div>
       </div>
@@ -271,8 +425,8 @@ function VideoSlide({
       {toast && (
         <div className="pointer-events-none absolute left-1/2 top-24 z-40 animate-toast-in">
           <div className="flex -translate-x-0 items-center gap-2 rounded-full bg-surface-raised py-2 pl-2 pr-4 shadow-lg shadow-black/40">
-            <LoroMascot state="happy" size={32} />
-            <span className="text-sm font-medium text-text">{toast}</span>
+            <LoroMascot state={toast.mood} size={32} />
+            <span className="text-sm font-medium text-text">{toast.message}</span>
           </div>
         </div>
       )}

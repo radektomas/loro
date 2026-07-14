@@ -1,6 +1,7 @@
 'use client';
 
-import type { Cue, Word } from '@/types';
+import type { Cue, Gloss, Word } from '@/types';
+import { glossText, normalizeSurface } from '@/lib/dictionary';
 import { CloseIcon, BookmarkIcon } from '@/components/icons/Icons';
 import { LoroMascot } from '@/components/LoroMascot';
 
@@ -8,6 +9,8 @@ export type WordSheetData = {
   word: Word;
   cue: Cue;
   cueIndex: number;
+  /** dictionary entry for this word, or null if it's somehow missing */
+  gloss: Gloss | null;
 };
 
 type WordSheetProps = {
@@ -23,10 +26,12 @@ type WordSheetProps = {
  * by the parent while this is open and resumed on close.
  */
 export function WordSheet({ data, language, saved, onSave, onClose }: WordSheetProps) {
-  // TODO(dictionary): replace this with a real per-word dictionary lookup.
-  // For now we surface the whole-cue translation as context for the word.
+  const { word, cue, gloss } = data;
   const contextTranslation =
-    data.cue.translations[language] ?? data.cue.translations.en;
+    cue.translations[language] ?? cue.translations.en ?? '';
+  const wordGloss = gloss ? glossText(gloss, language) : null;
+  const surface = normalizeSurface(word.text);
+  const showLemma = gloss && wordGloss && gloss.lemma !== surface;
 
   return (
     <div className="absolute inset-0 z-30" role="dialog" aria-modal="true">
@@ -41,14 +46,39 @@ export function WordSheet({ data, language, saved, onSave, onClose }: WordSheetP
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <p className="text-3xl font-bold tracking-tight text-text">
-              {data.word.text}
+              {word.text}
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              {contextTranslation}
-            </p>
-            <p className="mt-1 text-xs text-muted/60">
-              From the sentence — word-level dictionary coming soon
-            </p>
+
+            {wordGloss ? (
+              <>
+                <p className="mt-1.5 text-xl font-semibold text-accent">
+                  {wordGloss}
+                </p>
+                {showLemma && (
+                  <p className="mt-1.5 text-xs text-muted">
+                    {surface} → {gloss.lemma} · {gloss.pos}
+                  </p>
+                )}
+                {gloss?.note && (
+                  <p className="mt-1 text-xs italic text-muted">{gloss.note}</p>
+                )}
+                <p className="mt-3 text-xs leading-relaxed text-muted/60">
+                  In this sentence:{' '}
+                  <span className="text-muted">{contextTranslation}</span>
+                </p>
+              </>
+            ) : (
+              // No dictionary entry — fall back to the sentence translation,
+              // clearly marked approximate instead of posing as a word gloss.
+              <>
+                <p className="mt-1.5 text-base leading-relaxed text-text/85">
+                  ≈ {contextTranslation}
+                </p>
+                <p className="mt-1 text-xs text-amber-400/90">
+                  approximate — whole-sentence translation
+                </p>
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -74,7 +104,8 @@ export function WordSheet({ data, language, saved, onSave, onClose }: WordSheetP
             {saved ? 'Saved' : 'Save word'}
           </button>
           <div className="shrink-0">
-            <LoroMascot state={saved ? 'happy' : 'idle'} size={56} />
+            {/* 'happy' is reserved for correct typed recall, not saving */}
+            <LoroMascot state="idle" size={56} />
           </div>
         </div>
       </div>

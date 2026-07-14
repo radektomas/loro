@@ -1,18 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import type { SavedWord, Video } from '@/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import type { SavedWord, Video, WordState } from '@/types';
 import { storage } from '@/lib/storage';
+import { formatDue, MAX_BOX } from '@/lib/srs';
 import { LoroMascot } from '@/components/LoroMascot';
 import {
+  ChartIcon,
   ChevronLeftIcon,
   ReplayIcon,
+  SearchIcon,
   TrashIcon,
 } from '@/components/icons/Icons';
 import videosData from '@/data/videos.json';
 
-const videos = videosData as Video[];
+const videos = videosData as unknown as Video[];
 
 /** Resolve the deep-link target (/?v=...&t=...) for a saved word. */
 function replayHref(word: SavedWord): string {
@@ -21,39 +25,117 @@ function replayHref(word: SavedWord): string {
   return `/?v=${encodeURIComponent(word.videoId)}&t=${cueStart}`;
 }
 
-function dayLabel(timestamp: number): string {
-  const date = new Date(timestamp);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return date.toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
+/** Display order: problems first, then the pipeline, then the trophies. */
+const STATE_ORDER: WordState[] = ['lapsed', 'new', 'learning', 'known'];
+
+const STATE_LABELS: Record<WordState, string> = {
+  lapsed: 'Lapsed',
+  new: 'New',
+  learning: 'Learning',
+  known: 'Known',
+};
+
+/** Accent-and-case-insensitive haystack for search ("cancion" finds "canción"). */
+function fold(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
-export default function VocabPage() {
+function filterHref(state: WordState | null, video: string | null): string {
+  const params = new URLSearchParams();
+  if (state) params.set('state', state);
+  if (video) params.set('video', video);
+  const qs = params.toString();
+  return qs ? `/vocab?${qs}` : '/vocab';
+}
+
+/** Leitner progress at a glance: box 3 of 5 renders as ●●●○○. */
+function BoxDots({ word }: { word: SavedWord }) {
+  return (
+    <span
+      role="img"
+      aria-label={`box ${word.box} of ${MAX_BOX}`}
+      className="flex gap-1"
+    >
+      {Array.from({ length: MAX_BOX }, (_, i) => (
+        <span
+          key={i}
+          className={`h-1.5 w-1.5 rounded-full ${
+            i < word.box
+              ? word.state === 'known'
+                ? 'bg-accent'
+                : 'bg-muted'
+              : 'bg-white/15'
+          }`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function VocabContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const videoFilter = searchParams.get('video');
+  const stateParam = searchParams.get('state') as WordState | null;
+  const stateFilter =
+    stateParam && STATE_ORDER.includes(stateParam) ? stateParam : null;
+
   const [words, setWords] = useState<SavedWord[]>([]);
+  const [query, setQuery] = useState('');
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setWords(storage.getSavedWords());
+    const refresh = () => setWords(storage.getSavedWords());
+    refresh();
     setHydrated(true);
+    // stays fresh if words are saved in another tab or after bfcache restores
+    return storage.onWordsChanged(refresh);
   }, []);
 
+  // Video and search narrow the scope; the state chips count within it.
+  const scopedWords = useMemo(() => {
+    const needle = fold(query.trim());
+    return words.filter(
+      (w) =>
+        (!videoFilter || w.videoId === videoFilter) &&
+        (!needle ||
+          fold(w.text).includes(needle) ||
+          fold(w.translation).includes(needle))
+    );
+  }, [words, videoFilter, query]);
+
+  const stateCounts = useMemo(() => {
+    const counts = { lapsed: 0, new: 0, learning: 0, known: 0 };
+    for (const w of scopedWords) counts[w.state]++;
+    return counts;
+  }, [scopedWords]);
+
+  const visibleWords = useMemo(
+    () =>
+      stateFilter
+        ? scopedWords.filter((w) => w.state === stateFilter)
+        : scopedWords,
+    [scopedWords, stateFilter]
+  );
+
   const groups = useMemo(() => {
-    const sorted = [...words].sort((a, b) => b.savedAt - a.savedAt);
-    const map = new Map<string, SavedWord[]>();
-    for (const word of sorted) {
-      const label = dayLabel(word.savedAt);
-      const list = map.get(label) ?? [];
-      list.push(word);
-      map.set(label, list);
-    }
-    return [...map.entries()];
+    return STATE_ORDER.flatMap((state) => {
+      const items = visibleWords
+        .filter((w) => w.state === state)
+        .sort((a, b) => a.dueAt - b.dueAt);
+      return items.length > 0
+        ? [[STATE_LABELS[state], items] as [string, SavedWord[]]]
+        : [];
+    });
+  }, [visibleWords]);
+
+  // Only offer video filters that would show something.
+  const videoOptions = useMemo(() => {
+    const withWords = new Set(words.map((w) => w.videoId));
+    return videos.filter((v) => withWords.has(v.id));
   }, [words]);
 
   const handleRemove = (word: SavedWord) => {
@@ -74,12 +156,89 @@ export default function VocabPage() {
           <h1 className="text-xl font-bold tracking-tight text-text">
             My words
           </h1>
-          {words.length > 0 && (
-            <span className="ml-auto rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">
-              {words.length}
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {visibleWords.length > 0 && (
+              <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">
+                {visibleWords.length}
+              </span>
+            )}
+            <Link
+              href="/progress"
+              aria-label="Progress"
+              className="rounded-full bg-surface p-2 text-muted transition-colors hover:text-text"
+            >
+              <ChartIcon width={18} height={18} />
+            </Link>
+          </div>
         </div>
+
+        {words.length > 0 && (
+          <div className="space-y-2.5 px-4 pb-3">
+            <div className="relative">
+              <SearchIcon
+                width={15}
+                height={15}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted/70"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search words or translations"
+                aria-label="Search saved words"
+                className="w-full rounded-full bg-surface py-2.5 pl-10 pr-4 text-sm text-text outline-none placeholder:text-muted/60 focus:ring-1 focus:ring-accent/40"
+              />
+            </div>
+            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
+              <Link
+                href={filterHref(null, videoFilter)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  stateFilter === null
+                    ? 'bg-accent text-background'
+                    : 'bg-surface text-muted hover:text-text'
+                }`}
+              >
+                All {scopedWords.length}
+              </Link>
+              {STATE_ORDER.map((state) => (
+                <Link
+                  key={state}
+                  href={filterHref(state, videoFilter)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    stateFilter === state
+                      ? 'bg-accent text-background'
+                      : 'bg-surface text-muted hover:text-text'
+                  }`}
+                >
+                  {STATE_LABELS[state]} {stateCounts[state]}
+                </Link>
+              ))}
+              {videoOptions.length > 0 && (
+                <select
+                  value={videoFilter ?? ''}
+                  onChange={(e) =>
+                    router.replace(
+                      filterHref(stateFilter, e.target.value || null)
+                    )
+                  }
+                  aria-label="Filter by video"
+                  className={`shrink-0 appearance-none rounded-full px-3 py-1.5 text-xs font-semibold outline-none transition-colors ${
+                    videoFilter
+                      ? 'bg-accent text-background'
+                      : 'bg-surface text-muted'
+                  }`}
+                >
+                  <option value="">All videos</option>
+                  {videoOptions.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.creator} · {v.level} · {v.id}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {hydrated && words.length === 0 && (
@@ -99,6 +258,12 @@ export default function VocabPage() {
             Watch videos
           </Link>
         </div>
+      )}
+
+      {hydrated && words.length > 0 && visibleWords.length === 0 && (
+        <p className="px-5 pt-16 text-center text-sm text-muted">
+          Nothing matches these filters.
+        </p>
       )}
 
       <div className="px-4">
@@ -121,11 +286,18 @@ export default function VocabPage() {
                       {word.translation}
                     </p>
                   </div>
-                  {word.timesSeen > 1 && (
-                    <span className="shrink-0 text-xs text-muted/70">
-                      ×{word.timesSeen}
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <span
+                      className={`text-xs ${
+                        word.dueAt <= Date.now()
+                          ? 'font-semibold text-accent'
+                          : 'text-muted/70'
+                      }`}
+                    >
+                      {formatDue(word.dueAt)}
                     </span>
-                  )}
+                    <BoxDots word={word} />
+                  </div>
                   <Link
                     href={replayHref(word)}
                     aria-label={`Replay ${word.text}`}
@@ -148,5 +320,13 @@ export default function VocabPage() {
         ))}
       </div>
     </main>
+  );
+}
+
+export default function VocabPage() {
+  return (
+    <Suspense fallback={<main className="min-h-[100dvh] bg-background" />}>
+      <VocabContent />
+    </Suspense>
   );
 }

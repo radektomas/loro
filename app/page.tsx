@@ -3,7 +3,7 @@ import { Feed } from '@/components/Feed';
 import videosData from '@/data/videos.json';
 import type { Video } from '@/types';
 
-const videos = videosData as Video[];
+const videos = videosData as unknown as Video[];
 
 export default function Home() {
   return (

@@ -37,10 +37,24 @@ export function LoroMascot({ state = 'idle', size = 96, className }: LoroMascotP
         fill="var(--accent-deep, #3d8b40)"
         transform={state === 'happy' ? 'rotate(-40 26 42)' : 'rotate(-12 31 56)'}
       />
+      {/* red crest — three bold angular feathers, tucked under the head.
+          Lifts slightly when happy, droops when sleeping. */}
+      <g
+        fill="var(--loro-crest, #d14b3c)"
+        transform={
+          state === 'happy'
+            ? 'translate(0 -2.5) rotate(-6 56 14)'
+            : state === 'sleeping'
+              ? 'translate(1.5 2) rotate(16 56 16)'
+              : undefined
+        }
+      >
+        <path d="M50 17 L42 5 L53 12 Z" />
+        <path d="M53 15 L54 0 L60 13 Z" />
+        <path d="M59 14 L66 5 L63 15 Z" />
+      </g>
       {/* head */}
       <circle cx="56" cy="30" r="18" fill="var(--accent, #58cc4e)" />
-      {/* crest feather */}
-      <path d="M56 12 C52 4 44 6 46 14" stroke="var(--accent-deep, #3d8b40)" strokeWidth="4" strokeLinecap="round" fill="none" />
       {/* face patch */}
       <circle cx="62" cy="30" r="10" fill="#f3f9ef" />
       {/* eye */}
