@@ -39,6 +39,8 @@ type SubtitleTrackProps = {
   onBlankActive?: () => void;
   /** Fired when the user submits or skips a blank. */
   onBlankGrade?: (word: SavedWord, wasCorrect: boolean) => void;
+  /** Onboarding only: surface form of a word to pulse, drawing the eye to it. */
+  pulseWord?: string | null;
 };
 
 /**
@@ -58,6 +60,7 @@ export function SubtitleTrack({
   blanks,
   onBlankActive,
   onBlankGrade,
+  pulseWord,
 }: SubtitleTrackProps) {
   const [cueIndex, setCueIndex] = useState(-1);
   const [wordIndex, setWordIndex] = useState(-1);
@@ -122,6 +125,14 @@ export function SubtitleTrack({
       (w) => normalizeAnswer(w.text) === normalizeAnswer(target.text)
     );
   }, [cue, blankWord, resolvedResult, gradedWord]);
+
+  // Onboarding: which word in the visible cue to pulse (step "tap a word").
+  const pulseIndex = useMemo(() => {
+    if (!pulseWord || !cue) return -1;
+    return cue.words.findIndex(
+      (w) => normalizeAnswer(w.text) === normalizeAnswer(pulseWord)
+    );
+  }, [pulseWord, cue]);
 
   // Pause the video the moment an unresolved blank becomes visible.
   useEffect(() => {
@@ -271,6 +282,7 @@ export function SubtitleTrack({
                     </span>
                   );
                 }
+                const isPulsing = i === pulseIndex;
                 return (
                   <button
                     key={`${displayIndex}-${i}`}
@@ -280,7 +292,9 @@ export function SubtitleTrack({
                     className={`rounded-xl px-2 py-1 transition-colors duration-100 active:scale-95 ${
                       visible && i === wordIndex
                         ? 'bg-accent text-background [text-shadow:none]'
-                        : 'bg-transparent'
+                        : isPulsing
+                          ? 'animate-coach bg-accent-soft text-accent'
+                          : 'bg-transparent'
                     }`}
                   >
                     {word.text}

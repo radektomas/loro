@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useCallback,
   useEffect,
@@ -20,6 +20,7 @@ import { WordSheet, type WordSheetData } from '@/components/WordSheet';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { LoroMascot } from '@/components/LoroMascot';
 import { ActionRail } from '@/components/ActionRail';
+import { orderVideosForLevel } from '@/lib/calibration';
 import {
   BookIcon,
   ChartIcon,
@@ -30,12 +31,29 @@ import {
 const VISIBILITY_THRESHOLD = 0.6;
 
 export function Feed({ videos }: { videos: Video[] }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [language, setLanguage] = useState('en');
   const [unmuted, setUnmuted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // First-time visitors are routed to the guided intro before the feed. Render
+  // nothing until this resolves so the feed never flashes behind /welcome.
+  const [gate, setGate] = useState<'checking' | 'open'>('checking');
+  // Feed order is seeded by the calibrated level (client-only; SSR keeps the
+  // source order, and we only paint the feed after the gate opens — no mismatch).
+  const [feedVideos, setFeedVideos] = useState(videos);
+
+  useEffect(() => {
+    if (!storage.isOnboarded()) {
+      router.replace('/welcome');
+      return;
+    }
+    const level = storage.getStartLevel();
+    setFeedVideos(level ? orderVideosForLevel(videos, level) : videos);
+    setGate('open');
+  }, [router, videos]);
 
   // Every translation language present in the seed data.
   const languages = useMemo(() => {
@@ -81,11 +99,13 @@ export function Feed({ videos }: { videos: Video[] }) {
 
   useEffect(() => {
     if (!deepLinkVideoId || !containerRef.current) return;
-    const index = videos.findIndex((v) => v.id === deepLinkVideoId);
+    const index = feedVideos.findIndex((v) => v.id === deepLinkVideoId);
     if (index > 0) {
       containerRef.current.children[index]?.scrollIntoView({ behavior: 'instant' });
     }
-  }, [deepLinkVideoId, videos]);
+  }, [deepLinkVideoId, feedVideos]);
+
+  if (gate === 'checking') return <div className="h-[100dvh] bg-background" />;
 
   return (
     <div className="relative h-[100dvh] bg-background">
@@ -93,7 +113,7 @@ export function Feed({ videos }: { videos: Video[] }) {
         ref={containerRef}
         className="no-scrollbar h-full snap-y snap-mandatory overflow-y-scroll"
       >
-        {videos.map((video, index) => (
+        {feedVideos.map((video, index) => (
           <VideoSlide
             key={video.id}
             video={video}
@@ -139,6 +159,27 @@ export function Feed({ videos }: { videos: Video[] }) {
   );
 }
 
+/**
+ * Drives the guided intro on a real feed slide (see /welcome). Everything is
+ * optional and inert unless VideoSlide gets an `onboarding` prop, so the normal
+ * feed is unaffected. The overlay/coach-marks live in the /welcome page; this
+ * is just the hooks it needs into the slide's internals.
+ */
+export type OnboardingControl = {
+  /** Word to pulse in the subtitles (step "tap a word"). */
+  pulseWord?: string | null;
+  /** Force these blanks, bypassing SRS scheduling (the recall payoff). */
+  blanks?: ReadonlyMap<number, SavedWord> | null;
+  /** A seek instruction; a new object (bumped nonce) re-runs it. */
+  command?: { time: number; then: 'pause' | 'play'; nonce: number } | null;
+  /** Slide became active — the video is playing and subtitles are live. */
+  onActive?: () => void;
+  onWordTap?: (word: Word, cueIndex: number) => void;
+  onSaved?: (word: Word, cueIndex: number) => void;
+  onSheetClose?: (saved: boolean) => void;
+  onRecall?: (word: SavedWord, wasCorrect: boolean) => void;
+};
+
 type VideoSlideProps = {
   video: Video;
   language: string;
@@ -147,9 +188,10 @@ type VideoSlideProps = {
   onUnmute: () => void;
   onAutoMuted: () => void;
   seekRef: RefObject<{ videoId: string; time: number } | null>;
+  onboarding?: OnboardingControl;
 };
 
-function VideoSlide({
+export function VideoSlide({
   video,
   language,
   isFirst,
@@ -157,6 +199,7 @@ function VideoSlide({
   onUnmute,
   onAutoMuted,
   seekRef,
+  onboarding,
 }: VideoSlideProps) {
   const slideRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -246,13 +289,39 @@ function VideoSlide({
 
   // Plan which cues become blanks each time this slide takes the screen.
   // Graded words get a future dueAt, so replans never repeat them.
+  // Onboarding drives its own blanks (onboarding.blanks), so skip the planner.
   useEffect(() => {
+    if (onboarding) return;
     if (active) {
       setBlanks(computeBlankPlan(video, storage.getSavedWords(), Date.now()));
     } else {
       setBlanks(null);
     }
-  }, [active, video]);
+  }, [active, video, onboarding]);
+
+  const effectiveBlanks = onboarding
+    ? onboarding.blanks ?? undefined
+    : blanks ?? undefined;
+
+  // Onboarding: announce the slide is live once, so the guide can start step a.
+  const announcedActive = useRef(false);
+  useEffect(() => {
+    if (active && onboarding && !announcedActive.current) {
+      announcedActive.current = true;
+      onboarding.onActive?.();
+    }
+  }, [active, onboarding]);
+
+  // Onboarding: execute a seek command (rewind to a cue, then pause or play).
+  useEffect(() => {
+    const cmd = onboarding?.command;
+    if (!cmd) return;
+    const el = videoRef.current;
+    if (!el) return;
+    el.currentTime = cmd.time;
+    if (cmd.then === 'pause') el.pause();
+    else safePlay();
+  }, [onboarding?.command, safePlay]);
 
   const handleBlankActive = useCallback(() => {
     if (resumeTimer.current) clearTimeout(resumeTimer.current);
@@ -262,6 +331,10 @@ function VideoSlide({
   const handleBlankGrade = useCallback(
     (word: SavedWord, wasCorrect: boolean) => {
       storage.gradeWord(word.text, word.videoId, wasCorrect);
+      onboarding?.onRecall?.(word, wasCorrect);
+      // In onboarding the guide controls resume/rewind (it may re-blank on a
+      // miss), so don't fight it with the normal auto-resume.
+      if (onboarding) return;
       // Correct-answer feedback lives in SubtitleTrack's celebration —
       // no top-of-screen toast on top of it.
       // Resume quickly on success; leave time to read the reveal on a miss.
@@ -273,7 +346,7 @@ function VideoSlide({
         wasCorrect ? 600 : 1500
       );
     },
-    [safePlay]
+    [safePlay, onboarding]
   );
 
   const togglePlayback = useCallback(() => {
@@ -295,14 +368,16 @@ function VideoSlide({
       videoRef.current?.pause();
       setSheetSaved(false);
       setSheet({ word, cue, cueIndex, gloss: lookupGloss(video, word.text) });
+      onboarding?.onWordTap?.(word, cueIndex);
     },
-    [video]
+    [video, onboarding]
   );
 
   const handleSheetClose = useCallback(() => {
     setSheet(null);
+    onboarding?.onSheetClose?.(sheetSaved);
     if (active) safePlay();
-  }, [active, safePlay]);
+  }, [active, safePlay, onboarding, sheetSaved]);
 
   const handleSave = useCallback(() => {
     if (!sheet) return;
@@ -319,6 +394,20 @@ function VideoSlide({
       videoId: video.id,
       cueIndex: sheet.cueIndex,
     });
+    // In onboarding the save flows straight into the recall payoff: mark it
+    // saved, tell the guide (which arms the blank), then close the sheet and
+    // resume so the just-saved word comes back as a blank in its own cue.
+    if (onboarding) {
+      if (ok) {
+        setSheetSaved(true);
+        onboarding.onSaved?.(sheet.word, sheet.cueIndex);
+        setTimeout(() => {
+          setSheet(null);
+          if (activeRef.current) safePlay();
+        }, 900);
+      }
+      return;
+    }
     // Only celebrate a verified write — a failed save must look failed.
     // Loro stays 'idle' here: 'happy' is earned by recalling, not saving.
     if (ok) {
@@ -329,7 +418,7 @@ function VideoSlide({
     }
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
-  }, [sheet, language, video.id]);
+  }, [sheet, language, video.id, onboarding, safePlay]);
 
   useEffect(() => () => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -359,8 +448,9 @@ function VideoSlide({
 
       <ProgressBar videoRef={videoRef} active={active} />
 
-      {/* Paused indicator — taps fall through to the video, which resumes */}
-      {paused && active && !sheet && (
+      {/* Paused indicator — taps fall through to the video, which resumes.
+          Hidden during onboarding: the guide pauses deliberately. */}
+      {paused && active && !sheet && !onboarding && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center animate-fade-in">
           <span className="rounded-full bg-black/40 p-5 text-text backdrop-blur-md">
             <PlayIcon width={30} height={30} />
@@ -372,9 +462,11 @@ function VideoSlide({
           pointer-events-none so taps between controls reach the video;
           the rail and word buttons re-enable their own pointer events. */}
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 pb-safe">
-        <div className="flex justify-end px-3 pb-3">
-          <ActionRail video={video} onReplay={handleReplay} />
-        </div>
+        {!onboarding && (
+          <div className="flex justify-end px-3 pb-3">
+            <ActionRail video={video} onReplay={handleReplay} />
+          </div>
+        )}
         <div className="px-5 pb-3">
           <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-bold tracking-wide text-accent">
             {video.level}
@@ -390,15 +482,17 @@ function VideoSlide({
             language={language}
             active={active && !sheet}
             onWordTap={handleWordTap}
-            blanks={blanks ?? undefined}
+            blanks={effectiveBlanks}
             onBlankActive={handleBlankActive}
             onBlankGrade={handleBlankGrade}
+            pulseWord={onboarding?.pulseWord}
           />
         </div>
       </div>
 
-      {/* Tap-to-unmute — prominent, first slide only */}
-      {isFirst && !unmuted && (
+      {/* Tap-to-unmute — prominent, first slide only. Suppressed in onboarding
+          so nothing but the loop is on screen; sound is best-effort there. */}
+      {isFirst && !unmuted && !onboarding && (
         <button
           type="button"
           onClick={onUnmute}

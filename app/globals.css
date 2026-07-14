@@ -222,6 +222,38 @@ body {
     loro-reveal-wrong 1400ms ease both;
 }
 
+/* Onboarding coach mark: a soft green ring pulsing outward from a word, to
+   say "this one" without a hard outline. Used only during the guided intro. */
+@keyframes loro-coach {
+  0% {
+    box-shadow: 0 0 0 0 rgba(88, 204, 78, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(88, 204, 78, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(88, 204, 78, 0);
+  }
+}
+.animate-coach {
+  animation: loro-coach 1.5s ease-out infinite;
+}
+
+/* Coach-mark text pill fading/rising in as each step begins. */
+@keyframes loro-coach-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.animate-coach-in {
+  animation: loro-coach-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
 /* Reduced motion: correct recall becomes a plain colour fill — no scale,
    no particles, no hop. The wrong reveal loses its shake too. */
 @media (prefers-reduced-motion: reduce) {
@@ -232,5 +264,9 @@ body {
   .celebrate-particle,
   .animate-loro-pop {
     display: none;
+  }
+  .animate-coach {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(88, 204, 78, 0.5);
   }
 }

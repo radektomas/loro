@@ -1,4 +1,4 @@
-import type { SavedWord, Video, WordState } from '@/types';
+import type { Level, SavedWord, Video, WordState } from '@/types';
 import { grade, initialSrs } from '@/lib/srs';
 import { dayKey } from '@/lib/progress';
 import { glossText, lookupGloss } from '@/lib/dictionary';
@@ -25,6 +25,8 @@ const KEYS = {
   watched: 'loro.watchedVideos',
   recallDays: 'loro.recallDays',
   language: 'loro.language',
+  onboarded: 'loro.onboarded', // has the user finished (or skipped) the intro
+  startLevel: 'loro.startLevel', // CEFR seed from calibration — only seeds order
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
   unmuted: 'loro.session.unmuted', // sessionStorage — per-session only
@@ -590,6 +592,38 @@ export const storage = {
   setLanguage(code: string): void {
     if (!isBrowser) return;
     window.localStorage.setItem(KEYS.language, code);
+  },
+
+  /**
+   * Has the user finished (or skipped) the intro? First-timers are routed to
+   * /welcome. Anyone with prior activity (saved words, watched videos) is
+   * grandfathered in — existing users must never be dropped back into
+   * onboarding just because the flag postdates their data.
+   */
+  isOnboarded(): boolean {
+    if (!isBrowser) return true; // SSR: never redirect from the server
+    if (window.localStorage.getItem(KEYS.onboarded) === '1') return true;
+    if (storage.getSavedWords().length > 0) return true;
+    if (readJSON<string[]>(KEYS.watched, []).length > 0) return true;
+    return false;
+  },
+
+  setOnboarded(value = true): void {
+    if (!isBrowser) return;
+    if (value) window.localStorage.setItem(KEYS.onboarded, '1');
+    else window.localStorage.removeItem(KEYS.onboarded);
+  },
+
+  /** CEFR level from calibration. Seeds feed order only; behaviour corrects it. */
+  getStartLevel(): Level | null {
+    if (!isBrowser) return null;
+    const v = window.localStorage.getItem(KEYS.startLevel);
+    return v === 'A1' || v === 'A2' || v === 'B1' || v === 'B2' ? v : null;
+  },
+
+  setStartLevel(level: Level): void {
+    if (!isBrowser) return;
+    window.localStorage.setItem(KEYS.startLevel, level);
   },
 
   /** Unmute choice lives in sessionStorage — it only persists for the session. */

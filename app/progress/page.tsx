@@ -373,6 +373,16 @@ export default function ProgressPage() {
               A level unlocks once you understand 80% of the videos below it.
             </p>
           </section>
+
+          {/* Replay the guided intro — the loop, taught by doing it. */}
+          <div className="pt-2 text-center">
+            <Link
+              href="/welcome"
+              className="text-xs font-medium text-muted transition-colors hover:text-text"
+            >
+              Replay intro
+            </Link>
+          </div>
         </div>
       )}
     </main>
