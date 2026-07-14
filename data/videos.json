@@ -1,0 +1,236 @@
+[
+  {
+    "id": "saludos-01",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    "poster": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg",
+    "creator": "@loro.basico",
+    "level": "A1",
+    "cues": [
+      {
+        "start": 0.4,
+        "end": 3.0,
+        "words": [
+          { "text": "¡Hola!", "start": 0.4, "end": 1.0 },
+          { "text": "¿Cómo", "start": 1.3, "end": 1.8 },
+          { "text": "estás", "start": 1.8, "end": 2.3 },
+          { "text": "hoy?", "start": 2.3, "end": 2.9 }
+        ],
+        "translations": {
+          "en": "Hi! How are you today?",
+          "cs": "Ahoj! Jak se dnes máš?",
+          "de": "Hallo! Wie geht es dir heute?",
+          "fr": "Salut ! Comment vas-tu aujourd'hui ?"
+        }
+      },
+      {
+        "start": 3.5,
+        "end": 6.8,
+        "words": [
+          { "text": "Me", "start": 3.5, "end": 3.8 },
+          { "text": "llamo", "start": 3.8, "end": 4.3 },
+          { "text": "Loro", "start": 4.3, "end": 4.9 },
+          { "text": "y", "start": 5.1, "end": 5.3 },
+          { "text": "hablo", "start": 5.3, "end": 5.8 },
+          { "text": "español.", "start": 5.8, "end": 6.6 }
+        ],
+        "translations": {
+          "en": "My name is Loro and I speak Spanish.",
+          "cs": "Jmenuji se Loro a mluvím španělsky.",
+          "de": "Ich heiße Loro und ich spreche Spanisch.",
+          "fr": "Je m'appelle Loro et je parle espagnol."
+        }
+      },
+      {
+        "start": 7.3,
+        "end": 10.2,
+        "words": [
+          { "text": "Vamos", "start": 7.3, "end": 7.9 },
+          { "text": "a", "start": 7.9, "end": 8.1 },
+          { "text": "aprender", "start": 8.1, "end": 8.9 },
+          { "text": "juntos.", "start": 8.9, "end": 9.7 }
+        ],
+        "translations": {
+          "en": "Let's learn together.",
+          "cs": "Pojďme se učit spolu.",
+          "de": "Lass uns zusammen lernen.",
+          "fr": "Apprenons ensemble."
+        }
+      },
+      {
+        "start": 10.8,
+        "end": 14.2,
+        "words": [
+          { "text": "¿Estás", "start": 10.8, "end": 11.4 },
+          { "text": "listo?", "start": 11.4, "end": 12.1 },
+          { "text": "¡Empezamos!", "start": 12.6, "end": 13.8 }
+        ],
+        "translations": {
+          "en": "Are you ready? Let's start!",
+          "cs": "Jsi připraven? Začínáme!",
+          "de": "Bist du bereit? Los geht's!",
+          "fr": "Tu es prêt ? On commence !"
+        }
+      }
+    ]
+  },
+  {
+    "id": "comida-01",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    "poster": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+    "creator": "@cocina.conmigo",
+    "level": "A2",
+    "cues": [
+      {
+        "start": 0.5,
+        "end": 3.4,
+        "words": [
+          { "text": "Hoy", "start": 0.5, "end": 1.0 },
+          { "text": "quiero", "start": 1.0, "end": 1.6 },
+          { "text": "comer", "start": 1.6, "end": 2.2 },
+          { "text": "algo", "start": 2.2, "end": 2.7 },
+          { "text": "rico.", "start": 2.7, "end": 3.3 }
+        ],
+        "translations": {
+          "en": "Today I want to eat something tasty.",
+          "cs": "Dnes chci jíst něco dobrého.",
+          "de": "Heute möchte ich etwas Leckeres essen.",
+          "fr": "Aujourd'hui je veux manger quelque chose de bon."
+        }
+      },
+      {
+        "start": 4.0,
+        "end": 7.2,
+        "words": [
+          { "text": "Me", "start": 4.0, "end": 4.3 },
+          { "text": "encantan", "start": 4.3, "end": 5.1 },
+          { "text": "los", "start": 5.1, "end": 5.4 },
+          { "text": "tacos", "start": 5.4, "end": 6.0 },
+          { "text": "de", "start": 6.0, "end": 6.2 },
+          { "text": "pollo.", "start": 6.2, "end": 6.9 }
+        ],
+        "translations": {
+          "en": "I love chicken tacos.",
+          "cs": "Miluju kuřecí tacos.",
+          "de": "Ich liebe Hähnchen-Tacos.",
+          "fr": "J'adore les tacos au poulet."
+        }
+      },
+      {
+        "start": 7.8,
+        "end": 11.0,
+        "words": [
+          { "text": "¿Cuál", "start": 7.8, "end": 8.3 },
+          { "text": "es", "start": 8.3, "end": 8.5 },
+          { "text": "tu", "start": 8.5, "end": 8.8 },
+          { "text": "comida", "start": 8.8, "end": 9.5 },
+          { "text": "favorita?", "start": 9.5, "end": 10.6 }
+        ],
+        "translations": {
+          "en": "What is your favorite food?",
+          "cs": "Jaké je tvoje oblíbené jídlo?",
+          "de": "Was ist dein Lieblingsessen?",
+          "fr": "Quel est ton plat préféré ?"
+        }
+      },
+      {
+        "start": 11.6,
+        "end": 14.6,
+        "words": [
+          { "text": "La", "start": 11.6, "end": 11.9 },
+          { "text": "comida", "start": 11.9, "end": 12.5 },
+          { "text": "une", "start": 12.5, "end": 12.9 },
+          { "text": "a", "start": 12.9, "end": 13.1 },
+          { "text": "las", "start": 13.1, "end": 13.4 },
+          { "text": "personas.", "start": 13.4, "end": 14.3 }
+        ],
+        "translations": {
+          "en": "Food brings people together.",
+          "cs": "Jídlo lidi spojuje.",
+          "de": "Essen verbindet Menschen.",
+          "fr": "La nourriture rassemble les gens."
+        }
+      }
+    ]
+  },
+  {
+    "id": "viajes-01",
+    "src": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    "poster": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg",
+    "creator": "@mundo.viajero",
+    "level": "B1",
+    "cues": [
+      {
+        "start": 0.5,
+        "end": 3.8,
+        "words": [
+          { "text": "Viajar", "start": 0.5, "end": 1.2 },
+          { "text": "te", "start": 1.2, "end": 1.4 },
+          { "text": "cambia", "start": 1.4, "end": 2.0 },
+          { "text": "la", "start": 2.0, "end": 2.2 },
+          { "text": "manera", "start": 2.2, "end": 2.8 },
+          { "text": "de", "start": 2.8, "end": 3.0 },
+          { "text": "pensar.", "start": 3.0, "end": 3.7 }
+        ],
+        "translations": {
+          "en": "Traveling changes the way you think.",
+          "cs": "Cestování mění způsob, jakým přemýšlíš.",
+          "de": "Reisen verändert deine Art zu denken.",
+          "fr": "Voyager change ta façon de penser."
+        }
+      },
+      {
+        "start": 4.4,
+        "end": 7.6,
+        "words": [
+          { "text": "Cada", "start": 4.4, "end": 4.9 },
+          { "text": "ciudad", "start": 4.9, "end": 5.5 },
+          { "text": "tiene", "start": 5.5, "end": 6.0 },
+          { "text": "su", "start": 6.0, "end": 6.2 },
+          { "text": "propia", "start": 6.2, "end": 6.8 },
+          { "text": "historia.", "start": 6.8, "end": 7.5 }
+        ],
+        "translations": {
+          "en": "Every city has its own story.",
+          "cs": "Každé město má svůj vlastní příběh.",
+          "de": "Jede Stadt hat ihre eigene Geschichte.",
+          "fr": "Chaque ville a sa propre histoire."
+        }
+      },
+      {
+        "start": 8.2,
+        "end": 11.6,
+        "words": [
+          { "text": "No", "start": 8.2, "end": 8.5 },
+          { "text": "necesitas", "start": 8.5, "end": 9.3 },
+          { "text": "mucho", "start": 9.3, "end": 9.8 },
+          { "text": "dinero", "start": 9.8, "end": 10.4 },
+          { "text": "para", "start": 10.4, "end": 10.7 },
+          { "text": "explorar.", "start": 10.7, "end": 11.5 }
+        ],
+        "translations": {
+          "en": "You don't need much money to explore.",
+          "cs": "Nepotřebuješ moc peněz na objevování.",
+          "de": "Du brauchst nicht viel Geld, um zu entdecken.",
+          "fr": "Tu n'as pas besoin de beaucoup d'argent pour explorer."
+        }
+      },
+      {
+        "start": 12.2,
+        "end": 14.8,
+        "words": [
+          { "text": "Lo", "start": 12.2, "end": 12.5 },
+          { "text": "importante", "start": 12.5, "end": 13.3 },
+          { "text": "es", "start": 13.3, "end": 13.5 },
+          { "text": "tener", "start": 13.5, "end": 13.9 },
+          { "text": "curiosidad.", "start": 13.9, "end": 14.7 }
+        ],
+        "translations": {
+          "en": "What matters is being curious.",
+          "cs": "Důležité je mít zvědavost.",
+          "de": "Wichtig ist, neugierig zu sein.",
+          "fr": "L'important, c'est d'être curieux."
+        }
+      }
+    ]
+  }
+]
