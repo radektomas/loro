@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SavedWord, Video, WordState } from '@/types';
 import { storage } from '@/lib/storage';
 import { formatDue, MAX_BOX } from '@/lib/srs';
@@ -55,12 +54,7 @@ function reviewHref(due: SavedWord[]): string {
   return replayHref(earliest);
 }
 
-/** Problems first, then the pipeline, then the trophies. */
-const STATE_ORDER: WordState[] = ['lapsed', 'new', 'learning', 'known'];
-
 type StateMeta = {
-  /** compact label for filter chips */
-  chip: string;
   /** plain-language status a stranger understands */
   human: string;
   /** colour for the human status label + filled meter dots */
@@ -68,10 +62,10 @@ type StateMeta = {
 };
 
 const STATE_META: Record<WordState, StateMeta> = {
-  lapsed: { chip: 'Lapsed', human: 'Slipped — review soon', tone: 'red' },
-  new: { chip: 'New', human: 'Just saved', tone: 'muted' },
-  learning: { chip: 'Learning', human: 'Getting it', tone: 'accent' },
-  known: { chip: 'Learned', human: 'Learned ✓', tone: 'accent' },
+  lapsed: { human: 'Slipped — review soon', tone: 'red' },
+  new: { human: 'Just saved', tone: 'muted' },
+  learning: { human: 'Getting it', tone: 'accent' },
+  known: { human: 'Learned ✓', tone: 'accent' },
 };
 
 const TONE_TEXT = {
@@ -86,20 +80,30 @@ const TONE_DOT = {
   accent: 'bg-accent',
 } as const;
 
+/**
+ * The word list, grouped into urgency sections that read top-to-bottom:
+ * problems first, then the do-it-now pile, then the pipeline, then the wins.
+ * The section carries the organisation — no filter controls required.
+ */
+type SectionKey = 'lapsed' | 'ready' | 'new' | 'learning' | 'known';
+
+const SECTION_META: Record<SectionKey, { label: string; dot: string }> = {
+  lapsed: { label: 'SLIPPED', dot: 'bg-[#f87171]' }, // reserved red — most urgent
+  ready: { label: 'READY', dot: 'bg-accent' }, //        due now — do these
+  new: { label: 'JUST SAVED', dot: 'bg-muted' }, //      neutral pipeline
+  learning: { label: 'LEARNING', dot: 'bg-muted' }, //   neutral pipeline
+  known: { label: 'LEARNED', dot: 'bg-accent' }, //      accent green — the wins
+};
+
+/** Section order = urgency order. Empty sections are dropped before render. */
+const SECTION_ORDER: SectionKey[] = ['lapsed', 'ready', 'new', 'learning', 'known'];
+
 /** Accent-and-case-insensitive haystack for search ("cancion" finds "canción"). */
 function fold(text: string): string {
   return text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
-}
-
-function filterHref(state: WordState | null, video: string | null): string {
-  const params = new URLSearchParams();
-  if (state) params.set('state', state);
-  if (video) params.set('video', video);
-  const qs = params.toString();
-  return qs ? `/vocab?${qs}` : '/vocab';
 }
 
 /** Friendly forecast: "Ready now" / "Review in 10 min" / "Review in 2 days". */
@@ -121,7 +125,7 @@ function comeBackIn(dueAt: number, now: number): string {
   return days <= 1 ? 'Come back tomorrow' : `Come back in about ${days} days`;
 }
 
-/** 5-dot Leitner meter, read as "progress toward Learned". */
+/** Leitner meter (one dot per box), read as "progress toward Learned". */
 function BoxMeter({ word }: { word: SavedWord }) {
   const onColor = TONE_DOT[STATE_META[word.state].tone];
   return (
@@ -275,15 +279,9 @@ function WordCard({
 }
 
 function VocabContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const videoFilter = searchParams.get('video');
-  const stateParam = searchParams.get('state') as WordState | null;
-  const stateFilter =
-    stateParam && STATE_ORDER.includes(stateParam) ? stateParam : null;
-
   const [words, setWords] = useState<SavedWord[]>([]);
   const [query, setQuery] = useState('');
+  const [videoFilter, setVideoFilter] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   // Recomputed on load and every minute so "Ready now" and forecasts stay honest.
   const [now, setNow] = useState(0);
@@ -330,7 +328,7 @@ function VocabContent() {
     return () => clearTimeout(t);
   }, [words]);
 
-  // Video and search narrow the scope; the state chips count within it.
+  // Video filter + live search narrow the scope; sections group what's left.
   const scopedWords = useMemo(() => {
     const needle = fold(query.trim());
     return words.filter(
@@ -342,21 +340,30 @@ function VocabContent() {
     );
   }, [words, videoFilter, query]);
 
-  const stateCounts = useMemo(() => {
-    const counts = { lapsed: 0, new: 0, learning: 0, known: 0 };
-    for (const w of scopedWords) counts[w.state]++;
-    return counts;
-  }, [scopedWords]);
+  // Bucket into urgency sections. A due, non-lapsed word surfaces in READY
+  // instead of its state section, so every word appears exactly once and the
+  // list reads most-urgent → least from top to bottom.
+  const sections = useMemo(() => {
+    const buckets: Record<SectionKey, SavedWord[]> = {
+      lapsed: [],
+      ready: [],
+      new: [],
+      learning: [],
+      known: [],
+    };
+    for (const w of scopedWords) {
+      if (w.state === 'lapsed') buckets.lapsed.push(w);
+      else if (w.dueAt <= now) buckets.ready.push(w);
+      else buckets[w.state].push(w);
+    }
+    return SECTION_ORDER.map((key) => ({
+      key,
+      ...SECTION_META[key],
+      words: buckets[key].sort((a, b) => a.dueAt - b.dueAt),
+    })).filter((s) => s.words.length > 0);
+  }, [scopedWords, now]);
 
-  const visibleWords = useMemo(() => {
-    const list = stateFilter
-      ? scopedWords.filter((w) => w.state === stateFilter)
-      : scopedWords;
-    return [...list].sort((a, b) => {
-      const s = STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state);
-      return s !== 0 ? s : a.dueAt - b.dueAt;
-    });
-  }, [scopedWords, stateFilter]);
+  const hasVisible = sections.length > 0;
 
   // Only offer video filters that would show something.
   const videoOptions = useMemo(() => {
@@ -420,9 +427,9 @@ function VocabContent() {
           {/* 1 — lead with the action */}
           <ReviewCard words={words} now={now} />
 
-          {/* 2 — keep: search + filters (restyled) */}
-          <div className="space-y-2.5">
-            <div className="relative">
+          {/* 2 — keep: search + an unobtrusive per-video filter (no more pills) */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <SearchIcon
                 width={15}
                 height={15}
@@ -437,54 +444,29 @@ function VocabContent() {
                 className="w-full rounded-full bg-surface py-2.5 pl-10 pr-4 text-sm text-text outline-none placeholder:text-muted/60 focus:ring-1 focus:ring-accent/40"
               />
             </div>
-            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
-              <Link
-                href={filterHref(null, videoFilter)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  stateFilter === null
-                    ? 'bg-accent text-background'
+            {videoOptions.length > 0 && (
+              <select
+                value={videoFilter ?? ''}
+                onChange={(e) => setVideoFilter(e.target.value || null)}
+                aria-label="Filter by video"
+                className={`shrink-0 max-w-[9rem] appearance-none truncate rounded-full py-2.5 pl-4 pr-3 text-xs font-semibold outline-none transition-colors ${
+                  videoFilter
+                    ? 'bg-accent-soft text-accent'
                     : 'bg-surface text-muted hover:text-text'
                 }`}
               >
-                All {scopedWords.length}
-              </Link>
-              {STATE_ORDER.map((state) => (
-                <Link
-                  key={state}
-                  href={filterHref(state, videoFilter)}
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    stateFilter === state
-                      ? 'bg-accent text-background'
-                      : 'bg-surface text-muted hover:text-text'
-                  }`}
-                >
-                  {STATE_META[state].chip} {stateCounts[state]}
-                </Link>
-              ))}
-              {videoOptions.length > 0 && (
-                <select
-                  value={videoFilter ?? ''}
-                  onChange={(e) =>
-                    router.replace(filterHref(stateFilter, e.target.value || null))
-                  }
-                  aria-label="Filter by video"
-                  className={`shrink-0 appearance-none rounded-full px-3 py-1.5 text-xs font-semibold outline-none transition-colors ${
-                    videoFilter ? 'bg-accent text-background' : 'bg-surface text-muted'
-                  }`}
-                >
-                  <option value="">All videos</option>
-                  {videoOptions.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.creator} · {v.level} · {v.id}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+                <option value="">All videos ▾</option>
+                {videoOptions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.creator} · {v.level} · {v.id}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* 3 — legend: what the meter means */}
-          {visibleWords.length > 0 && (
+          {hasVisible && (
             <div className="flex items-center gap-2 px-1 text-xs text-muted/70">
               <span className="flex items-center gap-1" aria-hidden>
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
@@ -497,24 +479,44 @@ function VocabContent() {
             </div>
           )}
 
-          {visibleWords.length === 0 && (
+          {!hasVisible && (
             <p className="pt-12 text-center text-sm text-muted">
-              Nothing matches these filters.
+              Nothing matches your search.
             </p>
           )}
 
-          {/* 4 — the words */}
-          <ul className="space-y-2 pb-4">
-            {visibleWords.map((word) => (
-              <WordCard
-                key={wordKey(word)}
-                word={word}
-                now={now}
-                celebrating={celebrating.has(wordKey(word))}
-                onRemove={() => handleRemove(word)}
-              />
-            ))}
-          </ul>
+          {/* 4 — the words, grouped by urgency; scroll top→bottom to triage */}
+          {hasVisible && (
+            <div className="space-y-5 pb-4">
+              {sections.map((section) => (
+                <section key={section.key} className="space-y-2">
+                  <div className="flex items-center gap-2 px-1">
+                    <span
+                      className={`h-2 w-2 rounded-full ${section.dot}`}
+                      aria-hidden
+                    />
+                    <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                      {section.label}
+                    </h2>
+                    <span className="text-xs font-semibold text-muted/50">
+                      · {section.words.length}
+                    </span>
+                  </div>
+                  <ul className="space-y-2">
+                    {section.words.map((word) => (
+                      <WordCard
+                        key={wordKey(word)}
+                        word={word}
+                        now={now}
+                        celebrating={celebrating.has(wordKey(word))}
+                        onRemove={() => handleRemove(word)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </main>
@@ -522,9 +524,5 @@ function VocabContent() {
 }
 
 export default function VocabPage() {
-  return (
-    <Suspense fallback={<main className="min-h-[100dvh] bg-background" />}>
-      <VocabContent />
-    </Suspense>
-  );
+  return <VocabContent />;
 }

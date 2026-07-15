@@ -1,0 +1,6 @@
+# Python dependencies for transcribe.py
+#   pip install -r requirements.txt
+# (ffmpeg is also required, but installed separately: brew install ffmpeg)
+faster-whisper
+openai
+python-dotenv

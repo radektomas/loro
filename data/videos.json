@@ -1,5 +1,891 @@
 [
   {
+    "id": "94d510ae521b4b57981f4e12b74622a2",
+    "src": "/videos/94d510ae521b4b57981f4e12b74622a2.mp4",
+    "poster": "/posters/94d510ae521b4b57981f4e12b74622a2.jpg",
+    "creator": "Loro",
+    "level": "A2",
+    "cues": [
+      {
+        "start": 0.0,
+        "end": 1.6,
+        "words": [
+          {
+            "text": "Hola",
+            "start": 0.0,
+            "end": 0.18
+          },
+          {
+            "text": "mis",
+            "start": 0.18,
+            "end": 0.48
+          },
+          {
+            "text": "perris,",
+            "start": 0.48,
+            "end": 1.02
+          },
+          {
+            "text": "¿cómo",
+            "start": 1.06,
+            "end": 1.28
+          },
+          {
+            "text": "están?",
+            "start": 1.28,
+            "end": 1.6
+          }
+        ],
+        "translations": {
+          "en": "Hey my dogs, how's it going?",
+          "cs": "Ahoj kámoši, jak to jde?",
+          "de": "Hey meine Hunde, wie geht's?",
+          "fr": "Salut mes potes, ça va?"
+        }
+      },
+      {
+        "start": 1.86,
+        "end": 3.78,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 1.86,
+            "end": 2.02
+          },
+          {
+            "text": "sábado",
+            "start": 2.1,
+            "end": 2.46
+          },
+          {
+            "text": "11",
+            "start": 2.46,
+            "end": 2.8
+          },
+          {
+            "text": "de",
+            "start": 2.8,
+            "end": 3.02
+          },
+          {
+            "text": "julio,",
+            "start": 3.02,
+            "end": 3.78
+          }
+        ],
+        "translations": {
+          "en": "So, Saturday, July 11th,",
+          "cs": "Takže, sobota 11. července,",
+          "de": "Also, Samstag, der 11. Juli,",
+          "fr": "Bon, samedi 11 juillet,"
+        }
+      },
+      {
+        "start": 3.84,
+        "end": 6.18,
+        "words": [
+          {
+            "text": "yo",
+            "start": 3.84,
+            "end": 3.98
+          },
+          {
+            "text": "me",
+            "start": 3.98,
+            "end": 4.1
+          },
+          {
+            "text": "vine",
+            "start": 4.1,
+            "end": 4.18
+          },
+          {
+            "text": "con",
+            "start": 4.18,
+            "end": 4.34
+          },
+          {
+            "text": "un",
+            "start": 4.34,
+            "end": 4.54
+          },
+          {
+            "text": "amigo",
+            "start": 4.54,
+            "end": 4.86
+          },
+          {
+            "text": "de",
+            "start": 4.86,
+            "end": 5.18
+          },
+          {
+            "text": "vacaciones",
+            "start": 5.18,
+            "end": 5.62
+          },
+          {
+            "text": "a",
+            "start": 5.62,
+            "end": 5.82
+          },
+          {
+            "text": "Brasil.",
+            "start": 5.82,
+            "end": 6.18
+          }
+        ],
+        "translations": {
+          "en": "I came to Brazil with a buddy on vacation.",
+          "cs": "Jel jsem s kámošem na dovolenou do Brazílie.",
+          "de": "Ich bin mit einem Kumpel im Urlaub nach Brasilien gekommen.",
+          "fr": "Je suis venu en vacances au Brésil avec un pote."
+        }
+      },
+      {
+        "start": 6.5,
+        "end": 7.7,
+        "words": [
+          {
+            "text": "¿Y",
+            "start": 6.5,
+            "end": 6.58
+          },
+          {
+            "text": "qué",
+            "start": 6.58,
+            "end": 6.66
+          },
+          {
+            "text": "pasó,",
+            "start": 6.66,
+            "end": 6.84
+          },
+          {
+            "text": "hijo",
+            "start": 6.9,
+            "end": 7.02
+          },
+          {
+            "text": "de",
+            "start": 7.02,
+            "end": 7.14
+          },
+          {
+            "text": "la",
+            "start": 7.14,
+            "end": 7.3
+          },
+          {
+            "text": "selección?",
+            "start": 7.3,
+            "end": 7.7
+          }
+        ],
+        "translations": {
+          "en": "And what happened, soccer fan?",
+          "cs": "A co se stalo, fotbalový fanoušku?",
+          "de": "Und was ist passiert, Fußballfan?",
+          "fr": "Et qu'est-ce qui s'est passé, fan de foot?"
+        }
+      },
+      {
+        "start": 7.98,
+        "end": 10.4,
+        "words": [
+          {
+            "text": "Estamos",
+            "start": 7.98,
+            "end": 8.18
+          },
+          {
+            "text": "en",
+            "start": 8.18,
+            "end": 8.42
+          },
+          {
+            "text": "una",
+            "start": 8.42,
+            "end": 8.64
+          },
+          {
+            "text": "disuntiva",
+            "start": 8.64,
+            "end": 9.22
+          },
+          {
+            "text": "que",
+            "start": 9.22,
+            "end": 9.48
+          },
+          {
+            "text": "yo",
+            "start": 9.48,
+            "end": 9.68
+          },
+          {
+            "text": "quiero",
+            "start": 9.68,
+            "end": 9.9
+          },
+          {
+            "text": "irlo",
+            "start": 9.9,
+            "end": 10.28
+          },
+          {
+            "text": "a",
+            "start": 10.28,
+            "end": 10.4
+          }
+        ],
+        "translations": {
+          "en": "We're stuck in a dilemma where I wanna go",
+          "cs": "Jsme v dilematu, kde já chci jít",
+          "de": "Wir stecken in einem Dilemma, wo ich gehen will",
+          "fr": "On est dans un dilemme où je veux aller"
+        }
+      },
+      {
+        "start": 10.4,
+        "end": 13.42,
+        "words": [
+          {
+            "text": "ver",
+            "start": 10.4,
+            "end": 10.56
+          },
+          {
+            "text": "a",
+            "start": 10.56,
+            "end": 10.68
+          },
+          {
+            "text": "un",
+            "start": 10.68,
+            "end": 10.7
+          },
+          {
+            "text": "bar",
+            "start": 10.7,
+            "end": 11.04
+          },
+          {
+            "text": "lleno",
+            "start": 11.04,
+            "end": 11.44
+          },
+          {
+            "text": "de",
+            "start": 11.44,
+            "end": 11.56
+          },
+          {
+            "text": "argentinos",
+            "start": 11.56,
+            "end": 12.16
+          },
+          {
+            "text": "y",
+            "start": 12.16,
+            "end": 12.88
+          },
+          {
+            "text": "él",
+            "start": 12.88,
+            "end": 13.42
+          }
+        ],
+        "translations": {
+          "en": "to watch in a bar full of Argentinians and he",
+          "cs": "do baru plného Argentinců a on",
+          "de": "in eine Bar voller Argentinier schauen und er",
+          "fr": "voir dans un bar plein d'Argentins et lui"
+        }
+      },
+      {
+        "start": 13.42,
+        "end": 16.34,
+        "words": [
+          {
+            "text": "prefiere",
+            "start": 13.42,
+            "end": 13.84
+          },
+          {
+            "text": "que",
+            "start": 13.84,
+            "end": 13.96
+          },
+          {
+            "text": "nos",
+            "start": 13.96,
+            "end": 14.06
+          },
+          {
+            "text": "quedemos",
+            "start": 14.06,
+            "end": 14.38
+          },
+          {
+            "text": "acá",
+            "start": 14.38,
+            "end": 14.54
+          },
+          {
+            "text": "en",
+            "start": 14.54,
+            "end": 14.68
+          },
+          {
+            "text": "el",
+            "start": 14.68,
+            "end": 14.82
+          },
+          {
+            "text": "hotel",
+            "start": 14.82,
+            "end": 15.18
+          },
+          {
+            "text": "y",
+            "start": 15.18,
+            "end": 15.6
+          },
+          {
+            "text": "verlos",
+            "start": 15.6,
+            "end": 15.86
+          },
+          {
+            "text": "más",
+            "start": 15.86,
+            "end": 16.1
+          },
+          {
+            "text": "tranquilos.",
+            "start": 16.1,
+            "end": 16.34
+          }
+        ],
+        "translations": {
+          "en": "wants us to stay here at the hotel and watch more quietly.",
+          "cs": "chce, abychom zůstali tady v hotelu a sledovali to v klidu.",
+          "de": "will, dass wir hier im Hotel bleiben und es ruhiger anschauen.",
+          "fr": "préfère qu'on reste à l'hôtel et qu'on les regarde plus tranquilles."
+        }
+      }
+    ],
+    "dictionary": {
+      "hola": {
+        "lemma": "hola",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "hey",
+          "cs": "ahoj",
+          "de": "hallo",
+          "fr": "salut"
+        }
+      },
+      "mis": {
+        "lemma": "mi",
+        "pos": "pron",
+        "note": "plural form",
+        "glosses": {
+          "en": "my",
+          "cs": "moji",
+          "de": "meine",
+          "fr": "mes"
+        }
+      },
+      "perris": {
+        "lemma": "perri",
+        "pos": "noun",
+        "note": "informal term",
+        "glosses": {
+          "en": "dogs",
+          "cs": "psi",
+          "de": "Hunde",
+          "fr": "chiens"
+        }
+      },
+      "cómo": {
+        "lemma": "cómo",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "how",
+          "cs": "jak",
+          "de": "wie",
+          "fr": "comment"
+        }
+      },
+      "están": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "bueno": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "starting a sentence",
+        "glosses": {
+          "en": "so",
+          "cs": "takže",
+          "de": "also",
+          "fr": "alors"
+        }
+      },
+      "sábado": {
+        "lemma": "sábado",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "Saturday",
+          "cs": "sobota",
+          "de": "Samstag",
+          "fr": "samedi"
+        }
+      },
+      "11": {
+        "lemma": "11",
+        "pos": "other",
+        "note": "numeric date",
+        "glosses": {
+          "en": "11",
+          "cs": "11",
+          "de": "11",
+          "fr": "11"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": "common preposition",
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "julio": {
+        "lemma": "julio",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "July",
+          "cs": "červenec",
+          "de": "Juli",
+          "fr": "juillet"
+        }
+      },
+      "yo": {
+        "lemma": "yo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "I",
+          "cs": "já",
+          "de": "ich",
+          "fr": "je"
+        }
+      },
+      "me": {
+        "lemma": "me",
+        "pos": "pron",
+        "note": "reflexive usage",
+        "glosses": {
+          "en": "me",
+          "cs": "mě",
+          "de": "mich",
+          "fr": "me"
+        }
+      },
+      "vine": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "came",
+          "cs": "přišel",
+          "de": "kam",
+          "fr": "suis venu"
+        }
+      },
+      "con": {
+        "lemma": "con",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "with",
+          "cs": "s",
+          "de": "mit",
+          "fr": "avec"
+        }
+      },
+      "un": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "indefinite article",
+        "glosses": {
+          "en": "a",
+          "cs": "jeden",
+          "de": "ein",
+          "fr": "un"
+        }
+      },
+      "amigo": {
+        "lemma": "amigo",
+        "pos": "noun",
+        "note": "masculine form",
+        "glosses": {
+          "en": "buddy",
+          "cs": "kamarád",
+          "de": "Kumpel",
+          "fr": "copain"
+        }
+      },
+      "vacaciones": {
+        "lemma": "vacación",
+        "pos": "noun",
+        "note": "plural usage",
+        "glosses": {
+          "en": "vacation",
+          "cs": "dovolená",
+          "de": "Urlaub",
+          "fr": "vacances"
+        }
+      },
+      "a": {
+        "lemma": "a",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "do",
+          "de": "nach",
+          "fr": "à"
+        }
+      },
+      "brasil": {
+        "lemma": "Brasil",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "Brazil",
+          "cs": "Brazílie",
+          "de": "Brasilien",
+          "fr": "Brésil"
+        }
+      },
+      "y": {
+        "lemma": "y",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "and",
+          "cs": "a",
+          "de": "und",
+          "fr": "et"
+        }
+      },
+      "qué": {
+        "lemma": "qué",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "what",
+          "cs": "co",
+          "de": "was",
+          "fr": "quoi"
+        }
+      },
+      "pasó": {
+        "lemma": "pasar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "happened",
+          "cs": "stalo",
+          "de": "passierte",
+          "fr": "est arrivé"
+        }
+      },
+      "hijo": {
+        "lemma": "hijo",
+        "pos": "noun",
+        "note": "figurative use",
+        "glosses": {
+          "en": "fan",
+          "cs": "fanoušek",
+          "de": "Fan",
+          "fr": "fan"
+        }
+      },
+      "la": {
+        "lemma": "la",
+        "pos": "det",
+        "note": "feminine article",
+        "glosses": {
+          "en": "the",
+          "cs": "ta",
+          "de": "die",
+          "fr": "la"
+        }
+      },
+      "selección": {
+        "lemma": "selección",
+        "pos": "noun",
+        "note": "contextual noun",
+        "glosses": {
+          "en": "soccer",
+          "cs": "fotbal",
+          "de": "Fußball",
+          "fr": "football"
+        }
+      },
+      "estamos": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "we're",
+          "cs": "jsme",
+          "de": "sind",
+          "fr": "sommes"
+        }
+      },
+      "en": {
+        "lemma": "en",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "in",
+          "cs": "v",
+          "de": "in",
+          "fr": "dans"
+        }
+      },
+      "una": {
+        "lemma": "una",
+        "pos": "det",
+        "note": "feminine form",
+        "glosses": {
+          "en": "a",
+          "cs": "jedna",
+          "de": "eine",
+          "fr": "une"
+        }
+      },
+      "disuntiva": {
+        "lemma": "disyuntiva",
+        "pos": "noun",
+        "note": "spelling variation",
+        "glosses": {
+          "en": "dilemma",
+          "cs": "dilema",
+          "de": "Dilemma",
+          "fr": "dilemme"
+        }
+      },
+      "que": {
+        "lemma": "que",
+        "pos": "conj",
+        "note": "starts dependent clause",
+        "glosses": {
+          "en": "where",
+          "cs": "kde",
+          "de": "wo",
+          "fr": "où"
+        }
+      },
+      "quiero": {
+        "lemma": "querer",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "wanna",
+          "cs": "chci",
+          "de": "will",
+          "fr": "veux"
+        }
+      },
+      "irlo": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": "combined pronoun usage",
+        "glosses": {
+          "en": "go",
+          "cs": "jít",
+          "de": "gehen",
+          "fr": "aller"
+        }
+      },
+      "ver": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "watch",
+          "cs": "sledovat",
+          "de": "sehen",
+          "fr": "regarder"
+        }
+      },
+      "bar": {
+        "lemma": "bar",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "bar",
+          "cs": "bar",
+          "de": "Bar",
+          "fr": "bar"
+        }
+      },
+      "lleno": {
+        "lemma": "lleno",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "full",
+          "cs": "plný",
+          "de": "voll",
+          "fr": "plein"
+        }
+      },
+      "argentinos": {
+        "lemma": "argentino",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "Argentinians",
+          "cs": "Argentinci",
+          "de": "Argentinier",
+          "fr": "Argentins"
+        }
+      },
+      "él": {
+        "lemma": "él",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "he",
+          "cs": "on",
+          "de": "er",
+          "fr": "il"
+        }
+      },
+      "prefiere": {
+        "lemma": "preferir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "wants",
+          "cs": "chce",
+          "de": "möchte",
+          "fr": "veut"
+        }
+      },
+      "nos": {
+        "lemma": "nos",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "us",
+          "cs": "nás",
+          "de": "uns",
+          "fr": "nous"
+        }
+      },
+      "quedemos": {
+        "lemma": "quedar",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "stay",
+          "cs": "zůstat",
+          "de": "bleiben",
+          "fr": "rester"
+        }
+      },
+      "acá": {
+        "lemma": "acá",
+        "pos": "adv",
+        "note": "Latin American usage",
+        "glosses": {
+          "en": "here",
+          "cs": "tady",
+          "de": "hier",
+          "fr": "ici"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine article",
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "hotel": {
+        "lemma": "hotel",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "hotel",
+          "cs": "hotel",
+          "de": "Hotel",
+          "fr": "hôtel"
+        }
+      },
+      "verlos": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": "with pronoun",
+        "glosses": {
+          "en": "watch",
+          "cs": "sledovat",
+          "de": "sehen",
+          "fr": "voir"
+        }
+      },
+      "más": {
+        "lemma": "más",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "more",
+          "cs": "více",
+          "de": "mehr",
+          "fr": "plus"
+        }
+      },
+      "tranquilos": {
+        "lemma": "tranquilo",
+        "pos": "adj",
+        "note": "plural form",
+        "glosses": {
+          "en": "quietly",
+          "cs": "tiše",
+          "de": "ruhig",
+          "fr": "tranquillement"
+        }
+      }
+    }
+  },
+  {
     "id": "img-2053",
     "src": "/videos/img-2053.mp4",
     "poster": "/posters/img-2053.jpg",
@@ -47,10 +933,10 @@
           }
         ],
         "translations": {
-          "en": "I don't have plans this weekend.",
-          "cs": "Na tento víkend nemám žádné plány.",
+          "en": "I’ve got no plans this weekend.",
+          "cs": "Na tento víkend nemám plány.",
           "de": "Dieses Wochenende habe ich nichts vor.",
-          "fr": "Ce week-end, je n'ai rien de prévu."
+          "fr": "Ce week-end, j'ai rien de prévu."
         }
       },
       {
@@ -104,7 +990,7 @@
           }
         ],
         "translations": {
-          "en": "I wanna play guitar, but I don't know.",
+          "en": "I wanna play guitar, but I don’t know.",
           "cs": "Chci hrát na kytaru, ale nevím.",
           "de": "Ich will Gitarre spielen, aber ich weiß nicht.",
           "fr": "Je veux jouer de la guitare, mais je sais pas."
@@ -146,10 +1032,10 @@
           }
         ],
         "translations": {
-          "en": "I'm a bit tired, so yeah.",
-          "cs": "Jsem trochu unavený, takže jo.",
+          "en": "I'm kinda tired, so yeah.",
+          "cs": "Jsem trochu unavený, tak jo.",
           "de": "Ich bin ein bisschen müde, also ja.",
-          "fr": "Je suis un peu fatigué, donc ouais."
+          "fr": "Je suis un peu crevé, donc ouais."
         }
       }
     ],
@@ -203,10 +1089,10 @@
         "pos": "adv",
         "note": null,
         "glosses": {
-          "en": "not",
+          "en": "no",
           "cs": "ne",
-          "de": "nicht",
-          "fr": "ne"
+          "de": "nein",
+          "fr": "non"
         }
       },
       "tengo": {
@@ -247,7 +1133,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "I am going",
+          "en": "go",
           "cs": "jdu",
           "de": "gehe",
           "fr": "vais"
@@ -259,7 +1145,7 @@
         "note": null,
         "glosses": {
           "en": "to",
-          "cs": "na",
+          "cs": "do",
           "de": "zu",
           "fr": "à"
         }
@@ -276,9 +1162,9 @@
         }
       },
       "la": {
-        "lemma": "el",
+        "lemma": "la",
         "pos": "det",
-        "note": "gendered form",
+        "note": "feminine singular",
         "glosses": {
           "en": "the",
           "cs": "ta",
@@ -324,7 +1210,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "I am",
+          "en": "am",
           "cs": "jsem",
           "de": "bin",
           "fr": "suis"
@@ -333,7 +1219,7 @@
       "un": {
         "lemma": "un",
         "pos": "det",
-        "note": "gendered form",
+        "note": "masculine singular",
         "glosses": {
           "en": "a",
           "cs": "jeden",
@@ -343,19 +1229,19 @@
       },
       "poco": {
         "lemma": "poco",
-        "pos": "adv",
+        "pos": "adj",
         "note": null,
         "glosses": {
-          "en": "a bit",
-          "cs": "trošku",
-          "de": "etwas",
-          "fr": "un peu"
+          "en": "little",
+          "cs": "málo",
+          "de": "wenig",
+          "fr": "peu"
         }
       },
       "cansado": {
         "lemma": "cansado",
         "pos": "adj",
-        "note": "gendered form",
+        "note": null,
         "glosses": {
           "en": "tired",
           "cs": "unavený",
@@ -369,9 +1255,9 @@
         "note": null,
         "glosses": {
           "en": "so",
-          "cs": "tak",
+          "cs": "takže",
           "de": "also",
-          "fr": "alors"
+          "fr": "donc"
         }
       },
       "sí": {
@@ -435,10 +1321,10 @@
           }
         ],
         "translations": {
-          "en": "My girlfriend's from Costa Rica but",
-          "cs": "Moje holka je z Kostariky, ale",
-          "de": "Meine Freundin kommt aus Costa Rica, aber",
-          "fr": "Ma copine est du Costa Rica mais"
+          "en": "My girlfriend's from Costa Rica, but",
+          "cs": "Moje přítelkyně je z Kostariky, ale",
+          "de": "Meine Freundin ist aus Costa Rica, aber",
+          "fr": "Ma copine est du Costa Rica, mais"
         }
       },
       {
@@ -487,10 +1373,10 @@
           }
         ],
         "translations": {
-          "en": "I don't like Costa Rica that much",
-          "cs": "nemám Kostariku moc rád",
-          "de": "ich mag Costa Rica nicht so sehr",
-          "fr": "j'aime pas trop le Costa Rica"
+          "en": "I'm not that into Costa Rica,",
+          "cs": "Mně se Kostarika zas tak nelíbí,",
+          "de": "Ich mag Costa Rica nicht so sehr,",
+          "fr": "Je ne suis pas trop fan du Costa Rica,"
         }
       },
       {
@@ -529,10 +1415,10 @@
           }
         ],
         "translations": {
-          "en": "because it's not as safe as",
-          "cs": "protože není tak bezpečná jako",
-          "de": "weil es nicht so sicher ist wie",
-          "fr": "parce que c'est pas aussi sûr que"
+          "en": "it's not as safe as",
+          "cs": "není tak bezpečná jako",
+          "de": "es ist nicht so sicher wie",
+          "fr": "c'est pas aussi sûr que"
         }
       },
       {
@@ -589,9 +1475,9 @@
         ],
         "translations": {
           "en": "I live in Prague.",
-          "cs": "Bydlím v Praze.",
-          "de": "Ich lebe in Prag.",
-          "fr": "J'habite à Prague."
+          "cs": "Já žiju v Praze.",
+          "de": "Ich wohne in Prag.",
+          "fr": "Je vis à Prague."
         }
       }
     ],
@@ -641,25 +1527,25 @@
         }
       },
       "costa": {
-        "lemma": "costa",
+        "lemma": "Costa",
         "pos": "noun",
-        "note": null,
+        "note": "part of place name",
         "glosses": {
-          "en": "costa",
-          "cs": "costa",
-          "de": "Küste",
-          "fr": "côte"
+          "en": "Costa",
+          "cs": "Costa",
+          "de": "Costa",
+          "fr": "Costa"
         }
       },
       "rica": {
-        "lemma": "rico",
-        "pos": "adj",
-        "note": "gendered form",
+        "lemma": "Rica",
+        "pos": "noun",
+        "note": "part of place name",
         "glosses": {
-          "en": "rich",
-          "cs": "bohatý",
-          "de": "reich",
-          "fr": "riche"
+          "en": "Rica",
+          "cs": "Rica",
+          "de": "Rica",
+          "fr": "Rica"
         }
       },
       "pero": {
@@ -687,7 +1573,7 @@
       "mí": {
         "lemma": "yo",
         "pos": "pron",
-        "note": null,
+        "note": "first person pronoun",
         "glosses": {
           "en": "me",
           "cs": "mě",
@@ -709,22 +1595,22 @@
       "me": {
         "lemma": "me",
         "pos": "pron",
-        "note": "reflexive pronoun",
+        "note": "first person pronoun",
         "glosses": {
           "en": "me",
           "cs": "mě",
-          "de": "mich",
-          "fr": "moi"
+          "de": "mir",
+          "fr": "me"
         }
       },
       "gusta": {
         "lemma": "gustar",
         "pos": "verb",
-        "note": "backwards verb structure",
+        "note": "used like noun in Spanish",
         "glosses": {
           "en": "like",
           "cs": "líbit se",
-          "de": "gefällt",
+          "de": "gefallen",
           "fr": "aime"
         }
       },
@@ -734,9 +1620,9 @@
         "note": null,
         "glosses": {
           "en": "that much",
-          "cs": "tak moc",
+          "cs": "tolik",
           "de": "so sehr",
-          "fr": "tant"
+          "fr": "tellement"
         }
       },
       "porque": {
@@ -753,18 +1639,18 @@
       "tan": {
         "lemma": "tan",
         "pos": "adv",
-        "note": null,
+        "note": "intensifies 'seguro'",
         "glosses": {
-          "en": "as",
+          "en": "so",
           "cs": "tak",
           "de": "so",
-          "fr": "tellement"
+          "fr": "si"
         }
       },
       "seguro": {
         "lemma": "seguro",
         "pos": "adj",
-        "note": "gendered form",
+        "note": null,
         "glosses": {
           "en": "safe",
           "cs": "bezpečný",
@@ -775,7 +1661,7 @@
       "como": {
         "lemma": "como",
         "pos": "conj",
-        "note": null,
+        "note": "comparison",
         "glosses": {
           "en": "as",
           "cs": "jako",
@@ -802,13 +1688,13 @@
           "en": "in",
           "cs": "v",
           "de": "in",
-          "fr": "à"
+          "fr": "en"
         }
       },
       "praga": {
         "lemma": "Praga",
         "pos": "noun",
-        "note": "proper noun",
+        "note": "place name",
         "glosses": {
           "en": "Prague",
           "cs": "Praha",
@@ -819,7 +1705,7 @@
       "yo": {
         "lemma": "yo",
         "pos": "pron",
-        "note": null,
+        "note": "first person pronoun",
         "glosses": {
           "en": "I",
           "cs": "já",
@@ -830,7 +1716,7 @@
       "vivo": {
         "lemma": "vivir",
         "pos": "verb",
-        "note": null,
+        "note": "first person singular",
         "glosses": {
           "en": "live",
           "cs": "žiji",
@@ -893,9 +1779,9 @@
           }
         ],
         "translations": {
-          "en": "Hey, I'm a bit tired now 'cause I work",
-          "cs": "Hej, teď jsem trochu unavený, protože pracuju",
-          "de": "Hey, ich bin jetzt ein bisschen müde, weil ich arbeite",
+          "en": "Hey, I'm a bit tired now because I work",
+          "cs": "Hej, teď jsem trochu unavený, protože pracuji",
+          "de": "Hey, ich bin jetzt etwas müde, weil ich arbeite",
           "fr": "Salut, je suis un peu fatigué maintenant parce que je bosse"
         }
       },
@@ -960,10 +1846,10 @@
           }
         ],
         "translations": {
-          "en": "all day and now I work more because, yeah, I need money.",
-          "cs": "celý den a teď pracuju víc, protože, jo, potřebuji peníze.",
-          "de": "den ganzen Tag und jetzt arbeite ich mehr, weil, ja, ich brauche Geld.",
-          "fr": "toute la journée et maintenant je bosse plus parce que, ouais, j'ai besoin d'argent."
+          "en": "all day and now I work more because, yeah, I make money.",
+          "cs": "celý den a teď pracuji víc, protože, jo, vydělávám peníze.",
+          "de": "den ganzen Tag und jetzt arbeite ich mehr, weil, ja, ich verdiene Geld.",
+          "fr": "toute la journée et maintenant je travaille plus parce que, ouais, je gagne de l'argent."
         }
       }
     ],
@@ -973,7 +1859,7 @@
         "pos": "other",
         "note": null,
         "glosses": {
-          "en": "hello",
+          "en": "hey",
           "cs": "ahoj",
           "de": "hallo",
           "fr": "salut"
@@ -995,16 +1881,16 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "I am",
+          "en": "am",
           "cs": "jsem",
-          "de": "ich bin",
-          "fr": "je suis"
+          "de": "bin",
+          "fr": "suis"
         }
       },
       "un": {
-        "lemma": "uno",
+        "lemma": "un",
         "pos": "det",
-        "note": null,
+        "note": "masculine form",
         "glosses": {
           "en": "a",
           "cs": "jeden",
@@ -1018,7 +1904,7 @@
         "note": null,
         "glosses": {
           "en": "bit",
-          "cs": "málo",
+          "cs": "trochu",
           "de": "bisschen",
           "fr": "peu"
         }
@@ -1026,7 +1912,7 @@
       "cansado": {
         "lemma": "cansado",
         "pos": "adj",
-        "note": "gendered form",
+        "note": "masculine form",
         "glosses": {
           "en": "tired",
           "cs": "unavený",
@@ -1048,7 +1934,7 @@
       "trabajo": {
         "lemma": "trabajar",
         "pos": "verb",
-        "note": "irregular verb",
+        "note": "first-person singular",
         "glosses": {
           "en": "work",
           "cs": "pracuji",
@@ -1059,11 +1945,11 @@
       "todo": {
         "lemma": "todo",
         "pos": "adj",
-        "note": "gendered form",
+        "note": null,
         "glosses": {
           "en": "all",
           "cs": "všechno",
-          "de": "alle",
+          "de": "alles",
           "fr": "tout"
         }
       },
@@ -1081,7 +1967,7 @@
       "día": {
         "lemma": "día",
         "pos": "noun",
-        "note": "masculine in Spanish",
+        "note": null,
         "glosses": {
           "en": "day",
           "cs": "den",
@@ -1113,10 +1999,10 @@
       },
       "sí": {
         "lemma": "sí",
-        "pos": "other",
+        "pos": "adv",
         "note": null,
         "glosses": {
-          "en": "yes",
+          "en": "yeah",
           "cs": "ano",
           "de": "ja",
           "fr": "oui"
@@ -1125,12 +2011,1604 @@
       "plata": {
         "lemma": "plata",
         "pos": "noun",
-        "note": "informal for money",
+        "note": null,
         "glosses": {
           "en": "money",
           "cs": "peníze",
           "de": "Geld",
           "fr": "argent"
+        }
+      }
+    }
+  },
+  {
+    "id": "img-2112",
+    "src": "/videos/img-2112.mp4",
+    "poster": "/posters/img-2112.jpg",
+    "creator": "Loro",
+    "level": "A2",
+    "cues": [
+      {
+        "start": 0.66,
+        "end": 2.66,
+        "words": [
+          {
+            "text": "¿Vieras",
+            "start": 0.66,
+            "end": 1.84
+          },
+          {
+            "text": "qué",
+            "start": 1.84,
+            "end": 2.2
+          },
+          {
+            "text": "hago?",
+            "start": 2.2,
+            "end": 2.66
+          }
+        ],
+        "translations": {
+          "en": "Guess what I'm doing?",
+          "cs": "Hádej, co dělám?",
+          "de": "Rate mal, was ich mache?",
+          "fr": "Devine ce que je fais?"
+        }
+      },
+      {
+        "start": 4.8,
+        "end": 8.6,
+        "words": [
+          {
+            "text": "Trabajo.",
+            "start": 4.8,
+            "end": 5.72
+          },
+          {
+            "text": "Trabajo",
+            "start": 5.88,
+            "end": 6.38
+          },
+          {
+            "text": "otra",
+            "start": 6.38,
+            "end": 6.7
+          },
+          {
+            "text": "vez",
+            "start": 6.7,
+            "end": 6.98
+          },
+          {
+            "text": "porque",
+            "start": 6.98,
+            "end": 7.36
+          },
+          {
+            "text": "trabajo",
+            "start": 7.36,
+            "end": 8.6
+          }
+        ],
+        "translations": {
+          "en": "Working. Working again 'cause work",
+          "cs": "Pracuju. Zase makám, protože práce",
+          "de": "Am arbeiten. Wieder am arbeiten, weil Arbeit",
+          "fr": "Je bosse. Je bosse encore parce que le boulot"
+        }
+      },
+      {
+        "start": 8.6,
+        "end": 10.94,
+        "words": [
+          {
+            "text": "es",
+            "start": 8.6,
+            "end": 10.42
+          },
+          {
+            "text": "el",
+            "start": 10.42,
+            "end": 10.6
+          },
+          {
+            "text": "mejor.",
+            "start": 10.6,
+            "end": 10.94
+          }
+        ],
+        "translations": {
+          "en": "is the best.",
+          "cs": "je nejlepší.",
+          "de": "ist das Beste.",
+          "fr": "c'est le meilleur."
+        }
+      }
+    ],
+    "dictionary": {
+      "vieras": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "see",
+          "cs": "vidíš",
+          "de": "siehst",
+          "fr": "vois"
+        }
+      },
+      "qué": {
+        "lemma": "qué",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "what",
+          "cs": "co",
+          "de": "was",
+          "fr": "quoi"
+        }
+      },
+      "hago": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "I am doing",
+          "cs": "dělám",
+          "de": "mache",
+          "fr": "fais"
+        }
+      },
+      "trabajo": {
+        "lemma": "trabajo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "work",
+          "cs": "práce",
+          "de": "Arbeit",
+          "fr": "travail"
+        }
+      },
+      "otra": {
+        "lemma": "otro",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "again",
+          "cs": "znovu",
+          "de": "wieder",
+          "fr": "encore"
+        }
+      },
+      "vez": {
+        "lemma": "vez",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "time",
+          "cs": "čas",
+          "de": "Mal",
+          "fr": "fois"
+        }
+      },
+      "porque": {
+        "lemma": "porque",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "because",
+          "cs": "protože",
+          "de": "weil",
+          "fr": "parce que"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": null,
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "mejor": {
+        "lemma": "mejor",
+        "pos": "adj",
+        "note": "comparative form",
+        "glosses": {
+          "en": "best",
+          "cs": "nejlepší",
+          "de": "beste",
+          "fr": "meilleur"
+        }
+      }
+    }
+  },
+  {
+    "id": "img-2113",
+    "src": "/videos/img-2113.mp4",
+    "poster": "/posters/img-2113.jpg",
+    "creator": "Loro",
+    "level": "A2",
+    "cues": [
+      {
+        "start": 0.69,
+        "end": 2.79,
+        "words": [
+          {
+            "text": "Esto",
+            "start": 0.69,
+            "end": 1.47
+          },
+          {
+            "text": "es",
+            "start": 1.47,
+            "end": 1.77
+          },
+          {
+            "text": "mi",
+            "start": 1.77,
+            "end": 1.93
+          },
+          {
+            "text": "gato,",
+            "start": 1.93,
+            "end": 2.79
+          }
+        ],
+        "translations": {
+          "en": "This is my cat,",
+          "cs": "To je můj kocour,",
+          "de": "Das ist meine Katze,",
+          "fr": "C'est mon chat,"
+        }
+      },
+      {
+        "start": 3.31,
+        "end": 5.07,
+        "words": [
+          {
+            "text": "él",
+            "start": 3.31,
+            "end": 3.49
+          },
+          {
+            "text": "se",
+            "start": 3.49,
+            "end": 3.77
+          },
+          {
+            "text": "llama",
+            "start": 3.77,
+            "end": 4.23
+          },
+          {
+            "text": "Rio.",
+            "start": 4.23,
+            "end": 5.07
+          }
+        ],
+        "translations": {
+          "en": "he's named Rio.",
+          "cs": "jmenuje se Rio.",
+          "de": "er heißt Rio.",
+          "fr": "il s'appelle Rio."
+        }
+      },
+      {
+        "start": 6.25,
+        "end": 9.25,
+        "words": [
+          {
+            "text": "Yo",
+            "start": 6.25,
+            "end": 6.43
+          },
+          {
+            "text": "amo",
+            "start": 6.43,
+            "end": 6.67
+          },
+          {
+            "text": "Rio",
+            "start": 6.67,
+            "end": 6.95
+          },
+          {
+            "text": "muchísimo",
+            "start": 6.95,
+            "end": 7.67
+          },
+          {
+            "text": "porque",
+            "start": 7.67,
+            "end": 9.25
+          }
+        ],
+        "translations": {
+          "en": "I love Rio a lot because",
+          "cs": "Rio mám moc rád, protože",
+          "de": "Ich liebe Rio sehr, weil",
+          "fr": "J'adore Rio vraiment beaucoup parce que"
+        }
+      },
+      {
+        "start": 9.25,
+        "end": 13.21,
+        "words": [
+          {
+            "text": "es",
+            "start": 9.25,
+            "end": 11.25
+          },
+          {
+            "text": "muy",
+            "start": 11.25,
+            "end": 12.01
+          },
+          {
+            "text": "muy",
+            "start": 12.01,
+            "end": 13.21
+          }
+        ],
+        "translations": {
+          "en": "he's very very",
+          "cs": "je hrozně hrozně",
+          "de": "er ist ganz ganz",
+          "fr": "il est très très"
+        }
+      },
+      {
+        "start": 15.19,
+        "end": 16.21,
+        "words": [
+          {
+            "text": "muy",
+            "start": 15.19,
+            "end": 15.49
+          },
+          {
+            "text": "muy",
+            "start": 15.49,
+            "end": 15.73
+          },
+          {
+            "text": "amable.",
+            "start": 15.73,
+            "end": 16.21
+          }
+        ],
+        "translations": {
+          "en": "very very friendly.",
+          "cs": "moc moc přátelský.",
+          "de": "sehr sehr freundlich.",
+          "fr": "très très gentil."
+        }
+      }
+    ],
+    "dictionary": {
+      "esto": {
+        "lemma": "esto",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "this",
+          "cs": "toto",
+          "de": "dies",
+          "fr": "ceci"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "mi": {
+        "lemma": "mi",
+        "pos": "det",
+        "note": null,
+        "glosses": {
+          "en": "my",
+          "cs": "můj",
+          "de": "mein",
+          "fr": "mon"
+        }
+      },
+      "gato": {
+        "lemma": "gato",
+        "pos": "noun",
+        "note": "masculine form",
+        "glosses": {
+          "en": "cat",
+          "cs": "kočka",
+          "de": "Katze",
+          "fr": "chat"
+        }
+      },
+      "él": {
+        "lemma": "él",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "he",
+          "cs": "on",
+          "de": "er",
+          "fr": "il"
+        }
+      },
+      "se": {
+        "lemma": "se",
+        "pos": "pron",
+        "note": "reflexive pronoun",
+        "glosses": {
+          "en": "himself",
+          "cs": "se",
+          "de": "sich",
+          "fr": "se"
+        }
+      },
+      "llama": {
+        "lemma": "llamar",
+        "pos": "verb",
+        "note": "reflexive use",
+        "glosses": {
+          "en": "named",
+          "cs": "jmenuje",
+          "de": "heißt",
+          "fr": "s'appelle"
+        }
+      },
+      "rio": {
+        "lemma": "rio",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Rio",
+          "cs": "Rio",
+          "de": "Rio",
+          "fr": "Rio"
+        }
+      },
+      "yo": {
+        "lemma": "yo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "I",
+          "cs": "já",
+          "de": "ich",
+          "fr": "je"
+        }
+      },
+      "amo": {
+        "lemma": "amar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "love",
+          "cs": "miluji",
+          "de": "liebe",
+          "fr": "j'aime"
+        }
+      },
+      "muchísimo": {
+        "lemma": "muchísimo",
+        "pos": "adv",
+        "note": "intensifier",
+        "glosses": {
+          "en": "very much",
+          "cs": "moc",
+          "de": "sehr",
+          "fr": "beaucoup"
+        }
+      },
+      "porque": {
+        "lemma": "porque",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "because",
+          "cs": "protože",
+          "de": "weil",
+          "fr": "parce que"
+        }
+      },
+      "muy": {
+        "lemma": "muy",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "very",
+          "cs": "velmi",
+          "de": "sehr",
+          "fr": "très"
+        }
+      },
+      "amable": {
+        "lemma": "amable",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "friendly",
+          "cs": "přátelský",
+          "de": "freundlich",
+          "fr": "aimable"
+        }
+      }
+    }
+  },
+  {
+    "id": "3a4cee2d1f594bff83c6ca6081467d99",
+    "src": "/videos/3a4cee2d1f594bff83c6ca6081467d99.mp4",
+    "poster": "/posters/3a4cee2d1f594bff83c6ca6081467d99.jpg",
+    "creator": "Loro",
+    "level": "A2",
+    "cues": [
+      {
+        "start": 0.53,
+        "end": 2.57,
+        "words": [
+          {
+            "text": "Hola",
+            "start": 0.53,
+            "end": 1.15
+          },
+          {
+            "text": "Liz.",
+            "start": 1.15,
+            "end": 1.77
+          },
+          {
+            "text": "Bueno,",
+            "start": 2.21,
+            "end": 2.57
+          }
+        ],
+        "translations": {
+          "en": "Hey Liz. So,",
+          "cs": "Ahoj Liz. No,",
+          "de": "Hey Liz. Also,",
+          "fr": "Salut Liz. Alors,"
+        }
+      },
+      {
+        "start": 2.77,
+        "end": 6.05,
+        "words": [
+          {
+            "text": "me",
+            "start": 2.77,
+            "end": 2.83
+          },
+          {
+            "text": "estoy",
+            "start": 2.83,
+            "end": 2.97
+          },
+          {
+            "text": "haciendo",
+            "start": 2.97,
+            "end": 3.29
+          },
+          {
+            "text": "una",
+            "start": 3.29,
+            "end": 3.53
+          },
+          {
+            "text": "limpieza",
+            "start": 3.53,
+            "end": 3.99
+          },
+          {
+            "text": "de",
+            "start": 3.99,
+            "end": 4.15
+          },
+          {
+            "text": "huevo",
+            "start": 4.15,
+            "end": 4.55
+          },
+          {
+            "text": "mientras",
+            "start": 4.55,
+            "end": 5.09
+          },
+          {
+            "text": "la",
+            "start": 5.09,
+            "end": 5.43
+          },
+          {
+            "text": "termino.",
+            "start": 5.43,
+            "end": 6.05
+          }
+        ],
+        "translations": {
+          "en": "I'm doing an egg cleanse while I finish up.",
+          "cs": "Dělám si vaječnou očistu, zatímco to dodělávám.",
+          "de": "Ich mache gerade eine Eierreinigung, während ich fertig werde.",
+          "fr": "Je fais une purification à l'œuf pendant que je termine."
+        }
+      },
+      {
+        "start": 6.17,
+        "end": 9.45,
+        "words": [
+          {
+            "text": "Quería",
+            "start": 6.17,
+            "end": 6.45
+          },
+          {
+            "text": "comentarles",
+            "start": 6.45,
+            "end": 7.25
+          },
+          {
+            "text": "ahora",
+            "start": 7.25,
+            "end": 7.43
+          },
+          {
+            "text": "que",
+            "start": 7.43,
+            "end": 7.61
+          },
+          {
+            "text": "me",
+            "start": 7.61,
+            "end": 7.75
+          },
+          {
+            "text": "siento",
+            "start": 7.75,
+            "end": 7.99
+          },
+          {
+            "text": "mejor",
+            "start": 7.99,
+            "end": 8.53
+          },
+          {
+            "text": "lo",
+            "start": 8.53,
+            "end": 9.33
+          },
+          {
+            "text": "que",
+            "start": 9.33,
+            "end": 9.45
+          }
+        ],
+        "translations": {
+          "en": "I wanted to tell you now that I feel better about",
+          "cs": "Chtěla jsem vám říct, teď když se cítím lépe, co",
+          "de": "Ich wollte euch erzählen, jetzt wo es mir besser geht,",
+          "fr": "Je voulais vous dire maintenant que je me sens mieux ce que"
+        }
+      },
+      {
+        "start": 9.45,
+        "end": 10.89,
+        "words": [
+          {
+            "text": "me",
+            "start": 9.45,
+            "end": 9.59
+          },
+          {
+            "text": "estuvo",
+            "start": 9.59,
+            "end": 9.77
+          },
+          {
+            "text": "pasando",
+            "start": 9.77,
+            "end": 10.05
+          },
+          {
+            "text": "hoy",
+            "start": 10.05,
+            "end": 10.29
+          },
+          {
+            "text": "día.",
+            "start": 10.29,
+            "end": 10.89
+          }
+        ],
+        "translations": {
+          "en": "what happened to me today.",
+          "cs": "se mi dneska stalo.",
+          "de": "was mir heute passiert ist.",
+          "fr": "ce qui m'est arrivé aujourd'hui."
+        }
+      },
+      {
+        "start": 11.11,
+        "end": 12.99,
+        "words": [
+          {
+            "text": "Hoy",
+            "start": 11.11,
+            "end": 11.37
+          },
+          {
+            "text": "día",
+            "start": 11.37,
+            "end": 11.77
+          },
+          {
+            "text": "es...",
+            "start": 11.77,
+            "end": 12.99
+          }
+        ],
+        "translations": {
+          "en": "Today is...",
+          "cs": "Dnes je...",
+          "de": "Heute ist...",
+          "fr": "Aujourd'hui c'est..."
+        }
+      },
+      {
+        "start": 12.99,
+        "end": 15.73,
+        "words": [
+          {
+            "text": "bueno,",
+            "start": 12.99,
+            "end": 13.43
+          },
+          {
+            "text": "ayer,",
+            "start": 13.77,
+            "end": 14.15
+          },
+          {
+            "text": "porque",
+            "start": 14.47,
+            "end": 14.77
+          },
+          {
+            "text": "hoy",
+            "start": 14.77,
+            "end": 14.93
+          },
+          {
+            "text": "día",
+            "start": 14.93,
+            "end": 15.13
+          },
+          {
+            "text": "es",
+            "start": 15.13,
+            "end": 15.31
+          },
+          {
+            "text": "domingo.",
+            "start": 15.31,
+            "end": 15.73
+          }
+        ],
+        "translations": {
+          "en": "well, yesterday, because today's Sunday.",
+          "cs": "no, včera, protože dnes je neděle.",
+          "de": "naja, gestern, weil heute Sonntag ist.",
+          "fr": "enfin, hier, parce qu'aujourd'hui c'est dimanche."
+        }
+      },
+      {
+        "start": 16.93,
+        "end": 21.91,
+        "words": [
+          {
+            "text": "Ayer,",
+            "start": 16.93,
+            "end": 17.13
+          },
+          {
+            "text": "sábado,",
+            "start": 17.33,
+            "end": 17.95
+          },
+          {
+            "text": "16,",
+            "start": 18.01,
+            "end": 18.51
+          },
+          {
+            "text": "me",
+            "start": 18.83,
+            "end": 18.99
+          },
+          {
+            "text": "pasaron",
+            "start": 18.99,
+            "end": 19.39
+          },
+          {
+            "text": "varias",
+            "start": 19.39,
+            "end": 19.65
+          },
+          {
+            "text": "cosas.",
+            "start": 19.65,
+            "end": 20.15
+          },
+          {
+            "text": "Primero...",
+            "start": 21.65,
+            "end": 21.91
+          }
+        ],
+        "translations": {
+          "en": "Yesterday, Saturday the 16th, a few things happened to me. First...",
+          "cs": "Včera, v sobotu 16., se mi stalo několik věcí. Za prvé...",
+          "de": "Gestern, Samstag der 16., sind ein paar Sachen passiert. Erstens...",
+          "fr": "Hier, samedi 16, plusieurs choses me sont arrivées. D'abord..."
+        }
+      }
+    ],
+    "dictionary": {
+      "hola": {
+        "lemma": "hola",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "hello",
+          "cs": "ahoj",
+          "de": "hallo",
+          "fr": "salut"
+        }
+      },
+      "liz": {
+        "lemma": "liz",
+        "pos": "noun",
+        "note": "proper name",
+        "glosses": {
+          "en": "Liz",
+          "cs": "Liz",
+          "de": "Liz",
+          "fr": "Liz"
+        }
+      },
+      "bueno": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "well",
+          "cs": "dobře",
+          "de": "gut",
+          "fr": "bon"
+        }
+      },
+      "me": {
+        "lemma": "yo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "myself",
+          "cs": "se",
+          "de": "mich",
+          "fr": "me"
+        }
+      },
+      "estoy": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "am",
+          "cs": "jsem",
+          "de": "bin",
+          "fr": "suis"
+        }
+      },
+      "haciendo": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "irregular participle",
+        "glosses": {
+          "en": "doing",
+          "cs": "dělám",
+          "de": "mache",
+          "fr": "faisant"
+        }
+      },
+      "una": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "feminine",
+        "glosses": {
+          "en": "an",
+          "cs": "jedna",
+          "de": "eine",
+          "fr": "une"
+        }
+      },
+      "limpieza": {
+        "lemma": "limpieza",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "cleanse",
+          "cs": "očista",
+          "de": "Reinigung",
+          "fr": "nettoyage"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "huevo": {
+        "lemma": "huevo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "egg",
+          "cs": "vejce",
+          "de": "Ei",
+          "fr": "œuf"
+        }
+      },
+      "mientras": {
+        "lemma": "mientras",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "while",
+          "cs": "zatímco",
+          "de": "während",
+          "fr": "tandis que"
+        }
+      },
+      "la": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "feminine",
+        "glosses": {
+          "en": "it",
+          "cs": "to",
+          "de": "es",
+          "fr": "la"
+        }
+      },
+      "termino": {
+        "lemma": "terminar",
+        "pos": "verb",
+        "note": "1st person singular",
+        "glosses": {
+          "en": "finish",
+          "cs": "končím",
+          "de": "beende",
+          "fr": "termine"
+        }
+      },
+      "quería": {
+        "lemma": "querer",
+        "pos": "verb",
+        "note": "imperfect tense",
+        "glosses": {
+          "en": "wanted",
+          "cs": "chtěl",
+          "de": "wollte",
+          "fr": "voulais"
+        }
+      },
+      "comentarles": {
+        "lemma": "comentar",
+        "pos": "verb",
+        "note": "to them",
+        "glosses": {
+          "en": "tell",
+          "cs": "říct",
+          "de": "erzählen",
+          "fr": "dire"
+        }
+      },
+      "ahora": {
+        "lemma": "ahora",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "now",
+          "cs": "nyní",
+          "de": "jetzt",
+          "fr": "maintenant"
+        }
+      },
+      "que": {
+        "lemma": "que",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "že",
+          "de": "dass",
+          "fr": "que"
+        }
+      },
+      "siento": {
+        "lemma": "sentir",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "feel",
+          "cs": "cítím",
+          "de": "fühle",
+          "fr": "sens"
+        }
+      },
+      "mejor": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "comparative",
+        "glosses": {
+          "en": "better",
+          "cs": "lépe",
+          "de": "besser",
+          "fr": "mieux"
+        }
+      },
+      "lo": {
+        "lemma": "el",
+        "pos": "pron",
+        "note": "neuter form",
+        "glosses": {
+          "en": "it",
+          "cs": "to",
+          "de": "es",
+          "fr": "le"
+        }
+      },
+      "estuvo": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "3rd person singular",
+        "glosses": {
+          "en": "happened",
+          "cs": "bylo",
+          "de": "war",
+          "fr": "était"
+        }
+      },
+      "pasando": {
+        "lemma": "pasar",
+        "pos": "verb",
+        "note": "gerund",
+        "glosses": {
+          "en": "happening",
+          "cs": "děje",
+          "de": "passiert",
+          "fr": "passe"
+        }
+      },
+      "hoy": {
+        "lemma": "hoy",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "today",
+          "cs": "dnes",
+          "de": "heute",
+          "fr": "aujourd'hui"
+        }
+      },
+      "día": {
+        "lemma": "día",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "day",
+          "cs": "den",
+          "de": "Tag",
+          "fr": "jour"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "ayer": {
+        "lemma": "ayer",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "yesterday",
+          "cs": "včera",
+          "de": "gestern",
+          "fr": "hier"
+        }
+      },
+      "porque": {
+        "lemma": "porque",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "because",
+          "cs": "protože",
+          "de": "weil",
+          "fr": "parce que"
+        }
+      },
+      "domingo": {
+        "lemma": "domingo",
+        "pos": "noun",
+        "note": "day of week",
+        "glosses": {
+          "en": "Sunday",
+          "cs": "neděle",
+          "de": "Sonntag",
+          "fr": "dimanche"
+        }
+      },
+      "sábado": {
+        "lemma": "sábado",
+        "pos": "noun",
+        "note": "day of week",
+        "glosses": {
+          "en": "Saturday",
+          "cs": "sobota",
+          "de": "Samstag",
+          "fr": "samedi"
+        }
+      },
+      "16": {
+        "lemma": "16",
+        "pos": "other",
+        "note": "date number",
+        "glosses": {
+          "en": "16",
+          "cs": "16",
+          "de": "16",
+          "fr": "16"
+        }
+      },
+      "pasaron": {
+        "lemma": "pasar",
+        "pos": "verb",
+        "note": "3rd person plural",
+        "glosses": {
+          "en": "happened",
+          "cs": "stalo se",
+          "de": "passierten",
+          "fr": "sont passées"
+        }
+      },
+      "varias": {
+        "lemma": "vario",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "several",
+          "cs": "několik",
+          "de": "verschiedene",
+          "fr": "plusieurs"
+        }
+      },
+      "cosas": {
+        "lemma": "cosa",
+        "pos": "noun",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "things",
+          "cs": "věci",
+          "de": "Dinge",
+          "fr": "choses"
+        }
+      },
+      "primero": {
+        "lemma": "primero",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "first",
+          "cs": "nejprve",
+          "de": "zuerst",
+          "fr": "d'abord"
+        }
+      }
+    }
+  },
+  {
+    "id": "94d510ae521b4b57981f4e12b74622a2-2-copy",
+    "src": "/videos/94d510ae521b4b57981f4e12b74622a2-2-copy.mp4",
+    "poster": "/posters/94d510ae521b4b57981f4e12b74622a2-2-copy.jpg",
+    "creator": "Loro",
+    "level": "A2",
+    "cues": [
+      {
+        "start": 0.0,
+        "end": 3.0,
+        "words": [
+          {
+            "text": "No",
+            "start": 0.0,
+            "end": 0.0
+          },
+          {
+            "text": "pasa",
+            "start": 0.0,
+            "end": 0.18
+          },
+          {
+            "text": "nada,",
+            "start": 0.18,
+            "end": 0.56
+          },
+          {
+            "text": "porque",
+            "start": 0.94,
+            "end": 1.1
+          },
+          {
+            "text": "no",
+            "start": 1.1,
+            "end": 1.72
+          },
+          {
+            "text": "tiene",
+            "start": 1.72,
+            "end": 1.98
+          },
+          {
+            "text": "eliminación",
+            "start": 1.98,
+            "end": 2.52
+          },
+          {
+            "text": "directa,",
+            "start": 2.52,
+            "end": 3.0
+          }
+        ],
+        "translations": {
+          "en": "It's fine because there's no knockout stage,",
+          "cs": "Je to v pohodě, protože není žádný přímý vyřazovák,",
+          "de": "Kein Problem, weil es keine K.-o.-Runde gibt,",
+          "fr": "C'est pas grave, y a pas d'élimination directe,"
+        }
+      },
+      {
+        "start": 4.1,
+        "end": 6.54,
+        "words": [
+          {
+            "text": "pero",
+            "start": 4.1,
+            "end": 4.12
+          },
+          {
+            "text": "un",
+            "start": 4.12,
+            "end": 4.34
+          },
+          {
+            "text": "partido",
+            "start": 4.34,
+            "end": 4.66
+          },
+          {
+            "text": "definitorio",
+            "start": 4.66,
+            "end": 5.4
+          },
+          {
+            "text": "como",
+            "start": 5.4,
+            "end": 5.58
+          },
+          {
+            "text": "el",
+            "start": 5.58,
+            "end": 5.74
+          },
+          {
+            "text": "de",
+            "start": 5.74,
+            "end": 5.86
+          },
+          {
+            "text": "hoy",
+            "start": 5.86,
+            "end": 6.06
+          },
+          {
+            "text": "es",
+            "start": 6.06,
+            "end": 6.54
+          }
+        ],
+        "translations": {
+          "en": "but a decisive match like today is",
+          "cs": "ale rozhodující zápas jako dnes je",
+          "de": "aber ein entscheidendes Spiel wie heute ist",
+          "fr": "mais un match décisif comme aujourd'hui, c'est"
+        }
+      },
+      {
+        "start": 6.54,
+        "end": 8.14,
+        "words": [
+          {
+            "text": "mucho,",
+            "start": 6.54,
+            "end": 6.98
+          },
+          {
+            "text": "verlo,",
+            "start": 7.22,
+            "end": 7.72
+          },
+          {
+            "text": "no",
+            "start": 7.82,
+            "end": 7.96
+          },
+          {
+            "text": "sé.",
+            "start": 7.96,
+            "end": 8.14
+          }
+        ],
+        "translations": {
+          "en": "a lot, watching it, I don't know.",
+          "cs": "hodně, to sledovat, nevím.",
+          "de": "viel, zuzuschauen, ich weiß nicht.",
+          "fr": "énorme, le voir, je sais pas."
+        }
+      }
+    ],
+    "dictionary": {
+      "no": {
+        "lemma": "no",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "not",
+          "cs": "ne",
+          "de": "nicht",
+          "fr": "non"
+        }
+      },
+      "pasa": {
+        "lemma": "pasar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "happens",
+          "cs": "stane se",
+          "de": "passiert",
+          "fr": "se passe"
+        }
+      },
+      "nada": {
+        "lemma": "nada",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "nothing",
+          "cs": "nic",
+          "de": "nichts",
+          "fr": "rien"
+        }
+      },
+      "porque": {
+        "lemma": "porque",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "because",
+          "cs": "protože",
+          "de": "weil",
+          "fr": "parce que"
+        }
+      },
+      "tiene": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "has",
+          "cs": "má",
+          "de": "hat",
+          "fr": "a"
+        }
+      },
+      "eliminación": {
+        "lemma": "eliminación",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "elimination",
+          "cs": "vyřazení",
+          "de": "Ausscheidung",
+          "fr": "élimination"
+        }
+      },
+      "directa": {
+        "lemma": "directo",
+        "pos": "adj",
+        "note": "gendered form",
+        "glosses": {
+          "en": "direct",
+          "cs": "přímé",
+          "de": "direkt",
+          "fr": "directe"
+        }
+      },
+      "pero": {
+        "lemma": "pero",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "but",
+          "cs": "ale",
+          "de": "aber",
+          "fr": "mais"
+        }
+      },
+      "un": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "a",
+          "cs": "jeden",
+          "de": "ein",
+          "fr": "un"
+        }
+      },
+      "partido": {
+        "lemma": "partido",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "match",
+          "cs": "zápas",
+          "de": "Spiel",
+          "fr": "match"
+        }
+      },
+      "definitorio": {
+        "lemma": "definitorio",
+        "pos": "adj",
+        "note": "gendered form",
+        "glosses": {
+          "en": "decisive",
+          "cs": "rozhodující",
+          "de": "entscheidend",
+          "fr": "décisif"
+        }
+      },
+      "como": {
+        "lemma": "como",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "like",
+          "cs": "jako",
+          "de": "wie",
+          "fr": "comme"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "hoy": {
+        "lemma": "hoy",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "today",
+          "cs": "dnes",
+          "de": "heute",
+          "fr": "aujourd'hui"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "mucho": {
+        "lemma": "mucho",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "a lot",
+          "cs": "hodně",
+          "de": "viel",
+          "fr": "beaucoup"
+        }
+      },
+      "verlo": {
+        "lemma": "verlo",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "watching it",
+          "cs": "vidět to",
+          "de": "sehen",
+          "fr": "le voir"
+        }
+      },
+      "sé": {
+        "lemma": "saber",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "I don't know",
+          "cs": "nevím",
+          "de": "weiß ich nicht",
+          "fr": "je ne sais"
         }
       }
     }

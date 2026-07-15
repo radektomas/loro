@@ -1,77 +1,15 @@
-import type { Level, SavedWord, Video } from '@/types';
-import { normalizeAnswer } from '@/lib/srs';
+import type { SavedWord } from '@/types';
 
 /**
- * Progress metrics derived from saved words and the video library.
- * Pure functions only — persistence lives in lib/storage.
+ * Progress metrics derived from saved words. Pure functions only — persistence
+ * lives in lib/storage.
  *
- * The headline metric is COMPREHENSION: the share of a video's unique words
- * the user knows (state === 'known'). It grows with understanding, not with
- * volume — saving 100 words moves it not at all until they're recalled.
+ * Everything here counts real, honest effort: reviews due, and streaks of days
+ * with a correct recall. There is deliberately no "comprehension" metric —
+ * users only save words they DON'T know, so any score built from saved words
+ * measures the opposite of understanding and punishes fluent users. Progress on
+ * this screen is measured by what the user has LEARNED, which only ever grows.
  */
-
-export type Comprehension = {
-  /** unique words of the video the user knows */
-  known: number;
-  /** unique words in the video */
-  total: number;
-  /** known / total, 0 when the video has no words */
-  ratio: number;
-};
-
-/**
- * Normalised text of every word the user has brought to 'known', across all
- * videos. Knowledge transfers: "playa" learned in one video counts toward
- * comprehension of every video that uses it.
- */
-export function knownWordSet(words: SavedWord[]): Set<string> {
-  const set = new Set<string>();
-  for (const w of words) {
-    if (w.state !== 'known') continue;
-    const key = normalizeAnswer(w.text);
-    if (key) set.add(key);
-  }
-  return set;
-}
-
-/** Unique (normalised) words spoken in a video. */
-export function uniqueVideoWords(video: Video): Set<string> {
-  const set = new Set<string>();
-  for (const cue of video.cues) {
-    for (const word of cue.words) {
-      const key = normalizeAnswer(word.text);
-      if (key) set.add(key);
-    }
-  }
-  return set;
-}
-
-export function videoComprehension(
-  video: Video,
-  known: Set<string>
-): Comprehension {
-  const unique = uniqueVideoWords(video);
-  let hit = 0;
-  for (const word of unique) if (known.has(word)) hit++;
-  return {
-    known: hit,
-    total: unique.size,
-    ratio: unique.size > 0 ? hit / unique.size : 0,
-  };
-}
-
-/** Mean comprehension ratio across videos; null when the list is empty. */
-export function averageComprehension(
-  videos: Video[],
-  known: Set<string>
-): number | null {
-  if (videos.length === 0) return null;
-  const sum = videos.reduce(
-    (acc, video) => acc + videoComprehension(video, known).ratio,
-    0
-  );
-  return sum / videos.length;
-}
 
 // ---------------------------------------------------------------------------
 // Due reviews
@@ -142,52 +80,4 @@ export function computeStreaks(
     cursor--;
   }
   return { current, longest };
-}
-
-// ---------------------------------------------------------------------------
-// Levels — derived from comprehension per CEFR band, not word count.
-
-export const LEVEL_ORDER: Level[] = ['A1', 'A2', 'B1', 'B2'];
-
-/** A band unlocks once the band below averages at least this comprehension. */
-export const UNLOCK_THRESHOLD = 0.8;
-
-export type LevelBand = {
-  level: Level;
-  /** average comprehension across this band's videos; null if none exist */
-  ratio: number | null;
-  unlocked: boolean;
-  current: boolean;
-};
-
-/**
- * A1 starts unlocked; each later band unlocks when the previous one averages
- * >= UNLOCK_THRESHOLD. A band with no videos can't be measured: below the
- * first measured band it passes gating through (it can't block what it can't
- * test), but above measured data it can be unlocked — the working level —
- * without unlocking anything past it. Every unlock is therefore backed by a
- * measured >= 80% band, a claim the app can defend.
- */
-export function levelLadder(videos: Video[], known: Set<string>): LevelBand[] {
-  let unlocked = true;
-  let anyMeasured = false;
-  const bands: LevelBand[] = LEVEL_ORDER.map((level) => {
-    const ratio = averageComprehension(
-      videos.filter((v) => v.level === level),
-      known
-    );
-    const band: LevelBand = { level, ratio, unlocked, current: false };
-    unlocked =
-      unlocked &&
-      (ratio === null ? !anyMeasured : ratio >= UNLOCK_THRESHOLD);
-    if (ratio !== null) anyMeasured = true;
-    return band;
-  });
-  for (let i = bands.length - 1; i >= 0; i--) {
-    if (bands[i].unlocked) {
-      bands[i].current = true;
-      break;
-    }
-  }
-  return bands;
 }

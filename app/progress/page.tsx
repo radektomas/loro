@@ -5,23 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedWord, Video, WordState } from '@/types';
 import { storage } from '@/lib/storage';
 import { formatDue } from '@/lib/srs';
-import {
-  averageComprehension,
-  computeStreaks,
-  dueCount,
-  knownWordSet,
-  levelLadder,
-  nextDueAt,
-  videoComprehension,
-} from '@/lib/progress';
+import { computeStreaks, dueCount, nextDueAt } from '@/lib/progress';
 import { LoroMascot } from '@/components/LoroMascot';
 import { SignInCard } from '@/components/SignInCard';
-import { BookIcon, ChevronLeftIcon, LockIcon } from '@/components/icons/Icons';
+import { BookIcon, ChevronLeftIcon } from '@/components/icons/Icons';
 import videosData from '@/data/videos.json';
 
 const videos = videosData as unknown as Video[];
-
-const pct = (ratio: number) => Math.round(ratio * 100);
 
 /** Segment styling for the word-state bar. Red is reserved for lapses;
     green is earned by knowing; the pipeline states stay neutral. */
@@ -37,6 +27,38 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h2 className="px-1 pb-2 text-xs font-semibold uppercase tracking-widest text-muted">
       {children}
     </h2>
+  );
+}
+
+/** One honest, only-goes-up number. `hero` is the emphasized "Learned" card. */
+function MetricCard({
+  value,
+  label,
+  hero = false,
+}: {
+  value: number;
+  label: string;
+  hero?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-3xl px-3 py-5 text-center ${
+        hero
+          ? 'bg-gradient-to-br from-accent/25 via-accent-soft to-surface ring-1 ring-accent/25'
+          : 'bg-surface'
+      }`}
+    >
+      <p
+        className={`font-bold tabular-nums tracking-tight ${
+          hero ? 'text-5xl text-text' : 'text-4xl text-text'
+        }`}
+      >
+        {value}
+      </p>
+      <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+        {label}
+      </p>
+    </div>
   );
 }
 
@@ -60,26 +82,35 @@ export default function ProgressPage() {
     return storage.onWordsChanged(refresh);
   }, [refresh]);
 
-  const known = useMemo(() => knownWordSet(words), [words]);
+  // The honest headline numbers — every one only goes up as you learn.
+  const totals = useMemo(() => {
+    let learned = 0;
+    let learning = 0;
+    let recalls = 0;
+    for (const w of words) {
+      if (w.state === 'known') learned++;
+      else if (w.state === 'learning') learning++;
+      recalls += w.correct;
+    }
+    return { learned, learning, recalls };
+  }, [words]);
 
+  // Per video: how many words you've saved, and how many you've learned.
   const videoRows = useMemo(() => {
-    const watched = new Set(watchedIds);
+    const byVideo = new Map<string, { saved: number; learned: number }>();
+    for (const w of words) {
+      const e = byVideo.get(w.videoId) ?? { saved: 0, learned: 0 };
+      e.saved++;
+      if (w.state === 'known') e.learned++;
+      byVideo.set(w.videoId, e);
+    }
     return videos
-      .map((video) => ({
-        video,
-        comp: videoComprehension(video, known),
-        watched: watched.has(video.id),
-      }))
-      .sort((a, b) => b.comp.ratio - a.comp.ratio);
-  }, [known, watchedIds]);
-
-  const average = useMemo(() => {
-    const watched = new Set(watchedIds);
-    return averageComprehension(
-      videos.filter((v) => watched.has(v.id)),
-      known
-    );
-  }, [known, watchedIds]);
+      .map((video) => {
+        const e = byVideo.get(video.id) ?? { saved: 0, learned: 0 };
+        return { video, saved: e.saved, learned: e.learned };
+      })
+      .sort((a, b) => b.saved - a.saved); // most-engaged first
+  }, [words]);
 
   const stateCounts = useMemo(() => {
     const counts = { lapsed: 0, new: 0, learning: 0, known: 0 };
@@ -93,7 +124,6 @@ export default function ProgressPage() {
     () => computeStreaks(recallDays, now),
     [recallDays, now]
   );
-  const ladder = useMemo(() => levelLadder(videos, known), [known]);
 
   const empty = words.length === 0 && watchedIds.length === 0;
 
@@ -128,7 +158,7 @@ export default function ProgressPage() {
             Nothing to measure yet
           </h2>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
-            Watch videos, save words, and your comprehension will show up
+            Watch videos, save words, and recall them — your progress shows up
             here.
           </p>
           <Link
@@ -147,68 +177,43 @@ export default function ProgressPage() {
         <div className="space-y-8 px-4 pb-10">
           <SignInCard />
 
-          {/* 1 — Comprehension: the number that should grow */}
+          {/* 1 — The honest headline: what you've learned. Every stat only
+              ever goes up — never a score that punishes knowing the language. */}
+          <section className="grid grid-cols-3 gap-2">
+            <MetricCard value={totals.learned} label="Learned" hero />
+            <MetricCard value={totals.learning} label="Learning" />
+            <MetricCard value={totals.recalls} label="Recalls" />
+          </section>
+
+          {/* 2 — Streak: consecutive days with a correct recall, counted
+              quietly. A gap resets it silently — no fire, no guilt. */}
           <section>
-            <div className="rounded-3xl bg-surface px-6 py-7">
-              {average === null ? (
-                <p className="text-sm leading-relaxed text-muted">
-                  Watch a video and your comprehension shows up here.
-                </p>
+            <SectionTitle>Streak</SectionTitle>
+            <div className="flex items-center justify-between rounded-3xl bg-surface p-5">
+              {streaks.current > 0 ? (
+                <div>
+                  <p className="text-3xl font-bold tracking-tight text-text">
+                    {streaks.current}{' '}
+                    <span className="text-base font-semibold text-muted">
+                      {streaks.current === 1 ? 'day' : 'days'}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    of correct recalls in a row
+                  </p>
+                </div>
               ) : (
-                <>
-                  <p className="text-6xl font-bold tracking-tight text-text">
-                    {pct(average)}
-                    <span className="text-3xl text-muted">%</span>
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    You understand {pct(average)}% of what you&apos;ve
-                    watched.
-                  </p>
-                </>
+                <p className="text-sm leading-relaxed text-muted">
+                  No streak right now. One correct recall starts one.
+                </p>
+              )}
+              {streaks.longest > 0 && (
+                <p className="shrink-0 self-end text-xs text-muted/70">
+                  Longest: {streaks.longest}{' '}
+                  {streaks.longest === 1 ? 'day' : 'days'}
+                </p>
               )}
             </div>
-
-            <ul className="mt-3 space-y-2">
-              {videoRows.map(({ video, comp, watched }) => (
-                <li key={video.id}>
-                  <Link
-                    href={`/?v=${encodeURIComponent(video.id)}`}
-                    className="flex items-center gap-3 rounded-2xl bg-surface px-3 py-3 transition-colors hover:bg-surface-raised"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={video.poster}
-                      alt=""
-                      className="h-14 w-10 shrink-0 rounded-lg bg-surface-raised object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-text">
-                          {video.creator}
-                        </span>
-                        <span className="shrink-0 rounded-md bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent">
-                          {video.level}
-                        </span>
-                        {!watched && (
-                          <span className="shrink-0 text-[10px] text-muted/70">
-                            not watched yet
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10">
-                        <div
-                          className="h-full rounded-full bg-accent"
-                          style={{ width: `${pct(comp.ratio)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="w-10 shrink-0 text-right text-sm font-semibold text-text">
-                      {pct(comp.ratio)}%
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </section>
 
           {/* 3 — Due today. Caught up is a good state, not a nag. */}
@@ -288,90 +293,60 @@ export default function ProgressPage() {
             </section>
           )}
 
-          {/* 4 — Streak: correct recalls, counted quietly */}
+          {/* 5 — Videos: saved vs learned per video, most-engaged first.
+              Deep-links back into the feed to replay and review. */}
           <section>
-            <SectionTitle>Streak</SectionTitle>
-            <div className="flex items-center justify-between rounded-3xl bg-surface p-5">
-              {streaks.current > 0 ? (
-                <div>
-                  <p className="text-3xl font-bold tracking-tight text-text">
-                    {streaks.current}{' '}
-                    <span className="text-base font-semibold text-muted">
-                      {streaks.current === 1 ? 'day' : 'days'}
-                    </span>
-                  </p>
-                  <p className="mt-1 text-sm text-muted">
-                    of correct recalls in a row
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm leading-relaxed text-muted">
-                  No streak right now. One correct recall starts one.
-                </p>
-              )}
-              {streaks.longest > 0 && (
-                <p className="shrink-0 self-end text-xs text-muted/70">
-                  Longest: {streaks.longest}{' '}
-                  {streaks.longest === 1 ? 'day' : 'days'}
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* 5 — Level ladder, earned through comprehension */}
-          <section>
-            <SectionTitle>Level</SectionTitle>
-            <ol className="space-y-2">
-              {ladder.map((band) => (
-                <li
-                  key={band.level}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 ${
-                    band.current
-                      ? 'bg-accent-soft ring-1 ring-accent/30'
-                      : 'bg-surface'
-                  } ${band.unlocked ? '' : 'opacity-55'}`}
-                >
-                  <span
-                    className={`w-7 shrink-0 text-sm font-bold ${
-                      band.unlocked ? 'text-text' : 'text-muted'
-                    }`}
+            <SectionTitle>Videos</SectionTitle>
+            <ul className="space-y-2">
+              {videoRows.map(({ video, saved, learned }) => (
+                <li key={video.id}>
+                  <Link
+                    href={`/?v=${encodeURIComponent(video.id)}`}
+                    className="flex items-center gap-3 rounded-2xl bg-surface px-3 py-3 transition-colors hover:bg-surface-raised"
                   >
-                    {band.level}
-                  </span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-accent"
-                      style={{ width: `${pct(band.ratio ?? 0)}%` }}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={video.poster}
+                      alt=""
+                      className="h-14 w-10 shrink-0 rounded-lg bg-surface-raised object-cover"
                     />
-                  </div>
-                  {band.ratio === null ? (
-                    <span className="shrink-0 text-xs text-muted/70">
-                      no videos yet
-                    </span>
-                  ) : (
-                    <span className="w-9 shrink-0 text-right text-xs font-semibold text-text">
-                      {pct(band.ratio)}%
-                    </span>
-                  )}
-                  {band.current && (
-                    <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-background">
-                      Current
-                    </span>
-                  )}
-                  {!band.unlocked && (
-                    <LockIcon
-                      width={14}
-                      height={14}
-                      className="shrink-0 text-muted/60"
-                      aria-label="Locked"
-                    />
-                  )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-semibold text-text">
+                          {video.creator}
+                        </span>
+                        <span className="shrink-0 rounded-md bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent">
+                          {video.level}
+                        </span>
+                      </div>
+                      {saved > 0 ? (
+                        <>
+                          <p className="mt-1 text-xs">
+                            <span className="font-semibold text-accent">
+                              {learned} learned
+                            </span>
+                            <span className="text-muted/50"> · </span>
+                            <span className="text-muted">{saved} saved</span>
+                          </p>
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-accent transition-[width] duration-500"
+                              style={{
+                                width: `${Math.round((learned / saved) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-1.5 text-xs text-muted/70">
+                          Nothing saved yet
+                        </p>
+                      )}
+                    </div>
+                  </Link>
                 </li>
               ))}
-            </ol>
-            <p className="mt-2 px-1 text-xs leading-relaxed text-muted/70">
-              A level unlocks once you understand 80% of the videos below it.
-            </p>
+            </ul>
           </section>
 
           {/* Replay the guided intro — the loop, taught by doing it. */}

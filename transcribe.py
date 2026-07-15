@@ -8,10 +8,17 @@ Drops raw Spanish videos in, spits Loro's videos.json out.
                    public/videos/*.mp4
                    public/posters/*.jpg
 
+Incremental by default: files whose id is already in data/videos.json are
+skipped, and newly processed videos are appended to the existing list.
+
 Usage:
-    python transcribe.py                 # process everything in raw/
+    python transcribe.py                 # process only NEW files in raw/
+    python transcribe.py --force         # reprocess everything (regenerate)
+    python transcribe.py --only clip.mov # process just one file in raw/
     python transcribe.py --no-translate  # skip the OpenAI call (cheap dry run)
     python transcribe.py --check         # print cues to the terminal, write nothing
+
+OPENAI_API_KEY is read from .env automatically (python-dotenv).
 """
 
 import argparse
@@ -24,6 +31,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    load_dotenv = None
+
 # ---------------------------------------------------------------- config
 
 ROOT = Path(__file__).parent
@@ -31,6 +43,12 @@ RAW_DIR = ROOT / "raw"
 DATA_DIR = ROOT / "data"
 PUBLIC_VIDEOS = ROOT / "public" / "videos"
 PUBLIC_POSTERS = ROOT / "public" / "posters"
+
+# Read OPENAI_API_KEY (and anything else) from .env next to this script, so it
+# doesn't have to be exported every session. No-op if python-dotenv isn't
+# installed or there's no .env file — a shell-exported key still works.
+if load_dotenv is not None:
+    load_dotenv(ROOT / ".env")
 
 TARGET_LANGS = {
     "en": "English",
@@ -481,11 +499,29 @@ def process(video: Path, translate: bool, check: bool):
     }
 
 
+def load_existing(target: Path):
+    """Return the existing videos list, or [] if there's none yet."""
+    if not target.exists():
+        return []
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        die(f"{target} exists but isn't valid JSON ({e}). "
+            f"Fix or remove it before rerunning.")
+    if not isinstance(data, list):
+        die(f"{target} isn't a JSON array — refusing to overwrite it.")
+    return data
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-translate", action="store_true")
     ap.add_argument("--check", action="store_true",
                     help="print cues and exit, write nothing")
+    ap.add_argument("--force", action="store_true",
+                    help="reprocess every file, ignoring the already-done skip")
+    ap.add_argument("--only", metavar="FILENAME",
+                    help="process just this one file in raw/ (e.g. clip.mov)")
     args = ap.parse_args()
 
     require_ffmpeg()
@@ -501,17 +537,47 @@ def main():
     if not videos:
         die(f"No videos found in {RAW_DIR}/")
 
-    out = []
+    if args.only:
+        videos = [p for p in videos if p.name == args.only]
+        if not videos:
+            die(f"--only {args.only!r} not found in {RAW_DIR}/")
+
+    target = DATA_DIR / "videos.json"
+    existing = load_existing(target)
+    existing_ids = {e.get("id") for e in existing}
+
+    # Incremental: skip anything already in videos.json unless --force.
+    processed = []
     for v in videos:
+        vid = slugify(v.stem)
+        if vid in existing_ids and not args.force:
+            print(f"· skipping {v.name} (already processed)")
+            continue
         entry = process(v, translate=not args.no_translate, check=args.check)
         if entry:
-            out.append(entry)
+            processed.append(entry)
 
     if args.check:
         return
 
+    if not processed:
+        print("\n✓ nothing new to do — videos.json is up to date.\n")
+        return
+
+    # Merge: reprocessed ids replace their slot in place; genuinely new videos
+    # are appended, preserving the existing order.
+    index_by_id = {e.get("id"): i for i, e in enumerate(existing)}
+    merged = list(existing)
+    added = 0
+    for entry in processed:
+        if entry["id"] in index_by_id:
+            merged[index_by_id[entry["id"]]] = entry
+        else:
+            index_by_id[entry["id"]] = len(merged)
+            merged.append(entry)
+            added += 1
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    target = DATA_DIR / "videos.json"
 
     if target.exists():
         backup = DATA_DIR / "videos.backup.json"
@@ -519,11 +585,15 @@ def main():
         print(f"\n  (previous videos.json backed up to {backup.name})")
 
     target.write_text(
-        json.dumps(out, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(merged, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    print(f"\n✓ {len(out)} video(s) → {target}")
+    updated = len(processed) - added
+    detail = f"{added} new"
+    if updated:
+        detail += f", {updated} updated"
+    print(f"\n✓ {detail} → {len(merged)} video(s) total in {target}")
     print("  Restart the dev server and swipe.\n")
 
 

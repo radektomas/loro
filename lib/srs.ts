@@ -9,26 +9,36 @@ import type { SavedWord, Video, WordState } from '@/types';
 const MIN = 60_000;
 const DAY = 24 * 60 * 60_000;
 
-/** Review intervals per Leitner box 0-5. */
+/**
+ * Review intervals per Leitner box 0-6.
+ *
+ * The two extra early boxes (1 min, 10 min) make a word's FIRST session dense —
+ * a freshly saved word comes back almost immediately — without adding anything
+ * to the long tail. Boxes 0-2 are the rapid learning phase; boxes 3+ are the
+ * calm mastery schedule.
+ */
 export const BOX_INTERVALS_MS = [
-  10 * MIN, // box 0 — 10 minutes
-  1 * DAY, //  box 1 — 1 day
-  3 * DAY, //  box 2 — 3 days
-  7 * DAY, //  box 3 — 7 days
-  21 * DAY, // box 4 — 21 days
-  60 * DAY, // box 5 — 60 days
+  1 * MIN, //  box 0 — 1 minute
+  10 * MIN, // box 1 — 10 minutes
+  1 * DAY, //  box 2 — 1 day
+  3 * DAY, //  box 3 — 3 days
+  7 * DAY, //  box 4 — 7 days
+  21 * DAY, // box 5 — 21 days
+  60 * DAY, // box 6 — 60 days
 ];
 
 export const MAX_BOX = BOX_INTERVALS_MS.length - 1;
 
 /** Blank throttling — the feed must never feel like a test. */
-const MAX_BLANKS_PER_VIDEO = 3;
+const MAX_BLANKS_PER_VIDEO = 5;
 const MAX_BLANKS_IN_FIRST_TWO_CUES = 1;
-/** Never blank a word saved less than this long ago. */
-const MIN_AGE_MS = 10 * MIN;
+/** Never blank a word saved less than this long ago (matches box 0's interval). */
+const MIN_AGE_MS = 1 * MIN;
 
 function stateForBox(box: number): WordState {
-  return box >= 3 ? 'known' : 'learning';
+  if (box >= 3) return 'known';
+  if (box >= 1) return 'learning';
+  return 'new';
 }
 
 /** SRS fields for a freshly saved word. */
@@ -86,10 +96,10 @@ export function normalizeAnswer(text: string): string {
 /**
  * Decide which cue positions of `video` become blanks right now.
  * Returns cueIndex -> the word to blank. Rules:
- *  - only due words (dueAt <= now) saved at least 10 minutes ago
+ *  - only due words (dueAt <= now) saved at least 1 minute ago
  *  - one blank per cue; if several words are due, the lowest box wins
  *  - at most one blank within the first two cues
- *  - at most three blanks per video
+ *  - at most five blanks per video
  * Words not chosen simply stay due for a later video.
  */
 export function computeBlankPlan(

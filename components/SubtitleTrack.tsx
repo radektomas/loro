@@ -35,7 +35,7 @@ type SubtitleTrackProps = {
   onWordTap: (word: Word, cue: Cue, cueIndex: number) => void;
   /** cueIndex -> due word to render as a fill-in-the-blank. */
   blanks?: ReadonlyMap<number, SavedWord>;
-  /** Fired once when a blank becomes visible — the parent pauses the video. */
+  /** Fired when a due blank pauses the video — at the blanked word's END. */
   onBlankActive?: () => void;
   /** Fired when the user submits or skips a blank. */
   onBlankGrade?: (word: SavedWord, wasCorrect: boolean) => void;
@@ -78,12 +78,59 @@ export function SubtitleTrack({
     if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
   }, []);
 
+  // Latest values the rAF loop reads, kept in refs so the loop isn't torn down
+  // and re-subscribed every time a blank resolves.
+  const blanksRef = useRef(blanks);
+  const resolvedRef = useRef(resolved);
+  const onBlankActiveRef = useRef(onBlankActive);
+  useEffect(() => {
+    blanksRef.current = blanks;
+  }, [blanks]);
+  useEffect(() => {
+    resolvedRef.current = resolved;
+  }, [resolved]);
+  useEffect(() => {
+    onBlankActiveRef.current = onBlankActive;
+  }, [onBlankActive]);
+
   useEffect(() => {
     if (!active) return;
     let raf = 0;
     const tick = () => {
       const video = videoRef.current;
       if (video) {
+        // Let a due blank PLAY through its word so the user hears it in
+        // context, then pause at the word's END. We scan the blank plan rather
+        // than only the active cue, so if choppy playback overshoots past the
+        // word into the next cue before this fires, it's still caught here —
+        // then clamped back to word.end so the moment isn't lost and the next
+        // subtitle never bleeds in.
+        const plan = blanksRef.current;
+        if (plan && plan.size > 0) {
+          for (const [blankCue, saved] of plan) {
+            if (resolvedRef.current[blankCue] !== undefined) continue;
+            if (pausedForCueRef.current === blankCue) continue;
+            const c = cues[blankCue];
+            if (!c) continue;
+            const bw = c.words.find(
+              (w) => normalizeAnswer(w.text) === normalizeAnswer(saved.text)
+            );
+            if (!bw) continue;
+            if (video.currentTime >= bw.end) {
+              pausedForCueRef.current = blankCue;
+              if (video.currentTime > bw.end) video.currentTime = bw.end; // clamp
+              video.pause();
+              onBlankActiveRef.current?.();
+              setAnswer('');
+              // Focus without scrolling — the keyboard must not shift the track.
+              requestAnimationFrame(() =>
+                inputRef.current?.focus({ preventScroll: true })
+              );
+              break;
+            }
+          }
+        }
+
         const t = video.currentTime;
         const ci = cues.findIndex((c) => t >= c.start && t <= c.end);
         setCueIndex(ci);
@@ -134,20 +181,10 @@ export function SubtitleTrack({
     );
   }, [pulseWord, cue]);
 
-  // Pause the video the moment an unresolved blank becomes visible.
-  useEffect(() => {
-    if (
-      blankWord &&
-      blankWordIndex >= 0 &&
-      pausedForCueRef.current !== displayIndex
-    ) {
-      pausedForCueRef.current = displayIndex;
-      setAnswer('');
-      onBlankActive?.();
-      // focus after paint so the keyboard comes up with the blank
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [blankWord, blankWordIndex, displayIndex, onBlankActive]);
+  // The pause is no longer tied to a cue becoming visible: it happens in the
+  // rAF loop above, when currentTime crosses the blanked word's end time. The
+  // input renders (masking the word) from the moment the cue is active, so the
+  // user sees a blank is coming, hears the word, then the video stops to type.
 
   const gradeBlank = useCallback(
     (wasCorrect: boolean) => {
