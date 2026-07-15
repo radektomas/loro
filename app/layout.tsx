@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { SyncInit } from "@/components/SyncInit";
+import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} antialiased`}>
+        <ServiceWorkerCleanup />
         <SyncInit />
         {children}
       </body>
