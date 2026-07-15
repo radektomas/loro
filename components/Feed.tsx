@@ -97,13 +97,17 @@ export function Feed({ videos }: { videos: Video[] }) {
       : null
   );
 
+  // Scroll the deep-linked video into view once the feed is actually mounted.
+  // This must wait for the gate to open: while it's still 'checking' the scroll
+  // container isn't rendered, and feedVideos can keep the same reference, so
+  // without the gate dependency the effect would run too early and never retry.
   useEffect(() => {
-    if (!deepLinkVideoId || !containerRef.current) return;
+    if (gate !== 'open' || !deepLinkVideoId || !containerRef.current) return;
     const index = feedVideos.findIndex((v) => v.id === deepLinkVideoId);
     if (index > 0) {
       containerRef.current.children[index]?.scrollIntoView({ behavior: 'instant' });
     }
-  }, [deepLinkVideoId, feedVideos]);
+  }, [deepLinkVideoId, feedVideos, gate]);
 
   if (gate === 'checking') return <div className="h-[100dvh] bg-background" />;
 
@@ -244,10 +248,26 @@ export function VideoSlide({
           setActive(true);
           const pending = seekRef.current;
           if (pending && pending.videoId === video.id) {
-            el.currentTime = pending.time;
             seekRef.current = null;
+            // Seek to the word's cue — but a video seeks only once it has
+            // metadata. Setting currentTime while readyState is HAVE_NOTHING is
+            // silently dropped and playback starts at 0 (the deep-link bug), so
+            // defer the seek to loadedmetadata when the media isn't ready yet.
+            const HAVE_METADATA = 1; // readyState with duration/dimensions known
+            const seekAndPlay = () => {
+              if (!activeRef.current) return;
+              el.currentTime = pending.time;
+              safePlay();
+            };
+            if (el.readyState >= HAVE_METADATA) {
+              seekAndPlay();
+            } else {
+              el.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+              if (el.preload === 'none') el.load();
+            }
+          } else {
+            safePlay();
           }
-          safePlay();
         } else {
           activeRef.current = false;
           setActive(false);
