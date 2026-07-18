@@ -5,10 +5,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedWord, Video, WordState } from '@/types';
 import { storage } from '@/lib/storage';
 import { formatDue } from '@/lib/srs';
+import {
+  INITIAL_LEVEL_STATE,
+  TIERS,
+  tierFor,
+  type LevelState,
+} from '@/lib/levels';
 import { computeStreaks, dueCount, nextDueAt } from '@/lib/progress';
 import { LoroMascot } from '@/components/LoroMascot';
 import { SignInCard } from '@/components/SignInCard';
-import { BookIcon, ChevronLeftIcon } from '@/components/icons/Icons';
+import {
+  BookIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  LockIcon,
+} from '@/components/icons/Icons';
 import videosData from '@/data/videos.json';
 
 const videos = videosData as unknown as Video[];
@@ -30,7 +41,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** One honest, only-goes-up number. `hero` is the emphasized "Learned" card. */
+/** One honest, only-goes-up number. `hero` is the emphasized "Words learned" card. */
 function MetricCard({
   value,
   label,
@@ -66,6 +77,7 @@ export default function ProgressPage() {
   const [words, setWords] = useState<SavedWord[]>([]);
   const [watchedIds, setWatchedIds] = useState<string[]>([]);
   const [recallDays, setRecallDays] = useState<string[]>([]);
+  const [levelState, setLevelState] = useState<LevelState>(INITIAL_LEVEL_STATE);
   const [now, setNow] = useState(0);
   const [hydrated, setHydrated] = useState(false);
 
@@ -73,6 +85,7 @@ export default function ProgressPage() {
     setWords(storage.getSavedWords());
     setWatchedIds(storage.getWatchedVideoIds());
     setRecallDays(storage.getCorrectRecallDays());
+    setLevelState(storage.getLevelState());
     setNow(Date.now());
   }, []);
 
@@ -180,9 +193,90 @@ export default function ProgressPage() {
           {/* 1 — The honest headline: what you've learned. Every stat only
               ever goes up — never a score that punishes knowing the language. */}
           <section className="grid grid-cols-3 gap-2">
-            <MetricCard value={totals.learned} label="Learned" hero />
+            <MetricCard value={totals.learned} label="Words learned" hero />
             <MetricCard value={totals.learning} label="Learning" />
-            <MetricCard value={totals.recalls} label="Recalls" />
+            <MetricCard value={totals.recalls} label="Times remembered" />
+          </section>
+
+          {/* The tier ladder: all six named tiers, current highlighted with
+              the level meter inside it, achieved below, locked above. Names
+              are Spanish on purpose — the ladder itself teaches. */}
+          <section>
+            <SectionTitle>Level</SectionTitle>
+            <ul className="space-y-1.5">
+              {TIERS.map((tier) => {
+                const current = tier.level === levelState.level;
+                const achieved = tier.level < levelState.level;
+                const next = tierFor(levelState.level + 1);
+                const atTop = levelState.level >= TIERS.length;
+                return (
+                  <li
+                    key={tier.level}
+                    className={`rounded-2xl px-4 py-3 ${
+                      current
+                        ? 'bg-level-soft ring-1 ring-level/40'
+                        : 'bg-surface'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                          current
+                            ? 'bg-level text-background'
+                            : achieved
+                              ? 'bg-accent-soft text-accent'
+                              : 'bg-surface-raised text-muted/50'
+                        }`}
+                      >
+                        {achieved ? (
+                          <CheckIcon width={13} height={13} />
+                        ) : current ? (
+                          <LoroMascot state="idle" size={20} />
+                        ) : (
+                          <LockIcon width={12} height={12} />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`text-sm font-bold tracking-tight ${
+                            current
+                              ? 'text-text'
+                              : achieved
+                                ? 'text-text/80'
+                                : 'text-muted/60'
+                          }`}
+                        >
+                          {tier.name}
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            current ? 'text-muted' : 'text-muted/50'
+                          }`}
+                        >
+                          &ldquo;{tier.meaning}&rdquo;
+                        </p>
+                      </div>
+                      {current && (
+                        <p className="shrink-0 text-xs font-semibold tabular-nums text-level">
+                          {atTop ? 'Top tier' : `${levelState.meter}% to ${next.name}`}
+                        </p>
+                      )}
+                    </div>
+                    {current && !atTop && (
+                      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-level transition-[width] duration-500"
+                          style={{ width: `${levelState.meter}%` }}
+                        />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-2 px-1 text-xs leading-relaxed text-muted/70">
+              Type the blue level words in the feed to fill the meter.
+            </p>
           </section>
 
           {/* 2 — Streak: consecutive days with a correct recall, counted

@@ -1,5 +1,12 @@
 import type { Level, SavedWord, Video, WordState } from '@/types';
-import { grade, initialSrs } from '@/lib/srs';
+import { BOX_INTERVALS_MS, grade, initialSrs } from '@/lib/srs';
+import {
+  applyLevelAnswer,
+  INITIAL_LEVEL_STATE,
+  MAX_USER_LEVEL,
+  type LevelAnswerResult,
+  type LevelState,
+} from '@/lib/levels';
 import { dayKey } from '@/lib/progress';
 import { glossText, lookupGloss } from '@/lib/dictionary';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
@@ -27,6 +34,8 @@ const KEYS = {
   language: 'loro.language',
   onboarded: 'loro.onboarded', // has the user finished (or skipped) the intro
   startLevel: 'loro.startLevel', // CEFR seed from calibration — only seeds order
+  levelState: 'loro.levelState', // level fill-in mode: current level + meter
+  calibrationKnown: 'loro.calibrationKnown', // words tapped as known in calibration
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
   unmuted: 'loro.session.unmuted', // sessionStorage — per-session only
@@ -513,6 +522,85 @@ export const storage = {
     return { word: graded, ok };
   },
 
+  /** Level fill-in mode: current level (1..MAX_USER_LEVEL) + meter (0-100). */
+  getLevelState(): LevelState {
+    const raw = readJSON<Partial<LevelState>>(KEYS.levelState, {});
+    const level = Math.min(
+      MAX_USER_LEVEL,
+      Math.max(1, Math.round(raw.level ?? INITIAL_LEVEL_STATE.level))
+    );
+    const meter = Math.min(
+      100,
+      Math.max(0, Math.round(raw.meter ?? INITIAL_LEVEL_STATE.meter))
+    );
+    return { level, meter };
+  },
+
+  /** Apply one level-blank answer to the meter/level and persist it. */
+  applyLevelAnswer(wasCorrect: boolean): LevelAnswerResult {
+    const result = applyLevelAnswer(storage.getLevelState(), wasCorrect);
+    if (writeJSON(KEYS.levelState, { level: result.level, meter: result.meter })) {
+      emitWordsChanged();
+    }
+    return result;
+  },
+
+  /**
+   * Save a word the user answered as a LEVEL blank into the SRS, routed by
+   * result: a miss enters at the bottom (box 0 — a genuine unknown that comes
+   * back within minutes), a correct fill is filed as already known (box 4,
+   * 7 days) so obvious words never flood the active recall queue. A word
+   * that's already saved just takes a normal review grade instead — one word,
+   * one schedule.
+   */
+  saveLevelWord(
+    word: Pick<SavedWord, 'text' | 'translation' | 'videoId' | 'cueIndex'>,
+    wasCorrect: boolean
+  ): { ok: boolean } {
+    const words = storage.getSavedWords();
+    const existing = words.find(
+      (w) => w.text === word.text && w.videoId === word.videoId
+    );
+    if (existing) {
+      return { ok: storage.gradeWord(word.text, word.videoId, wasCorrect).ok };
+    }
+
+    const LEVEL_KNOWN_BOX = 4;
+    const now = Date.now();
+    const base = { ...word, savedAt: now, ...initialSrs(now) };
+    const entry: SavedWord = wasCorrect
+      ? {
+          ...base,
+          box: LEVEL_KNOWN_BOX,
+          state: 'known',
+          dueAt: now + BOX_INTERVALS_MS[LEVEL_KNOWN_BOX],
+          correct: 1,
+          lastReviewedAt: now,
+        }
+      : { ...base, incorrect: 1, lastReviewedAt: now };
+
+    const wrote = writeJSON(KEYS.savedWords, [...words, entry]);
+    const ok =
+      wrote &&
+      storage
+        .getSavedWords()
+        .some((w) => w.text === word.text && w.videoId === word.videoId);
+    if (ok) {
+      // A correct level fill is a correct typed production — it counts toward
+      // the streak exactly like a correct recall does.
+      if (wasCorrect) {
+        const days = readJSON<string[]>(KEYS.recallDays, []);
+        const today = dayKey(now);
+        if (!days.includes(today)) {
+          writeJSON(KEYS.recallDays, [...days, today].sort());
+        }
+      }
+      emitWordsChanged();
+      enqueue('upsert', word.text, word.videoId);
+    }
+    return { ok };
+  },
+
   /** Record that a video took the screen in the feed. Idempotent. */
   markWatched(videoId: string): void {
     const ids = readJSON<string[]>(KEYS.watched, []);
@@ -572,6 +660,7 @@ export const storage = {
       KEYS.savedWords,
       KEYS.watched,
       KEYS.recallDays,
+      KEYS.levelState,
     ];
     const onStorage = (e: StorageEvent) => {
       if (e.key === null || watchedKeys.includes(e.key)) callback();
@@ -624,6 +713,16 @@ export const storage = {
   setStartLevel(level: Level): void {
     if (!isBrowser) return;
     window.localStorage.setItem(KEYS.startLevel, level);
+  },
+
+  /** Words the user marked as already-known during CEFR calibration. The
+      per-video glossary renders them as known so they never flood "unknown". */
+  getCalibrationKnown(): string[] {
+    return readJSON<string[]>(KEYS.calibrationKnown, []);
+  },
+
+  setCalibrationKnown(words: string[]): void {
+    writeJSON(KEYS.calibrationKnown, words);
   },
 
   /** Unmute choice lives in sessionStorage — it only persists for the session. */

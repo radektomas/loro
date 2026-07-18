@@ -55,9 +55,10 @@ function buildBlankWord(
   };
 }
 
-const COACH: Record<Exclude<GuideStep, 'closing'>, string> = {
+// tapWord has no entry: its instruction ("Tap this word") is anchored to the
+// pulsing word itself inside SubtitleTrack, not floated up here.
+const COACH: Record<Exclude<GuideStep, 'closing' | 'tapWord'>, string> = {
   watch: 'The words light up as they’re spoken.',
-  tapWord: 'Tap a word you don’t know.',
   saveWord: 'Save it — Loro brings it back.',
   recall: 'Now type it from memory.',
 };
@@ -123,6 +124,7 @@ export default function WelcomePage() {
     const derived = deriveLevel(known, calibrationWords);
     setLevel(derived);
     storage.setStartLevel(derived);
+    storage.setCalibrationKnown([...known]);
 
     const video = pickGuidedVideo(videos, derived);
     const knownSurfaces = new Set([...known].map(normalizeAnswer));
@@ -146,14 +148,17 @@ export default function WelcomePage() {
 
   const armTapWord = useCallback(() => {
     const target = targetRef.current;
-    const video = guided;
-    if (!target || !video) return;
-    const cue = video.cues[target.cueIndex];
+    if (!target || !guided) return;
     setPulseWord(target.word.text);
     setStep('tapWord');
     nonceRef.current += 1;
-    // Hold on the target cue, paused, so the pulsing word stays tappable.
-    setCommand({ time: cue.start + 0.05, then: 'pause', nonce: nonceRef.current });
+    // Freeze mid-word, not at the cue start: the target must be the word on
+    // screen when the frame stops, and playback waits there until they tap.
+    setCommand({
+      time: (target.word.start + target.word.end) / 2,
+      then: 'pause',
+      nonce: nonceRef.current,
+    });
   }, [guided, setStep]);
 
   const handleActive = useCallback(() => {
@@ -359,8 +364,9 @@ export default function WelcomePage() {
 
       {SkipButton}
 
-      {/* Coach mark — a soft pulsing line, dismissed by doing the thing. */}
-      {guideStep !== 'closing' && (
+      {/* Coach mark — a soft pulsing line, dismissed by doing the thing.
+          Not shown for tapWord: that step's instruction lives on the word. */}
+      {guideStep !== 'closing' && guideStep !== 'tapWord' && (
         <div
           key={guideStep}
           className="animate-coach-in pointer-events-none absolute left-1/2 top-[22%] z-40 flex items-center gap-2.5 rounded-full bg-black/55 px-5 py-2.5 backdrop-blur-md"

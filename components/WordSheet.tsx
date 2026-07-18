@@ -4,6 +4,7 @@ import type { Cue, Gloss, Word } from '@/types';
 import { glossText, normalizeSurface } from '@/lib/dictionary';
 import { CloseIcon, BookmarkIcon } from '@/components/icons/Icons';
 import { LoroMascot } from '@/components/LoroMascot';
+import { Sheet } from '@/components/Sheet';
 
 export type WordSheetData = {
   word: Word;
@@ -34,16 +35,8 @@ export function WordSheet({ data, language, saved, onSave, onClose }: WordSheetP
   const showLemma = gloss && wordGloss && gloss.lemma !== surface;
 
   return (
-    <div className="absolute inset-0 z-30" role="dialog" aria-modal="true">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/50 animate-fade-in"
-      />
-      <div className="absolute inset-x-0 bottom-0 animate-sheet-up rounded-t-3xl bg-surface-raised px-6 pt-5 pb-safe shadow-[0_-8px_40px_rgba(0,0,0,0.5)]">
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-text/15" />
-        <div className="flex items-start justify-between">
+    <Sheet onClose={onClose}>
+      <div className="flex items-start justify-between">
           <div className="min-w-0">
             <p className="text-3xl font-bold tracking-tight text-text">
               {word.text}
@@ -108,7 +101,6 @@ export function WordSheet({ data, language, saved, onSave, onClose }: WordSheetP
             <LoroMascot state="idle" size={56} />
           </div>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

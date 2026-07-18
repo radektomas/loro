@@ -10,6 +10,10 @@
   --accent: #58cc4e; /* warm parrot green */
   --accent-deep: #3d8b40;
   --accent-soft: rgba(88, 204, 78, 0.16);
+  /* Level-practice accent — blue, so a level blank never looks like the green
+     SRS recall blank (and stays clear of red = wrong). */
+  --level: #57b3f2;
+  --level-soft: rgba(87, 179, 242, 0.16);
   /* Loro's crest — brand accent on the MASCOT ONLY. Deliberately not exposed
      as a Tailwind color: red in the UI is reserved for incorrect answers. */
   --loro-crest: #d14b3c;
@@ -24,6 +28,8 @@
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-accent-soft: var(--accent-soft);
+  --color-level: var(--level);
+  --color-level-soft: var(--level-soft);
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
 }
 
@@ -239,6 +245,47 @@ body {
   animation: loro-coach 1.5s ease-out infinite;
 }
 
+/* Onboarding tap target: the word itself breathes — a scale + glow loop with
+   the coach ring folded in. It must read as "press this", not "this word is
+   coloured", because the video is frozen waiting on exactly this tap. */
+@keyframes loro-tap-target {
+  0% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(88, 204, 78, 0.55),
+      0 0 14px 0 rgba(88, 204, 78, 0.3);
+  }
+  60% {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 0 12px rgba(88, 204, 78, 0),
+      0 0 26px 6px rgba(88, 204, 78, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(88, 204, 78, 0),
+      0 0 14px 0 rgba(88, 204, 78, 0.3);
+  }
+}
+.animate-tap-target {
+  animation: loro-tap-target 1.4s ease-in-out infinite;
+}
+
+/* The caret riding above the tap target, nodding down at it. */
+@keyframes loro-tap-hint {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+.animate-tap-hint {
+  animation: loro-tap-hint 1.4s ease-in-out infinite;
+}
+
 /* Coach-mark text pill fading/rising in as each step begins. */
 @keyframes loro-coach-in {
   from {
@@ -285,6 +332,15 @@ body {
   .animate-coach {
     animation: none;
     box-shadow: 0 0 0 3px rgba(88, 204, 78, 0.5);
+  }
+  .animate-tap-target {
+    animation: none;
+    box-shadow:
+      0 0 0 3px rgba(88, 204, 78, 0.5),
+      0 0 18px 2px rgba(88, 204, 78, 0.35);
+  }
+  .animate-tap-hint {
+    animation: none;
   }
   .animate-card-glow {
     animation: none;

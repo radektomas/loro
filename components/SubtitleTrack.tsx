@@ -10,7 +10,13 @@ import {
 } from 'react';
 import type { Cue, SavedWord, Word } from '@/types';
 import { normalizeAnswer } from '@/lib/srs';
-import { CheckIcon, CloseIcon } from '@/components/icons/Icons';
+import { tierFor, type LevelBlankWord } from '@/lib/levels';
+import {
+  CaretDownIcon,
+  ChartIcon,
+  CheckIcon,
+  CloseIcon,
+} from '@/components/icons/Icons';
 import { LoroMascot } from '@/components/LoroMascot';
 
 /** Feather burst offsets for the correct-recall celebration (CSS vars). */
@@ -26,6 +32,16 @@ const PARTICLES = [
 
 type BlankResult = 'correct' | 'wrong';
 
+/**
+ * One planned blank, from either source. Both kinds share the exact same
+ * pause-at-word-end + typed-input interaction; only the accent/label and the
+ * grade callback differ, so the user always knows WHY a word popped up:
+ * green dashed = your own saved word (SRS recall), blue solid = level practice.
+ */
+type BlankEntry =
+  | { kind: 'recall'; word: SavedWord }
+  | { kind: 'level'; word: LevelBlankWord };
+
 type SubtitleTrackProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
   cues: Cue[];
@@ -35,10 +51,15 @@ type SubtitleTrackProps = {
   onWordTap: (word: Word, cue: Cue, cueIndex: number) => void;
   /** cueIndex -> due word to render as a fill-in-the-blank. */
   blanks?: ReadonlyMap<number, SavedWord>;
+  /** cueIndex -> level-practice word to render as a fill-in-the-blank. On a
+      cue collision the SRS blank wins (the feed plans them disjoint anyway). */
+  levelBlanks?: ReadonlyMap<number, LevelBlankWord>;
   /** Fired when a due blank pauses the video — at the blanked word's END. */
   onBlankActive?: () => void;
-  /** Fired when the user submits or skips a blank. */
+  /** Fired when the user submits or skips an SRS recall blank. */
   onBlankGrade?: (word: SavedWord, wasCorrect: boolean) => void;
+  /** Fired when the user submits or skips a LEVEL blank. */
+  onLevelBlankGrade?: (word: LevelBlankWord, wasCorrect: boolean) => void;
   /** Onboarding only: surface form of a word to pulse, drawing the eye to it. */
   pulseWord?: string | null;
 };
@@ -58,8 +79,10 @@ export function SubtitleTrack({
   active,
   onWordTap,
   blanks,
+  levelBlanks,
   onBlankActive,
   onBlankGrade,
+  onLevelBlankGrade,
   pulseWord,
 }: SubtitleTrackProps) {
   const [cueIndex, setCueIndex] = useState(-1);
@@ -78,14 +101,28 @@ export function SubtitleTrack({
     if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
   }, []);
 
+  // Both blank sources merged into one plan the rest of the component runs on.
+  // The pause/type/grade machinery is shared; `kind` only picks the accent,
+  // the label, and which grade callback fires.
+  const allBlanks = useMemo(() => {
+    const merged = new Map<number, BlankEntry>();
+    if (levelBlanks) {
+      for (const [ci, word] of levelBlanks) merged.set(ci, { kind: 'level', word });
+    }
+    if (blanks) {
+      for (const [ci, word] of blanks) merged.set(ci, { kind: 'recall', word });
+    }
+    return merged;
+  }, [blanks, levelBlanks]);
+
   // Latest values the rAF loop reads, kept in refs so the loop isn't torn down
   // and re-subscribed every time a blank resolves.
-  const blanksRef = useRef(blanks);
+  const blanksRef = useRef(allBlanks);
   const resolvedRef = useRef(resolved);
   const onBlankActiveRef = useRef(onBlankActive);
   useEffect(() => {
-    blanksRef.current = blanks;
-  }, [blanks]);
+    blanksRef.current = allBlanks;
+  }, [allBlanks]);
   useEffect(() => {
     resolvedRef.current = resolved;
   }, [resolved]);
@@ -107,13 +144,13 @@ export function SubtitleTrack({
         // subtitle never bleeds in.
         const plan = blanksRef.current;
         if (plan && plan.size > 0) {
-          for (const [blankCue, saved] of plan) {
+          for (const [blankCue, entry] of plan) {
             if (resolvedRef.current[blankCue] !== undefined) continue;
             if (pausedForCueRef.current === blankCue) continue;
             const c = cues[blankCue];
             if (!c) continue;
             const bw = c.words.find(
-              (w) => normalizeAnswer(w.text) === normalizeAnswer(saved.text)
+              (w) => normalizeAnswer(w.text) === normalizeAnswer(entry.word.text)
             );
             if (!bw) continue;
             if (video.currentTime >= bw.end) {
@@ -152,18 +189,19 @@ export function SubtitleTrack({
     setResolved({});
     setAnswer('');
     pausedForCueRef.current = null;
-  }, [blanks]);
+  }, [allBlanks]);
 
   const visible = cueIndex >= 0;
   const displayIndex = visible ? cueIndex : lastCueIndexRef.current;
   const cue = displayIndex >= 0 ? cues[displayIndex] : null;
 
-  const blankWord =
-    visible && blanks && !resolved[displayIndex]
-      ? blanks.get(displayIndex) ?? null
+  const blankEntry =
+    visible && !resolved[displayIndex]
+      ? allBlanks.get(displayIndex) ?? null
       : null;
+  const blankWord = blankEntry?.word ?? null;
   const resolvedResult = resolved[displayIndex];
-  const gradedWord = blanks?.get(displayIndex) ?? null;
+  const gradedWord = allBlanks.get(displayIndex)?.word ?? null;
 
   const blankWordIndex = useMemo(() => {
     const target = blankWord ?? (resolvedResult ? gradedWord : null);
@@ -188,11 +226,16 @@ export function SubtitleTrack({
 
   const gradeBlank = useCallback(
     (wasCorrect: boolean) => {
-      if (!blankWord) return;
+      if (!blankEntry) return;
       setResolved((r) => ({
         ...r,
         [displayIndex]: wasCorrect ? 'correct' : 'wrong',
       }));
+      // The typed text belongs to this blank only. The next blank's input
+      // mounts as soon as its cue is visible — well before the pause handler
+      // clears the field — so without this the old answer sits in the new
+      // blank (and its check button is enabled) until the video stops.
+      setAnswer('');
       if (wasCorrect) {
         setCelebrating(true);
         if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
@@ -206,9 +249,13 @@ export function SubtitleTrack({
           }
         }
       }
-      onBlankGrade?.(blankWord, wasCorrect);
+      if (blankEntry.kind === 'recall') {
+        onBlankGrade?.(blankEntry.word, wasCorrect);
+      } else {
+        onLevelBlankGrade?.(blankEntry.word, wasCorrect);
+      }
     },
-    [blankWord, displayIndex, onBlankGrade]
+    [blankEntry, displayIndex, onBlankGrade, onLevelBlankGrade]
   );
 
   const submitAnswer = useCallback(() => {
@@ -238,12 +285,22 @@ export function SubtitleTrack({
           <>
             <p className="pointer-events-auto flex flex-wrap items-center gap-y-1 text-[1.75rem] font-bold leading-[1.3] tracking-tight text-text [text-shadow:0_1px_16px_rgba(0,0,0,0.75)]">
               {cue.words.map((word, i) => {
-                if (i === blankWordIndex && blankWord) {
+                if (i === blankWordIndex && blankWord && blankEntry) {
+                  // Same blank interaction for both kinds; the framing says
+                  // why it popped up: green dashed = your saved word coming
+                  // back (recall), blue solid + tier chip = level practice.
+                  const isLevel = blankEntry.kind === 'level';
                   return (
                     <span
                       key={`${displayIndex}-${i}`}
                       className="inline-flex items-center gap-1.5 px-1"
                     >
+                      {isLevel && (
+                        <span className="flex items-center gap-1 rounded-md bg-level-soft px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-level">
+                          <ChartIcon width={11} height={11} />
+                          {tierFor(blankEntry.word.level).name}
+                        </span>
+                      )}
                       <input
                         ref={inputRef}
                         value={answer}
@@ -255,8 +312,12 @@ export function SubtitleTrack({
                         autoCorrect="off"
                         spellCheck={false}
                         enterKeyHint="done"
-                        aria-label="Type the missing Spanish word"
-                        // the word's gloss is the recall prompt: meaning -> Spanish
+                        aria-label={
+                          isLevel
+                            ? 'Type the level word you just heard'
+                            : 'Type the missing Spanish word'
+                        }
+                        // the word's gloss is the prompt: meaning -> Spanish
                         placeholder={blankWord.translation}
                         style={{
                           width: `${Math.max(
@@ -265,13 +326,19 @@ export function SubtitleTrack({
                             Math.min(blankWord.translation.length, 14)
                           )}ch`,
                         }}
-                        className="border-b-[3px] border-dashed border-accent bg-transparent px-1 py-0.5 text-center text-accent caret-accent outline-none [font:inherit] [letter-spacing:inherit] placeholder:text-[0.6em] placeholder:font-medium placeholder:text-accent/50"
+                        className={`border-b-[3px] bg-transparent px-1 py-0.5 text-center outline-none [font:inherit] [letter-spacing:inherit] placeholder:text-[0.6em] placeholder:font-medium ${
+                          isLevel
+                            ? 'border-solid border-level text-level caret-level placeholder:text-level/50'
+                            : 'border-dashed border-accent text-accent caret-accent placeholder:text-accent/50'
+                        }`}
                       />
                       <button
                         type="button"
                         onClick={submitAnswer}
                         aria-label="Check answer"
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-background transition-transform active:scale-90 disabled:opacity-40"
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-background transition-transform active:scale-90 disabled:opacity-40 ${
+                          isLevel ? 'bg-level' : 'bg-accent'
+                        }`}
                         disabled={!answer.trim()}
                       >
                         <CheckIcon width={16} height={16} />
@@ -319,27 +386,65 @@ export function SubtitleTrack({
                     </span>
                   );
                 }
-                const isPulsing = i === pulseIndex;
+                if (i === pulseIndex) {
+                  // The onboarding tap target. The video is frozen on this
+                  // word; the pulse + anchored hint must carry the whole
+                  // "press this" message on their own.
+                  return (
+                    <span
+                      key={`${displayIndex}-${i}`}
+                      className="relative inline-flex"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onWordTap(word, cue, displayIndex)}
+                        className="animate-tap-target rounded-xl bg-accent-soft px-2 py-1 text-accent"
+                      >
+                        {word.text}
+                      </button>
+                      {/* The step's primary call to action — sized to compete
+                          with the subtitle itself, not fine print. */}
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 flex -translate-x-1/2 flex-col items-center whitespace-nowrap"
+                      >
+                        <span className="text-[1.375rem] font-bold tracking-tight text-text [text-shadow:0_2px_16px_rgba(0,0,0,0.95),0_0_3px_rgba(0,0,0,0.7)]">
+                          Tap this word
+                        </span>
+                        <CaretDownIcon
+                          width={22}
+                          height={22}
+                          className="animate-tap-hint mt-0.5 text-accent drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]"
+                        />
+                      </span>
+                    </span>
+                  );
+                }
                 return (
                   <button
                     key={`${displayIndex}-${i}`}
                     type="button"
                     // px-2 py-1 puts the hit area at ~44px tall for this type size
                     onClick={() => onWordTap(word, cue, displayIndex)}
-                    className={`rounded-xl px-2 py-1 transition-colors duration-100 active:scale-95 ${
-                      visible && i === wordIndex
+                    // While a tap target pulses, the karaoke highlight yields
+                    // and the rest of the line steps back — still tappable
+                    // (never block a tap), just visually de-emphasised.
+                    className={`rounded-xl px-2 py-1 transition-[background-color,color,opacity] duration-100 active:scale-95 ${
+                      visible && i === wordIndex && pulseIndex < 0
                         ? 'bg-accent text-background [text-shadow:none]'
-                        : isPulsing
-                          ? 'animate-coach bg-accent-soft text-accent'
-                          : 'bg-transparent'
-                    }`}
+                        : 'bg-transparent'
+                    } ${pulseIndex >= 0 ? 'opacity-40' : ''}`}
                   >
                     {word.text}
                   </button>
                 );
               })}
             </p>
-            <p className="mt-2 px-2 text-[1.0625rem] font-normal leading-relaxed text-text/70 [text-shadow:0_1px_10px_rgba(0,0,0,0.8)]">
+            <p
+              className={`mt-2 px-2 text-[1.0625rem] font-normal leading-relaxed text-text/70 transition-opacity duration-100 [text-shadow:0_1px_10px_rgba(0,0,0,0.8)] ${
+                pulseIndex >= 0 ? 'opacity-40' : ''
+              }`}
+            >
               {cue.translations[language] ?? cue.translations.en}
             </p>
           </>

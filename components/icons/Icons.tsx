@@ -63,6 +63,36 @@ export function ChevronLeftIcon(props: IconProps) {
   );
 }
 
+export function PlusIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function ListIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8 6h13" />
+      <path d="M8 12h13" />
+      <path d="M8 18h13" />
+      <path d="M3 6h.01" />
+      <path d="M3 12h.01" />
+      <path d="M3 18h.01" />
+    </svg>
+  );
+}
+
+export function CaretDownIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 9.5 12 16l6-6.5H6Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function PlayIcon(props: IconProps) {
   return (
     <svg {...base(props)}>
