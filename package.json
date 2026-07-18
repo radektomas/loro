@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@supabase/supabase-js": "^2.110.5",
     "next": "15.5.20",
     "react": "19.1.0",

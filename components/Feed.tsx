@@ -77,17 +77,28 @@ export function Feed({ videos }: { videos: Video[] }) {
     storage.setLanguage(code);
   }, []);
 
+  // The ONLY places a sound choice is persisted: both are real user gestures
+  // (the tap-for-sound overlay, the rail's mute toggle).
   const handleUnmute = useCallback(() => {
     setUnmuted(true);
     storage.setSessionUnmuted(true);
   }, []);
 
-  // Browsers reject unmuted autoplay without a fresh gesture (e.g. after a
-  // reload with the unmute choice persisted). When that happens the slide
-  // falls back to muted playback and we surface the sound overlay again.
-  const handleAutoMuted = useCallback(() => {
+  const handleUserMute = useCallback(() => {
     setUnmuted(false);
     storage.setSessionUnmuted(false);
+  }, []);
+
+  // Browsers reject unmuted autoplay without a fresh gesture (e.g. scrolling
+  // to a new slide, or a timer-driven resume). When that happens the slide
+  // falls back to muted playback and the sound overlay resurfaces.
+  //
+  // Deliberately does NOT call storage.setSessionUnmuted: this is the
+  // browser's autoplay policy talking, not the user. Persisting it here made
+  // a one-off rejection stick across the session as if the user had chosen
+  // mute. Only a user gesture may write the stored choice.
+  const handleAutoMuted = useCallback(() => {
+    setUnmuted(false);
   }, []);
 
   // Deep link from /vocab: /?v={videoId}&t={cueStart}
@@ -119,14 +130,14 @@ export function Feed({ videos }: { videos: Video[] }) {
         ref={containerRef}
         className="no-scrollbar h-full snap-y snap-mandatory overflow-y-scroll"
       >
-        {feedVideos.map((video, index) => (
+        {feedVideos.map((video) => (
           <VideoSlide
             key={video.id}
             video={video}
             language={language}
-            isFirst={index === 0}
             unmuted={unmuted}
             onUnmute={handleUnmute}
+            onUserMute={handleUserMute}
             onAutoMuted={handleAutoMuted}
             seekRef={seekRef}
           />
@@ -189,9 +200,11 @@ export type OnboardingControl = {
 type VideoSlideProps = {
   video: Video;
   language: string;
-  isFirst: boolean;
   unmuted: boolean;
   onUnmute: () => void;
+  /** Deliberate mute from the rail toggle — a user CHOICE, so the parent
+      persists it. Optional: the onboarding slide has no rail. */
+  onUserMute?: () => void;
   onAutoMuted: () => void;
   seekRef: RefObject<{ videoId: string; time: number } | null>;
   onboarding?: OnboardingControl;
@@ -200,9 +213,9 @@ type VideoSlideProps = {
 export function VideoSlide({
   video,
   language,
-  isFirst,
   unmuted,
   onUnmute,
+  onUserMute,
   onAutoMuted,
   seekRef,
   onboarding,
@@ -223,6 +236,10 @@ export function VideoSlide({
   } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A recall/level blank has paused the video and is waiting for an answer.
+  // While true, the paused indicator hides and video taps don't resume —
+  // the check / skip buttons are the only way forward.
+  const [blankWaiting, setBlankWaiting] = useState(false);
   // cueIndex -> due word rendered as a typed-recall blank
   const [blanks, setBlanks] = useState<Map<number, SavedWord> | null>(null);
   // cueIndex -> level-practice word rendered as a level blank (same UI)
@@ -246,8 +263,13 @@ export function VideoSlide({
   const safePlay = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
-    el.play().catch(() => {
-      if (!el.muted) {
+    el.play().catch((err: unknown) => {
+      // Only the autoplay-policy rejection earns the muted retry. A pending
+      // play() that gets interrupted by pause() rejects with AbortError —
+      // retrying THAT would silently resume a video something just paused
+      // (e.g. a recall blank holding the frame for the answer).
+      const name = err instanceof DOMException ? err.name : '';
+      if (name === 'NotAllowedError' && !el.muted) {
         el.muted = true;
         onAutoMutedRef.current();
         el.play().catch(() => {});
@@ -293,6 +315,7 @@ export function VideoSlide({
           setActive(false);
           setSheet(null);
           setGlossaryOpen(false);
+          setBlankWaiting(false);
           el.pause();
           el.currentTime = 0;
         }
@@ -380,11 +403,13 @@ export function VideoSlide({
 
   const handleBlankActive = useCallback(() => {
     if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    setBlankWaiting(true);
     videoRef.current?.pause();
   }, []);
 
   const handleBlankGrade = useCallback(
     (word: SavedWord, wasCorrect: boolean) => {
+      setBlankWaiting(false);
       storage.gradeWord(word.text, word.videoId, wasCorrect);
       onboarding?.onRecall?.(word, wasCorrect);
       // In onboarding the guide controls resume/rewind (it may re-blank on a
@@ -410,6 +435,7 @@ export function VideoSlide({
   // lives on the Progress screen.
   const handleLevelBlankGrade = useCallback(
     (word: LevelBlankWord, wasCorrect: boolean) => {
+      setBlankWaiting(false);
       storage.saveLevelWord(
         {
           text: word.text,
@@ -455,13 +481,14 @@ export function VideoSlide({
   const togglePlayback = useCallback(() => {
     // While onboarding holds the frame on the tap target (pulseWord set), a
     // stray tap on the video must not resume playback — the step waits,
-    // frozen, until a subtitle word is tapped.
-    if (onboarding?.pulseWord) return;
+    // frozen, until a subtitle word is tapped. Same while a blank is waiting
+    // for an answer: answering or skipping is the only way to move on.
+    if (onboarding?.pulseWord || blankWaiting) return;
     const el = videoRef.current;
     if (!el) return;
     if (el.paused) safePlay();
     else el.pause();
-  }, [safePlay, onboarding?.pulseWord]);
+  }, [safePlay, onboarding?.pulseWord, blankWaiting]);
 
   const handleReplay = useCallback(() => {
     const el = videoRef.current;
@@ -469,6 +496,29 @@ export function VideoSlide({
     el.currentTime = 0;
     safePlay();
   }, [safePlay]);
+
+  // Unmute inside the tap's own user activation: set the element directly
+  // and resume, so autoplay policy can never re-reject it — THEN update
+  // state. This is the reliable recovery after an auto-mute.
+  const handleUnmuteTap = useCallback(() => {
+    const el = videoRef.current;
+    if (el) {
+      el.muted = false;
+      if (el.paused && activeRef.current) safePlay();
+    }
+    onUnmute();
+  }, [onUnmute, safePlay]);
+
+  // Rail toggle: deliberate mute (a persisted user choice) or unmute.
+  const handleToggleSound = useCallback(() => {
+    const el = videoRef.current;
+    if (unmuted) {
+      if (el) el.muted = true;
+      onUserMute?.();
+    } else {
+      handleUnmuteTap();
+    }
+  }, [unmuted, onUserMute, handleUnmuteTap]);
 
   // The glossary sheet pauses like the word sheet: open holds the video,
   // close resumes it if the slide is still on screen.
@@ -569,7 +619,7 @@ export function VideoSlide({
 
       {/* Paused indicator — taps fall through to the video, which resumes.
           Hidden during onboarding: the guide pauses deliberately. */}
-      {paused && active && !sheet && !onboarding && (
+      {paused && active && !sheet && !onboarding && !blankWaiting && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center animate-fade-in">
           <span className="rounded-full bg-black/40 p-5 text-text backdrop-blur-md">
             <PlayIcon width={30} height={30} />
@@ -585,6 +635,8 @@ export function VideoSlide({
           <div className="flex justify-end px-3 pb-3">
             <ActionRail
               video={video}
+              unmuted={unmuted}
+              onToggleSound={handleToggleSound}
               onReplay={handleReplay}
               onOpenGlossary={handleOpenGlossary}
             />
@@ -615,20 +667,25 @@ export function VideoSlide({
         </div>
       </div>
 
-      {/* Tap-to-unmute — prominent, first slide only. Suppressed in onboarding
-          so nothing but the loop is on screen; sound is best-effort there. */}
-      {isFirst && !unmuted && !onboarding && (
-        <button
-          type="button"
-          onClick={onUnmute}
-          className="absolute inset-0 z-20 flex items-center justify-center"
-          aria-label="Unmute"
-        >
-          <span className="flex items-center gap-2.5 rounded-full bg-black/60 px-6 py-3.5 text-base font-semibold text-text backdrop-blur-md transition-transform active:scale-95">
+      {/* Tap-to-unmute — on WHICHEVER slide is active while sound is off, so
+          an auto-mute mid-feed always has a recovery right where it happened
+          (the tap is a real user gesture on the element that failed). Only
+          the pill itself is tappable: muted watching stays fully interactive
+          — word taps, rail, pause — around it. Suppressed in onboarding so
+          nothing but the loop is on screen, and while a blank is waiting for
+          an answer so it never competes with typing. */}
+      {active && !unmuted && !onboarding && !blankWaiting && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={handleUnmuteTap}
+            aria-label="Unmute"
+            className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-black/60 px-6 py-3.5 text-base font-semibold text-text backdrop-blur-md transition-transform active:scale-95"
+          >
             <VolumeOnIcon width={20} height={20} className="text-accent" />
             Tap for sound
-          </span>
-        </button>
+          </button>
+        </div>
       )}
 
       {sheet && (

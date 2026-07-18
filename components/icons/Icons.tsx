@@ -165,6 +165,30 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
+export function UploadIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m17 8-5-5-5 5" />
+      <path d="M12 3v12" />
+    </svg>
+  );
+}
+
+export function FilmIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 3v18" />
+      <path d="M17 3v18" />
+      <path d="M3 8h4" />
+      <path d="M3 16h4" />
+      <path d="M17 8h4" />
+      <path d="M17 16h4" />
+    </svg>
+  );
+}
+
 export function LockIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

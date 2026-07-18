@@ -353,7 +353,6 @@ export default function WelcomePage() {
         <VideoSlide
           video={guided}
           language={language}
-          isFirst={false}
           unmuted={unmuted}
           onUnmute={() => setUnmuted(true)}
           onAutoMuted={() => setUnmuted(false)}

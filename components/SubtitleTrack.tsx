@@ -146,25 +146,35 @@ export function SubtitleTrack({
         if (plan && plan.size > 0) {
           for (const [blankCue, entry] of plan) {
             if (resolvedRef.current[blankCue] !== undefined) continue;
-            if (pausedForCueRef.current === blankCue) continue;
             const c = cues[blankCue];
             if (!c) continue;
             const bw = c.words.find(
               (w) => normalizeAnswer(w.text) === normalizeAnswer(entry.word.text)
             );
             if (!bw) continue;
-            if (video.currentTime >= bw.end) {
-              pausedForCueRef.current = blankCue;
-              if (video.currentTime > bw.end) video.currentTime = bw.end; // clamp
-              video.pause();
-              onBlankActiveRef.current?.();
-              setAnswer('');
-              // Focus without scrolling — the keyboard must not shift the track.
-              requestAnimationFrame(() =>
-                inputRef.current?.focus({ preventScroll: true })
-              );
+            if (video.currentTime < bw.end) continue;
+            if (pausedForCueRef.current === blankCue) {
+              // Already holding for this blank. If playback somehow resumed
+              // over the unanswered blank (a stray tap, a play() promise that
+              // outlived our pause), re-assert the hold — clamp back and
+              // pause again, but keep whatever the user has typed.
+              if (!video.paused) {
+                if (video.currentTime > bw.end) video.currentTime = bw.end;
+                video.pause();
+                onBlankActiveRef.current?.(); // cancels any pending auto-resume
+              }
               break;
             }
+            pausedForCueRef.current = blankCue;
+            if (video.currentTime > bw.end) video.currentTime = bw.end; // clamp
+            video.pause();
+            onBlankActiveRef.current?.();
+            setAnswer('');
+            // Focus without scrolling — the keyboard must not shift the track.
+            requestAnimationFrame(() =>
+              inputRef.current?.focus({ preventScroll: true })
+            );
+            break;
           }
         }
 
