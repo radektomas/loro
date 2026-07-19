@@ -36,6 +36,10 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatElapsed(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
 /** The pipeline as the creator experiences it, driven by videos.status. */
 function PipelineState({ video }: { video: CreatorVideo }) {
   const steps = [
@@ -135,11 +139,17 @@ export default function CreatorUploadPage() {
 
   const [picked, setPicked] = useState<Picked | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  // Set when conversion failed for a file that passed validation — lets the
+  // user retry without hunting for the file again.
+  const [retryFile, setRetryFile] = useState<File | null>(null);
   // ffmpeg.wasm conversion state: which phase is running and how far along.
   const [converting, setConverting] = useState<{
     phase: PreparePhase;
     pct: number;
   } | null>(null);
+  // Elapsed seconds since conversion started — a slow phone encode must
+  // read as "working", never as "frozen".
+  const [elapsed, setElapsed] = useState(0);
   // Ignore results of a conversion the user has already abandoned.
   const pickToken = useRef(0);
   const [rights, setRights] = useState(false);
@@ -168,10 +178,52 @@ export default function CreatorUploadPage() {
     return subscribeToVideo(live.id, setLive);
   }, [live?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Tick the elapsed clock while a conversion runs.
+  const isConverting = converting !== null;
+  useEffect(() => {
+    if (!isConverting) {
+      setElapsed(0);
+      return;
+    }
+    const started = Date.now();
+    const id = setInterval(
+      () => setElapsed(Math.floor((Date.now() - started) / 1000)),
+      1000
+    );
+    return () => clearInterval(id);
+  }, [isConverting]);
+
+  // Convert a validated file: transcode to H.264 MP4 (iPhone HEVC .mov
+  // renders black in Chrome/Firefox, so it must never reach storage) and
+  // extract the transcription audio. If either fails, the upload is blocked
+  // with a real message — and the file is kept so retry is one tap.
+  const convert = async (file: File, duration: number, token: number) => {
+    setConverting({ phase: 'video', pct: 0 });
+    const result = await prepareClip(file, (phase, ratio) => {
+      if (token === pickToken.current)
+        setConverting({ phase, pct: Math.round(ratio * 100) });
+    });
+    if (token !== pickToken.current) return;
+    setConverting(null);
+    if (!result.ok) {
+      setPickError(result.error);
+      setRetryFile(file);
+      return;
+    }
+    setRetryFile(null);
+    setPicked({
+      file: result.video,
+      duration,
+      audio: result.audio,
+      transcoded: result.transcoded,
+    });
+  };
+
   const pick = async (file: File | undefined) => {
     const token = ++pickToken.current;
     setPickError(null);
     setPicked(null);
+    setRetryFile(null);
     setConverting(null);
     if (!file) return;
     // Pre-transcode source bound — the upload itself will be much smaller.
@@ -195,27 +247,23 @@ export default function CreatorUploadPage() {
       );
       return;
     }
-    // Convert NOW, before upload: transcode to H.264 MP4 (iPhone HEVC .mov
-    // renders black in Chrome/Firefox, so it must never reach storage) and
-    // extract the transcription audio. If either fails, the upload is
-    // blocked with a real message instead of publishing a broken clip.
-    setConverting({ phase: 'video', pct: 0 });
-    const result = await prepareClip(file, (phase, ratio) => {
-      if (token === pickToken.current)
-        setConverting({ phase, pct: Math.round(ratio * 100) });
-    });
-    if (token !== pickToken.current) return;
-    setConverting(null);
-    if (!result.ok) {
-      setPickError(result.error);
+    await convert(file, duration, token);
+  };
+
+  const retryConvert = async () => {
+    const file = retryFile;
+    if (!file) return;
+    const token = ++pickToken.current;
+    setPickError(null);
+    let duration: number;
+    try {
+      duration = await readVideoDuration(file);
+    } catch {
+      setPickError('Could not read that file as a video.');
       return;
     }
-    setPicked({
-      file: result.video,
-      duration,
-      audio: result.audio,
-      transcoded: result.transcoded,
-    });
+    if (token !== pickToken.current) return;
+    await convert(file, duration, token);
   };
 
   const submit = async () => {
@@ -273,29 +321,62 @@ export default function CreatorUploadPage() {
                 need to re-upload.
               </p>
             )}
+            {/* The next action decides whether they upload a second video —
+                make it the primary, with their library one tap away. */}
             <button
               type="button"
               onClick={() => {
                 setLive(null);
                 setImportWarning(false);
               }}
-              className="w-full rounded-2xl bg-surface py-3.5 text-base font-semibold text-text transition-colors hover:bg-surface-raised"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3.5 text-base font-semibold text-background transition-transform active:scale-[0.98]"
             >
+              <UploadIcon width={16} height={16} />
               Upload another video
             </button>
+            <Link
+              href="/creator"
+              className="block w-full rounded-2xl bg-surface py-3.5 text-center text-base font-semibold text-text transition-colors hover:bg-surface-raised"
+            >
+              See your videos
+            </Link>
           </>
         )}
 
         {ready && loaded && user && approved && !live && (
           <>
-            <p className="px-1 text-sm leading-relaxed text-muted">
-              One clip, Spanish audio, up to{' '}
-              <span className="text-text">90 seconds</span>. MP4 or iPhone
-              MOV — straight off your phone is fine; it&apos;s converted to a
-              web-friendly MP4 right in your browser before it uploads (large
-              files take longer to convert). Loro then transcribes it, times
-              every word, and adds tap-to-translate automatically.
-            </p>
+            {/* Set expectations BEFORE the file picker — especially that the
+                conversion happens on their phone and takes a while. */}
+            <ol className="space-y-3 rounded-3xl bg-surface p-5">
+              {[
+                {
+                  title: 'Pick a clip',
+                  body: 'Spanish audio, up to 90 seconds. MP4 or iPhone MOV — straight off your phone is fine.',
+                },
+                {
+                  title: 'Your phone converts it',
+                  body: 'Right here in the browser, before anything uploads. Longer clips can take a few minutes — keep this tab open.',
+                },
+                {
+                  title: 'Loro does the rest',
+                  body: 'Transcribes it, times every word, adds tap-to-translate, and it goes live after a quick check.',
+                },
+              ].map((step, i) => (
+                <li key={step.title} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-text">
+                      {step.title}
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                      {step.body}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
 
             <input
               ref={fileInputRef}
@@ -307,31 +388,38 @@ export default function CreatorUploadPage() {
 
             {converting !== null ? (
               <div className="rounded-3xl bg-surface p-6">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-semibold text-text">
-                    {converting.phase === 'video'
-                      ? 'Converting video…'
-                      : 'Extracting audio…'}
-                  </p>
-                  <p className="text-sm font-semibold tabular-nums text-accent">
+                <div className="flex items-center gap-3">
+                  <LoroMascot state="idle" size={44} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+                      Step {converting.phase === 'video' ? '1' : '2'} of 2
+                    </p>
+                    <p className="mt-0.5 text-base font-semibold text-text">
+                      {converting.phase === 'video'
+                        ? 'Converting your video…'
+                        : 'Extracting the audio…'}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-2xl font-bold tabular-nums tracking-tight text-accent">
                     {converting.pct}%
                   </p>
                 </div>
-                {/* Phase 1 can take a minute or more on a long clip — the
-                    bar is driven by ffmpeg's real progress, never fake. */}
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                {/* The bar is driven by ffmpeg's real progress, never fake;
+                    the clock proves a slow phone encode isn't a freeze. */}
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                   <div
                     className="h-full rounded-full bg-accent transition-[width] duration-300"
                     style={{ width: `${Math.max(converting.pct, 3)}%` }}
                   />
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-muted/70">
-                  {converting.phase === 'video'
-                    ? 'Step 1 of 2 — converting to web-playable MP4.'
-                    : 'Step 2 of 2 — extracting the audio track for transcription.'}{' '}
-                  This runs in your browser — keep this tab open. Longer or
-                  larger clips take longer.
-                </p>
+                <div className="mt-2 flex items-baseline justify-between">
+                  <p className="text-xs leading-relaxed text-muted/70">
+                    Working on your device — keep this tab open.
+                  </p>
+                  <p className="shrink-0 text-xs font-semibold tabular-nums text-muted">
+                    {formatElapsed(elapsed)}
+                  </p>
+                </div>
               </div>
             ) : !picked ? (
               <button
@@ -367,7 +455,7 @@ export default function CreatorUploadPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="shrink-0 rounded-xl bg-surface-raised px-3 py-2 text-xs font-semibold text-muted transition-colors hover:text-text"
+                    className="shrink-0 rounded-xl bg-surface-raised px-4 py-3 text-xs font-semibold text-muted transition-colors hover:text-text"
                   >
                     Change
                   </button>
@@ -376,9 +464,29 @@ export default function CreatorUploadPage() {
             )}
 
             {pickError && (
-              <p className="rounded-2xl bg-[#f87171]/10 px-4 py-3 text-sm leading-relaxed text-[#f87171]">
-                {pickError}
-              </p>
+              <div className="rounded-2xl bg-[#f87171]/10 px-4 py-3">
+                <p className="text-sm leading-relaxed text-[#f87171]">
+                  {pickError}
+                </p>
+                {retryFile && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void retryConvert()}
+                      className="flex-1 rounded-xl bg-accent py-3 text-sm font-semibold text-background transition-transform active:scale-[0.98]"
+                    >
+                      Try again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 rounded-xl bg-surface py-3 text-sm font-semibold text-text transition-colors hover:bg-surface-raised"
+                    >
+                      Choose another video
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-surface px-4 py-3.5">
@@ -395,9 +503,15 @@ export default function CreatorUploadPage() {
             </label>
 
             {uploadError && (
-              <p className="rounded-2xl bg-[#f87171]/10 px-4 py-3 text-sm leading-relaxed text-[#f87171]">
-                {uploadError}
-              </p>
+              <div className="rounded-2xl bg-[#f87171]/10 px-4 py-3">
+                <p className="text-sm leading-relaxed text-[#f87171]">
+                  {uploadError}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Your converted clip is still here — press Upload to try
+                  again.
+                </p>
+              </div>
             )}
 
             <button

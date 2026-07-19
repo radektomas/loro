@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  deleteCreatorVideo,
   getMyCreator,
   listMyVideos,
   type Creator,
@@ -16,7 +17,7 @@ import {
   VideoStatusChip,
 } from '@/components/creator/ugc';
 import { LoroMascot } from '@/components/LoroMascot';
-import { FilmIcon, UploadIcon } from '@/components/icons/Icons';
+import { FilmIcon, TrashIcon, UploadIcon } from '@/components/icons/Icons';
 
 function ImpactCard({
   value,
@@ -50,6 +51,10 @@ export default function CreatorDashboardPage() {
   const [creator, setCreator] = useState<Creator | null>(null);
   const [videos, setVideos] = useState<CreatorVideo[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Two-step delete: first tap arms the confirmation, second tap deletes.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -76,6 +81,19 @@ export default function CreatorDashboardPage() {
   }, [videos]);
 
   const gated = ready && loaded && (!user || creator?.status !== 'approved');
+
+  const handleDelete = async (video: CreatorVideo) => {
+    setDeletingId(video.id);
+    setDeleteError(null);
+    const result = await deleteCreatorVideo(video);
+    setDeletingId(null);
+    setConfirmDeleteId(null);
+    if (!result.ok) {
+      setDeleteError(result.error ?? 'Could not delete the video.');
+      return;
+    }
+    setVideos((prev) => prev.filter((v) => v.id !== video.id));
+  };
 
   return (
     <main className="min-h-[100dvh] bg-background pb-safe">
@@ -130,23 +148,29 @@ export default function CreatorDashboardPage() {
 
         {ready && loaded && user && creator?.status === 'approved' && (
           <div className="space-y-8">
-            <p className="px-1 text-sm text-muted">
-              Hola, <span className="font-semibold text-text">{creator.displayName}</span>{' '}
-              <span className="text-muted/60">@{creator.handle}</span>
-            </p>
+            <div className="flex items-center gap-3 px-1">
+              <LoroMascot state="happy" size={44} />
+              <p className="min-w-0 text-sm text-muted">
+                Hola,{' '}
+                <span className="font-semibold text-text">
+                  {creator.displayName}
+                </span>{' '}
+                <span className="text-muted/60">@{creator.handle}</span>
+              </p>
+            </div>
 
-            {/* Learning impact — words people saved from your videos, and how
-                many of those they went on to master (top Leitner box). */}
+            {/* THE hero: what people actually learned from your videos —
+                mastered leads, it's the number the revenue share will follow. */}
             <section>
               <SectionTitle>Learning impact</SectionTitle>
               <div className="grid grid-cols-2 gap-2">
-                <ImpactCard value={totals.saved} label="Words saved" />
                 <ImpactCard value={totals.mastered} label="Words mastered" hero />
+                <ImpactCard value={totals.saved} label="Words saved" />
               </div>
               <p className="mt-2 px-1 text-xs leading-relaxed text-muted/70">
-                A word counts as mastered when a learner carries it to the top
-                of their review ladder — the strongest signal your video
-                taught something that stuck.
+                {totals.saved === 0
+                  ? 'These counters start moving as soon as learners save words from your first published video.'
+                  : 'A word counts as mastered when a learner carries it to the top of their review ladder — the strongest signal your video taught something that stuck.'}
               </p>
               <div className="mt-3 rounded-2xl bg-level-soft px-4 py-3 ring-1 ring-level/25">
                 <p className="text-xs font-bold uppercase tracking-wider text-level">
@@ -161,6 +185,11 @@ export default function CreatorDashboardPage() {
 
             <section>
               <SectionTitle>Your videos</SectionTitle>
+              {deleteError && (
+                <p className="mb-2 rounded-2xl bg-[#f87171]/10 px-4 py-3 text-sm text-[#f87171]">
+                  {deleteError}
+                </p>
+              )}
               {videos.length === 0 ? (
                 <div className="flex flex-col items-center rounded-3xl bg-surface px-6 py-10 text-center">
                   <LoroMascot state="idle" size={72} />
@@ -197,7 +226,49 @@ export default function CreatorDashboardPage() {
                         </span>
                         <span className="ml-auto" />
                         <VideoStatusChip status={v.status} />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmDeleteId(
+                              confirmDeleteId === v.id ? null : v.id
+                            )
+                          }
+                          aria-label={`Delete ${v.title ?? 'video'}`}
+                          className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted/70 transition-colors hover:text-[#f87171]"
+                        >
+                          <TrashIcon width={15} height={15} />
+                        </button>
                       </div>
+                      {confirmDeleteId === v.id && (
+                        <div className="mt-3 rounded-xl bg-[#f87171]/10 px-3 py-3">
+                          <p className="text-xs leading-relaxed text-text">
+                            Delete this video?{' '}
+                            {v.status === 'published'
+                              ? 'It disappears from the feed and its learning stats go with it. '
+                              : ''}
+                            This can&apos;t be undone.
+                          </p>
+                          <div className="mt-2.5 flex gap-2">
+                            <button
+                              type="button"
+                              disabled={deletingId === v.id}
+                              onClick={() => void handleDelete(v)}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#f87171] py-2.5 text-xs font-semibold text-background transition-transform active:scale-[0.98] disabled:opacity-40"
+                            >
+                              <TrashIcon width={12} height={12} />
+                              {deletingId === v.id ? 'Deleting…' : 'Delete'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingId === v.id}
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="flex-1 rounded-lg bg-surface-raised py-2.5 text-xs font-semibold text-text transition-colors"
+                            >
+                              Keep it
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <p className="mt-1.5 text-xs text-muted/70">
                         {new Date(v.createdAt).toLocaleDateString()}
                         {v.durationSeconds

@@ -253,6 +253,10 @@ export function computeLevelBlankPlan(
     if (excludeCues.has(ci) || ci - lastCue < MIN_CUE_GAP) continue;
 
     for (const word of video.cues[ci].words) {
+      // Zero-length timings are alignment artifacts (UGC pipeline data can
+      // carry them). The blank interaction is "hear the word, then type it"
+      // — a word with no audible span was never heard, so never blank it.
+      if (word.end - word.start <= 0.05) continue;
       const key = normalizeAnswer(word.text);
       if (key.length < 2 || saved.has(key) || used.has(key)) continue;
       const gloss = lookupGloss(video, word.text);

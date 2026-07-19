@@ -14,6 +14,7 @@ import {
 } from '@/components/creator/ugc';
 import { SignInCard } from '@/components/SignInCard';
 import { LoroMascot } from '@/components/LoroMascot';
+import { CheckIcon } from '@/components/icons/Icons';
 
 const inputCls =
   'w-full rounded-2xl bg-surface px-4 py-3.5 text-base text-text placeholder:text-muted/50 outline-none ring-1 ring-transparent focus:ring-accent/50';
@@ -161,9 +162,48 @@ export default function CreatorApplyPage() {
 
         {ready && loaded && user && !creator && (
           <>
+            {/* An invited friend lands here knowing nothing about Loro —
+                explain the app, their part in it, and what a good clip is,
+                in one scannable card. */}
+            <div className="rounded-3xl bg-surface p-5">
+              <div className="flex items-start gap-3">
+                <LoroMascot state="idle" size={48} />
+                <p className="min-w-0 text-sm leading-relaxed text-muted">
+                  <span className="font-semibold text-text">
+                    Loro teaches Spanish with short, real videos.
+                  </span>{' '}
+                  People watch, tap the words they don&apos;t know, and
+                  practice them until they stick. Your clips become the
+                  lessons — Loro adds the subtitles and translations
+                  automatically.
+                </p>
+              </div>
+              <p className="mt-4 px-1 text-xs font-semibold uppercase tracking-widest text-muted">
+                What makes a good clip
+              </p>
+              <ul className="mt-2 space-y-2">
+                {[
+                  'Speak naturally, like you’re talking to a friend',
+                  'Clear audio — loud background noise fails the automatic quality check',
+                  '15–60 seconds, filmed vertically on your phone',
+                  'Any everyday topic: food, your street, a story, an opinion',
+                ].map((tip) => (
+                  <li key={tip} className="flex items-start gap-2.5">
+                    <CheckIcon
+                      width={14}
+                      height={14}
+                      className="mt-0.5 shrink-0 text-accent"
+                    />
+                    <span className="text-sm leading-relaxed text-muted">
+                      {tip}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <p className="px-1 text-sm leading-relaxed text-muted">
-              Make short Spanish videos people learn from. Tell us who you are —
-              every application is reviewed by a human.
+              Tell us who you are — every application is reviewed by a human.
             </p>
             <form onSubmit={submit} className="space-y-5">
               <Field label="Display name">

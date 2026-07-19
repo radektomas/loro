@@ -152,21 +152,37 @@ export function SubtitleTrack({
               (w) => normalizeAnswer(w.text) === normalizeAnswer(entry.word.text)
             );
             if (!bw) continue;
-            if (video.currentTime < bw.end) continue;
+            // Hold INSIDE the blank cue's display window, never on its
+            // boundary. Pipeline data can carry a word whose end sits exactly
+            // on cue.start — pausing there displays the PREVIOUS cue (the
+            // boundary instant belongs to it), so the input would never
+            // render and the video would freeze with no way out. Clamping a
+            // hair into the cue guarantees the input is on screen while we
+            // hold.
+            const pauseAt = Math.min(c.end, Math.max(bw.end, c.start + 0.02));
             if (pausedForCueRef.current === blankCue) {
-              // Already holding for this blank. If playback somehow resumed
-              // over the unanswered blank (a stray tap, a play() promise that
-              // outlived our pause), re-assert the hold — clamp back and
-              // pause again, but keep whatever the user has typed.
               if (!video.paused) {
-                if (video.currentTime > bw.end) video.currentTime = bw.end;
-                video.pause();
-                onBlankActiveRef.current?.(); // cancels any pending auto-resume
+                // Playback resumed over the unanswered blank (a stray tap, a
+                // play() promise that outlived our pause) — re-assert the
+                // hold once it reaches the word again, keeping typed text.
+                // (Replay deliberately gets to play back UP TO the word.)
+                if (video.currentTime >= pauseAt) {
+                  if (video.currentTime > pauseAt) video.currentTime = pauseAt;
+                  video.pause();
+                  onBlankActiveRef.current?.(); // cancels pending auto-resume
+                }
+              } else if (Math.abs(video.currentTime - pauseAt) > 0.05) {
+                // Paused but displaced — e.g. a blank on the video's final
+                // word can lose the race with the loop wrap and land at 0,
+                // a frozen frame with no input in sight. Re-seat the hold
+                // where the blank's cue (and its input) are visible.
+                video.currentTime = pauseAt;
               }
               break;
             }
+            if (video.currentTime < pauseAt) continue;
             pausedForCueRef.current = blankCue;
-            if (video.currentTime > bw.end) video.currentTime = bw.end; // clamp
+            if (video.currentTime > pauseAt) video.currentTime = pauseAt;
             video.pause();
             onBlankActiveRef.current?.();
             setAnswer('');

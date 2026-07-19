@@ -22,6 +22,7 @@ import { GlossarySheet } from '@/components/GlossarySheet';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { LoroMascot } from '@/components/LoroMascot';
 import { ActionRail } from '@/components/ActionRail';
+import { CreatorPill } from '@/components/creator/CreatorEntryCard';
 import { orderVideosForLevel } from '@/lib/calibration';
 import {
   BookIcon,
@@ -162,6 +163,7 @@ export function Feed({ videos }: { videos: Video[] }) {
               <ChartIcon width={15} height={15} className="text-accent" />
               Progress
             </Link>
+            <CreatorPill />
           </div>
           {hydrated && (
             <LanguagePicker

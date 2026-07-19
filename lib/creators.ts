@@ -309,6 +309,31 @@ export async function setVideoStatus(
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
+/**
+ * Delete one of the signed-in creator's own videos: the row first (RLS is
+ * the authorization — if it refuses, nothing is touched), then the storage
+ * objects best-effort. An orphaned file after a failed removal costs pennies;
+ * a dangling row pointing at deleted media would be a broken feed slide.
+ */
+export async function deleteCreatorVideo(
+  video: CreatorVideo
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: 'Supabase is not configured.' };
+  const { error } = await supabase
+    .from(UGC_TABLES.videos)
+    .delete()
+    .eq('id', video.id);
+  if (error) return { ok: false, error: error.message };
+  const paths = [video.storagePath, video.audioPath].filter(
+    (p): p is string => Boolean(p)
+  );
+  if (paths.length) {
+    await supabase.storage.from(VIDEOS_BUCKET).remove(paths);
+  }
+  return { ok: true };
+}
+
 /** Playback URL for a storage path (the loro-videos bucket is public). */
 export function videoPublicUrl(storagePath: string): string | null {
   const supabase = getSupabase();
