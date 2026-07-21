@@ -12,6 +12,7 @@
     "harvest": "node scripts/harvest-youtube.mts",
     "refilter": "node scripts/refilter-candidates.mts",
     "backfill-provenance": "node scripts/backfill-provenance.mts",
+    "rate-candidates": "node scripts/rate-candidates.mts",
     "prune-embeds": "node scripts/prune-embeds.mts",
     "publish-embeds": "node scripts/publish-embeds.mts",
     "sweep-embeds": "node scripts/sweep-embeds.mts",

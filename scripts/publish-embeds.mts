@@ -76,10 +76,18 @@ type Options = {
   limit: number;
   ids: string[] | null;
   license: 'creativeCommon' | 'youtube' | 'both';
+  /** Restrict to these difficulty_level values; null means any. */
+  levels: string[] | null;
 };
 
 function parseArgs(argv: readonly string[]): Options {
-  const options: Options = { dryRun: false, limit: 8, ids: null, license: 'both' };
+  const options: Options = {
+    dryRun: false,
+    limit: 8,
+    ids: null,
+    license: 'both',
+    levels: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = (): string => {
@@ -100,6 +108,15 @@ function parseArgs(argv: readonly string[]): Options {
       case '--ids':
         options.ids = next().split(',').map((s) => s.trim()).filter(Boolean);
         break;
+      case '--level':
+        // Publish only these difficulty levels, e.g. --level A1,A2. Requires
+        // rate-candidates to have run; unrated rows are excluded rather than
+        // guessed at, so a typo yields an empty batch instead of a wrong one.
+        options.levels = next()
+          .split(',')
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean);
+        break;
       case '--license': {
         const v = next();
         options.license =
@@ -107,7 +124,7 @@ function parseArgs(argv: readonly string[]): Options {
         break;
       }
       default:
-        console.error(`Unknown flag "${arg}". Flags: --dry-run --limit N --ids a,b --license cc|yt|any`);
+        console.error(`Unknown flag "${arg}". Flags: --dry-run --limit N --ids a,b --license cc|yt|any --level A1,A2`);
         process.exit(1);
     }
   }
@@ -187,6 +204,14 @@ async function selectCandidates(
     (r) => !r.default_audio_language || r.default_audio_language.startsWith('es')
   );
   rows = rows.filter((r) => !alreadyPublished.has(r.youtube_id));
+
+  if (options.levels) {
+    const wanted = new Set(options.levels);
+    // Unrated rows are dropped, not guessed at — run rate-candidates first.
+    rows = rows.filter(
+      (r) => r.difficulty_level && wanted.has(r.difficulty_level.toUpperCase())
+    );
+  }
 
   // Curation: drop what is not a person speaking, and rank what is left by
   // how likely it is to be one. Views are a floor inside curationScore, NOT
