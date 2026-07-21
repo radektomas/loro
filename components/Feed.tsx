@@ -739,7 +739,7 @@ export function VideoSlide({
         {/* Embed band extras — progress and the paused hint live HERE,
             below the player, never over it. */}
         {isEmbed && (
-          <div className="relative mx-4 mb-2 h-0.5">
+          <div className="relative mx-4 mb-1.5 h-0.5">
             <ProgressBar videoRef={videoRef} active={active} />
           </div>
         )}
@@ -747,7 +747,7 @@ export function VideoSlide({
           <div
             className={
               isEmbed
-                ? 'flex justify-center px-3 pb-2'
+                ? 'flex justify-center px-3 pb-1.5'
                 : 'flex justify-end px-3 pb-3'
             }
           >
@@ -761,7 +761,7 @@ export function VideoSlide({
             />
           </div>
         )}
-        <div className="px-5 pb-3">
+        <div className={isEmbed ? 'px-5 pb-1.5' : 'px-5 pb-3'}>
           <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-bold tracking-wide text-accent">
             {video.level}
           </span>
@@ -805,7 +805,7 @@ export function VideoSlide({
             </span>
           )}
         </div>
-        <div className={isEmbed ? 'pb-4' : 'pb-10'}>
+        <div className={isEmbed ? 'pb-2' : 'pb-10'}>
           <SubtitleTrack
             videoRef={videoRef}
             cues={video.cues}

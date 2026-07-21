@@ -292,9 +292,17 @@ export function SubtitleTrack({
   }, [answer, blankWord, gradeBlank]);
 
   return (
-    // min-height fits a two-line Spanish cue plus translation at full size,
-    // so cue changes and wraps never shift the layout below. The celebration
-    // (mascot hop, particles) is absolute within this box — zero layout shift.
+    // min-height fits the COMMON WORST CASE, not the average: a three-line
+    // Spanish cue (3 x 28px/1.3 = 109px) plus a two-line translation (64px)
+    // = 173px, just inside 11rem. Cues run to 9-12 words and ~3-4 words fit
+    // a line at this size, so three lines are routine, not exceptional.
+    //
+    // Do NOT shave this to give an embed slide a taller player. Tried at
+    // 10rem: the band then grows on any three-line cue, and since the embed
+    // player is sized from what the band leaves, the video visibly resizes
+    // mid-playback. A stable frame beats 16px of extra height. The
+    // celebration (mascot hop, particles) is absolute within this box — zero
+    // layout shift.
     <div className="pointer-events-none relative flex min-h-[11rem] flex-col justify-end px-4">
       {celebrating && (
         <div className="animate-loro-pop absolute right-6 top-0 flex items-end gap-1.5">
