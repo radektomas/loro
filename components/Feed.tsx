@@ -25,7 +25,7 @@ import { ActionRail } from '@/components/ActionRail';
 import { YouTubeSurface } from '@/components/YouTubeSurface';
 import { CreatorPill } from '@/components/creator/CreatorEntryCard';
 import { FeedEndCard } from '@/components/FeedEndCard';
-import { orderVideosForLevel } from '@/lib/calibration';
+import { orderVideosForLevel } from '@/lib/feedOrder';
 import {
   BookIcon,
   ChartIcon,
@@ -66,6 +66,9 @@ export function Feed({ videos }: { videos: Video[] }) {
   // Feed order is seeded by the calibrated level (client-only; SSR keeps the
   // source order, and we only paint the feed after the gate opens — no mismatch).
   const [feedVideos, setFeedVideos] = useState(videos);
+  // The order settled on for THIS mount. Held in a ref so the effect can tell
+  // "first run" from "videos prop grew" without re-ordering the whole feed.
+  const orderedRef = useRef<Video[] | null>(null);
 
   useEffect(() => {
     if (!storage.isOnboarded()) {
@@ -73,7 +76,26 @@ export function Feed({ videos }: { videos: Video[] }) {
       return;
     }
     const level = storage.getStartLevel();
-    setFeedVideos(level ? orderVideosForLevel(videos, level) : videos);
+    const watchedIds = new Set(storage.getWatchedVideoIds());
+    const order = (list: Video[]): Video[] =>
+      level ? orderVideosForLevel(list, level, { watchedIds }) : [...list];
+
+    setFeedVideos((prev) => {
+      // Ordered ONCE per mount: unseen first, then closest to the user's
+      // level, shuffled within ties. Re-running it would be a bug, not a
+      // refresh — `videos` grows when published UGC arrives mid-session, and
+      // re-ordering then would rearrange the feed under a user who is
+      // already scrolling it. New arrivals are appended instead.
+      if (!orderedRef.current) {
+        orderedRef.current = order(videos);
+        return orderedRef.current;
+      }
+      const placed = new Set(orderedRef.current.map((v) => v.id));
+      const fresh = videos.filter((v) => !placed.has(v.id));
+      if (fresh.length === 0) return prev;
+      orderedRef.current = [...orderedRef.current, ...order(fresh)];
+      return orderedRef.current;
+    });
     setGate('open');
   }, [router, videos]);
 

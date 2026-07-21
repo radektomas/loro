@@ -142,12 +142,3 @@ export function pickTargetWord(
   return first ? { word: first, cueIndex: 0 } : null;
 }
 
-/** Seed the feed order by proximity to the start level (stable within a band). */
-export function orderVideosForLevel(videos: Video[], level: Level): Video[] {
-  const li = LEVEL_ORDER.indexOf(level);
-  return [...videos].sort(
-    (a, b) =>
-      Math.abs(LEVEL_ORDER.indexOf(a.level) - li) -
-      Math.abs(LEVEL_ORDER.indexOf(b.level) - li)
-  );
-}
