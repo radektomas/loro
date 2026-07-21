@@ -219,8 +219,18 @@ export type LevelBlankWord = {
   level: number;
 };
 
-/** Level blanks are rarer than SRS blanks — playback must stay playback. */
-const MAX_LEVEL_BLANKS_PER_VIDEO = 2;
+/**
+ * Level blanks are rarer than SRS blanks — playback must stay playback.
+ *
+ * Scaled by length rather than a flat cap: the catalog runs from 4-cue
+ * 20-second shorts to 21-cue minute-long clips, and two blanks is a fair
+ * amount of interruption in the first but noticeably sparse in the second.
+ * This keeps short clips exactly where they were and only adds practice
+ * where there is room for it.
+ */
+function maxLevelBlanks(cueCount: number): number {
+  return Math.min(4, 2 + Math.floor(cueCount / 10));
+}
 /** Let the video open before the first interruption. */
 const MIN_CUE_INDEX = 2;
 /** Breathing room between two level blanks. */
@@ -231,8 +241,8 @@ const MIN_CUE_GAP = 2;
  * cueIndex -> the word to blank. Rules:
  *  - only words whose level equals the user's current level
  *  - never a word already in the SRS (those belong to the recall flow)
- *  - never the same word twice in one video, at most two blanks per video,
- *    never in the first two cues, and never in back-to-back cues
+ *  - never the same word twice in one video, at most `maxLevelBlanks` per
+ *    video, never in the first two cues, and never in back-to-back cues
  *  - never a cue the SRS blank plan already claimed (`excludeCues`)
  *  - only glossable words — the gloss is the prompt and the saved translation
  */
@@ -246,10 +256,11 @@ export function computeLevelBlankPlan(
   const saved = new Set(savedWords.map((w) => normalizeAnswer(w.text)));
   const plan = new Map<number, LevelBlankWord>();
   const used = new Set<string>();
+  const maxBlanks = maxLevelBlanks(video.cues.length);
   let lastCue = -Infinity;
 
   for (let ci = MIN_CUE_INDEX; ci < video.cues.length; ci++) {
-    if (plan.size >= MAX_LEVEL_BLANKS_PER_VIDEO) break;
+    if (plan.size >= maxBlanks) break;
     if (excludeCues.has(ci) || ci - lastCue < MIN_CUE_GAP) continue;
 
     for (const word of video.cues[ci].words) {

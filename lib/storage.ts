@@ -1,4 +1,4 @@
-import type { Level, SavedWord, Video, WordState } from '@/types';
+import type { Level, SavedWord, WordState } from '@/types';
 import { BOX_INTERVALS_MS, grade, initialSrs } from '@/lib/srs';
 import {
   applyLevelAnswer,
@@ -12,9 +12,10 @@ import { glossText, lookupGloss } from '@/lib/dictionary';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
 import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
 // Seed data is only used to upgrade legacy saved words to per-word glosses.
-import videosData from '@/data/videos.json';
+import { localVideos } from '@/lib/localVideos';
 
-const videos = videosData as unknown as Video[];
+// Seed + embed catalog: words saved from either kind must resolve here.
+const videos = localVideos;
 
 /**
  * Typed persistence layer for Loro.

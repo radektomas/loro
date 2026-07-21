@@ -6,7 +6,16 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"scripts/**/*.test.mts\" \"lib/**/*.test.mts\"",
+    "harvest": "node scripts/harvest-youtube.mts",
+    "refilter": "node scripts/refilter-candidates.mts",
+    "backfill-provenance": "node scripts/backfill-provenance.mts",
+    "prune-embeds": "node scripts/prune-embeds.mts",
+    "publish-embeds": "node scripts/publish-embeds.mts",
+    "sweep-embeds": "node scripts/sweep-embeds.mts",
+    "probe-captions": "node scripts/probe-captions.mts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

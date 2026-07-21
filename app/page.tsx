@@ -3,16 +3,14 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Feed } from '@/components/Feed';
 import { fetchPublishedVideos } from '@/lib/publishedVideos';
-import videosData from '@/data/videos.json';
+import { localVideos } from '@/lib/localVideos';
 import type { Video } from '@/types';
-
-const staticVideos = videosData as unknown as Video[];
 
 export default function Home() {
   // The static seed videos render immediately; published UGC videos from
   // loro_videos merge in once fetched. The static set stays first-class —
   // if Supabase is unreachable the feed is exactly what it was before UGC.
-  const [videos, setVideos] = useState<Video[]>(staticVideos);
+  const [videos, setVideos] = useState<Video[]>(localVideos);
 
   useEffect(() => {
     void fetchPublishedVideos().then((published) => {

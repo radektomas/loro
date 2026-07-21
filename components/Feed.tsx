@@ -10,7 +10,7 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import type { Cue, SavedWord, Video, Word } from '@/types';
+import type { Cue, FeedMedia, SavedWord, Video, Word } from '@/types';
 import { storage } from '@/lib/storage';
 import { computeBlankPlan } from '@/lib/srs';
 import { computeLevelBlankPlan, tierFor, type LevelBlankWord } from '@/lib/levels';
@@ -22,6 +22,7 @@ import { GlossarySheet } from '@/components/GlossarySheet';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { LoroMascot } from '@/components/LoroMascot';
 import { ActionRail } from '@/components/ActionRail';
+import { YouTubeSurface } from '@/components/YouTubeSurface';
 import { CreatorPill } from '@/components/creator/CreatorEntryCard';
 import { orderVideosForLevel } from '@/lib/calibration';
 import {
@@ -32,6 +33,23 @@ import {
 } from '@/components/icons/Icons';
 
 const VISIBILITY_THRESHOLD = 0.6;
+
+/**
+ * Embed-slide layout: the YouTube player may not have ANYTHING drawn over it
+ * (embed terms), so unlike the full-bleed <video> slides, embeds render the
+ * player in a top-anchored box and every piece of Loro UI — subtitles, rail,
+ * progress bar, paused indicator, unmute pill, attribution — lives in the
+ * band below it. Modern phones are taller than the player's 9:16, which is
+ * exactly the space the band uses.
+ *
+ * The split is computed by FLEXBOX, never by pixel constants: the band's
+ * height is whatever its content needs, and the player takes the remainder.
+ * An earlier version hardcoded a 236px band when the real one is ~2.5x that,
+ * so the UI painted straight over the player — the precise violation this
+ * layout exists to prevent. Never reintroduce a magic band height. The rail
+ * also switches to a horizontal row on embeds, because a 316px vertical
+ * stack is most of the band's budget on its own.
+ */
 
 export function Feed({ videos }: { videos: Video[] }) {
   const router = useRouter();
@@ -223,7 +241,10 @@ export function VideoSlide({
   onboarding,
 }: VideoSlideProps) {
   const slideRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // FeedMedia: an HTMLVideoElement for hosted clips, the YouTubeMedia adapter
+  // for embeds. Every handler below drives this interface and works for both.
+  const videoRef = useRef<FeedMedia | null>(null);
+  const isEmbed = Boolean(video.youtubeId);
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);
   const [paused, setPaused] = useState(false);
@@ -599,29 +620,70 @@ export function VideoSlide({
   return (
     <div
       ref={slideRef}
-      className="relative h-[100dvh] w-full snap-start overflow-hidden bg-background"
+      className={`relative h-[100dvh] w-full snap-start overflow-hidden bg-background${
+        isEmbed ? ' flex flex-col' : ''
+      }`}
     >
-      <video
-        ref={videoRef}
-        src={video.src}
-        poster={video.poster}
-        playsInline
-        loop
-        muted
-        preload="metadata"
-        onClick={togglePlayback}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
+      {isEmbed ? (
+        <>
+          {/* Reserve the top chrome's real height: safe-area inset (0 on a
+              flat screen, ~47-59px on a notch/Dynamic Island) plus the pill
+              row. A fixed constant here put the pills over the player on
+              every notched phone. */}
+          <div
+            className="flex-none"
+            style={{ height: 'calc(env(safe-area-inset-top, 0px) + 3.25rem)' }}
+          />
+          {/* The player takes whatever vertical space the band leaves — no
+              hardcoded band height. min-h-0 lets this flex child actually
+              shrink; max-w-full keeps the 9:16 box inside narrow screens by
+              trading height instead of overflowing. NOTHING is ever drawn on
+              top of this box: that is the embed-terms constraint the whole
+              band layout exists to satisfy. */}
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <div
+              className="h-full max-w-full overflow-hidden rounded-xl"
+              style={{ aspectRatio: '9 / 16' }}
+            >
+              <YouTubeSurface
+                videoId={video.youtubeId!}
+                poster={video.poster}
+                durationSeconds={video.durationSeconds}
+                mediaRef={videoRef}
+                onTap={togglePlayback}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <video
+          ref={(el) => {
+            videoRef.current = el;
+          }}
+          src={video.src}
+          poster={video.poster}
+          playsInline
+          loop
+          muted
+          preload="metadata"
+          onClick={togglePlayback}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
 
       {/* Soft scrim so the subtitle track stays legible over bright footage —
-          transparent at the top, dark at the bottom, never a hard bar */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+          hosted slides only; embed subtitles render on the solid band. */}
+      {!isEmbed && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+      )}
 
-      <ProgressBar videoRef={videoRef} active={active} />
+      {!isEmbed && <ProgressBar videoRef={videoRef} active={active} />}
 
       {/* Paused indicator — taps fall through to the video, which resumes.
-          Hidden during onboarding: the guide pauses deliberately. */}
-      {paused && active && !sheet && !onboarding && !blankWaiting && (
+          Hidden during onboarding: the guide pauses deliberately. Embed
+          slides show theirs in the band instead (nothing may cover the
+          player). */}
+      {!isEmbed && paused && active && !sheet && !onboarding && !blankWaiting && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center animate-fade-in">
           <span className="rounded-full bg-black/40 p-5 text-text backdrop-blur-md">
             <PlayIcon width={30} height={30} />
@@ -632,15 +694,39 @@ export function VideoSlide({
       {/* Bottom stack: action rail, then creator + subtitles. The wrapper is
           pointer-events-none so taps between controls reach the video;
           the rail and word buttons re-enable their own pointer events. */}
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 pb-safe">
+      <div
+        className={
+          isEmbed
+            ? // Normal flow inside the slide's flex column: the band's real
+              // height is whatever its content needs, and the player above
+              // gets the rest. No absolute positioning, so it is structurally
+              // impossible for the band to overlap the player.
+              'pointer-events-none z-10 flex-none pb-safe'
+            : 'pointer-events-none absolute bottom-0 left-0 right-0 z-10 pb-safe'
+        }
+      >
+        {/* Embed band extras — progress and the paused hint live HERE,
+            below the player, never over it. */}
+        {isEmbed && (
+          <div className="relative mx-4 mb-2 h-0.5">
+            <ProgressBar videoRef={videoRef} active={active} />
+          </div>
+        )}
         {!onboarding && (
-          <div className="flex justify-end px-3 pb-3">
+          <div
+            className={
+              isEmbed
+                ? 'flex justify-center px-3 pb-2'
+                : 'flex justify-end px-3 pb-3'
+            }
+          >
             <ActionRail
               video={video}
               unmuted={unmuted}
               onToggleSound={handleToggleSound}
               onReplay={handleReplay}
               onOpenGlossary={handleOpenGlossary}
+              orientation={isEmbed ? 'horizontal' : 'vertical'}
             />
           </div>
         )}
@@ -648,11 +734,47 @@ export function VideoSlide({
           <span className="mr-2 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-bold tracking-wide text-accent">
             {video.level}
           </span>
-          <span className="text-sm font-medium text-text/80">
-            {video.creator}
-          </span>
+          {isEmbed && paused && active && !sheet && !blankWaiting && (
+            <span className="mr-2 inline-flex translate-y-0.5 text-text/70">
+              <PlayIcon width={14} height={14} />
+            </span>
+          )}
+          {isEmbed && video.attribution ? (
+            <span className="text-sm font-medium text-text/80">
+              <a
+                href={video.attribution.channelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pointer-events-auto underline-offset-2 hover:underline"
+              >
+                {video.creator}
+              </a>
+              {video.attribution.license === 'creativeCommon' && (
+                <a
+                  href="https://creativecommons.org/licenses/by/3.0/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pointer-events-auto ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-text/70"
+                >
+                  CC BY
+                </a>
+              )}
+              <a
+                href={video.attribution.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pointer-events-auto ml-2 text-xs text-text/50 hover:text-text/80"
+              >
+                YouTube ↗
+              </a>
+            </span>
+          ) : (
+            <span className="text-sm font-medium text-text/80">
+              {video.creator}
+            </span>
+          )}
         </div>
-        <div className="pb-10">
+        <div className={isEmbed ? 'pb-4' : 'pb-10'}>
           <SubtitleTrack
             videoRef={videoRef}
             cues={video.cues}
@@ -676,7 +798,7 @@ export function VideoSlide({
           — word taps, rail, pause — around it. Suppressed in onboarding so
           nothing but the loop is on screen, and while a blank is waiting for
           an answer so it never competes with typing. */}
-      {active && !unmuted && !onboarding && !blankWaiting && (
+      {!isEmbed && active && !unmuted && !onboarding && !blankWaiting && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
           <button
             type="button"
@@ -731,7 +853,7 @@ function ProgressBar({
   videoRef,
   active,
 }: {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: RefObject<FeedMedia | null>;
   active: boolean;
 }) {
   const barRef = useRef<HTMLDivElement>(null);

@@ -19,12 +19,19 @@ type ActionRailProps = {
   onToggleSound: () => void;
   onReplay: () => void;
   onOpenGlossary: () => void;
+  /**
+   * 'vertical' (default) is the TikTok stack over full-bleed video.
+   * 'horizontal' is for YouTube-embed slides, where every pixel of vertical
+   * space in the band is taken from the player: the stack is ~316px tall,
+   * the row ~64px.
+   */
+  orientation?: 'vertical' | 'horizontal';
 };
 
 /**
- * TikTok-style vertical action stack, bottom-right of each slide:
- * sound toggle, saved-word count (links to /vocab filtered to this video),
- * the per-video glossary sheet (every word, coloured by knowledge), replay.
+ * Action controls for a slide: sound toggle, saved-word count (links to
+ * /vocab filtered to this video), the per-video glossary sheet (every word,
+ * coloured by knowledge), replay.
  */
 export function ActionRail({
   video,
@@ -32,6 +39,7 @@ export function ActionRail({
   onToggleSound,
   onReplay,
   onOpenGlossary,
+  orientation = 'vertical',
 }: ActionRailProps) {
   const [savedCount, setSavedCount] = useState(0);
 
@@ -45,7 +53,13 @@ export function ActionRail({
   }, [video.id]);
 
   return (
-    <div className="pointer-events-auto flex flex-col items-center gap-4">
+    <div
+      className={
+        orientation === 'horizontal'
+          ? 'pointer-events-auto flex flex-row items-start justify-center gap-7'
+          : 'pointer-events-auto flex flex-col items-center gap-4'
+      }
+    >
       <button
         type="button"
         onClick={onToggleSound}

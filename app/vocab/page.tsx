@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { SavedWord, Video, WordState } from '@/types';
+import type { SavedWord, WordState } from '@/types';
 import { storage } from '@/lib/storage';
 import { formatDue, MAX_BOX } from '@/lib/srs';
 import { nextDueAt } from '@/lib/progress';
@@ -15,9 +15,9 @@ import {
   SearchIcon,
   TrashIcon,
 } from '@/components/icons/Icons';
-import videosData from '@/data/videos.json';
+import { localVideos } from '@/lib/localVideos';
 
-const videos = videosData as unknown as Video[];
+const videos = localVideos;
 
 const wordKey = (w: SavedWord) => `${w.videoId}-${w.text}`;
 

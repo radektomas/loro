@@ -8,7 +8,7 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import type { Cue, SavedWord, Word } from '@/types';
+import type { Cue, FeedMedia, SavedWord, Word } from '@/types';
 import { normalizeAnswer } from '@/lib/srs';
 import { tierFor, type LevelBlankWord } from '@/lib/levels';
 import {
@@ -43,7 +43,9 @@ type BlankEntry =
   | { kind: 'level'; word: LevelBlankWord };
 
 type SubtitleTrackProps = {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  /** FeedMedia: a real <video> or the YouTube-embed adapter — the component
+      only touches currentTime (read/write), paused and pause(). */
+  videoRef: RefObject<FeedMedia | null>;
   cues: Cue[];
   language: string;
   /** Only run the rAF loop while the slide is on screen. */

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { SavedWord, Video, WordState } from '@/types';
+import type { SavedWord, WordState } from '@/types';
 import { storage } from '@/lib/storage';
 import { formatDue } from '@/lib/srs';
 import {
@@ -20,9 +20,9 @@ import {
   ChevronLeftIcon,
   LockIcon,
 } from '@/components/icons/Icons';
-import videosData from '@/data/videos.json';
+import { localVideos } from '@/lib/localVideos';
 
-const videos = videosData as unknown as Video[];
+const videos = localVideos;
 
 /** Segment styling for the word-state bar. Red is reserved for lapses;
     green is earned by knowing; the pipeline states stay neutral. */

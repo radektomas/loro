@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // The CLI scripts under scripts/ run straight through Node's built-in
+    // type stripping (`node scripts/foo.ts`), which needs real, extension-ed
+    // import specifiers. Safe here because this config never emits.
+    "allowImportingTsExtensions": true,
     "jsx": "preserve",
     "incremental": true,
     "plugins": [
@@ -22,6 +26,15 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  // "**/*.ts" does NOT match .mts — the CLI scripts under scripts/ are .mts
+  // (explicit ESM, matching the existing export-mascot.mjs), so without this
+  // entry they would compile at runtime but never be typechecked.
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.mts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }
