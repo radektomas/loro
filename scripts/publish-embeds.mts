@@ -170,6 +170,19 @@ function isDefinitiveNoCaptions(err: NoCaptionsError): boolean {
   );
 }
 
+/**
+ * An exhausted OpenAI balance, as opposed to a passing rate limit.
+ *
+ * Both surface as HTTP 429, so the status code alone cannot distinguish
+ * them — only `insufficient_quota` means "will not recover by waiting".
+ * Matched on the type field OpenAI returns, not the prose message, which
+ * is free to change.
+ */
+function isOutOfCredit(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('insufficient_quota');
+}
+
 async function selectCandidates(
   supabase: SupabaseClient,
   options: Options,
@@ -341,6 +354,17 @@ async function main(): Promise<void> {
         // Transient (network, consent wall, OpenAI hiccup): skip, no verdict.
         stats.failed += 1;
         console.log(`   ! skipped (transient): ${error instanceof Error ? error.message : error}\n`);
+
+        // ...except an exhausted OpenAI balance, which will not recover
+        // during this run. Continuing just marches through the rest of the
+        // batch fetching captions and failing at the gloss, so stop and say
+        // so. Nothing is lost: every remaining candidate keeps its
+        // 'eligible' status and the next run resumes from here.
+        if (isOutOfCredit(error)) {
+          console.log('   ⛔ OpenAI balance exhausted — stopping the run.');
+          console.log('      Top up, then re-run the same command to resume.\n');
+          break;
+        }
       }
     }
 
