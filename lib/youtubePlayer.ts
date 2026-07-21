@@ -397,6 +397,15 @@ export class YouTubeMedia implements FeedMedia {
             autoplay: 0,
             controls: 0,
             playsinline: 1,
+            // REQUIRED for autoplay on phones. Mobile browsers decide whether
+            // a gesture-free play() is allowed from the player's state at
+            // CREATION, so calling player.mute() later in onReady is too
+            // late: without this the feed loaded muted, playVideo() was
+            // refused on every slide, and each video had to be tapped.
+            // Desktop is lenient about it, so the bug only showed on a phone.
+            // The user's sound choice is applied on top of this in
+            // handleReady (unMute) once playback is under way.
+            mute: 1,
             rel: 0,
             fs: 0,
             disablekb: 1,
