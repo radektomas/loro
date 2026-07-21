@@ -24,6 +24,7 @@ import { LoroMascot } from '@/components/LoroMascot';
 import { ActionRail } from '@/components/ActionRail';
 import { YouTubeSurface } from '@/components/YouTubeSurface';
 import { CreatorPill } from '@/components/creator/CreatorEntryCard';
+import { FeedEndCard } from '@/components/FeedEndCard';
 import { orderVideosForLevel } from '@/lib/calibration';
 import {
   BookIcon,
@@ -161,6 +162,14 @@ export function Feed({ videos }: { videos: Video[] }) {
             seekRef={seekRef}
           />
         ))}
+        {feedVideos.length > 0 && (
+          <FeedEndCard
+            totalVideos={feedVideos.length}
+            onRestart={() =>
+              containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+          />
+        )}
       </div>
 
       {/* Top chrome — over everything, respects the notch */}
