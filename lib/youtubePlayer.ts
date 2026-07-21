@@ -106,6 +106,35 @@ export function loadYouTubeApi(): Promise<YTNamespace> {
   return apiPromise;
 }
 
+/**
+ * Has the user interacted with the page since it loaded?
+ *
+ * Phones grant audio per page load, not per preference: a stored "sound on"
+ * from an earlier visit buys nothing. Unmuting a playing video before that
+ * grant does not merely stay silent on Safari — it PAUSES the video. So the
+ * adapter restores sound only once this is true; until then playback runs
+ * muted, which is always permitted.
+ *
+ * navigator.userActivation would be the direct question to ask, but Safari
+ * does not implement it — which is the exact browser this guards. A capture
+ * listener on the first pointer/key event is portable and equivalent for our
+ * purpose (any touch, including the scroll that moves to the next slide).
+ */
+let hasUserActivation = false;
+/** Players already running muted that want sound the moment a touch lands. */
+const awaitingActivation = new Set<() => void>();
+if (typeof document !== 'undefined') {
+  const mark = () => {
+    hasUserActivation = true;
+    for (const restore of awaitingActivation) restore();
+    awaitingActivation.clear();
+  };
+  const opts = { once: true, capture: true, passive: true } as const;
+  document.addEventListener('pointerdown', mark, opts);
+  document.addEventListener('touchstart', mark, opts);
+  document.addEventListener('keydown', mark, opts);
+}
+
 // ----------------------------------------------------------------- the shim
 
 type PendingPlay = {
@@ -316,8 +345,15 @@ export class YouTubeMedia implements FeedMedia {
     // preload is always 'metadata'; nothing to do.
   }
 
+  /** Bound so it can be added to and removed from awaitingActivation. */
+  private restoreSound = (): void => {
+    if (this.destroyed || !this.player || this._muted) return;
+    this.player.unMute();
+  };
+
   destroy(): void {
     this.destroyed = true;
+    awaitingActivation.delete(this.restoreSound);
     this.settlePendingPlay(new DOMException('media destroyed', 'AbortError'));
     this.listeners.clear();
     if (this.player) {
@@ -430,8 +466,14 @@ export class YouTubeMedia implements FeedMedia {
   private handleReady(): void {
     if (this.destroyed || !this.player) return;
     this.playerReady = true;
-    if (this._muted) this.player.mute();
-    else this.player.unMute();
+    // ALWAYS start muted, even when the user's stored preference is sound-on.
+    // A phone grants audio only after a gesture IN THIS PAGE LOAD, and a
+    // preference persisted from an earlier visit is not one — so unmuting
+    // here made the very first playVideo() an unmuted autoplay, which iOS
+    // refuses outright, leaving YouTube's own red play button on every
+    // slide. Muted autoplay is always permitted, so we take it and restore
+    // sound the instant playback is actually running (see PLAYING).
+    this.player.mute();
     if (this.anchorTime > 0.25) this.player.seekTo(this.anchorTime, true);
     this.emit('loadedmetadata');
     if (this.desired === 'playing') {
@@ -447,6 +489,18 @@ export class YouTubeMedia implements FeedMedia {
     switch (state) {
       case PLAYING: {
         this.playing = true;
+        // Sound is restored only now, once playback is genuinely running AND
+        // the page has been touched at least once (see hasUserActivation).
+        // Worst case the first slide of a cold load plays silently until the
+        // user touches anything; the old behaviour was that it did not play
+        // at all.
+        if (!this._muted) {
+          if (hasUserActivation) this.player.unMute();
+          // Not touched yet: queue, so the video the user is looking at gains
+          // sound on their first touch rather than staying silent until the
+          // next slide.
+          else awaitingActivation.add(this.restoreSound);
+        }
         this.lastRaw = this.player.getCurrentTime();
         this.anchorTime = this.lastRaw;
         this.anchorAt = performance.now();
