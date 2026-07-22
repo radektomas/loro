@@ -9,25 +9,62 @@ type LanguagePickerProps = {
   languages: string[];
   value: string;
   onChange: (code: string) => void;
+  /**
+   * How the trigger looks. 'pill' is the translucent feed-chrome pill;
+   * 'row' is a full-width settings row on a solid surface. The SHEET is
+   * identical either way — this only changes what opens it, so the setting
+   * behaves the same wherever it is surfaced.
+   */
+  variant?: 'pill' | 'row';
 };
 
 /**
- * Pill in the top-right of the feed; opens a sheet listing every
- * translation language present in the data.
+ * Opens a sheet listing every translation language present in the data.
+ *
+ * Lives in Settings on /profile. It is a controlled component: the selected
+ * value is owned and persisted by the caller (storage.getLanguage /
+ * setLanguage, key 'loro.language'), so relocating the trigger never moves
+ * the state.
  */
-export function LanguagePicker({ languages, value, onChange }: LanguagePickerProps) {
+export function LanguagePicker({
+  languages,
+  value,
+  onChange,
+  variant = 'pill',
+}: LanguagePickerProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-sm font-medium text-text backdrop-blur-md transition-colors hover:bg-black/55"
-      >
-        <GlobeIcon width={15} height={15} className="text-accent" />
-        {languageLabel(value)}
-      </button>
+      {variant === 'row' ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-left transition-colors hover:bg-surface-raised"
+        >
+          <GlobeIcon width={18} height={18} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-semibold text-text">
+              Translations
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-muted">
+              Word meanings and subtitles
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-muted">
+            {languageLabel(value)}
+          </span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-sm font-medium text-text backdrop-blur-md transition-colors hover:bg-black/55"
+        >
+          <GlobeIcon width={15} height={15} className="text-accent" />
+          {languageLabel(value)}
+        </button>
+      )}
 
       {open && (
         // pointer-events-auto is load-bearing: this sheet renders inside the

@@ -12,6 +12,7 @@ import {
   PageHeader,
   useSupabaseUser,
 } from '@/components/creator/ugc';
+import { isReservedHandle } from '@/lib/reservedHandles';
 import { SignInCard } from '@/components/SignInCard';
 import { LoroMascot } from '@/components/LoroMascot';
 import { CheckIcon } from '@/components/icons/Icons';
@@ -117,7 +118,9 @@ export default function CreatorApplyPage() {
     });
   }, [ready, user]);
 
-  const handleValid = /^[a-z0-9_.]{3,20}$/.test(handle.trim().toLowerCase());
+  const handleReserved = isReservedHandle(handle);
+  const handleValid =
+    /^[a-z0-9_.]{3,20}$/.test(handle.trim().toLowerCase()) && !handleReserved;
   const canSubmit =
     displayName.trim().length >= 2 &&
     handleValid &&
@@ -218,7 +221,11 @@ export default function CreatorApplyPage() {
               </Field>
               <Field
                 label="Handle"
-                hint="3–20 characters: lowercase letters, numbers, dots, underscores."
+                hint={
+                  handleReserved
+                    ? 'That handle is reserved — please pick another.'
+                    : '3–20 characters: lowercase letters, numbers, dots, underscores.'
+                }
               >
                 <div className="flex items-center gap-1 rounded-2xl bg-surface pl-4 ring-1 ring-transparent focus-within:ring-accent/50">
                   <span className="text-base text-muted">@</span>

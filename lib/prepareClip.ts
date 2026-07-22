@@ -88,8 +88,66 @@ async function probeVideoCodec(
 export type PreparePhase = 'video' | 'audio';
 
 export type PrepareResult =
-  | { ok: true; video: File; audio: Blob; transcoded: boolean }
+  | {
+      ok: true;
+      video: File;
+      audio: Blob;
+      /** Poster frame, or null when extraction failed — see extractPoster. */
+      poster: Blob | null;
+      transcoded: boolean;
+    }
   | { ok: false; error: string };
+
+/** Poster frame: ~1s in, long edge 480, JPEG. -q:v 4 on mjpeg's 2..31 scale
+    is roughly quality 0.8 — small enough for a 3-column grid tile. */
+const POSTER_SECONDS = 1;
+const POSTER_MAX_WIDTH = 480;
+const POSTER_TIMEOUT_MS = 60_000;
+
+/**
+ * Grab a single frame as a JPEG for the profile grid.
+ *
+ * Returns null instead of throwing on ANY failure: a missing poster degrades
+ * to the grid's initial tile, while a thrown error here would fail an upload
+ * that is otherwise perfectly good. The poster is a nice-to-have; the clip is
+ * the product.
+ *
+ * Reads whichever file is known to be H.264 — the transcoded output when we
+ * made one, the original only when it was already H.264 (an HEVC .mov is not
+ * decodable by the wasm core, which is why it was transcoded in the first
+ * place). A clip shorter than the seek point yields no frame, so that retries
+ * at 0.
+ */
+async function extractPoster(
+  ffmpeg: FFmpeg,
+  sourceName: string,
+  outName: string
+): Promise<Blob | null> {
+  for (const seek of [POSTER_SECONDS, 0]) {
+    try {
+      const code = await ffmpeg.exec(
+        [
+          // -ss before -i seeks by keyframe: fast, and exact enough for a
+          // thumbnail.
+          '-ss', String(seek),
+          '-i', sourceName,
+          '-frames:v', '1',
+          '-vf', `scale='min(iw,${POSTER_MAX_WIDTH})':-2`,
+          '-q:v', '4',
+          outName,
+        ],
+        POSTER_TIMEOUT_MS
+      );
+      if (code !== 0) continue;
+      const data = await ffmpeg.readFile(outName);
+      if (typeof data === 'string' || data.byteLength === 0) continue;
+      return new Blob([new Uint8Array(data)], { type: 'image/jpeg' });
+    } catch {
+      // try the next seek point, then give up
+    }
+  }
+  return null;
+}
 
 /**
  * Prepare a picked clip for upload: H.264 MP4 video + m4a transcription
@@ -114,6 +172,7 @@ export async function prepareClip(
   const inName = `in.${(file.name.split('.').pop() || 'mov').toLowerCase()}`;
   const outVideo = 'out.mp4';
   const outAudio = 'out.m4a';
+  const outPoster = 'out.jpg';
   const baseName = file.name.replace(/\.[^.]+$/, '') || 'clip';
 
   let phase: PreparePhase = 'video';
@@ -215,10 +274,19 @@ export async function prepareClip(
       };
     }
 
+    // Last, and deliberately unguarded by any error path: by this point the
+    // upload is already viable, so a failed poster must change nothing.
+    const poster = await extractPoster(
+      ffmpeg,
+      transcoded ? outVideo : inName,
+      outPoster
+    );
+
     return {
       ok: true,
       video,
       audio: new Blob([new Uint8Array(audioData)], { type: 'audio/mp4' }),
+      poster,
       transcoded,
     };
   } catch {
@@ -232,7 +300,7 @@ export async function prepareClip(
   } finally {
     ffmpeg.off('progress', handleProgress);
     // Best-effort scratch cleanup; the worker keeps its FS between runs.
-    for (const name of [inName, outVideo, outAudio]) {
+    for (const name of [inName, outVideo, outAudio, outPoster]) {
       try {
         await ffmpeg.deleteFile(name);
       } catch {}

@@ -49,11 +49,45 @@ export type VideoAttribution = {
   license: 'creativeCommon' | 'youtube';
 };
 
+/**
+ * WHO made a feed slide, and therefore what the attribution line does when
+ * tapped. A discriminated union rather than optional fields, because the
+ * three cases have genuinely different obligations and must never be
+ * collapsed into "maybe there's a handle, maybe there's a channel":
+ *
+ *  - 'creator'  a Loro creator's own upload. Links INTERNALLY to their
+ *               profile at /creator/{handle}.
+ *  - 'youtube'  an embedded YouTube video. Links OUT to the channel in a new
+ *               tab and NEVER to an internal profile, carries the watch URL
+ *               and licence, and its attribution must stay visible — this is
+ *               an embed-terms requirement, not a style choice. Carrying the
+ *               full TASL set in the variant is what makes it impossible to
+ *               render an embed slide with a missing piece.
+ *  - 'none'     a static seed clip with no creator behind it. Renders the
+ *               plain name with no link — never a dead one.
+ */
+export type FeedAuthor =
+  | {
+      kind: 'creator';
+      /** loro_creators.user_id — the follow target */
+      creatorId: string;
+      handle: string;
+      displayName: string;
+      /** Public avatar URL, or null — the shared Avatar component falls back
+          to the initial circle. */
+      avatarUrl: string | null;
+    }
+  | ({ kind: 'youtube' } & VideoAttribution)
+  | { kind: 'none' };
+
 export type Video = {
   id: string;
   src: string;
   poster: string;
+  /** Display name shown wherever a slide is listed (feed, /progress). Who to
+      LINK to is `author` — this is only the label. */
   creator: string;
+  author: FeedAuthor;
   level: Level;
   cues: Cue[];
   /** keyed by normalised surface form — see lib/dictionary.ts normalizeSurface() */
@@ -64,8 +98,6 @@ export type Video = {
   /** Known duration for embeds, so the progress bar works before the player
       boots (the iframe reports duration only once created). */
   durationSeconds?: number;
-  /** Required whenever youtubeId is set. */
-  attribution?: VideoAttribution;
 };
 
 /**

@@ -48,6 +48,58 @@ function dayIndex(day: string): number {
   return Date.UTC(y, m - 1, d) / 86_400_000;
 }
 
+/** One cell of the week strip. */
+export type WeekDay = {
+  /** "YYYY-MM-DD" local day key */
+  key: string;
+  /** Single-letter column heading, Mon-first */
+  label: string;
+  /** Was there a correct recall on this day? */
+  active: boolean;
+  isToday: boolean;
+  /** Later this week — rendered as empty, never as a miss. */
+  isFuture: boolean;
+};
+
+const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+
+/**
+ * The current week, Monday-first, marked with the days that had a correct
+ * recall. Built from the SAME day-key list the streak is computed from
+ * (storage.getCorrectRecallDays), so the strip and the number can never
+ * disagree.
+ *
+ * Existing days are what this shows — deliberately. A streak that reset to 0
+ * still has real practice behind it, and the strip is how that stays visible
+ * instead of the week reading as a failure.
+ */
+export function weekStrip(days: string[], now: number = Date.now()): WeekDay[] {
+  const set = new Set(days);
+  const today = new Date(now);
+  const todayKey = dayKey(now);
+  // getDay() is Sunday-based; shift so Monday is 0.
+  const offset = (today.getDay() + 6) % 7;
+
+  return WEEK_LABELS.map((label, i) => {
+    // Local calendar arithmetic — Date normalises month/year rollover, and
+    // day-of-month maths keeps this correct across DST shifts, which adding
+    // 86_400_000 ms would not.
+    const d = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - offset + i
+    );
+    const key = dayKey(d.getTime());
+    return {
+      key,
+      label,
+      active: set.has(key),
+      isToday: key === todayKey,
+      isFuture: i > offset,
+    };
+  });
+}
+
 export type Streaks = { current: number; longest: number };
 
 /**

@@ -9,7 +9,20 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+/**
+ * Absolute base for og:/twitter: URLs — link previews (creator profiles are
+ * shared as links) need absolute URLs, and relative ones are dropped without
+ * this. Vercel injects VERCEL_PROJECT_PRODUCTION_URL; the localhost fallback
+ * keeps dev renders from throwing.
+ */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Loro",
   description: "Learn Spanish one swipe at a time.",
   manifest: "/manifest.json",

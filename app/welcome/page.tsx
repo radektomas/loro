@@ -6,6 +6,7 @@ import type { Level, SavedWord, Video, Word } from '@/types';
 import { storage } from '@/lib/storage';
 import { normalizeAnswer } from '@/lib/srs';
 import { glossText, lookupGloss } from '@/lib/dictionary';
+import { languageLabel } from '@/lib/languages';
 import {
   buildCalibrationWords,
   deriveLevel,
@@ -384,6 +385,13 @@ export default function WelcomePage() {
           <p className="mt-6 max-w-sm text-xl font-semibold leading-relaxed text-text">
             That’s Loro. Save what you don’t know, and it’ll come back right
             before you forget it.
+          </p>
+          {/* The intro teaches translations by showing them, so it also has to
+              say where the language is chosen — it now lives two taps deep in
+              Profile → Settings instead of on the feed's top bar. */}
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
+            Translations are in {languageLabel(language)}. Change that any time
+            in Profile → Settings.
           </p>
           <button
             type="button"

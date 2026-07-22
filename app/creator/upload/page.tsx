@@ -28,6 +28,9 @@ type Picked = {
   file: File;
   duration: number;
   audio: Blob;
+  /** Poster frame for the profile grid — null when extraction failed, which
+      is not an upload error (the grid falls back to an initial tile). */
+  poster: Blob | null;
   transcoded: boolean;
 };
 
@@ -215,6 +218,7 @@ export default function CreatorUploadPage() {
       file: result.video,
       duration,
       audio: result.audio,
+      poster: result.poster,
       transcoded: result.transcoded,
     });
   };
@@ -273,7 +277,8 @@ export default function CreatorUploadPage() {
     const result = await uploadCreatorVideo(
       picked.file,
       picked.duration,
-      picked.audio
+      picked.audio,
+      picked.poster
     );
     setUploading(false);
     if (!result.ok) {

@@ -197,6 +197,25 @@ export function FilmIcon(props: IconProps) {
   );
 }
 
+/** Streak flame. Only ever rendered when the streak is actually alive. */
+export function FlameIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3c.5 3-1.5 4-3 5.5A5.5 5.5 0 0 0 6.5 13a5.5 5.5 0 0 0 11 0c0-2.5-1.5-4-2.5-5-.6 1-1.3 1.5-2 1.5 1-2.5 0-5-1-6.5Z" />
+    </svg>
+  );
+}
+
+/** Neutral stand-in for a signed-out viewer in the profile pill. */
+export function UserIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+    </svg>
+  );
+}
+
 export function LockIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

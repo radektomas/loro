@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type RefObject,
@@ -19,11 +18,11 @@ import type { LoroMascotState } from '@/components/LoroMascot';
 import { SubtitleTrack } from '@/components/SubtitleTrack';
 import { WordSheet, type WordSheetData } from '@/components/WordSheet';
 import { GlossarySheet } from '@/components/GlossarySheet';
-import { LanguagePicker } from '@/components/LanguagePicker';
 import { LoroMascot } from '@/components/LoroMascot';
 import { ActionRail } from '@/components/ActionRail';
 import { YouTubeSurface } from '@/components/YouTubeSurface';
-import { CreatorPill } from '@/components/creator/CreatorEntryCard';
+import { ProfilePill } from '@/components/creator/ProfilePill';
+import { Avatar } from '@/components/creator/Avatar';
 import { FeedEndCard } from '@/components/FeedEndCard';
 import { orderVideosForLevel } from '@/lib/feedOrder';
 import {
@@ -52,14 +51,27 @@ const VISIBILITY_THRESHOLD = 0.6;
  * stack is most of the band's budget on its own.
  */
 
-export function Feed({ videos }: { videos: Video[] }) {
+/**
+ * `scoped` = this feed is one creator's videos, opened from their profile
+ * grid. The list is then used EXACTLY as given (newest first, matching the
+ * grid) — no shuffle, no level ordering, no unseen-first. Reordering a
+ * deliberately-chosen sequence would break the one thing the user asked for:
+ * tapping a tile and continuing through that creator's videos in the order
+ * they just saw them.
+ */
+export function Feed({
+  videos,
+  scoped = false,
+}: {
+  videos: Video[];
+  scoped?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [language, setLanguage] = useState('en');
   const [unmuted, setUnmuted] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
   // First-time visitors are routed to the guided intro before the feed. Render
   // nothing until this resolves so the feed never flashes behind /welcome.
   const [gate, setGate] = useState<'checking' | 'open'>('checking');
@@ -78,7 +90,9 @@ export function Feed({ videos }: { videos: Video[] }) {
     const level = storage.getStartLevel();
     const watchedIds = new Set(storage.getWatchedVideoIds());
     const order = (list: Video[]): Video[] =>
-      level ? orderVideosForLevel(list, level, { watchedIds }) : [...list];
+      level && !scoped
+        ? orderVideosForLevel(list, level, { watchedIds })
+        : [...list];
 
     setFeedVideos((prev) => {
       // Ordered ONCE per mount: unseen first, then closest to the user's
@@ -97,26 +111,14 @@ export function Feed({ videos }: { videos: Video[] }) {
       return orderedRef.current;
     });
     setGate('open');
-  }, [router, videos]);
+  }, [router, videos, scoped]);
 
-  // Every translation language present in the seed data.
-  const languages = useMemo(() => {
-    const set = new Set<string>();
-    for (const video of videos)
-      for (const cue of video.cues)
-        for (const code of Object.keys(cue.translations)) set.add(code);
-    return [...set].sort();
-  }, [videos]);
-
+  // The translation language is CHOSEN in /profile → Settings and read here.
+  // Re-read on mount is enough: /profile is a separate route, so returning to
+  // the feed remounts this component with the new value.
   useEffect(() => {
     setLanguage(storage.getLanguage());
     setUnmuted(storage.getSessionUnmuted());
-    setHydrated(true);
-  }, []);
-
-  const handleLanguageChange = useCallback((code: string) => {
-    setLanguage(code);
-    storage.setLanguage(code);
   }, []);
 
   // The ONLY places a sound choice is persisted: both are real user gestures
@@ -212,15 +214,10 @@ export function Feed({ videos }: { videos: Video[] }) {
               <ChartIcon width={15} height={15} className="text-accent" />
               Progress
             </Link>
-            <CreatorPill />
           </div>
-          {hydrated && (
-            <LanguagePicker
-              languages={languages}
-              value={language}
-              onChange={handleLanguageChange}
-            />
-          )}
+          {/* Profile lives in the top RIGHT; Create and the translation
+              language moved inside it (/profile). */}
+          <ProfilePill />
         </div>
       </div>
     </div>
@@ -770,40 +767,7 @@ export function VideoSlide({
               <PlayIcon width={14} height={14} />
             </span>
           )}
-          {isEmbed && video.attribution ? (
-            <span className="text-sm font-medium text-text/80">
-              <a
-                href={video.attribution.channelUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pointer-events-auto underline-offset-2 hover:underline"
-              >
-                {video.creator}
-              </a>
-              {video.attribution.license === 'creativeCommon' && (
-                <a
-                  href="https://creativecommons.org/licenses/by/3.0/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pointer-events-auto ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-text/70"
-                >
-                  CC BY
-                </a>
-              )}
-              <a
-                href={video.attribution.videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pointer-events-auto ml-2 text-xs text-text/50 hover:text-text/80"
-              >
-                YouTube ↗
-              </a>
-            </span>
-          ) : (
-            <span className="text-sm font-medium text-text/80">
-              {video.creator}
-            </span>
-          )}
+          <AuthorLine video={video} />
         </div>
         <div className={isEmbed ? 'pb-2' : 'pb-10'}>
           <SubtitleTrack
@@ -877,6 +841,73 @@ export function VideoSlide({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The attribution line under a slide. One switch over the author union, with
+ * every case rendering something — so no slide can end up with a blank
+ * attribution, and no case is reachable through a null check on an optional
+ * field.
+ *
+ * The 'youtube' case is the constrained one: the channel name links OUT in a
+ * new tab and never to an internal Loro profile, the licence chip and watch
+ * link stay with it, and the whole line stays visible. That is an embed-terms
+ * requirement (see the layout note at the top of this file), not styling.
+ */
+function AuthorLine({ video }: { video: Video }) {
+  const author = video.author;
+
+  if (author.kind === 'youtube') {
+    return (
+      <span className="text-sm font-medium text-text/80">
+        <a
+          href={author.channelUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pointer-events-auto underline-offset-2 hover:underline"
+        >
+          {author.channelTitle}
+        </a>
+        {author.license === 'creativeCommon' && (
+          <a
+            href="https://creativecommons.org/licenses/by/3.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pointer-events-auto ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-text/70"
+          >
+            CC BY
+          </a>
+        )}
+        <a
+          href={author.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pointer-events-auto ml-2 text-xs text-text/50 hover:text-text/80"
+        >
+          YouTube ↗
+        </a>
+      </span>
+    );
+  }
+
+  if (author.kind === 'creator') {
+    return (
+      <Link
+        href={`/creator/${encodeURIComponent(author.handle)}`}
+        className="pointer-events-auto inline-flex translate-y-1 items-center gap-1.5 align-middle"
+      >
+        <Avatar url={author.avatarUrl} name={author.displayName} size={24} />
+        <span className="text-sm font-medium text-text/80 underline-offset-2 hover:underline">
+          @{author.handle}
+        </span>
+      </Link>
+    );
+  }
+
+  // 'none' — a seed clip. The name still shows; it just isn't a link.
+  return (
+    <span className="text-sm font-medium text-text/80">{video.creator}</span>
   );
 }
 

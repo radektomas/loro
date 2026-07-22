@@ -13,6 +13,17 @@ import type { Video } from '@/types';
  * deliberately picks from the seed set only, where playback is frame-exact.
  * UGC rows from Supabase remain feed-only, as before.
  */
-export const staticVideos = videosData as unknown as Video[];
+type StaticEntry = Omit<Video, 'author'>;
+
+/**
+ * The seed clips have no creator behind them (they predate UGC), so their
+ * author is explicitly 'none': the feed renders their name as plain text and
+ * never links it anywhere. Mapped rather than cast so the field actually
+ * exists at runtime — a cast would satisfy the compiler and hand the feed an
+ * undefined author.
+ */
+export const staticVideos: Video[] = (
+  videosData as unknown as StaticEntry[]
+).map((entry) => ({ ...entry, author: { kind: 'none' } }));
 
 export const localVideos: Video[] = [...staticVideos, ...embedVideos];

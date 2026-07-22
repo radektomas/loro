@@ -11,6 +11,16 @@ import { dayKey } from '@/lib/progress';
 import { glossText, lookupGloss } from '@/lib/dictionary';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
 import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
+// Follow state is its own localStorage-first cache with the same shape, but it
+// does NOT observe auth itself: this module owns the single cache-owner
+// verdict and drives the follows engine's transitions from handleSession.
+// The dependency is one-way (follows.ts must never import storage.ts).
+import {
+  flushFollowsQueue,
+  handleFollowsAuth,
+  handleFollowsSignOut,
+  type FollowsAuthMode,
+} from '@/lib/follows';
 // Seed data is only used to upgrade legacy saved words to per-word glosses.
 import { localVideos } from '@/lib/localVideos';
 
@@ -410,13 +420,26 @@ async function handleSession(userId: string | null): Promise<void> {
     // Signed out. Keep the cache as an anonymous working copy; just stop
     // syncing. syncedUser is left as-is so this user re-signs in cleanly.
     currentUserId = null;
+    handleFollowsSignOut();
     return;
   }
 
   currentUserId = userId;
   void ensureProfile(userId);
 
+  // Read the cache owner ONCE, before any branch writes syncedUser: it is the
+  // single verdict on whose data localStorage holds, and every localStorage-
+  // first feature transitions on it. Follows ride the same verdict rather than
+  // keeping their own owner key, so the two caches can never disagree about
+  // which account they belong to.
   const cacheOwner = readJSON<string | null>(KEYS.syncedUser, null);
+  const followsMode: FollowsAuthMode =
+    cacheOwner === userId
+      ? 'hydrate'
+      : cacheOwner === null
+        ? 'merge-up'
+        : 'switch-user';
+
   if (cacheOwner === userId) {
     await hydrateFromRemote(userId);
   } else if (cacheOwner === null) {
@@ -430,6 +453,19 @@ async function handleSession(userId: string | null): Promise<void> {
   }
 
   void flushQueue();
+  // Independent of the word sync: a failure above must not skip follows, and
+  // follows has its own retry queue. Not awaited — nothing in the UI waits.
+  //
+  // The fire-and-forget is only safe because the follows engine's merge-up
+  // and hydrate are THE SAME union-push: local and remote are unioned, local-
+  // only ids are queued upward, and nothing is ever dropped from the local
+  // cache. A merge that fails (or never runs, because the tab closed) is
+  // therefore self-healing — the next hydrate performs the identical union
+  // and the pending ids are still queued. If hydrate is ever changed to a
+  // pure remote -> local read, that stops being true: an un-merged local
+  // follow would be silently overwritten, and this call must then become
+  // awaited and error-handled before the merge-up branch can be trusted.
+  void handleFollowsAuth(userId, followsMode);
 }
 
 export const storage = {
@@ -450,12 +486,18 @@ export const storage = {
       void handleSession(session?.user?.id ?? null);
     });
 
+    // Both queues flush on the same signals — a pending follow is as easy to
+    // strand on a backgrounded tab as a pending word.
+    const flushAll = () => {
+      void flushQueue();
+      void flushFollowsQueue();
+    };
     const flushSoon = () => {
-      if (document.visibilityState === 'hidden') void flushQueue();
+      if (document.visibilityState === 'hidden') flushAll();
     };
     document.addEventListener('visibilitychange', flushSoon);
-    window.addEventListener('online', () => void flushQueue());
-    window.addEventListener('beforeunload', () => void flushQueue());
+    window.addEventListener('online', flushAll);
+    window.addEventListener('beforeunload', flushAll);
   },
 
   getSavedWords(): SavedWord[] {

@@ -45,6 +45,9 @@ export const embedVideos: Video[] = (embedData as unknown as EmbedEntry[]).map(
     dictionary: entry.dictionary,
     youtubeId: entry.youtubeId,
     durationSeconds: entry.durationSeconds,
-    attribution: entry.attribution,
+    // Every embed slide is a 'youtube' author carrying the complete TASL set,
+    // so the compliant attribution line is guaranteed by construction rather
+    // than by a null check at render time.
+    author: { kind: 'youtube', ...entry.attribution },
   })
 );

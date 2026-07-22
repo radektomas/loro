@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getUser, onAuthChange } from '@/lib/auth';
-import type { UgcVideoStatus } from '@/lib/creators';
+import { getMyCreator, type Creator, type UgcVideoStatus } from '@/lib/creators';
 import { ChevronLeftIcon } from '@/components/icons/Icons';
 
 /**
@@ -91,6 +91,50 @@ export function useSupabaseUser(): { user: User | null; ready: boolean } {
     return onAuthChange((session) => setUser(session?.user ?? null));
   }, []);
   return { user, ready };
+}
+
+/**
+ * The signed-in user AND their creator row, resolved together.
+ *
+ * Every creator screen needs the same pair, and the same three-way answer
+ * (no session / session but no application / application with a status).
+ * This is that logic once: `ready` means BOTH the session and the creator
+ * lookup have settled, so callers can branch on `creator?.status` without
+ * flashing the wrong state on the way there.
+ */
+export function useMyCreator(): {
+  user: User | null;
+  creator: Creator | null;
+  ready: boolean;
+} {
+  const { user, ready: authReady } = useSupabaseUser();
+  const [creator, setCreator] = useState<Creator | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (!user) {
+      setCreator(null);
+      setLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setLoaded(false);
+    // A failed lookup resolves as "no creator row" rather than wedging the
+    // screen on its loading state — same posture as useSupabaseUser.
+    getMyCreator()
+      .catch(() => null)
+      .then((c) => {
+        if (cancelled) return;
+        setCreator(c);
+        setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, user]);
+
+  return { user, creator, ready: authReady && loaded };
 }
 
 /** Centered quiet message for gate states (not signed in, not allowed…). */
