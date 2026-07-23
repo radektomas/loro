@@ -147,8 +147,14 @@ export const VOICEOVER_FORMAT_PATTERNS: readonly RegExp[] = [
 /**
  * Minimum views to publish. A floor, deliberately NOT an ordering: it filters
  * out abandoned uploads without making virality the selection criterion.
+ *
+ * Lowered 20k -> 10k (2026-07-23) on measured evidence: at 20k the remaining
+ * pool was 31 candidates from 15 channels; at 10k it is 65 from 38. The floor
+ * was costing source diversity — its own stated purpose is to exclude
+ * abandoned uploads, and 10k still does that — while concentrating the feed on
+ * a handful of large channels, which BATCH_MAX_PER_CHANNEL then throttles.
  */
-export const MIN_VIEWS_TO_PUBLISH = 20_000;
+export const MIN_VIEWS_TO_PUBLISH = 10_000;
 
 export type CurationVerdict = {
   /** Higher is better. Negative means never publish. */
