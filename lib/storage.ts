@@ -7,13 +7,18 @@ import {
   type LevelAnswerResult,
   type LevelState,
 } from '@/lib/levels';
-import { dayKey } from '@/lib/progress';
+import { dayKey, dueCount } from '@/lib/progress';
 import {
   foldDuplicateWords,
   localAhead,
   mergePrefer,
   mergeWordSets,
 } from '@/lib/wordMerge';
+import {
+  EMPTY_SAVE_PROMPT_STATE,
+  type PromptOutcome,
+  type SavePromptState,
+} from '@/lib/savePrompt';
 import {
   EMPTY_PROGRESS,
   mergeProgress,
@@ -62,6 +67,7 @@ const KEYS = {
   levelState: 'loro.levelState', // level fill-in mode: current level + meter
   calibrationKnown: 'loro.calibrationKnown', // words tapped as known in calibration
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
+  savePrompt: 'loro.savePrompt', // account-nudge state — see lib/savePrompt.ts
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
   unmuted: 'loro.session.unmuted', // sessionStorage — per-session only
 } as const;
@@ -385,6 +391,52 @@ async function syncProgress(userId: string): Promise<void> {
   if (!sameProgress(merged, remote)) await pushProgress(userId);
 }
 
+/**
+ * After sign-in: resolve pending prompts as conversions and mirror the
+ * measurement counters to the user's profile row so they're queryable
+ * server-side (loro_profiles.save_prompt_stats).
+ *
+ * 'converted' is strict: only a prompt still PENDING when the session
+ * arrives counts — the magic-link flow finishes in whatever tab opens the
+ * link, so this is the one reliable place to observe it. A prompt already
+ * dismissed stays dismissed even if the user signs in later from /profile;
+ * that sign-in wasn't this prompt's doing.
+ *
+ * Until the save_prompt_stats migration is applied the update fails on the
+ * unknown column — logged, harmless, retried at the next auth event.
+ */
+async function syncSavePrompt(userId: string): Promise<void> {
+  const state = readJSON<SavePromptState>(KEYS.savePrompt, EMPTY_SAVE_PROMPT_STATE);
+  let changed = false;
+  const resolved: SavePromptState = { ...state };
+  for (const key of ['p1', 'p2'] as const) {
+    const record = resolved[key];
+    if (record && record.outcome === 'shown') {
+      resolved[key] = { ...record, outcome: 'converted' };
+      changed = true;
+    }
+  }
+  if (changed) writeJSON(KEYS.savePrompt, resolved);
+
+  // Nothing shown yet -> nothing to measure, and no row noise for the
+  // majority who sign in without ever meeting a prompt.
+  if (!resolved.p1 && !resolved.p2) return;
+
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase
+    .from(TABLES.profiles)
+    .update({
+      save_prompt_stats: {
+        sessions: resolved.sessions,
+        p1: resolved.p1,
+        p2: resolved.p2,
+      },
+    })
+    .eq('id', userId);
+  if (error) console.error('[loro] save-prompt stats sync failed', error.message);
+}
+
 async function fetchRemoteWords(userId: string): Promise<SavedWord[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -520,6 +572,7 @@ async function handleSession(userId: string | null): Promise<void> {
   // After the words branch: progress rides the same cache-owner verdict
   // (no-ops internally if the branch above failed to claim the cache).
   void syncProgress(userId);
+  void syncSavePrompt(userId);
 
   void flushQueue();
   // Independent of the word sync: a failure above must not skip follows, and
@@ -619,6 +672,16 @@ export const storage = {
     const graded = grade(target, wasCorrect);
     const next = words.map((w) => (w === target ? graded : w));
     const ok = writeJSON(KEYS.savedWords, next);
+    // A completed recall session = the grading that empties the due queue
+    // (the graded word reschedules into the future either way). Feeds the
+    // second save-prompt threshold; see lib/savePrompt.ts.
+    if (ok) {
+      const nowMs = Date.now();
+      if (dueCount(words, nowMs) > 0 && dueCount(next, nowMs) === 0) {
+        const s = storage.getSavePromptState();
+        writeJSON(KEYS.savePrompt, { ...s, sessions: s.sessions + 1 });
+      }
+    }
     // The honest streak counts days with a correct recall, so log the day.
     if (ok && wasCorrect) {
       const days = readJSON<string[]>(KEYS.recallDays, []);
@@ -714,6 +777,35 @@ export const storage = {
       scheduleProgressPush();
     }
     return { ok };
+  },
+
+  // ---- account-nudge state (lib/savePrompt.ts owns the rules) ------------
+
+  getSavePromptState(): SavePromptState {
+    return readJSON<SavePromptState>(KEYS.savePrompt, EMPTY_SAVE_PROMPT_STATE);
+  },
+
+  /** Mark a prompt as shown. Idempotent: a re-show of a still-pending prompt
+      keeps the ORIGINAL shownAt and word count — the measurement wants the
+      first exposure, not the latest reload. */
+  recordSavePromptShown(variant: 1 | 2, words: number): void {
+    const s = storage.getSavePromptState();
+    const key = variant === 1 ? 'p1' : 'p2';
+    if (s[key]) return;
+    writeJSON(KEYS.savePrompt, {
+      ...s,
+      [key]: { shownAt: Date.now(), words, outcome: 'shown' },
+    });
+  },
+
+  /** Resolve a pending prompt. Only 'shown' can transition — a prompt never
+      flips between dismissed and converted after the fact. */
+  recordSavePromptOutcome(variant: 1 | 2, outcome: PromptOutcome): void {
+    const s = storage.getSavePromptState();
+    const key = variant === 1 ? 'p1' : 'p2';
+    const record = s[key];
+    if (!record || record.outcome !== 'shown') return;
+    writeJSON(KEYS.savePrompt, { ...s, [key]: { ...record, outcome } });
   },
 
   /** Record that a video took the screen in the feed. Idempotent. */

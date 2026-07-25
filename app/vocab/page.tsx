@@ -16,6 +16,7 @@ import {
   TrashIcon,
 } from '@/components/icons/Icons';
 import { localVideos } from '@/lib/localVideos';
+import { SavePromptSheet } from '@/components/SavePromptSheet';
 
 const videos = localVideos;
 
@@ -519,6 +520,8 @@ function VocabContent() {
           )}
         </div>
       )}
+      {/* The account nudge's ONLY mount point in the app — never the feed. */}
+      <SavePromptSheet />
     </main>
   );
 }
