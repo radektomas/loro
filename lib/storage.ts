@@ -8,6 +8,12 @@ import {
   type LevelState,
 } from '@/lib/levels';
 import { dayKey } from '@/lib/progress';
+import {
+  foldDuplicateWords,
+  localAhead,
+  mergePrefer,
+  mergeWordSets,
+} from '@/lib/wordMerge';
 import { glossText, lookupGloss } from '@/lib/dictionary';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
 import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
@@ -191,49 +197,8 @@ function fromRow(r: SavedWordRow): SavedWord {
   };
 }
 
-function maxNullable(a: number | null, b: number | null): number | null {
-  if (a == null) return b;
-  if (b == null) return a;
-  return Math.max(a, b);
-}
-
-/**
- * Transition merge (anon -> signed in): combine two histories for the same
- * word. Higher box wins its schedule; correct/incorrect are SUMMED because the
- * two sides are independent review histories; earliest save and latest review
- * are kept. A box-0 side can never clobber a higher box.
- */
-function mergeSum(local: SavedWord, remote: SavedWord): SavedWord {
-  const hi = local.box >= remote.box ? local : remote;
-  return {
-    ...hi,
-    box: Math.max(local.box, remote.box),
-    correct: local.correct + remote.correct,
-    incorrect: local.incorrect + remote.incorrect,
-    savedAt: Math.min(local.savedAt, remote.savedAt),
-    translation: local.translation || remote.translation || '',
-    lastReviewedAt: maxNullable(local.lastReviewedAt, remote.lastReviewedAt),
-  };
-}
-
-/**
- * Hydrate merge (already-synced user, e.g. refresh or offline edits): remote is
- * the source of truth, but a locally more-advanced word (higher box, edited
- * offline) is preserved rather than overwritten. Counts are max'd, never
- * summed — local is a cache of remote here, so summing would double-count.
- */
-function mergePrefer(local: SavedWord, remote: SavedWord): SavedWord {
-  const hi = local.box > remote.box ? local : remote; // tie -> remote
-  const lo = hi === local ? remote : local;
-  return {
-    ...hi,
-    correct: Math.max(local.correct, remote.correct),
-    incorrect: Math.max(local.incorrect, remote.incorrect),
-    savedAt: Math.min(local.savedAt, remote.savedAt),
-    translation: hi.translation || lo.translation || '',
-    lastReviewedAt: maxNullable(local.lastReviewedAt, remote.lastReviewedAt),
-  };
-}
+// mergeSum / mergePrefer / mergeWordSets live in lib/wordMerge.ts — pure and
+// tested there; this module owns only transport and persistence.
 
 /** Overwrite the cache and notify the UI in one place. */
 function commitWords(words: SavedWord[]): void {
@@ -336,7 +301,12 @@ async function fetchRemoteWords(userId: string): Promise<SavedWord[] | null> {
     console.error('[loro] fetch remote words failed', error.message);
     return null;
   }
-  return (data as SavedWordRow[]).map(fromRow);
+  // Fold BEFORE either merge path sees the rows: the DB unique key includes
+  // cue_index, so one word can legitimately exist as two rows (a re-save
+  // from a different cue after storage eviction, or a second device). The
+  // fold is deterministic in every field — without it, the map-by-key in
+  // the merge paths kept whichever row the unordered SELECT returned last.
+  return foldDuplicateWords((data as SavedWordRow[]).map(fromRow));
 }
 
 /**
@@ -351,14 +321,7 @@ async function transitionMergeUp(userId: string): Promise<void> {
   const remote = await fetchRemoteWords(userId);
   if (remote === null) return; // couldn't read — keep local, retry later
 
-  const merged = new Map<string, SavedWord>();
-  for (const r of remote) merged.set(localKey(r.text, r.videoId), r);
-  for (const l of storage.getSavedWords()) {
-    const key = localKey(l.text, l.videoId);
-    const existing = merged.get(key);
-    merged.set(key, existing ? mergeSum(l, existing) : l);
-  }
-  const words = [...merged.values()];
+  const words = mergeWordSets(storage.getSavedWords(), remote);
 
   const { error } = await supabase
     .from(TABLES.savedWords)
@@ -397,7 +360,7 @@ async function hydrateFromRemote(userId: string): Promise<void> {
     } else {
       const m = mergePrefer(l, r);
       byKey.set(key, m);
-      if (m.box > r.box || m.correct > r.correct || m.incorrect > r.incorrect) {
+      if (localAhead(m, r)) {
         toPush.push(m); // local was ahead — reconcile remote
       }
     }
@@ -446,7 +409,9 @@ async function handleSession(userId: string | null): Promise<void> {
     await transitionMergeUp(userId); // the anon -> signed-in path
   } else {
     // A different user owned this cache. Don't leak their words upward:
-    // drop the local copy and hydrate this user fresh from remote.
+    // drop the local copy and hydrate this user fresh from remote. Progress
+    // is wiped with them — before progress synced, the previous owner's
+    // streak/watched/level silently bled into the next account here.
     writeJSON(KEYS.savedWords, []);
     writeJSON(KEYS.syncQueue, []);
     await hydrateFromRemote(userId);
