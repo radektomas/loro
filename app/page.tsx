@@ -19,6 +19,32 @@ import type { Video } from '@/types';
  *    paint — a filter would show an empty feed and then pop.
  */
 
+/**
+ * Post-deletion confirmation — /?deleted=1 is where the delete-account flow
+ * lands after its hard redirect. A brief self-dismissing banner; the param
+ * is scrubbed from the URL so a reload or share doesn't re-announce it.
+ */
+function DeletedBanner() {
+  const wasDeleted = useSearchParams().get('deleted') !== null;
+  const [visible, setVisible] = useState(wasDeleted);
+
+  useEffect(() => {
+    if (!wasDeleted) return;
+    window.history.replaceState(null, '', '/');
+    const timer = setTimeout(() => setVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [wasDeleted]);
+
+  if (!visible) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="rounded-full bg-surface-raised px-4 py-2 text-sm font-medium text-text shadow-lg">
+        Your account has been deleted
+      </div>
+    </div>
+  );
+}
+
 function FeedRoute() {
   const creatorHandle = useSearchParams().get('creator');
   const scoped = creatorHandle !== null;
@@ -62,6 +88,7 @@ export default function Home() {
     // Suspense boundary required because this route reads useSearchParams
     // (the scoped-feed handle, and Feed's own deep links).
     <Suspense fallback={<div className="h-[100dvh] bg-background" />}>
+      <DeletedBanner />
       <FeedRoute />
     </Suspense>
   );

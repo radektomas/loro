@@ -16,6 +16,7 @@ import { useMyCreator } from '@/components/creator/ugc';
 import { Avatar } from '@/components/creator/Avatar';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { SignInCard } from '@/components/SignInCard';
+import { DeleteAccountCard } from '@/components/DeleteAccountCard';
 import {
   ChevronLeftIcon,
   FilmIcon,
@@ -410,6 +411,8 @@ export default function ProfilePage() {
         <section>
           <SectionTitle>Account</SectionTitle>
           <SignInCard />
+          {/* Destructive zone — renders only when signed in. */}
+          <DeleteAccountCard />
         </section>
       </div>
     </main>
