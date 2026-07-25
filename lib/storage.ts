@@ -14,6 +14,14 @@ import {
   mergePrefer,
   mergeWordSets,
 } from '@/lib/wordMerge';
+import {
+  EMPTY_PROGRESS,
+  mergeProgress,
+  rowToSnapshot,
+  sameProgress,
+  type ProgressRow,
+  type ProgressSnapshot,
+} from '@/lib/progressSync';
 import { glossText, lookupGloss } from '@/lib/dictionary';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
 import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
@@ -290,6 +298,93 @@ async function flushQueue(): Promise<void> {
   if (stillFailed.length > 0) scheduleFlush(5000); // back off and retry
 }
 
+// ---- progress sync: streak days, watch history, level meter --------------
+//
+// Same architecture as words: localStorage is the synchronous truth, the
+// loro_progress row is a one-per-user mirror, and merges only ever UNION —
+// sync cannot move progress backwards (lib/progressSync.ts). Pushes are
+// whole-row and debounced; a lost push self-heals at the next hydrate, which
+// runs on every app open with a session.
+
+let progressPushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** The local progress state, as a mergeable snapshot. levelState is null
+    until the meter was ever touched, so a fresh device can't "win" over a
+    real level with its INITIAL_LEVEL_STATE. */
+function readProgressSnapshot(): ProgressSnapshot {
+  return {
+    recallDays: readJSON<string[]>(KEYS.recallDays, []),
+    watchedIds: readJSON<string[]>(KEYS.watched, []),
+    levelState:
+      readJSON<Partial<LevelState> | null>(KEYS.levelState, null) === null
+        ? null
+        : storage.getLevelState(),
+  };
+}
+
+function writeProgressSnapshot(s: ProgressSnapshot): void {
+  writeJSON(KEYS.recallDays, s.recallDays);
+  writeJSON(KEYS.watched, s.watchedIds);
+  if (s.levelState) writeJSON(KEYS.levelState, s.levelState);
+}
+
+async function pushProgress(userId: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const s = readProgressSnapshot();
+  const { error } = await supabase.from(TABLES.progress).upsert({
+    user_id: userId,
+    recall_days: s.recallDays,
+    watched_ids: s.watchedIds,
+    level_state: s.levelState,
+  });
+  // Lost pushes are fine: the next hydrate's union-and-push repeats them.
+  if (error) console.error('[loro] progress push failed', error.message);
+}
+
+/** Debounced whole-row push. Inert while anonymous or before the initial
+    merge has claimed the cache for this user (same gate as flushQueue). */
+function scheduleProgressPush(): void {
+  if (!currentUserId) return;
+  if (readJSON<string | null>(KEYS.syncedUser, null) !== currentUserId) return;
+  const userId = currentUserId;
+  if (progressPushTimer) clearTimeout(progressPushTimer);
+  progressPushTimer = setTimeout(() => {
+    progressPushTimer = null;
+    void pushProgress(userId);
+  }, 3000);
+}
+
+/**
+ * Merge local and remote progress at sign-in / app open. Runs AFTER the word
+ * sync so it can ride the same cache-owner verdict: if the word branch failed
+ * (syncedUser not claimed), progress waits for the next auth event too.
+ */
+async function syncProgress(userId: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  if (readJSON<string | null>(KEYS.syncedUser, null) !== userId) return;
+
+  const { data, error } = await supabase
+    .from(TABLES.progress)
+    .select('user_id, recall_days, watched_ids, level_state')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    // Keep local, retry at the next auth event — never guess at remote.
+    console.error('[loro] progress fetch failed', error.message);
+    return;
+  }
+
+  const remote = rowToSnapshot((data as ProgressRow | null) ?? null);
+  const local = readProgressSnapshot();
+  const merged = mergeProgress(local, remote);
+  writeProgressSnapshot(merged);
+  emitWordsChanged(); // open /progress and /profile pages re-read
+
+  if (!sameProgress(merged, remote)) await pushProgress(userId);
+}
+
 async function fetchRemoteWords(userId: string): Promise<SavedWord[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -414,8 +509,17 @@ async function handleSession(userId: string | null): Promise<void> {
     // streak/watched/level silently bled into the next account here.
     writeJSON(KEYS.savedWords, []);
     writeJSON(KEYS.syncQueue, []);
+    writeProgressSnapshot(EMPTY_PROGRESS);
+    // writeProgressSnapshot leaves levelState alone when null — remove the
+    // key outright so the new account starts untouched, not at the previous
+    // owner's level.
+    window.localStorage.removeItem(KEYS.levelState);
     await hydrateFromRemote(userId);
   }
+
+  // After the words branch: progress rides the same cache-owner verdict
+  // (no-ops internally if the branch above failed to claim the cache).
+  void syncProgress(userId);
 
   void flushQueue();
   // Independent of the word sync: a failure above must not skip follows, and
@@ -526,6 +630,7 @@ export const storage = {
     if (ok) {
       emitWordsChanged();
       enqueue('upsert', text, videoId);
+      scheduleProgressPush(); // a correct recall may have logged a streak day
     }
     return { word: graded, ok };
   },
@@ -549,6 +654,7 @@ export const storage = {
     const result = applyLevelAnswer(storage.getLevelState(), wasCorrect);
     if (writeJSON(KEYS.levelState, { level: result.level, meter: result.meter })) {
       emitWordsChanged();
+      scheduleProgressPush();
     }
     return result;
   },
@@ -605,6 +711,7 @@ export const storage = {
       }
       emitWordsChanged();
       enqueue('upsert', word.text, word.videoId);
+      scheduleProgressPush();
     }
     return { ok };
   },
@@ -613,7 +720,10 @@ export const storage = {
   markWatched(videoId: string): void {
     const ids = readJSON<string[]>(KEYS.watched, []);
     if (ids.includes(videoId)) return;
-    if (writeJSON(KEYS.watched, [...ids, videoId])) emitWordsChanged();
+    if (writeJSON(KEYS.watched, [...ids, videoId])) {
+      emitWordsChanged();
+      scheduleProgressPush();
+    }
   },
 
   /**

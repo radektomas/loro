@@ -66,4 +66,5 @@ export const TABLES = {
   profiles: 'loro_profiles',
   savedWords: 'loro_saved_words',
   follows: 'loro_follows',
+  progress: 'loro_progress',
 } as const;
