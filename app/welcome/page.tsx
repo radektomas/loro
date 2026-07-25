@@ -16,9 +16,13 @@ import {
 } from '@/lib/calibration';
 import { VideoSlide, type OnboardingControl } from '@/components/Feed';
 import { LoroMascot } from '@/components/LoroMascot';
-import videosData from '@/data/videos.json';
+import { staticVideos } from '@/lib/staticVideos';
 
-const videos = videosData as unknown as Video[];
+// The typed seed list, with `author` mapped in — NOT a cast of the raw JSON.
+// The previous `videosData as unknown as Video[]` here handed VideoSlide
+// videos with no author field and crashed AuthorLine for every onboarding
+// user. lib/staticVideos.ts is the one place seed entries become Video.
+const videos = staticVideos;
 
 type Phase = 'hook' | 'calibration' | 'result' | 'guide';
 type GuideStep = 'watch' | 'tapWord' | 'saveWord' | 'recall' | 'closing';

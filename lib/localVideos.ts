@@ -1,5 +1,5 @@
-import videosData from '@/data/videos.json';
 import { embedVideos } from '@/lib/embedVideos';
+import { staticVideos } from '@/lib/staticVideos';
 import type { Video } from '@/types';
 
 /**
@@ -9,21 +9,12 @@ import type { Video } from '@/types';
  * upgrades, progress stats) — a word saved from an embed slide must resolve
  * exactly like one saved from a seed clip.
  *
- * NOT used by /welcome: the guided intro drives precise seeks and pauses and
- * deliberately picks from the seed set only, where playback is frame-exact.
- * UGC rows from Supabase remain feed-only, as before.
+ * NOT used by /welcome: the guided intro imports lib/staticVideos.ts directly
+ * (seed clips only, where playback is frame-exact) — and, deliberately, NOT
+ * this module, whose embedVideos import would pull the full embed-transcript
+ * JSON into the onboarding bundle. UGC rows from Supabase remain feed-only,
+ * as before.
  */
-type StaticEntry = Omit<Video, 'author'>;
-
-/**
- * The seed clips have no creator behind them (they predate UGC), so their
- * author is explicitly 'none': the feed renders their name as plain text and
- * never links it anywhere. Mapped rather than cast so the field actually
- * exists at runtime — a cast would satisfy the compiler and hand the feed an
- * undefined author.
- */
-export const staticVideos: Video[] = (
-  videosData as unknown as StaticEntry[]
-).map((entry) => ({ ...entry, author: { kind: 'none' } }));
+export { staticVideos };
 
 export const localVideos: Video[] = [...staticVideos, ...embedVideos];

@@ -858,6 +858,13 @@ export function VideoSlide({
 function AuthorLine({ video }: { video: Video }) {
   const author = video.author;
 
+  // Data-shape backstop, unreachable when the types hold: `author` is
+  // required on Video, but a cast around a raw JSON import once produced
+  // authorless videos and crashed onboarding right here. Attribution
+  // matters, but a missing line beats a dead slide — and for embeds the
+  // attribution band is rebuilt on next render of a well-formed object.
+  if (!author) return null;
+
   if (author.kind === 'youtube') {
     return (
       <span className="text-sm font-medium text-text/80">
