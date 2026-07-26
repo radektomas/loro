@@ -1,6 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        // The founding-member landing launched at /join, then became the
+        // root page (2026-07-27). Anyone holding a shared /join link lands
+        // in the same place.
+        source: "/join",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

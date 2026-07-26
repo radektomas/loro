@@ -171,7 +171,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
       <header className="sticky top-0 z-10 bg-background/85 pt-safe backdrop-blur-md">
         <div className="flex items-center gap-2 px-4 py-4">
           <Link
-            href="/"
+            href="/feed"
             aria-label="Back to feed"
             className="rounded-full bg-surface p-2 text-muted transition-colors hover:text-text"
           >

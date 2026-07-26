@@ -21,7 +21,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase) {
-      router.replace('/');
+      router.replace('/feed');
       return;
     }
 

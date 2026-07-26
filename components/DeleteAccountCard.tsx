@@ -118,7 +118,7 @@ export function DeleteAccountCard() {
       }
       await signOut();
       wipeLocalState();
-      window.location.replace('/?deleted=1');
+      window.location.replace('/feed?deleted=1');
     } catch {
       setError('Deletion failed.');
       setPhase('confirming');
@@ -130,7 +130,7 @@ export function DeleteAccountCard() {
   const finishKept = async () => {
     await signOut();
     wipeLocalState();
-    window.location.replace('/?deleted=1');
+    window.location.replace('/feed?deleted=1');
   };
 
   return (

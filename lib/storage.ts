@@ -69,6 +69,7 @@ const KEYS = {
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
   savePrompt: 'loro.savePrompt', // account-nudge state — see lib/savePrompt.ts
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
+  joinPromo: 'loro.joinPromoDismissed', // /profile founding-member row hidden
   unmuted: 'loro.session.unmuted', // sessionStorage — per-session only
 } as const;
 
@@ -933,6 +934,18 @@ export const storage = {
 
   setCalibrationKnown(words: string[]): void {
     writeJSON(KEYS.calibrationKnown, words);
+  },
+
+  /** Has the /profile founding-member row been dismissed? Dismissal is
+      final on this device — the pre-launch offer never nags twice. */
+  isJoinPromoDismissed(): boolean {
+    if (!isBrowser) return true; // SSR: render nothing until hydrated
+    return window.localStorage.getItem(KEYS.joinPromo) === '1';
+  },
+
+  dismissJoinPromo(): void {
+    if (!isBrowser) return;
+    window.localStorage.setItem(KEYS.joinPromo, '1');
   },
 
   /** Unmute choice lives in sessionStorage — it only persists for the session. */

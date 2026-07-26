@@ -145,7 +145,7 @@ export default function ProgressPage() {
       <header className="sticky top-0 z-10 bg-background/85 pt-safe backdrop-blur-md">
         <div className="flex items-center gap-2 px-4 py-4">
           <Link
-            href="/"
+            href="/feed"
             aria-label="Back to feed"
             className="rounded-full bg-surface p-2 text-muted transition-colors hover:text-text"
           >
@@ -175,7 +175,7 @@ export default function ProgressPage() {
             here.
           </p>
           <Link
-            href="/"
+            href="/feed"
             className="mt-8 rounded-2xl bg-accent px-6 py-3 text-base font-semibold text-background transition-transform active:scale-95"
           >
             Watch videos
@@ -324,7 +324,7 @@ export default function ProgressPage() {
                   </p>
                 </div>
                 <Link
-                  href="/"
+                  href="/feed"
                   className="shrink-0 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-background transition-transform active:scale-95"
                 >
                   Review

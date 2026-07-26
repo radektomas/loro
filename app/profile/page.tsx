@@ -17,6 +17,7 @@ import { Avatar } from '@/components/creator/Avatar';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { SignInCard } from '@/components/SignInCard';
 import { DeleteAccountCard } from '@/components/DeleteAccountCard';
+import { FoundingMemberRow } from '@/components/FoundingMemberRow';
 import {
   ChevronLeftIcon,
   FilmIcon,
@@ -244,7 +245,7 @@ export default function ProfilePage() {
       <header className="sticky top-0 z-10 bg-background/85 pt-safe backdrop-blur-md">
         <div className="flex items-center gap-2 px-4 py-4">
           <Link
-            href="/"
+            href="/feed"
             aria-label="Back to feed"
             className="rounded-full bg-surface p-2 text-muted transition-colors hover:text-text"
           >
@@ -328,6 +329,11 @@ export default function ProfilePage() {
             </Link>
           </section>
         )}
+
+        {/* Pre-launch founding-member offer — dismissible, renders nothing
+            once dismissed. Lives between the stats and Create so it reads as
+            an aside, not a headline. */}
+        <FoundingMemberRow />
 
         {/* Create: the same approved / pending / rejected / none branching the
             creator screens gate on, via the shared useMyCreator hook. Nothing

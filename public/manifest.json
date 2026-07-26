@@ -2,7 +2,7 @@
   "name": "Loro",
   "short_name": "Loro",
   "description": "Learn Spanish one swipe at a time.",
-  "start_url": "/",
+  "start_url": "/feed",
   "display": "standalone",
   "background_color": "#0a0d0b",
   "theme_color": "#0a0d0b",

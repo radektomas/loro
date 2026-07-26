@@ -112,7 +112,7 @@ export default function WelcomePage() {
 
   const finish = useCallback(() => {
     storage.setOnboarded();
-    router.replace('/');
+    router.replace('/feed');
   }, [router]);
 
   // --- Step 2: calibration -> derived level ---

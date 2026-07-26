@@ -1,0 +1,199 @@
+/* /join-only styles: the two motion systems the landing page has, both pure
+   CSS so the page ships zero client JS outside the form component. */
+
+/* --- 1 · The living subtitle in the hero phone -----------------------------
+   Each word carries this animation with a staggered delay (i × 1.2s set
+   inline), so the karaoke highlight walks the sentence exactly like the
+   feed's rAF-driven one. 10.8s cycle = 9 words × 1.2s; the highlight is on
+   for 11.1% of the cycle (= 1.2s) with ~60ms ramps so the handoff reads as
+   motion, not a blink. */
+
+@keyframes join-word-cycle {
+  0% {
+    background-color: transparent;
+    color: inherit;
+  }
+  0.6%,
+  10.5% {
+    background-color: var(--accent);
+    color: var(--background);
+    text-shadow: none;
+  }
+  11.1%,
+  100% {
+    background-color: transparent;
+    color: inherit;
+  }
+}
+
+.join-cycle-word {
+  animation: join-word-cycle 10.8s linear infinite;
+}
+
+/* --- 2 · Scroll reveal -----------------------------------------------------
+   Scroll-driven (animation-timeline: view()), which is what makes a zero-JS
+   fade-up possible. Browsers without support skip the @supports block and
+   simply render everything visible — the correct fallback. Stagger comes from
+   nth-child ranges: later siblings finish revealing slightly deeper into the
+   viewport, reading as the 60ms cascade. */
+
+@keyframes join-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .join-reveal > * {
+      animation: join-fade-up ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 32%;
+    }
+    .join-reveal > *:nth-child(2) {
+      animation-range: entry 5% entry 37%;
+    }
+    .join-reveal > *:nth-child(3) {
+      animation-range: entry 10% entry 42%;
+    }
+    .join-reveal > *:nth-child(4) {
+      animation-range: entry 15% entry 47%;
+    }
+  }
+}
+
+/* --- 3 · How-it-works, alive ----------------------------------------------
+   Three loops, one per step, all pure CSS. Base (no-animation) styles are the
+   resting end-state, so prefers-reduced-motion simply shows the finished
+   frame of each. */
+
+/* Step 1: the feed nudges up every few seconds — the next clip announcing
+   itself, the way a feed does. */
+@keyframes join-feed-nudge {
+  0%,
+  46%,
+  72%,
+  100% {
+    transform: translateY(0);
+  }
+  56%,
+  64% {
+    transform: translateY(-20px);
+  }
+}
+.join-feed-nudge {
+  animation: join-feed-nudge 5.6s ease-in-out infinite;
+}
+
+/* Step 3: the blank types itself. One 5.6s cycle shared by three elements:
+   the gloss hint fades out, the answer types in (steps() = keystrokes, the
+   border-right is the caret), the check pops when the word lands. */
+@keyframes join-type-hint {
+  0%,
+  10% {
+    opacity: 1;
+  }
+  16%,
+  86% {
+    opacity: 0;
+  }
+  94%,
+  100% {
+    opacity: 1;
+  }
+}
+.join-type-hint {
+  opacity: 0;
+  animation: join-type-hint 5.6s linear infinite;
+}
+
+@keyframes join-type-word {
+  0%,
+  14% {
+    width: 0ch;
+    border-right-color: var(--accent);
+    animation-timing-function: steps(8, end);
+  }
+  44% {
+    width: 8.6ch;
+  }
+  52%,
+  84% {
+    width: 8.6ch;
+    border-right-color: transparent;
+  }
+  90%,
+  100% {
+    width: 0ch;
+  }
+}
+.join-type-word {
+  width: 8.6ch;
+  border-right: 2px solid transparent;
+  animation: join-type-word 5.6s linear infinite;
+}
+
+@keyframes join-type-check {
+  0%,
+  44%,
+  60%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(88, 204, 78, 0);
+  }
+  50% {
+    transform: scale(1.18);
+    box-shadow: 0 0 18px 2px rgba(88, 204, 78, 0.45);
+  }
+}
+.join-type-check {
+  animation: join-type-check 5.6s ease-out infinite;
+}
+
+/* --- 4 · The waving mascot -------------------------------------------------
+   A slow rock from the feet, like an actual wave — one element, one subtle
+   loop. Anything faster or bouncier would fight the page's restraint. */
+
+@keyframes join-wave {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(2.5deg) translateY(-4px);
+  }
+}
+
+.join-wave {
+  animation: join-wave 3.4s ease-in-out infinite;
+  transform-origin: 50% 88%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The mockup keeps meaning without motion: freeze the highlight on the
+     word the WordSheet below is explaining. */
+  .join-cycle-word {
+    animation: none;
+  }
+  .join-static-highlight {
+    background-color: var(--accent);
+    color: var(--background);
+    text-shadow: none;
+  }
+  .join-wave {
+    animation: none;
+  }
+  /* The step loops stop on their finished frame: feed at rest, answer typed
+     (base width 8.6ch), hint hidden (base opacity 0), check at rest. */
+  .join-feed-nudge,
+  .join-type-hint,
+  .join-type-word,
+  .join-type-check {
+    animation: none;
+  }
+}
