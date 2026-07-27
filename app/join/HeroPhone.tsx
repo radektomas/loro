@@ -27,15 +27,15 @@ export function HeroPhone() {
     // are transforms — combined on one element, the animation would override
     // the tilt.
     <div className="join-phone-float relative mx-auto w-[272px] sm:w-[300px]">
-      {/* soft ground shadow the float bobs over */}
+      {/* small contact shadow right under the device, nothing more */}
       <div
         aria-hidden
-        className="absolute left-1/2 top-[97%] h-14 w-52 -translate-x-1/2 rounded-full bg-black/70 blur-2xl"
+        className="absolute left-1/2 top-full h-5 w-36 -translate-x-1/2 -translate-y-2 rounded-full bg-black/45 blur-lg"
       />
       <div className="join-phone-tilt">
         {/* Device: CSS-drawn. A brushed-edge gradient rim around a black
             bezel — the two-layer frame is what reads as machined metal. */}
-        <div className="rounded-[3.2rem] bg-gradient-to-br from-[#565a57] via-[#232624] to-[#0a0b0a] p-[3px] shadow-[0_28px_56px_-16px_rgba(0,0,0,0.75)]">
+        <div className="rounded-[3.2rem] bg-gradient-to-br from-[#565a57] via-[#232624] to-[#0a0b0a] p-[3px] shadow-[0_10px_20px_-10px_rgba(0,0,0,0.6)]">
           <div className="relative rounded-[3rem] bg-black p-2.5">
             {/* side buttons */}
             <div aria-hidden className="absolute -left-[5px] top-24 h-9 w-[3px] rounded-l-md bg-[#3d403e]" />

@@ -140,7 +140,7 @@ export function WaitlistForm({ source, align = 'start' }: WaitlistFormProps) {
         >
           {/* The label keeps its width while loading — no layout shift. */}
           <span className={phase === 'loading' ? 'invisible' : undefined}>
-            Claim founding member spot
+            Get notified at launch
           </span>
           {phase === 'loading' && (
             <span className="absolute inset-0 flex items-center justify-center">
