@@ -30,6 +30,30 @@
   animation: join-word-cycle 10.8s linear infinite;
 }
 
+/* --- 1b · The device itself ------------------------------------------------
+   Perspective tilt turns the flat mockup into an object: the face angles
+   toward the headline, the top edge leans back a hair. The float is a slow
+   4px bob on a separate wrapper (both are transforms — one element would
+   let the animation clobber the tilt). */
+
+.join-phone-tilt {
+  transform: perspective(1400px) rotateY(-7deg) rotateX(1.5deg) rotate(2.5deg);
+}
+
+@keyframes join-phone-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.join-phone-float {
+  animation: join-phone-float 7s ease-in-out infinite;
+}
+
 /* --- 2 · Scroll reveal -----------------------------------------------------
    Scroll-driven (animation-timeline: view()), which is what makes a zero-JS
    fade-up possible. Browsers without support skip the @supports block and
@@ -193,7 +217,8 @@
   .join-feed-nudge,
   .join-type-hint,
   .join-type-word,
-  .join-type-check {
+  .join-type-check,
+  .join-phone-float {
     animation: none;
   }
 }

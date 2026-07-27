@@ -23,10 +23,25 @@ const TAPPED = 0;
 
 export function HeroPhone() {
   return (
-    <div className="rotate-[2.5deg]">
-      {/* Device: CSS-drawn, thin bezel, no notch drama. */}
-      <div className="mx-auto w-[272px] rounded-[3rem] bg-black p-2.5 shadow-sm ring-1 ring-white/15 sm:w-[300px]">
-        <div className="relative aspect-[9/19] overflow-hidden rounded-[2.4rem] bg-surface">
+    // Float (outer) and 3D tilt (inner) are separate wrappers because both
+    // are transforms — combined on one element, the animation would override
+    // the tilt.
+    <div className="join-phone-float relative mx-auto w-[272px] sm:w-[300px]">
+      {/* soft ground shadow the float bobs over */}
+      <div
+        aria-hidden
+        className="absolute left-1/2 top-[97%] h-14 w-52 -translate-x-1/2 rounded-full bg-black/70 blur-2xl"
+      />
+      <div className="join-phone-tilt">
+        {/* Device: CSS-drawn. A brushed-edge gradient rim around a black
+            bezel — the two-layer frame is what reads as machined metal. */}
+        <div className="rounded-[3.2rem] bg-gradient-to-br from-[#565a57] via-[#232624] to-[#0a0b0a] p-[3px] shadow-[0_28px_56px_-16px_rgba(0,0,0,0.75)]">
+          <div className="relative rounded-[3rem] bg-black p-2.5">
+            {/* side buttons */}
+            <div aria-hidden className="absolute -left-[5px] top-24 h-9 w-[3px] rounded-l-md bg-[#3d403e]" />
+            <div aria-hidden className="absolute -left-[5px] top-36 h-14 w-[3px] rounded-l-md bg-[#3d403e]" />
+            <div aria-hidden className="absolute -right-[5px] top-28 h-16 w-[3px] rounded-r-md bg-[#3d403e]" />
+            <div className="relative aspect-[9/19] overflow-hidden rounded-[2.4rem] bg-surface">
           <Image
             src="/posters/yt-viajamos-juntos.jpg"
             alt=""
@@ -86,6 +101,19 @@ export function HeroPhone() {
             <div className="mt-2.5 flex items-center justify-center gap-1.5 rounded-2xl bg-accent py-2.5 text-xs font-semibold text-background">
               <BookmarkIcon width={13} height={13} />
               Save word
+            </div>
+          </div>
+
+              {/* glass: a diagonal sheen plus a hairline inner rim, above
+                  everything on screen — it is the screen's surface */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(115deg,rgba(255,255,255,0.10),rgba(255,255,255,0.03)_30%,transparent_48%)]"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-10 rounded-[2.4rem] ring-1 ring-inset ring-white/10"
+              />
             </div>
           </div>
         </div>

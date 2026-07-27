@@ -218,10 +218,6 @@ export default function JoinPage() {
             </p>
             <div className="mt-9">
               <WaitlistForm source="landing-hero" />
-              <p className="mt-3 max-w-md text-xs leading-relaxed text-muted/80">
-                Free forever premium for the first 100. Loro is in open beta —
-                you can try it right now.
-              </p>
               <Link
                 href="/feed"
                 className="mt-5 inline-flex h-11 items-center rounded-2xl px-4 text-sm font-semibold text-text ring-1 ring-white/15 transition-colors duration-150 hover:bg-white/5"
