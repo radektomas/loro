@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import {
@@ -195,6 +196,18 @@ export function SignInCard() {
           </form>
 
           {error && <p className="mt-2 text-xs text-[#f87171]">{error}</p>}
+
+          <p className="mt-3 text-[11px] leading-relaxed text-muted/70">
+            By signing in you agree to the{' '}
+            <Link href="/terms" className="text-muted underline decoration-white/20 underline-offset-2 hover:text-text">
+              Terms
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-muted underline decoration-white/20 underline-offset-2 hover:text-text">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </div>
       )}
     </div>

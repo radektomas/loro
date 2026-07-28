@@ -53,6 +53,8 @@ type YTNamespace = {
     element: HTMLElement,
     options: {
       videoId: string;
+      /** Embed host — we pass the privacy-enhanced youtube-nocookie.com. */
+      host?: string;
       width: string;
       height: string;
       playerVars: Record<string, string | number>;
@@ -76,7 +78,18 @@ const CUED = 5;
 
 let apiPromise: Promise<YTNamespace> | null = null;
 
-/** Load https://www.youtube.com/iframe_api once; resolve with the namespace. */
+/**
+ * Load https://www.youtube.com/iframe_api once; resolve with the namespace.
+ *
+ * The loader script itself has NO nocookie variant —
+ * www.youtube-nocookie.com/iframe_api is a 404 (verified 2026-07-28), so this
+ * URL must stay on www.youtube.com. The privacy win happens at PLAYER
+ * creation, where `host` points the embed context at youtube-nocookie.com.
+ * Note the loader response does attempt to set .youtube.com cookies where the
+ * browser permits third-party cookies; that is unavoidable while using the
+ * IFrame API at all. The script is only ever loaded once the feed actually
+ * reaches an embed slide, never on the landing page.
+ */
 export function loadYouTubeApi(): Promise<YTNamespace> {
   if (apiPromise) return apiPromise;
   apiPromise = new Promise<YTNamespace>((resolve, reject) => {
@@ -425,6 +438,11 @@ export class YouTubeMedia implements FeedMedia {
         if (this.destroyed) return;
         this.player = new YT.Player(this.host, {
           videoId: this.videoId,
+          // Privacy-enhanced mode: the embed iframe lives on
+          // youtube-nocookie.com, so Google sets no watch-history identifiers
+          // from merely rendering the player. Playback events, currentTime
+          // polling and the ended signal are host-agnostic (verified).
+          host: 'https://www.youtube-nocookie.com',
           width: '100%',
           height: '100%',
           playerVars: {

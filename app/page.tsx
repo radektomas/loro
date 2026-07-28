@@ -336,6 +336,12 @@ export default function JoinPage() {
               >
                 Privacy
               </Link>
+              <Link
+                href="/terms"
+                className="transition-colors duration-150 hover:text-text"
+              >
+                Terms
+              </Link>
               <span>© 2026</span>
             </div>
           </div>
