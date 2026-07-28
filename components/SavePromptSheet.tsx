@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { authEnabled, getSession, onAuthChange, signInWithGoogle, signInWithMagicLink } from '@/lib/auth';
 import { storage } from '@/lib/storage';
 import { savePromptVariant } from '@/lib/savePrompt';
+import { STARTER_VIDEO_ID } from '@/lib/starterDeck';
 import { Sheet } from '@/components/Sheet';
 
 /**
@@ -64,7 +65,13 @@ export function SavePromptSheet() {
     let cancelled = false;
     void getSession().then((session) => {
       if (cancelled) return;
-      const savedCount = storage.getSavedWords().length;
+      // Starter-deck words don't count toward the thresholds: a single
+      // onboarding run banks ~80 saves, which would pre-exhaust both prompts
+      // before the user ever engaged with a real video. The count (and the
+      // measurement payload below) is words saved from real videos only.
+      const savedCount = storage
+        .getSavedWords()
+        .filter((w) => w.videoId !== STARTER_VIDEO_ID).length;
       const v = savePromptVariant(storage.getSavePromptState(), {
         signedIn: session !== null,
         savedCount,

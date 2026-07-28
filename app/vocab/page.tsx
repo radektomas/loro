@@ -16,6 +16,7 @@ import {
   TrashIcon,
 } from '@/components/icons/Icons';
 import { localVideos } from '@/lib/localVideos';
+import { STARTER_VIDEO_ID } from '@/lib/starterDeck';
 import { SavePromptSheet } from '@/components/SavePromptSheet';
 
 const videos = localVideos;
@@ -37,11 +38,18 @@ function replayHref(word: SavedWord): string {
 function reviewHref(due: SavedWord[]): string {
   const byVideo = new Map<string, SavedWord[]>();
   for (const w of due) {
+    // Starter-deck words have no video of their own — as a group they'd win
+    // this contest outright after onboarding (~80 rows on one pseudo id) and
+    // turn the CTA into a dead link. They review in any video that speaks
+    // them, so they don't need a group here.
+    if (w.videoId === STARTER_VIDEO_ID) continue;
     const list = byVideo.get(w.videoId);
     if (list) list.push(w);
     else byVideo.set(w.videoId, [w]);
   }
-  let best: SavedWord[] = due;
+  // Only starter words due: any video can surface them — just open the feed.
+  if (byVideo.size === 0) return '/feed';
+  let best: SavedWord[] | null = null;
   let bestScore = -1;
   for (const list of byVideo.values()) {
     const minDue = Math.min(...list.map((w) => w.dueAt));
@@ -51,7 +59,7 @@ function reviewHref(due: SavedWord[]): string {
       best = list;
     }
   }
-  const earliest = best.reduce((a, b) => (a.dueAt <= b.dueAt ? a : b));
+  const earliest = best!.reduce((a, b) => (a.dueAt <= b.dueAt ? a : b));
   return replayHref(earliest);
 }
 
@@ -234,14 +242,17 @@ function WordCard({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Link
-              href={replayHref(word)}
-              aria-label={`Replay ${word.text} in its video`}
-              className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-2 text-xs font-semibold text-accent transition-transform active:scale-90"
-            >
-              <ReplayIcon width={15} height={15} />
-              Replay
-            </Link>
+            {/* Starter-deck words have no source video to replay. */}
+            {word.videoId !== STARTER_VIDEO_ID && (
+              <Link
+                href={replayHref(word)}
+                aria-label={`Replay ${word.text} in its video`}
+                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-2 text-xs font-semibold text-accent transition-transform active:scale-90"
+              >
+                <ReplayIcon width={15} height={15} />
+                Replay
+              </Link>
+            )}
             <button
               type="button"
               onClick={onRemove}

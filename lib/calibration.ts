@@ -1,6 +1,10 @@
 import type { Level, Video, Word } from '@/types';
-import { normalizeAnswer } from '@/lib/srs';
-import { lookupGloss } from '@/lib/dictionary';
+// Relative and extension-ed, not '@/lib/…': starterDeck.test.mts imports
+// this module under plain node, where neither the bundler alias nor
+// extensionless specifiers resolve. Type-only alias imports are fine
+// (erased by type stripping).
+import { normalizeAnswer } from './srs.ts';
+import { lookupGloss } from './dictionary.ts';
 
 /**
  * Calibration for onboarding: derive a starting CEFR level from which words a

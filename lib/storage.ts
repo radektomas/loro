@@ -1,5 +1,11 @@
-import type { Level, SavedWord, WordState } from '@/types';
-import { BOX_INTERVALS_MS, grade, initialSrs } from '@/lib/srs';
+import type { Level, SavedWord, SelfLevel, WordState } from '@/types';
+import {
+  BOX_INTERVALS_MS,
+  grade,
+  initialSrs,
+  MAX_BOX,
+  stateForBox,
+} from '@/lib/srs';
 import {
   applyLevelAnswer,
   INITIAL_LEVEL_STATE,
@@ -63,6 +69,8 @@ const KEYS = {
   recallDays: 'loro.recallDays',
   language: 'loro.language',
   onboarded: 'loro.onboarded', // has the user finished (or skipped) the intro
+  level: 'loro.level', // onboarding self-assessment: zero | some | confident
+  starterDone: 'loro.starterDone', // starter deck finished or skipped
   startLevel: 'loro.startLevel', // CEFR seed from calibration — only seeds order
   levelState: 'loro.levelState', // level fill-in mode: current level + meter
   calibrationKnown: 'loro.calibrationKnown', // words tapped as known in calibration
@@ -438,6 +446,26 @@ async function syncSavePrompt(userId: string): Promise<void> {
   if (error) console.error('[loro] save-prompt stats sync failed', error.message);
 }
 
+/**
+ * Mirror the onboarding self-assessment to the profile row on sign-in —
+ * the merge-on-signin payload for loro.level. Push-only and only when a
+ * local value exists: a device that never assessed must not null out a
+ * value another device wrote. Until the self_level migration is applied
+ * the update fails on the unknown column — logged, harmless, retried at
+ * the next auth event (same contract as save_prompt_stats).
+ */
+async function syncSelfLevel(userId: string): Promise<void> {
+  const level = storage.getSelfLevel();
+  if (!level) return;
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase
+    .from(TABLES.profiles)
+    .update({ self_level: level })
+    .eq('id', userId);
+  if (error) console.error('[loro] self-level sync failed', error.message);
+}
+
 async function fetchRemoteWords(userId: string): Promise<SavedWord[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -567,6 +595,10 @@ async function handleSession(userId: string | null): Promise<void> {
     // key outright so the new account starts untouched, not at the previous
     // owner's level.
     window.localStorage.removeItem(KEYS.levelState);
+    // Same for the self-assessment: without this, syncSelfLevel would push
+    // the PREVIOUS owner's answer up into this account's profile row.
+    window.localStorage.removeItem(KEYS.level);
+    window.localStorage.removeItem(KEYS.starterDone);
     await hydrateFromRemote(userId);
   }
 
@@ -574,6 +606,7 @@ async function handleSession(userId: string | null): Promise<void> {
   // (no-ops internally if the branch above failed to claim the cache).
   void syncProgress(userId);
   void syncSavePrompt(userId);
+  void syncSelfLevel(userId);
 
   void flushQueue();
   // Independent of the word sync: a failure above must not skip follows, and
@@ -780,6 +813,57 @@ export const storage = {
     return { ok };
   },
 
+  /**
+   * Save a word directly INTO a Leitner box — the starter deck's "Znám"/
+   * "Neznám" sorting (box 3 / box 1) and the calibration escape hatch's
+   * box-3 commits. Same engine as every other save: verified round-trip,
+   * words-changed event, sync enqueue. NOT for feed saves — those start at
+   * box 0 via saveWord so the schedule is earned, not granted.
+   *
+   * `staggerMs` shifts dueAt past the box interval. The deck passes
+   * deckIndex * STARTER_STAGGER_MS so a full run comes due as a rolling,
+   * frequency-ordered wave instead of ~80 words hitting one cliff and
+   * pinning every feed video at computeBlankPlan's blank cap.
+   *
+   * A word that already exists keeps its schedule untouched (ok: true) —
+   * the deck skips saved words anyway, so an existing entry here means two
+   * surfaces raced; the earlier one owns the history.
+   */
+  saveWordAtBox(
+    word: Pick<SavedWord, 'text' | 'translation' | 'videoId' | 'cueIndex'>,
+    box: number,
+    staggerMs = 0
+  ): { ok: boolean } {
+    const words = storage.getSavedWords();
+    const exists = words.some(
+      (w) => w.text === word.text && w.videoId === word.videoId
+    );
+    if (exists) return { ok: true };
+
+    const target = Math.min(Math.max(0, Math.round(box)), MAX_BOX);
+    const now = Date.now();
+    const entry: SavedWord = {
+      ...word,
+      savedAt: now,
+      ...initialSrs(now),
+      box: target,
+      state: stateForBox(target),
+      dueAt: now + BOX_INTERVALS_MS[target] + staggerMs,
+    };
+
+    const wrote = writeJSON(KEYS.savedWords, [...words, entry]);
+    const ok =
+      wrote &&
+      storage
+        .getSavedWords()
+        .some((w) => w.text === word.text && w.videoId === word.videoId);
+    if (ok) {
+      emitWordsChanged();
+      enqueue('upsert', word.text, word.videoId);
+    }
+    return { ok };
+  },
+
   // ---- account-nudge state (lib/savePrompt.ts owns the rules) ------------
 
   getSavePromptState(): SavePromptState {
@@ -912,6 +996,31 @@ export const storage = {
     if (!isBrowser) return;
     if (value) window.localStorage.setItem(KEYS.onboarded, '1');
     else window.localStorage.removeItem(KEYS.onboarded);
+  },
+
+  /** Onboarding self-assessment. Distinct from getStartLevel (CEFR): this is
+      what the user SAID, and it routes onboarding ('zero' -> starter deck). */
+  getSelfLevel(): SelfLevel | null {
+    if (!isBrowser) return null;
+    const v = window.localStorage.getItem(KEYS.level);
+    return v === 'zero' || v === 'some' || v === 'confident' ? v : null;
+  },
+
+  setSelfLevel(level: SelfLevel): void {
+    if (!isBrowser) return;
+    window.localStorage.setItem(KEYS.level, level);
+  },
+
+  /** Has the starter deck been finished or skipped? Gates only the resume
+      forward from /welcome — never access to the feed. */
+  isStarterDone(): boolean {
+    if (!isBrowser) return true; // SSR: never redirect from the server
+    return window.localStorage.getItem(KEYS.starterDone) === '1';
+  },
+
+  setStarterDone(): void {
+    if (!isBrowser) return;
+    window.localStorage.setItem(KEYS.starterDone, '1');
   },
 
   /** CEFR level from calibration. Seeds feed order only; behaviour corrects it. */

@@ -19,6 +19,14 @@ export type Cue = {
 export type Level = 'A1' | 'A2' | 'B1' | 'B2';
 
 /**
+ * The user's onboarding self-assessment — what they SAID about their Spanish,
+ * as opposed to `Level`, which is the CEFR level calibration derived for
+ * them. 'zero' routes to the starter deck; the other two go to calibration.
+ * Mirrored to loro_profiles.self_level on sign-in.
+ */
+export type SelfLevel = 'zero' | 'some' | 'confident';
+
+/**
  * Per-word dictionary entry, built at transcription time. Glosses translate
  * the word AS USED in this video's sentences — short, contextual, per language.
  */
@@ -151,7 +159,7 @@ export type SavedWord = {
   /** epoch ms */
   savedAt: number;
   state: WordState;
-  /** Leitner box 0-5 */
+  /** Leitner box 0-6 (see BOX_INTERVALS_MS in lib/srs.ts) */
   box: number;
   /** epoch ms — next moment this word may appear as a blank */
   dueAt: number;

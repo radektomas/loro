@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Level, SavedWord, Video, Word } from '@/types';
+import type { Level, SavedWord, SelfLevel, Video, Word } from '@/types';
 import { storage } from '@/lib/storage';
 import { normalizeAnswer } from '@/lib/srs';
+import {
+  STARTER_DECK,
+  STARTER_STAGGER_MS,
+  STARTER_VIDEO_ID,
+  starterIndexOf,
+  starterTranslation,
+} from '@/lib/starterDeck';
 import { glossText, lookupGloss } from '@/lib/dictionary';
 import { languageLabel } from '@/lib/languages';
 import {
@@ -24,7 +31,7 @@ import { staticVideos } from '@/lib/staticVideos';
 // user. lib/staticVideos.ts is the one place seed entries become Video.
 const videos = staticVideos;
 
-type Phase = 'hook' | 'calibration' | 'result' | 'guide';
+type Phase = 'hook' | 'assess' | 'calibration' | 'result' | 'guide';
 type GuideStep = 'watch' | 'tapWord' | 'saveWord' | 'recall' | 'closing';
 
 const MAX_RECALL_RETRIES = 2;
@@ -114,6 +121,71 @@ export default function WelcomePage() {
     storage.setOnboarded();
     router.replace('/feed');
   }, [router]);
+
+  // A from-zero user who dropped out of the starter deck resumes there, not
+  // back at the questions. Gated on !isOnboarded so "replay the intro" from
+  // /progress still replays the intro.
+  useEffect(() => {
+    if (
+      !storage.isOnboarded() &&
+      storage.getSelfLevel() === 'zero' &&
+      !storage.isStarterDone()
+    ) {
+      router.replace('/onboarding/starter');
+    }
+  }, [router]);
+
+  // --- Step 1: self-assessment -> route ---
+  const pickSelfLevel = useCallback(
+    (level: SelfLevel) => {
+      storage.setSelfLevel(level);
+      if (level === 'zero') {
+        // The deck IS their calibration: seed the feed at the easy end.
+        storage.setStartLevel('A1');
+        router.push('/onboarding/starter');
+      } else {
+        setPhase('calibration');
+      }
+    },
+    [router]
+  );
+
+  /**
+   * Escape hatch from calibration: "I'm actually starting from zero."
+   * Selections are COMMITTED, not discarded — each tapped word enters the
+   * SRS at box 3 ("I know this"), so the starter deck skips it and the
+   * denominator shrinks. Translations resolve through the starter deck,
+   * which the deck test guarantees is a superset of the calibration seed —
+   * deliberately no fallback (an empty translation is a permanently broken
+   * /vocab row). A miss means the lists drifted: skip the word, and the
+   * test is the tripwire that catches the drift.
+   */
+  const escapeToStarter = useCallback(() => {
+    for (const text of known) {
+      const i = starterIndexOf(text);
+      if (i < 0) {
+        console.error(
+          `[loro] calibration word "${text}" missing from starter deck`
+        );
+        continue;
+      }
+      const entry = STARTER_DECK[i];
+      storage.saveWordAtBox(
+        {
+          text: entry.word,
+          translation: starterTranslation(entry, language),
+          videoId: STARTER_VIDEO_ID,
+          cueIndex: i,
+        },
+        3,
+        i * STARTER_STAGGER_MS
+      );
+    }
+    storage.setCalibrationKnown([...known]);
+    storage.setStartLevel('A1');
+    storage.setSelfLevel('zero');
+    router.push('/onboarding/starter');
+  }, [known, language, router]);
 
   // --- Step 2: calibration -> derived level ---
   const toggleWord = (text: string) => {
@@ -282,11 +354,61 @@ export default function WelcomePage() {
         </h1>
         <button
           type="button"
-          onClick={() => setPhase('calibration')}
+          onClick={() => setPhase('assess')}
           className="mt-10 rounded-2xl bg-accent px-10 py-4 text-lg font-bold text-background transition-transform active:scale-95"
         >
           Empezar
         </button>
+      </main>
+    );
+  }
+
+  if (phase === 'assess') {
+    const options: { level: SelfLevel; title: string; body: string }[] = [
+      {
+        level: 'zero',
+        title: 'Starting from zero',
+        body: 'We’ll build your first words together before the videos.',
+      },
+      {
+        level: 'some',
+        title: 'I know some Spanish',
+        body: 'A quick word check tunes where you start.',
+      },
+      {
+        level: 'confident',
+        title: 'I want to grow my vocabulary',
+        body: 'Jump into real videos and mine them for words.',
+      },
+    ];
+    return (
+      <main className="relative flex min-h-[100dvh] flex-col bg-background px-6 pt-safe pb-safe">
+        {SkipButton}
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-16">
+          <h1 className="text-2xl font-bold tracking-tight text-text">
+            How much Spanish do you have?
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            This just picks your starting point — nothing is locked in.
+          </p>
+          <div className="mt-8 space-y-2.5">
+            {options.map((o) => (
+              <button
+                key={o.level}
+                type="button"
+                onClick={() => pickSelfLevel(o.level)}
+                className="w-full rounded-2xl bg-surface p-5 text-left transition-all hover:bg-surface-raised active:scale-[0.98]"
+              >
+                <span className="block text-base font-semibold text-text">
+                  {o.title}
+                </span>
+                <span className="mt-0.5 block text-sm leading-relaxed text-muted">
+                  {o.body}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </main>
     );
   }
@@ -326,9 +448,18 @@ export default function WelcomePage() {
         <button
           type="button"
           onClick={finishCalibration}
-          className="mb-6 w-full rounded-2xl bg-accent py-4 text-lg font-bold text-background transition-transform active:scale-[0.98]"
+          className="w-full rounded-2xl bg-accent py-4 text-lg font-bold text-background transition-transform active:scale-[0.98]"
         >
           {known.size > 0 ? 'Continuar' : 'None of these yet'}
+        </button>
+        {/* Escape hatch — low emphasis on purpose. Selections are kept, not
+            thrown away (see escapeToStarter). */}
+        <button
+          type="button"
+          onClick={escapeToStarter}
+          className="mb-6 mt-3 w-full py-1 text-center text-sm font-medium text-muted transition-colors hover:text-text"
+        >
+          I’m actually starting from zero
         </button>
       </main>
     );

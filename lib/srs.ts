@@ -35,7 +35,10 @@ const MAX_BLANKS_IN_FIRST_TWO_CUES = 1;
 /** Never blank a word saved less than this long ago (matches box 0's interval). */
 const MIN_AGE_MS = 1 * MIN;
 
-function stateForBox(box: number): WordState {
+/** The display/merge state a word in `box` carries. Exported for the callers
+    that save words directly INTO a box (starter deck, calibration escape
+    hatch) so box and state can never disagree. */
+export function stateForBox(box: number): WordState {
   if (box >= 3) return 'known';
   if (box >= 1) return 'learning';
   return 'new';

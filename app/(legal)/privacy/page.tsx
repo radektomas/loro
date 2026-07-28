@@ -156,7 +156,7 @@ export default function PrivacyPage() {
             },
             {
               term: 'Preferences and app state',
-              def: 'loro.language, loro.onboarded, loro.savePrompt, loro.joinPromoDismissed, and loro.session.unmuted (sound choice, kept only for the session).',
+              def: 'loro.language, loro.onboarded, loro.level, loro.starterDone, loro.savePrompt, loro.joinPromoDismissed, and loro.session.unmuted (sound choice, kept only for the session).',
             },
             {
               term: 'Sync machinery',

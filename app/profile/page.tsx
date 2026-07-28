@@ -12,6 +12,8 @@ import {
   type LevelState,
 } from '@/lib/levels';
 import { localVideos } from '@/lib/localVideos';
+import { normalizeAnswer } from '@/lib/srs';
+import { STARTER_DECK } from '@/lib/starterDeck';
 import { useMyCreator } from '@/components/creator/ugc';
 import { Avatar } from '@/components/creator/Avatar';
 import { LanguagePicker } from '@/components/LanguagePicker';
@@ -19,6 +21,7 @@ import { SignInCard } from '@/components/SignInCard';
 import { DeleteAccountCard } from '@/components/DeleteAccountCard';
 import { FoundingMemberRow } from '@/components/FoundingMemberRow';
 import {
+  BookIcon,
   ChevronLeftIcon,
   FilmIcon,
   FlameIcon,
@@ -228,6 +231,13 @@ export default function ProfilePage() {
     return { learned, saved: words.length };
   }, [words]);
 
+  // Deck coverage by normalized text across ALL saved words — the same
+  // identity the deck screen skips by, so this count and its queue agree.
+  const starterSaved = useMemo(() => {
+    const saved = new Set(words.map((w) => normalizeAnswer(w.text)));
+    return STARTER_DECK.filter((e) => saved.has(e.id)).length;
+  }, [words]);
+
   const streak = useMemo(
     () => computeStreaks(recallDays).current,
     [recallDays]
@@ -320,6 +330,15 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
+
+            {/* Starter deck re-entry — visible to everyone regardless of the
+                self-assessment; a confident user may still want the basics. */}
+            <ActionCard
+              href="/onboarding/starter"
+              icon={<BookIcon width={16} height={16} />}
+              title="Starter words"
+              body={`${starterSaved} of ${STARTER_DECK.length} of the most common Spanish words saved.`}
+            />
 
             <Link
               href="/progress"
