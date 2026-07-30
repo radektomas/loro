@@ -11,6 +11,23 @@ import { getSupabase, isSupabaseConfigured, TABLES } from '@/lib/supabase';
 
 export const authEnabled = isSupabaseConfigured;
 
+/**
+ * Where the provider sends the user back to. EVERY auth entry point below must
+ * pass this — omit it and Supabase falls back to the project's Site URL, which
+ * lands sign-in on whatever domain that happens to name.
+ *
+ * Built from window.location.origin rather than an env var on purpose: it means
+ * localhost, tunnel previews and production each return to themselves with no
+ * per-environment configuration.
+ *
+ * The one thing code cannot cover: Supabase only honours this if the URL
+ * matches the project's Redirect URLs allowlist. An origin missing from that
+ * list is silently replaced by the Site URL, which looks exactly like a bug in
+ * here. Add each origin (and a wildcard for preview URLs) in the dashboard.
+ *
+ * Returns undefined only when there is no window — unreachable in practice,
+ * since getSupabase() is client-only and every caller bails on its null first.
+ */
 function redirectTo(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   return `${window.location.origin}/auth/callback`;
