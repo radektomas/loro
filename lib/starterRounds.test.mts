@@ -6,6 +6,7 @@ import { normalizeSurface } from './dictionary.ts';
 import { STARTER_DECK, starterIndexOf } from './starterDeck.ts';
 import {
   chooseRoundTargets,
+  describeStarterPlan,
   functionAllowanceFor,
   functionWordIds,
   isContentWord,
@@ -14,10 +15,13 @@ import {
   MIN_WORDS_PER_ROUND,
   PAYOFF_TAIL_S,
   PREFERRED_MAX_DURATION_S,
+  planStarterDeck,
   planStarterRounds,
   plannedCardCount,
   roundTargetIds,
+  STARTER_CLIP_ALLOWLIST,
   STARTER_ROUNDS,
+  starterCandidates,
   targetOccurrences,
   WORDS_PER_ROUND,
 } from './starterRounds.ts';
@@ -559,6 +563,12 @@ describe('the real catalog can back a full run', () => {
     // The one test that touches real content: the whole design assumes the
     // catalog can seed 7-9 words at the lowest level. If A1 depth ever drops
     // below that, this fails loudly instead of quietly shipping short rounds.
+    //
+    // allowlist: [] deliberately — this test is about the RANKING's own
+    // guarantee (lowest level, short, full rounds), decoupled from
+    // STARTER_CLIP_ALLOWLIST's editorial picks, which trade level for topic
+    // quality on purpose (see that constant's doc) and are covered by their
+    // own tripwire below.
     const { default: embeds } = await import('../data/embedVideos.json', {
       with: { type: 'json' },
     });
@@ -566,7 +576,7 @@ describe('the real catalog can back a full run', () => {
       ...entry,
       author: { kind: 'none' as const },
     }));
-    const plan = planStarterRounds({ videos, savedIds: NO_SAVES });
+    const plan = planStarterRounds({ videos, savedIds: NO_SAVES, allowlist: [] });
     assert.equal(plan.length, STARTER_ROUNDS);
     assert.ok(
       plannedCardCount(plan) >= 7,
@@ -624,6 +634,38 @@ describe('the real catalog can back a full run', () => {
       `three rounds now take ${watchTime.toFixed(1)}s of video`
     );
   });
+
+  it('every curated id is a clip the deck can actually use', async () => {
+    // The tripwire for STARTER_CLIP_ALLOWLIST. A curated entry that silently
+    // fails to load is the whole risk of a hand-maintained list: the deck falls
+    // back to the ranking and looks fine, so nobody notices the curation was
+    // never applied. Empty passes trivially — that is the shipped default.
+    if (STARTER_CLIP_ALLOWLIST.length === 0) return;
+    const { default: embeds } = await import('../data/embedVideos.json', {
+      with: { type: 'json' },
+    });
+    const videos = (embeds as unknown as Video[]).map((entry) => ({
+      ...entry,
+      author: { kind: 'none' as const },
+    }));
+    const usable = new Set(
+      starterCandidates({ videos, savedIds: NO_SAVES }).map((c) => c.video.id)
+    );
+    for (const id of STARTER_CLIP_ALLOWLIST) {
+      assert.ok(
+        usable.has(id),
+        `curated clip "${id}" cannot back a starter round — check /dev/starter-clips`
+      );
+    }
+    // ...and the curation must actually reach the deck, not be overruled by a
+    // constraint at plan time.
+    const { rounds } = planStarterDeck({ videos, savedIds: NO_SAVES });
+    const curated = rounds.filter((r) => r.source === 'allowlist').length;
+    assert.ok(
+      curated > 0,
+      'the allowlist is non-empty but no round came from it'
+    );
+  });
 });
 
 describe('payoffEnd — the round ends at the payoff, not the video', () => {
@@ -672,5 +714,288 @@ describe('payoffEnd — the round ends at the payoff, not the video', () => {
         `"${id}" is spoken at ${occurrence.end}s, after the round ends at ${round.payoffEnd}s`
       );
     }
+  });
+});
+
+describe('planStarterDeck — the curated allowlist', () => {
+  const CLIPS = [
+    clip('rich', ['hola', 'gracias', 'bien', 'no', 'está', 'tengo']),
+    clip('picked-first', ['sí', 'adiós', 'estoy']),
+    clip('picked-second', ['quiero', 'puedo', 'vamos']),
+    clip('unranked', ['hablo', 'necesito', 'muy']),
+  ];
+
+  it('draws from the allowlist in the order given', () => {
+    const { rounds } = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: ['picked-second', 'picked-first'],
+    });
+    assert.deepEqual(
+      rounds.map((r) => r.video.id),
+      // Round 3 has no curated entry left, so the ranking fills it.
+      ['picked-second', 'picked-first', 'rich']
+    );
+    assert.deepEqual(
+      rounds.map((r) => r.source),
+      ['allowlist', 'allowlist', 'ranking']
+    );
+  });
+
+  it('beats the ranking — a curated clip the ranking would not pick wins', () => {
+    // 'rich' has the most to teach, so the ranking picks it first; the list
+    // overrules that. Nothing about the ranking changed: it still fills round 2.
+    const { rounds } = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: ['unranked'],
+      rounds: 2,
+    });
+    assert.deepEqual(
+      rounds.map((r) => [r.video.id, r.source]),
+      [
+        ['unranked', 'allowlist'],
+        ['rich', 'ranking'],
+      ]
+    );
+  });
+
+  it('still enforces the round-1 content-only rule, and says so', () => {
+    // 'glue' can deal two cards in an ordinary round (one content word plus one
+    // function word) but only one content-only card, so it cannot be round 1.
+    const videos = [...CLIPS, clip('glue', ['comida', 'y', 'en', 'de'])];
+    const { rounds, notes } = planStarterDeck({
+      videos,
+      savedIds: NO_SAVES,
+      allowlist: ['glue'],
+      rounds: 1,
+    });
+    assert.equal(rounds.length, 1);
+    assert.notEqual(rounds[0].video.id, 'glue');
+    assert.equal(rounds[0].source, 'ranking');
+    const skip = notes.find((n) => n.videoId === 'glue');
+    assert.equal(skip?.outcome, 'skipped');
+    assert.match(skip!.reason, /content-only/);
+  });
+
+  it('takes the same clip for a later round once glue is allowed', () => {
+    // Same clip, same list. Round 1 refuses it for being glue-heavy; round 2,
+    // where one function word is allowed, takes it — the skip is per round, not
+    // a verdict on the entry.
+    const videos = [...CLIPS, clip('glue', ['comida', 'y', 'en', 'de'])];
+    const { rounds } = planStarterDeck({
+      videos,
+      savedIds: NO_SAVES,
+      allowlist: ['glue'],
+      rounds: 2,
+    });
+    assert.equal(rounds[1].video.id, 'glue');
+    assert.equal(rounds[1].source, 'allowlist');
+    assert.equal(rounds[1].targets.length, MIN_WORDS_PER_ROUND);
+  });
+
+  it('skips a curated clip whose round would run long', () => {
+    // The length limit is a HARD gate on the curated path (and only there): a
+    // clip picked by hand does not get to stretch a beginner's first minute.
+    const long = clipAt('long', ['hola', 'gracias', 'bien'], 40, 60);
+    const { rounds, notes } = planStarterDeck({
+      videos: [...CLIPS, long],
+      savedIds: NO_SAVES,
+      allowlist: ['long'],
+      rounds: 1,
+    });
+    assert.notEqual(rounds[0].video.id, 'long');
+    const skip = notes.find((n) => n.videoId === 'long');
+    assert.match(skip!.reason, /over the 30s limit/);
+  });
+
+  it('reports an id that is not a candidate, with the reason', () => {
+    const { rounds, notes } = planStarterDeck({
+      videos: [...CLIPS, clip('hosted', ['hola', 'gracias'], { embed: false })],
+      savedIds: NO_SAVES,
+      allowlist: ['nope', 'hosted'],
+      rounds: 1,
+    });
+    assert.equal(rounds.length, 1);
+    assert.equal(rounds[0].source, 'ranking');
+    assert.equal(
+      notes.find((n) => n.videoId === 'nope')?.reason,
+      'not in the catalog'
+    );
+    assert.equal(
+      notes.find((n) => n.videoId === 'hosted')?.reason,
+      'not a YouTube embed'
+    );
+  });
+
+  it('never fails to produce a deck, whatever the list says', () => {
+    const { rounds } = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: ['nope', 'also-nope', 'still-nope'],
+    });
+    assert.equal(rounds.length, STARTER_ROUNDS);
+    for (const round of rounds) assert.equal(round.source, 'ranking');
+  });
+
+  it('an empty list plans exactly what the ranking alone plans', () => {
+    const withEmpty = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: [],
+    });
+    const ranked = planStarterRounds({ videos: CLIPS, savedIds: NO_SAVES });
+    assert.deepEqual(
+      withEmpty.rounds.map((r) => r.video.id),
+      ranked.map((r) => r.video.id)
+    );
+    for (const round of withEmpty.rounds) {
+      assert.equal(round.source, 'ranking');
+    }
+  });
+
+  it('never deals the same curated clip twice', () => {
+    const { rounds } = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: ['rich', 'rich', 'rich'],
+    });
+    assert.equal(rounds.filter((r) => r.video.id === 'rich').length, 1);
+  });
+
+  it('reports one skip per reason, not one per round', () => {
+    const { notes } = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: ['nope'],
+    });
+    assert.equal(notes.filter((n) => n.videoId === 'nope').length, 1);
+  });
+
+  it('describeStarterPlan names each round’s source and every skip', () => {
+    const result = planStarterDeck({
+      videos: CLIPS,
+      savedIds: NO_SAVES,
+      allowlist: ['picked-first', 'nope'],
+    });
+    const text = describeStarterPlan(result).join('\n');
+    assert.match(text, /round 1\s+allowlist\s+picked-first/);
+    assert.match(text, /round 2\s+ranking/);
+    assert.match(text, /skipped nope for round \d: not in the catalog/);
+  });
+});
+
+describe('starterCandidates — the curation browser’s list', () => {
+  it('offers only clips that can really back a round', () => {
+    const list = starterCandidates({
+      videos: [
+        clip('ok', ['hola', 'gracias', 'bien']),
+        clip('hosted', ['hola', 'gracias', 'bien'], { embed: false }),
+        clip('thin', ['hola', 'basura', 'otra']),
+        // Glue only: has deck words, but cannot deal two cards under any
+        // allowance, so the planner would never take it.
+        clip('allglue', ['y', 'en', 'de', 'para']),
+      ],
+      savedIds: NO_SAVES,
+    });
+    assert.deepEqual(
+      list.map((c) => c.video.id),
+      ['ok']
+    );
+  });
+
+  it('leads with the planner’s own round-1 pick', () => {
+    const videos = [
+      clip('b', ['sí', 'adiós', 'estoy']),
+      clip('a', ['hola', 'gracias', 'bien', 'no', 'está', 'tengo']),
+      clip('c', ['quiero', 'puedo', 'vamos']),
+    ];
+    const list = starterCandidates({ videos, savedIds: NO_SAVES });
+    const plan = planStarterRounds({ videos, savedIds: NO_SAVES });
+    assert.equal(list[0].video.id, plan[0].video.id);
+  });
+
+  it('prices asRound1 exactly like the planner would price round 1', () => {
+    const [row] = starterCandidates({
+      videos: [clipAt('a', ['hola', 'gracias', 'bien'], 5, 60)],
+      savedIds: NO_SAVES,
+    });
+    const [round] = planStarterRounds({
+      videos: [clipAt('a', ['hola', 'gracias', 'bien'], 5, 60)],
+      savedIds: NO_SAVES,
+      rounds: 1,
+    });
+    assert.equal(row.asRound1.payoffEnd, round.payoffEnd);
+    assert.deepEqual(
+      row.asRound1.targets.map((t) => t.entry.word),
+      round.targets.map((t) => t.entry.word)
+    );
+  });
+
+  it('prices asLaterRound with one function word allowed', () => {
+    // 'está' loses to the function word 'en' by frequency alone, but here it's
+    // the reverse test: a clip whose best 3 unclaimed words already include a
+    // function word once one is permitted.
+    const [row] = starterCandidates({
+      videos: [clip('a', ['hola', 'y', 'gracias'])],
+      savedIds: NO_SAVES,
+    });
+    assert.equal(row.asLaterRound.targets.length, 3);
+    assert.equal(
+      row.asLaterRound.targets.filter((t) => !t.content).length,
+      1
+    );
+  });
+
+  it('flags a clip that cannot open the deck, and still prices both rounds', () => {
+    const [row] = starterCandidates({
+      videos: [clip('glue', ['hola', 'y', 'en', 'de'])],
+      savedIds: NO_SAVES,
+    });
+    assert.equal(row.round1Ready, false);
+    // Round 1 (content-only): only "hola" clears it.
+    assert.equal(row.asRound1.targets.length, 1);
+    // A later round (one function word allowed): content word plus one glue
+    // word is a legal round 2/3.
+    assert.equal(row.asLaterRound.targets.length, 2);
+    assert.ok(row.asLaterRound.targets.some((t) => !t.content));
+  });
+
+  it('carries the audible span of every word it shows', () => {
+    const [row] = starterCandidates({
+      videos: [clipAt('a', ['hola', 'gracias', 'bien'], 2, 30)],
+      savedIds: NO_SAVES,
+    });
+    for (const target of row.asRound1.targets) {
+      const occurrence = row.asRound1.occurrences.get(target.entry.id);
+      assert.ok(occurrence, `no occurrence for "${target.entry.word}"`);
+      assert.ok(
+        occurrence!.end - occurrence!.start >= MIN_TARGET_AUDIBLE_S,
+        `"${target.entry.word}" span is under the audible floor`
+      );
+    }
+  });
+
+  it('skips words the user already knows, like the planner does', () => {
+    const list = starterCandidates({
+      videos: [clip('a', ['hola', 'gracias', 'bien', 'no', 'está'])],
+      savedIds: new Set(['hola', 'gracias'].map(normalizeAnswer)),
+    });
+    assert.deepEqual(
+      list[0].asRound1.targets.map((t) => t.entry.word),
+      ['no', 'bien', 'está']
+    );
+  });
+
+  it('carries the clip’s topic, so curation never needs a transcript re-read', () => {
+    const [row] = starterCandidates({
+      videos: [
+        clip('a', [
+          'hola', 'gracias', 'bien', 'comida', 'deliciosa', 'receta', 'pollo',
+        ]),
+      ],
+      savedIds: NO_SAVES,
+    });
+    assert.equal(row.topic, 'food');
   });
 });

@@ -5,6 +5,16 @@ import type { Level, Video } from '../types/index.ts';
 import { normalizeAnswer } from './srs.ts';
 import { normalizeSurface } from './dictionary.ts';
 import { STARTER_DECK, type StarterWord } from './starterDeck.ts';
+import {
+  classifyStarterTopic,
+  STARTER_TOPIC_PREFERENCE,
+  type StarterTopic,
+} from './starterTopics.ts';
+
+// Re-exported so consumers of the planner (the deck, the curation browser)
+// need one import path for everything curation-related; the classification
+// rules themselves live in lib/starterTopics.ts.
+export { STARTER_TOPIC_PREFERENCE, type StarterTopic };
 
 /**
  * Round planning for the starter deck — CLIP FIRST, words second.
@@ -94,6 +104,105 @@ export const MIN_TARGET_AUDIBLE_S = 0.2;
 /** Function words allowed per round — one, so content always carries a round. */
 export const MAX_FUNCTION_WORDS_PER_ROUND = 1;
 
+/**
+ * HAND-CURATED CLIP ORDER — the editorial layer over the ranking below.
+ *
+ * These three clips are the first thing 100% of from-zero users ever see, and
+ * they are the same three for everyone. The ranking can only measure what is in
+ * the data — word coverage, frequency, how soon the payoff lands — and none of
+ * that is clip QUALITY: whether the speech is clear, whether the framing is
+ * pleasant, whether a stranger's first thirty seconds of Spanish is somewhere
+ * they want to be. That is a judgement made by watching, so it belongs in a
+ * list, not in a heuristic.
+ *
+ * Ordered: entry 0 is round 1, entry 1 is round 2, and so on. Browse and audit
+ * candidates at /dev/starter-clips (dev only), which shows each clip's round
+ * preview, its target words with their audible spans, and whether it is in this
+ * list.
+ *
+ * Empty by default, which means the ranking alone decides — exactly the
+ * behaviour before this list existed. An entry that cannot satisfy the round
+ * constraints is SKIPPED, never forced: the deck is a beginner's first minute
+ * and a curated pick does not get to make it a glue round or a 40-second one.
+ * Anything the list cannot fill falls back to the ranking, so a stale or
+ * mistyped id degrades to the old behaviour instead of breaking the deck.
+ * describeStarterPlan() reports which rounds came from where; the deck logs it
+ * in development.
+ *
+ * CURATED 2026-07-30, refined 2026-07-30, by topic first and reading full
+ * transcripts rather than trusting lib/starterTopics.ts's keyword scores alone
+ * (see its module doc for why: on this catalog "travel" scored mostly false
+ * positives — motorcycle maintenance, a religious monologue, a gym tutorial —
+ * and one otherwise qualifying dailyLife clip turned out to be a personal
+ * HIV-diagnosis disclosure, which no keyword list would ever catch). Topic
+ * preference order is travel > dailyLife > food > culture; 'tech' is never
+ * eligible — it is the exact failure this list exists to fix (the ranking's
+ * own round-3 pick was a Microsoft/Android settings walkthrough).
+ *
+ * LEVEL IS SECONDARY TO TOPIC, AND WEIGHTED PER ROUND. Within whichever topic
+ * wins a round, the lowest available level is preferred — most strongly for
+ * round 1, since it is the beginner's first impression; rounds 2-3 may trade
+ * level for a better content fit more freely. Concretely: round 1 already sits
+ * at travel's floor (A2 — the catalog has NO A1 travel or dailyLife content at
+ * all, confirmed with starterCandidates() filtered to level === 'A1'), so
+ * nothing to trade there. Round 3 sits at food's floor (A1) with no trade
+ * needed either. Round 2 is the one real trade: every daily-life clip AT ITS
+ * lowest available level (B1) that clears every constraint is either the same
+ * body/exercise register as the clip it replaced or a dry wage-statistics
+ * recitation — B2 is where the first clip that actually reads differently
+ * shows up. One level was spent there on purpose; see round 2 below.
+ *
+ *   1. 3FosEuFdIjk — travel, A2 (topic floor, no lower level exists) — a
+ *      practical "what you need to know before visiting Machu Picchu" guide
+ *      (season, transport, packing, tickets).
+ *   2. a3sudA_IXgY — dailyLife, B2 (traded up one level from B1 — see below) —
+ *      a cost-of-living breakdown for expats in Dubai: food, transport,
+ *      housing and phone/internet, month by month.
+ *   3. lmyYWJvq4wQ — food, A1 (topic floor, no lower level exists) — a home
+ *      cook shows off a pot of ribs cooked in green sauce, pleased with how
+ *      well-seasoned they turned out.
+ *
+ * ROUND 2 WAS RECONSIDERED 2026-07-30: the original pick (GUqE8AeIaUQ, home
+ * remedies for muscle cramps) satisfied every constraint but read oddly as the
+ * app's second impression — clinical/body-symptom content right after a travel
+ * guide. Checked every dailyLife AND food clip that could fill the slot
+ * (starterCandidates() filtered to round1Ready, either topic): the B1
+ * dailyLife floor offers only more of the same register (RAndbXOYYOM, another
+ * gym/body-part exercise clip) or dry statistics (two wage-comparison videos,
+ * one running a 5.3s round); the strongest food alternative under the cap
+ * (Sse8Gm9OzQk, A2, a couple trying unusual breakfast foods) would have made
+ * rounds 2 AND 3 both food, trading away the topic variety travel/dailyLife/
+ * food gives the deck.
+ *
+ * The first candidate that actually read as a different kind of moment —
+ * personal, practical, non-medical — was guIID3CEwuM (a story about building
+ * credit as a newcomer to a country). It was dropped for an unrelated reason
+ * found while checking it in: that id is ALSO lib/playerContext.tsx's
+ * PRIME_VIDEO_ID, the hidden clip the shared player loads once, muted, to
+ * capture the iOS autoplay blessing before the deck's first real round. Tracing
+ * the swap logic, reusing it here would not actually misbehave (the priming
+ * path only applies while nothing has been requested yet, which round 2 never
+ * sees) — but that file itself marks its blessing-preservation assumption
+ * UNVERIFIED pending physical-device testing, and stacking an unrelated,
+ * coincidental id collision on top of an already-fragile, already-flagged
+ * mechanism was not a trade worth making for one clip. a3sudA_IXgY was the
+ * next-best fit with no such entanglement (grepped clean against lib/, app/,
+ * components/) — drier delivery than guIID3CEwuM, but still a clean break from
+ * both the original pick's register and the tech-tutorial failure this whole
+ * list exists to fix.
+ *
+ * Level is still not a constraint the allowlist path enforces (see
+ * planStarterDeck) — it is only ever a preference applied by hand while
+ * choosing entries. Re-derive this list with /dev/starter-clips if the catalog
+ * grows enough for an A1 travel or dailyLife clip to exist, or for a dailyLife
+ * clip that both reads well AND sits at B1 or lower.
+ */
+export const STARTER_CLIP_ALLOWLIST: readonly string[] = [
+  '3FosEuFdIjk',
+  'a3sudA_IXgY',
+  'lmyYWJvq4wQ',
+];
+
 /** A word a round teaches: the deck entry plus its rank (the frequency key). */
 export type StarterTarget = {
   entry: StarterWord;
@@ -132,7 +241,12 @@ export type StarterRound = {
    * a 57s video whose three targets land by 0:12 is a 13s round.
    */
   payoffEnd: number;
+  /** Where this round came from: a hand-curated entry in
+      STARTER_CLIP_ALLOWLIST, or the ranking. */
+  source: StarterRoundSource;
 };
+
+export type StarterRoundSource = 'allowlist' | 'ranking';
 
 export type StarterPlanOptions = {
   /** The catalog to draw from (localVideos, or a subset). */
@@ -147,6 +261,31 @@ export type StarterPlanOptions = {
   wordsPerRound?: number;
   minWordsPerRound?: number;
   maxDurationSeconds?: number;
+  /** Curated clip ids, in round order. Defaults to STARTER_CLIP_ALLOWLIST;
+      overridable so the test can pin the rules without editing the shipped
+      list. */
+  allowlist?: readonly string[];
+};
+
+/**
+ * One line of the plan's provenance: which clip filled a round and why, and
+ * every curated entry that was passed over, with the reason.
+ *
+ * Data rather than a log call, because the planner stays pure — the deck prints
+ * these in development and /dev/starter-clips renders them.
+ */
+export type StarterPlanNote = {
+  /** 1-based round the note concerns; 0 for a note about the plan itself. */
+  round: number;
+  videoId: string | null;
+  outcome: 'allowlist' | 'ranking' | 'skipped';
+  /** Human-readable, and the only place a skipped curated pick is explained. */
+  reason: string;
+};
+
+export type StarterPlanResult = {
+  rounds: StarterRound[];
+  notes: StarterPlanNote[];
 };
 
 /** Accent-exact deck lookup: normalizeSurface(word) -> deck rank. */
@@ -289,22 +428,17 @@ function targetsIn(video: Video, exclude: ReadonlySet<string>): StarterTarget[] 
 }
 
 /**
- * Plan the deck: `rounds` clips, each with the words it will teach.
+ * Every clip that could back a starter round at all, with its deck words.
  *
- * Returns fewer rounds than asked (possibly none) when the catalog cannot back
- * them — the caller must handle a short plan rather than assume three.
+ * Shared by the planner and by /dev/starter-clips, so the browser can never
+ * show a clip the planner would refuse (or hide one it would accept).
  */
-export function planStarterRounds(options: StarterPlanOptions): StarterRound[] {
-  const {
-    videos,
-    savedIds,
-    seenIds,
-    rounds = STARTER_ROUNDS,
-    wordsPerRound = WORDS_PER_ROUND,
-    minWordsPerRound = MIN_WORDS_PER_ROUND,
-    maxDurationSeconds = PREFERRED_MAX_DURATION_S,
-  } = options;
-
+function buildCandidates(
+  videos: readonly Video[],
+  savedIds: ReadonlySet<string>,
+  seenIds: ReadonlySet<string> | undefined,
+  minWordsPerRound: number
+): Candidate[] {
   const candidates: Candidate[] = [];
   for (const video of videos) {
     // Embeds only. Not an arbitrary restriction: the deck drives ONE
@@ -329,8 +463,104 @@ export function planStarterRounds(options: StarterPlanOptions): StarterRound[] {
       targets,
     });
   }
+  return candidates;
+}
+
+/**
+ * Price a clip as THIS round: the cards it would deal under this round's
+ * function-word allowance, how much it would still have left to teach, and how
+ * long the round would run.
+ */
+function priceRound(
+  candidate: Candidate,
+  used: ReadonlySet<string>,
+  wordsPerRound: number,
+  functionAllowance: number
+): BestRound {
+  const fresh = candidate.targets.filter((t) => !used.has(t.entry.id));
+  const chosen = chooseRoundTargets(fresh, wordsPerRound, functionAllowance);
+  return {
+    candidate,
+    targets: chosen,
+    // `fresh.length` is carried separately from `chosen.length`: chosen is
+    // capped at wordsPerRound, so it cannot express how much a clip still has
+    // to teach — which is the tiebreak between two equally short full rounds.
+    freshCount: fresh.length,
+    payoffEnd: payoffEndOf(
+      candidate.video.cues,
+      chosen,
+      transcriptEndOf(candidate.video)
+    ),
+  };
+}
+
+/** Why an allowlisted id never even became a candidate — the curator needs the
+    actual reason, not a silent omission. */
+function ineligibilityReason(
+  id: string,
+  videos: readonly Video[],
+  savedIds: ReadonlySet<string>,
+  minWordsPerRound: number
+): string {
+  const video = videos.find((v) => v.id === id);
+  if (!video) return 'not in the catalog';
+  if (!video.youtubeId) return 'not a YouTube embed';
+  if (video.cues.length === 0) return 'no transcript';
+  const usable = targetsIn(video, savedIds).length;
+  return `only ${usable} deck word(s) are unsaved and audible for ${MIN_TARGET_AUDIBLE_S}s (needs ${minWordsPerRound})`;
+}
+
+/**
+ * Plan the deck: `rounds` clips, each with the words it will teach, and a note
+ * for every round explaining where it came from.
+ *
+ * Two passes per round, in this order:
+ *
+ *  1. THE CURATED LIST, in its own order. Every constraint still applies — the
+ *     audible floor, the function-word allowance, round 1 content-only — plus
+ *     one that is ONLY a gate here: the round must come in under
+ *     maxDurationSeconds. In the ranking that length is a preference (see
+ *     `better`), deliberately, because refusing to deal a round at all is worse
+ *     than dealing a long one. A curated pick has no such excuse: the list is
+ *     admission by hand, and if a hand-picked clip cannot be short it should be
+ *     re-picked, not silently stretch a beginner's first minute. Every skip is
+ *     reported with its reason.
+ *  2. THE RANKING, over the whole catalog, exactly as before — for the rounds
+ *     the list did not fill. So an empty, short, or stale list always still
+ *     produces a deck.
+ *
+ * Returns fewer rounds than asked (possibly none) when the catalog cannot back
+ * them — the caller must handle a short plan rather than assume three.
+ */
+export function planStarterDeck(options: StarterPlanOptions): StarterPlanResult {
+  const {
+    videos,
+    savedIds,
+    seenIds,
+    rounds = STARTER_ROUNDS,
+    wordsPerRound = WORDS_PER_ROUND,
+    minWordsPerRound = MIN_WORDS_PER_ROUND,
+    maxDurationSeconds = PREFERRED_MAX_DURATION_S,
+    allowlist = STARTER_CLIP_ALLOWLIST,
+  } = options;
+
+  const candidates = buildCandidates(videos, savedIds, seenIds, minWordsPerRound);
+  const byId = new Map(candidates.map((c) => [c.video.id, c]));
 
   const plan: StarterRound[] = [];
+  const notes: StarterPlanNote[] = [];
+  // One note per (clip, outcome, reason): a curated clip skipped for the same
+  // reason in all three rounds is one fact, not three lines of noise. A
+  // DIFFERENT reason in a later round (round 1 is content-only, rounds 2-3 are
+  // not) is a different fact and does get its own line.
+  const seenNotes = new Set<string>();
+  const note = (entry: StarterPlanNote): void => {
+    const key = `${entry.videoId ?? '-'}|${entry.outcome}|${entry.reason}`;
+    if (seenNotes.has(key)) return;
+    seenNotes.add(key);
+    notes.push(entry);
+  };
+
   const used = new Set<string>();
   const takenVideos = new Set<string>();
 
@@ -338,49 +568,149 @@ export function planStarterRounds(options: StarterPlanOptions): StarterRound[] {
   // clips that only spoke those words are no longer worth a round, so the
   // ranking has to be recomputed rather than sorted once up front.
   while (plan.length < rounds) {
+    const roundNumber = plan.length + 1;
     // The function-word allowance depends on WHICH round this is, so the cards
     // are chosen per round rather than sliced off a precomputed list.
-    const allowance = functionAllowanceFor(plan.length + 1);
-    let best: BestRound | null = null;
-    for (const candidate of candidates) {
-      if (takenVideos.has(candidate.video.id)) continue;
-      const fresh = candidate.targets.filter((t) => !used.has(t.entry.id));
-      const chosen = chooseRoundTargets(fresh, wordsPerRound, allowance);
-      // Short of even the fallback within the constraints: this clip cannot
-      // back THIS round (it may still back a later one, where a function word
-      // is allowed).
-      if (chosen.length < minWordsPerRound) continue;
-      // `fresh.length` is carried separately from `chosen.length`: chosen is
-      // capped at wordsPerRound, so it cannot express how much a clip still has
-      // to teach — which is the tiebreak between two equally short full rounds.
-      const contender: BestRound = {
-        candidate,
-        targets: chosen,
-        freshCount: fresh.length,
-        payoffEnd: payoffEndOf(
-          candidate.video.cues,
-          chosen,
-          transcriptEndOf(candidate.video)
-        ),
-      };
-      if (!best || better(contender, best, wordsPerRound, maxDurationSeconds)) {
-        best = contender;
+    const allowance = functionAllowanceFor(roundNumber);
+
+    // ---- pass 1: the curated list, in order
+    let picked: BestRound | null = null;
+    let source: StarterRoundSource = 'ranking';
+    for (const [position, id] of allowlist.entries()) {
+      if (takenVideos.has(id)) continue;
+      const candidate = byId.get(id);
+      if (!candidate) {
+        note({
+          round: roundNumber,
+          videoId: id,
+          outcome: 'skipped',
+          reason: ineligibilityReason(id, videos, savedIds, minWordsPerRound),
+        });
+        continue;
+      }
+      const priced = priceRound(candidate, used, wordsPerRound, allowance);
+      if (priced.targets.length < minWordsPerRound) {
+        note({
+          round: roundNumber,
+          videoId: id,
+          outcome: 'skipped',
+          reason:
+            allowance === 0
+              ? `round ${roundNumber} is content-only and it can deal ${priced.targets.length} such card(s)`
+              : `only ${priced.targets.length} unclaimed word(s) clear the round's constraints`,
+        });
+        continue;
+      }
+      if (priced.payoffEnd > maxDurationSeconds) {
+        note({
+          round: roundNumber,
+          videoId: id,
+          outcome: 'skipped',
+          reason: `round would run ${priced.payoffEnd.toFixed(1)}s, over the ${maxDurationSeconds}s limit`,
+        });
+        continue;
+      }
+      picked = priced;
+      source = 'allowlist';
+      note({
+        round: roundNumber,
+        videoId: id,
+        outcome: 'allowlist',
+        reason: `curated entry ${position + 1}`,
+      });
+      break;
+    }
+
+    // ---- pass 2: the ranking, untouched
+    if (!picked) {
+      let best: BestRound | null = null;
+      for (const candidate of candidates) {
+        if (takenVideos.has(candidate.video.id)) continue;
+        const contender = priceRound(candidate, used, wordsPerRound, allowance);
+        // Short of even the fallback within the constraints: this clip cannot
+        // back THIS round (it may still back a later one, where a function word
+        // is allowed).
+        if (contender.targets.length < minWordsPerRound) continue;
+        if (!best || better(contender, best, wordsPerRound, maxDurationSeconds)) {
+          best = contender;
+        }
+      }
+      if (best) {
+        picked = best;
+        note({
+          round: roundNumber,
+          videoId: best.candidate.video.id,
+          outcome: 'ranking',
+          reason:
+            allowlist.length === 0
+              ? 'ranked pick (no curated list)'
+              : 'ranked pick — no curated entry could fill this round',
+        });
       }
     }
-    if (!best) break;
-    const targets = best.targets;
+
+    if (!picked) {
+      note({
+        round: roundNumber,
+        videoId: null,
+        outcome: 'skipped',
+        reason: 'nothing in the catalog can back this round',
+      });
+      break;
+    }
+
+    const targets = picked.targets;
     for (const t of targets) used.add(t.entry.id);
-    takenVideos.add(best.candidate.video.id);
-    const video = best.candidate.video;
+    takenVideos.add(picked.candidate.video.id);
+    const video = picked.candidate.video;
     plan.push({
       video,
       targets,
       cues: video.cues,
       transcriptEnd: transcriptEndOf(video),
-      payoffEnd: best.payoffEnd,
+      payoffEnd: picked.payoffEnd,
+      source,
     });
   }
-  return plan;
+  return { rounds: plan, notes };
+}
+
+/**
+ * The rounds alone — what every consumer except the dev report wants.
+ * Unchanged in behaviour and signature; the provenance rides along on each
+ * round's `source`.
+ */
+export function planStarterRounds(options: StarterPlanOptions): StarterRound[] {
+  return planStarterDeck(options).rounds;
+}
+
+/**
+ * The plan's provenance as printable lines: which clip filled each round, where
+ * it came from, and every curated entry that was passed over, with the reason.
+ *
+ * Pure, so the deck can print it in development (see the deck's plan effect)
+ * and /dev/starter-clips can render the same text.
+ */
+export function describeStarterPlan(result: StarterPlanResult): string[] {
+  const lines: string[] = [];
+  result.rounds.forEach((round, i) => {
+    const words = round.targets
+      .map((t) => `${t.entry.word}${t.content ? '' : '*'}`)
+      .join(' · ');
+    lines.push(
+      `round ${i + 1}  ${round.source.padEnd(9)} ${round.video.id} ` +
+        `[${round.video.level}] ${round.payoffEnd.toFixed(1)}s  ${words}`
+    );
+  });
+  for (const n of result.notes) {
+    if (n.outcome !== 'skipped') continue;
+    lines.push(
+      `  skipped ${n.videoId ?? '(no clip)'} for round ${n.round}: ${n.reason}`
+    );
+  }
+  if (lines.length === 0) lines.push('no rounds — nothing left to teach');
+  lines.push('(* = function word)');
+  return lines;
 }
 
 /**
@@ -468,6 +798,125 @@ function better(
     return contender.payoffEnd < best.payoffEnd;
   }
   return a.video.id < b.video.id;
+}
+
+/** A clip priced as one round: the cards, where they are said, how long it runs. */
+export type StarterCandidateRound = {
+  targets: StarterTarget[];
+  /** First audible occurrence of each target — the spans a curator reads to
+      see whether a word is really hearable. */
+  occurrences: Map<string, TargetOccurrence>;
+  /** Round length: what the user sits through, and the preview's end point. */
+  payoffEnd: number;
+};
+
+/**
+ * One clip as a curation candidate — everything /dev/starter-clips needs to
+ * judge it without re-deriving any of the planner's rules.
+ *
+ * PRICED TWICE, because a clip is not one offer. Round 1 admits no function
+ * word and rounds 2-3 admit one, so the same clip can deal three cards later in
+ * the deck and only two at the top of it. A single figure would have understated
+ * every clip whose third-best word is glue — and the allowlist is ORDERED, so a
+ * curator choosing entry 1 and entry 3 is asking two different questions.
+ */
+export type StarterCandidate = {
+  video: Video;
+  /** As ROUND 1 would deal it: content words only. */
+  asRound1: StarterCandidateRound;
+  /** As rounds 2-3 would deal it: one function word allowed. */
+  asLaterRound: StarterCandidateRound;
+  /** Can it back round 1 at all? The content-only rule, as a verdict. */
+  round1Ready: boolean;
+  /** What the clip is actually ABOUT, read off its own vocabulary (see
+      lib/starterTopics.ts) — not derivable from level, duration or target
+      words, which is why curating without it means reading every transcript
+      by hand. */
+  topic: StarterTopic;
+  transcriptEnd: number;
+  /** Everything it could still teach, uncapped — the ranking's richness key. */
+  freshCount: number;
+  /** Whole-video duration, or null when the catalog does not know it. */
+  durationSeconds: number | null;
+};
+
+/**
+ * Every clip eligible for a starter round, in the ranking's own order.
+ *
+ * Priced for ROUND 1 (content words only) wherever a clip can fill one, because
+ * round 1 is the pick that matters most and this list exists to be read top
+ * down. A clip that cannot fill a content-only round is priced with the
+ * ordinary allowance instead, and sorts below the full round-1 candidates on
+ * the "full round" key — which is the honest position for it.
+ *
+ * Ranking-only: `rounds` and `allowlist` in the options are ignored, and
+ * nothing here consults the curated list. It is the raw material the curated
+ * list is chosen FROM.
+ */
+export function starterCandidates(options: StarterPlanOptions): StarterCandidate[] {
+  const {
+    videos,
+    savedIds,
+    seenIds,
+    wordsPerRound = WORDS_PER_ROUND,
+    minWordsPerRound = MIN_WORDS_PER_ROUND,
+    maxDurationSeconds = PREFERRED_MAX_DURATION_S,
+  } = options;
+
+  const nothingClaimed: ReadonlySet<string> = new Set();
+  const priced = buildCandidates(
+    videos,
+    savedIds,
+    seenIds,
+    minWordsPerRound
+  ).map((candidate) => {
+    const round1 = priceRound(candidate, nothingClaimed, wordsPerRound, 0);
+    const later = priceRound(
+      candidate,
+      nothingClaimed,
+      wordsPerRound,
+      MAX_FUNCTION_WORDS_PER_ROUND
+    );
+    const round1Ready = round1.targets.length >= minWordsPerRound;
+    // Ranked at the price of the round it could open, so the list reads top-down
+    // as the planner's own round-1 preference. A clip that cannot open the deck
+    // is ranked as the later round it CAN fill, and lands below the full round-1
+    // candidates on the "full round" key — the honest position for it.
+    return { candidate, ranked: round1Ready ? round1 : later, round1, later, round1Ready };
+  })
+    // Eligible means it can really back a round: a clip whose only unsaved deck
+    // words are glue clears buildCandidates (it HAS words) but cannot deal the
+    // two-card fallback under any allowance, so the planner would never take it.
+    // Showing it as a candidate would invite curating a clip the deck refuses.
+    .filter(({ later }) => later.targets.length >= minWordsPerRound);
+
+  // `better` is a strict total order (its last key is the video id), so using
+  // it in both directions is a valid comparator.
+  priced.sort((a, b) => {
+    if (better(a.ranked, b.ranked, wordsPerRound, maxDurationSeconds)) return -1;
+    if (better(b.ranked, a.ranked, wordsPerRound, maxDurationSeconds)) return 1;
+    return 0;
+  });
+
+  const asRound = (
+    candidate: Candidate,
+    round: BestRound
+  ): StarterCandidateRound => ({
+    targets: round.targets,
+    occurrences: occurrencesIn(candidate.video.cues, round.targets),
+    payoffEnd: round.payoffEnd,
+  });
+
+  return priced.map(({ candidate, round1, later, round1Ready }) => ({
+    video: candidate.video,
+    asRound1: asRound(candidate, round1),
+    asLaterRound: asRound(candidate, later),
+    round1Ready,
+    topic: classifyStarterTopic(candidate.video),
+    transcriptEnd: transcriptEndOf(candidate.video),
+    freshCount: later.freshCount,
+    durationSeconds: candidate.video.durationSeconds ?? null,
+  }));
 }
 
 /** Normalized identities a round teaches — the highlight set for the clip. */

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import type { StarterEvent, StarterEventName } from '@/lib/starterEvents';
 import { STARTER_STAGGER_MS, starterTranslation } from '@/lib/starterDeck';
 import {
-  planStarterRounds,
+  describeStarterPlan,
+  planStarterDeck,
   targetOccurrences,
   STARTER_ROUNDS,
   type StarterRound,
@@ -127,13 +128,23 @@ export default function StarterDeckPage() {
       for (const text of storage.getCalibrationKnown()) {
         saved.add(normalizeAnswer(text));
       }
-      setPlan(
-        planStarterRounds({
-          videos: localVideos,
-          savedIds: saved,
-          seenIds: new Set(storage.getWatchedVideoIds()),
-        })
-      );
+      const result = planStarterDeck({
+        videos: localVideos,
+        savedIds: saved,
+        seenIds: new Set(storage.getWatchedVideoIds()),
+      });
+      // Which rounds the curated allowlist filled, which fell back to the
+      // ranking, and why any curated entry was passed over. Development only:
+      // the deck's three clips are a hand-tuned editorial choice, and a curated
+      // pick that silently loses to a constraint would otherwise be invisible —
+      // the deck still plays, just not the clips someone chose. NODE_ENV is
+      // inlined at build time, so this whole block is dropped from production.
+      if (process.env.NODE_ENV !== 'production') {
+        console.info(
+          ['[loro] starter deck plan', ...describeStarterPlan(result)].join('\n')
+        );
+      }
+      setPlan(result.rounds);
     });
     return () => {
       cancelled = true;
