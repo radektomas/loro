@@ -148,6 +148,25 @@ export type FeedMedia = {
 export type WordState = 'new' | 'learning' | 'known' | 'lapsed';
 
 /**
+ * How a saved word came to be — and therefore whether it counts toward a gate.
+ *
+ *  - 'user'  the user chose it: tapped it in the feed, or answered a level
+ *            blank. Demonstrated behaviour.
+ *  - 'deck'  WE handed it to them: the starter deck's rounds and the
+ *            calibration escape hatch. Onboarding grants.
+ *
+ * Both kinds are completely normal words everywhere else — same SRS schedule,
+ * same /vocab row, reviewable and deletable alike. The distinction exists for
+ * exactly two counters, the account prompt and the free-tier ceiling, which
+ * both measure user behaviour and must not be satisfied by a gift (see
+ * lib/entitlements/limit.ts countsTowardLimit).
+ *
+ * Words saved before this field existed read back as 'user' — that is what
+ * they were.
+ */
+export type WordSource = 'deck' | 'user';
+
+/**
  * A word the user tapped and saved from the feed, plus its Leitner-box
  * scheduling state. Words are "earned" by typing them back from memory.
  */
@@ -156,6 +175,9 @@ export type SavedWord = {
   translation: string;
   videoId: string;
   cueIndex: number;
+  /** Who put this word here — see WordSource. Required in memory; filled in as
+      'user' when reading rows written before the field existed. */
+  source: WordSource;
   /** epoch ms */
   savedAt: number;
   state: WordState;

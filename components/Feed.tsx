@@ -20,7 +20,11 @@ import { WordSheet, type WordSheetData } from '@/components/WordSheet';
 import { GlossarySheet } from '@/components/GlossarySheet';
 import { LoroMascot } from '@/components/LoroMascot';
 import { ActionRail } from '@/components/ActionRail';
-import { YouTubeSurface } from '@/components/YouTubeSurface';
+import {
+  PLAYBACK_STALL_MS,
+  usePlayer,
+  useSharedMedia,
+} from '@/lib/playerContext';
 import { ProfilePill } from '@/components/creator/ProfilePill';
 import { Avatar } from '@/components/creator/Avatar';
 import { FeedEndCard } from '@/components/FeedEndCard';
@@ -69,8 +73,12 @@ export function Feed({
   const router = useRouter();
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
+  const player = usePlayer();
 
   const [language, setLanguage] = useState('en');
+  // Seeded from storage in the mount effect below, which resolves in the same
+  // commit as the gate — so a user who already chose sound never sees the
+  // tap-for-sound pill flash before the choice is read.
   const [unmuted, setUnmuted] = useState(false);
   // First-time visitors are routed to the guided intro before the feed. Render
   // nothing until this resolves so the feed never flashes behind /welcome.
@@ -120,6 +128,30 @@ export function Feed({
     setLanguage(storage.getLanguage());
     setUnmuted(storage.getSessionUnmuted());
   }, []);
+
+  /**
+   * Bless the shared player on the first touch anywhere in the feed.
+   *
+   * iOS grants playback to the player instance that asked during a real
+   * gesture, and one grant then covers every later loadVideoById on that
+   * instance — so this listener is the single thing standing between the user
+   * and having to tap every video. pointerdown, not click: the gesture that
+   * matters most here is a swipe, which never becomes a click. Once is enough,
+   * hence { once: true }.
+   *
+   * Waits for the gate, because the container it listens on does not exist
+   * while the onboarding check is still running.
+   */
+  useEffect(() => {
+    const container = containerRef.current;
+    if (gate !== 'open' || !container) return;
+    const bless = () => player.bless();
+    container.addEventListener('pointerdown', bless, {
+      once: true,
+      passive: true,
+    });
+    return () => container.removeEventListener('pointerdown', bless);
+  }, [gate, player]);
 
   // The ONLY places a sound choice is persisted: both are real user gestures
   // (the tap-for-sound overlay, the rail's mute toggle).
@@ -269,11 +301,32 @@ export function VideoSlide({
   onboarding,
 }: VideoSlideProps) {
   const slideRef = useRef<HTMLDivElement>(null);
-  // FeedMedia: an HTMLVideoElement for hosted clips, the YouTubeMedia adapter
-  // for embeds. Every handler below drives this interface and works for both.
+  /**
+   * FeedMedia: an HTMLVideoElement for hosted clips, the app-level shared
+   * YouTube player for embeds. Every handler below drives this interface and
+   * works for both — which is what let embeds move to one persistent player
+   * without touching the sheet, blank, rail or subtitle logic.
+   *
+   * For an embed this points at the shared instance ONLY while this slide is
+   * the active one; it is handed back on the way out so a background slide can
+   * never pause or seek the video another slide is showing.
+   */
   const videoRef = useRef<FeedMedia | null>(null);
   const isEmbed = Boolean(video.youtubeId);
+  const player = usePlayer();
+  const { media: sharedMedia, loadedVideoId, started } = useSharedMedia();
+  /**
+   * Is the media this slide's handlers point at actually showing THIS video?
+   *
+   * Always true for a hosted clip — it owns its own element. For an embed it is
+   * false until the shared player has been pointed at this slide's video, which
+   * is what stops the outgoing video's clock from driving the incoming slide's
+   * word highlighting during a swap.
+   */
+  const ownsMedia = isEmbed ? loadedVideoId === video.youtubeId : true;
   const [active, setActive] = useState(false);
+  /** Playback never started for this slide — the fallback play button is up. */
+  const [stalled, setStalled] = useState(false);
   const activeRef = useRef(false);
   const [paused, setPaused] = useState(false);
   const [sheet, setSheet] = useState<WordSheetData | null>(null);
@@ -311,6 +364,16 @@ export function VideoSlide({
     onAutoMutedRef.current = onAutoMuted;
   }, [onAutoMuted]);
 
+  // Read by the embed effects below, which must NOT re-run when these change:
+  // re-running them would re-issue loadAndPlay (restarting the video) every
+  // time the user toggled sound, or on every swap of the shared player.
+  const unmutedRef = useRef(unmuted);
+  const loadedIdRef = useRef(loadedVideoId);
+  useEffect(() => {
+    unmutedRef.current = unmuted;
+    loadedIdRef.current = loadedVideoId;
+  }, [unmuted, loadedVideoId]);
+
   const safePlay = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
@@ -334,11 +397,17 @@ export function VideoSlide({
     if (!slide) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const el = videoRef.current;
-        if (!el) return;
         if (entry.intersectionRatio > VISIBILITY_THRESHOLD) {
           activeRef.current = true;
           setActive(true);
+          // Embeds: crossing the visibility threshold IS the scroll-snap
+          // settle, but the loadAndPlay it triggers lives in the effect below
+          // rather than here — the shared player may not have mounted yet on a
+          // cold load, and an effect can wait for it where a one-shot observer
+          // callback cannot.
+          if (isEmbed) return;
+          const el = videoRef.current;
+          if (!el) return;
           const pending = seekRef.current;
           if (pending && pending.videoId === video.id) {
             seekRef.current = null;
@@ -367,6 +436,12 @@ export function VideoSlide({
           setSheet(null);
           setGlossaryOpen(false);
           setBlankWaiting(false);
+          // Embeds: the effect below releases the shared player on its way out.
+          // Pausing from here would be wrong anyway — by now the next slide may
+          // already have loaded its own video onto that same instance.
+          if (isEmbed) return;
+          const el = videoRef.current;
+          if (!el) return;
           el.pause();
           el.currentTime = 0;
         }
@@ -375,7 +450,89 @@ export function VideoSlide({
     );
     observer.observe(slide);
     return () => observer.disconnect();
-  }, [safePlay, seekRef, video.id]);
+  }, [safePlay, seekRef, video.id, isEmbed]);
+
+  /**
+   * EMBEDS: drive the one shared player.
+   *
+   * Nothing here creates, configures or destroys a player. It points this
+   * slide's handlers at the app-level instance while the slide is active, asks
+   * for this slide's video, and releases it again — the instance itself is
+   * never touched beyond that, which is what keeps its iOS blessing alive
+   * across every swipe of the session.
+   *
+   * `sharedMedia` is a dependency rather than a ref read so that a slide which
+   * became active before the provider mounted still gets its video: the effect
+   * simply re-runs when the instance arrives.
+   */
+  useEffect(() => {
+    if (!isEmbed || !active || !sharedMedia) return;
+    const youtubeId = video.youtubeId!;
+    videoRef.current = sharedMedia;
+    // Apply the session's sound choice before playback starts. The adapter
+    // holds an unmute back until the page has been touched, so this cannot turn
+    // into an unmuted autoplay attempt.
+    sharedMedia.muted = !unmutedRef.current;
+    void player.loadAndPlay(youtubeId).catch(() => {
+      // Refused, or never reached PLAYING. Not exceptional on iOS — Low Power
+      // Mode refuses autoplay outright — and the fallback play button below is
+      // the way out, so there is nothing to do here.
+    });
+    return () => {
+      // Release, and pause ONLY if this slide still owns the instance. During a
+      // swipe the incoming slide's loadAndPlay can land before this cleanup
+      // runs, and pausing then would kill the video that just started.
+      if (loadedIdRef.current === youtubeId) {
+        sharedMedia.pause();
+        // Matches the hosted-slide behaviour: coming back to a slide restarts
+        // its video rather than resuming mid-clip.
+        sharedMedia.currentTime = 0;
+      }
+      if (videoRef.current === sharedMedia) videoRef.current = null;
+    };
+  }, [isEmbed, active, sharedMedia, player, video.youtubeId]);
+
+  /**
+   * EMBEDS: deep link from /vocab (/feed?v=&t=).
+   *
+   * Deferred until the shared player is actually on this video AND playing.
+   * Seeking earlier would move whatever the previous slide was showing, since
+   * one instance serves them all.
+   */
+  useEffect(() => {
+    if (!isEmbed || !ownsMedia || !started) return;
+    const pending = seekRef.current;
+    if (!pending || pending.videoId !== video.id) return;
+    seekRef.current = null;
+    const el = videoRef.current;
+    if (el) el.currentTime = pending.time;
+  }, [isEmbed, ownsMedia, started, seekRef, video.id]);
+
+  // Playback is under way (or this slide left the screen): no fallback needed.
+  useEffect(() => {
+    if (!isEmbed) return;
+    if (!active || (ownsMedia && started)) setStalled(false);
+  }, [isEmbed, active, ownsMedia, started]);
+
+  /**
+   * Arm the stall deadline whenever this slide is waiting for playback.
+   *
+   * `stalled` is a dependency so that a failed retry re-arms it — otherwise
+   * dismissing the button once would hide it for good on a slide that never
+   * plays.
+   */
+  useEffect(() => {
+    if (!isEmbed || !active || stalled || (ownsMedia && started)) return;
+    const timer = setTimeout(() => setStalled(true), PLAYBACK_STALL_MS);
+    return () => clearTimeout(timer);
+  }, [isEmbed, active, stalled, ownsMedia, started]);
+
+  /** The fallback's tap: a real gesture, which is the one thing Low Power Mode
+      still honours. Synchronous, so the gesture is not spent before the ask. */
+  const handleRetryPlayback = useCallback(() => {
+    setStalled(false);
+    void player.loadAndPlay(video.youtubeId!).catch(() => {});
+  }, [player, video.youtubeId]);
 
   // Keep the element's muted flag in sync with the session choice.
   useEffect(() => {
@@ -604,7 +761,7 @@ export function VideoSlide({
     // Store the per-word gloss — it becomes the recall prompt in the SRS
     // blanks. Sentence translation only as a last-resort fallback.
     const wordGloss = sheet.gloss && glossText(sheet.gloss, language);
-    const { ok } = storage.saveWord({
+    const { ok, blocked } = storage.saveWord({
       text: sheet.word.text,
       translation:
         wordGloss ??
@@ -633,7 +790,13 @@ export function VideoSlide({
     if (ok) {
       setSheetSaved(true);
       setToast({ message: `"${sheet.word.text}" saved!`, mood: 'idle' });
-    } else {
+    } else if (!blocked) {
+      // Only a genuine write failure says so. A `blocked` save gets NO toast:
+      // storage.saveWord has already asked the paywall to open (refuseSave in
+      // lib/storage.ts), the modal is the explanation, and a second message
+      // underneath it would compete with it and outlive it. It must certainly
+      // not get this copy — nothing is broken when a user reaches a limit, and
+      // "storage unavailable" sends them off to fix the wrong thing.
       setToast({ message: 'Could not save — storage unavailable', mood: 'idle' });
     }
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -669,17 +832,47 @@ export function VideoSlide({
               top of this box: that is the embed-terms constraint the whole
               band layout exists to satisfy. */}
           <div className="flex min-h-0 flex-1 items-center justify-center">
+            {/* THE PLAYER SLOT. Deliberately holds no player: the app-level
+                shared instance positions ITSELF over whichever box carries
+                this attribute, which is why only the ACTIVE slide claims it
+                (see lib/playerContext.tsx). The poster sits UNDER that layer
+                and the layer fades in over it once playback starts, so the
+                black frame during a swap is never seen and nothing of ours is
+                ever drawn on top of the player. */}
             <div
-              className="h-full max-w-full overflow-hidden rounded-xl"
+              data-loro-player-slot={active ? '' : undefined}
+              className="relative h-full max-w-full overflow-hidden rounded-xl bg-black"
               style={{ aspectRatio: '9 / 16' }}
             >
-              <YouTubeSurface
-                videoId={video.youtubeId!}
-                poster={video.poster}
-                durationSeconds={video.durationSeconds}
-                mediaRef={videoRef}
-                onTap={togglePlayback}
-              />
+              {video.poster && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={video.poster}
+                  alt=""
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+                    ownsMedia && started ? 'opacity-0' : 'opacity-100'
+                  }`}
+                />
+              )}
+              {/* Playback did not start within PLAYBACK_STALL_MS. Most often
+                  that is iOS Low Power Mode, which refuses autoplay outright,
+                  even muted — common enough that it cannot be left as an
+                  unhandled state where the slide just sits on its poster. The
+                  player layer is transparent AND non-interactive until playback
+                  starts, so this button is reachable. */}
+              {active && stalled && (
+                <button
+                  type="button"
+                  onClick={handleRetryPlayback}
+                  aria-label="Play"
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-text backdrop-blur-md transition-transform active:scale-95">
+                    <PlayIcon width={30} height={30} />
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </>
@@ -705,7 +898,7 @@ export function VideoSlide({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
       )}
 
-      {!isEmbed && <ProgressBar videoRef={videoRef} active={active} />}
+      {!isEmbed && <ProgressBar videoRef={videoRef} active={active && ownsMedia} />}
 
       {/* Paused indicator — taps fall through to the video, which resumes.
           Hidden during onboarding: the guide pauses deliberately. Embed
@@ -737,7 +930,7 @@ export function VideoSlide({
             below the player, never over it. */}
         {isEmbed && (
           <div className="relative mx-4 mb-1.5 h-0.5">
-            <ProgressBar videoRef={videoRef} active={active} />
+            <ProgressBar videoRef={videoRef} active={active && ownsMedia} />
           </div>
         )}
         {!onboarding && (
@@ -774,7 +967,12 @@ export function VideoSlide({
             videoRef={videoRef}
             cues={video.cues}
             language={language}
-            active={active && !sheet && !glossaryOpen}
+            // ownsMedia is what resets the highlighting across a swap: while
+            // the shared player is still on the previous video this track is
+            // inactive, so its rAF loop cannot read that video's clock against
+            // this video's cue times. By the time it flips true, the adapter's
+            // clock model has been reset to 0 by the load.
+            active={active && ownsMedia && !sheet && !glossaryOpen}
             onWordTap={handleWordTap}
             blanks={effectiveBlanks}
             levelBlanks={onboarding ? undefined : levelBlanks ?? undefined}

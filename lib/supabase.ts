@@ -54,6 +54,9 @@ export type SavedWordRow = {
   incorrect: number;
   last_reviewed_at: string | null;
   saved_at: string | null;
+  /** 'deck' | 'user' — see WordSource in types/index.ts. Nullable because rows
+      predating the column have no value; readers default those to 'user'. */
+  source: string | null;
 };
 
 export type ProfileRow = {

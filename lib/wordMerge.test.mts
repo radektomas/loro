@@ -15,6 +15,7 @@ function word(overrides: Partial<SavedWord> & Pick<SavedWord, 'text' | 'videoId'
   return {
     translation: 'x',
     cueIndex: 0,
+    source: 'user',
     state: 'learning',
     box: 1,
     dueAt: 1_000,

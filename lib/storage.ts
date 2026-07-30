@@ -1,4 +1,10 @@
-import type { Level, SavedWord, SelfLevel, WordState } from '@/types';
+import type {
+  Level,
+  SavedWord,
+  SelfLevel,
+  WordSource,
+  WordState,
+} from '@/types';
 import {
   BOX_INTERVALS_MS,
   grade,
@@ -26,6 +32,36 @@ import {
   type SavePromptState,
 } from '@/lib/savePrompt';
 import {
+  appendStarterEvent,
+  mergeStarterEvents,
+  parseStarterEvents,
+  type StarterEvent,
+} from '@/lib/starterEvents';
+import {
+  appendPaywallEvent,
+  mergePaywallEvents,
+  sanitizePaywallLog,
+  type PaywallEvent,
+} from '@/lib/entitlements/paywallEvents';
+import {
+  canSaveMore,
+  countedSaved,
+  countsTowardLimit,
+  effectiveLimit,
+  milestoneFor,
+} from '@/lib/entitlements/limit';
+// Entitlements are a second localStorage-first cache with the same shape as
+// follows, and the same one-way rule: state.ts must never import storage.ts.
+// This module owns the cache-owner verdict and drives the tier cache's
+// transitions from handleSession.
+import {
+  entitlementInput,
+  handleEntitlementsAuth,
+  handleEntitlementsSignOut,
+  type EntitlementsAuthMode,
+} from '@/lib/entitlements/state';
+import { requestPaywall } from '@/lib/entitlements/paywallBus';
+import {
   EMPTY_PROGRESS,
   mergeProgress,
   rowToSnapshot,
@@ -34,6 +70,9 @@ import {
   type ProgressSnapshot,
 } from '@/lib/progressSync';
 import { glossText, lookupGloss } from '@/lib/dictionary';
+// Only for the provenance back-fill below: rows written by the OLD linear deck
+// and the calibration escape hatch are identifiable by this pseudo video id.
+import { STARTER_VIDEO_ID } from '@/lib/starterDeck';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
 import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
 // Follow state is its own localStorage-first cache with the same shape, but it
@@ -78,7 +117,10 @@ const KEYS = {
   savePrompt: 'loro.savePrompt', // account-nudge state — see lib/savePrompt.ts
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
   joinPromo: 'loro.joinPromoDismissed', // /profile founding-member row hidden
-  unmuted: 'loro.session.unmuted', // sessionStorage — per-session only
+  starterEvents: 'loro.starterEvents', // deck funnel — see lib/starterEvents.ts
+  paywallEvents: 'loro.paywallEvents', // see lib/entitlements/paywallEvents.ts
+  unmuted: 'loro.session.unmuted', // sessionStorage — THIS session's sound state
+  soundOn: 'loro.soundOn', // the user's standing sound CHOICE (see below)
 } as const;
 
 /** Fired on window whenever any learning data changes (same-tab updates). */
@@ -113,6 +155,28 @@ function emitWordsChanged(): void {
   if (isBrowser) window.dispatchEvent(new Event(WORDS_CHANGED));
 }
 
+/**
+ * Resolve a stored word's provenance.
+ *
+ * Three cases, in order: an explicit value wins; otherwise a row saved against
+ * the STARTER_VIDEO_ID pseudo id is a grant from the OLD linear deck or the
+ * calibration escape hatch (both wrote that id, neither had this field), and
+ * back-filling it here keeps a pre-existing user's ~80 granted words out of the
+ * gate counters; anything else is a user save, which is the safe default —
+ * counting a word toward a gate is recoverable, exempting one silently is not.
+ *
+ * The same back-fill runs server-side in the source migration, so the two
+ * cannot disagree about a row.
+ */
+function wordSourceOf(
+  raw: WordSource | string | undefined,
+  videoId: string | undefined
+): WordSource {
+  if (raw === 'deck') return 'deck';
+  if (raw === 'user') return 'user';
+  return videoId === STARTER_VIDEO_ID ? 'deck' : 'user';
+}
+
 /** Fill SRS fields for entries saved before the spaced-repetition schema. */
 function migrateWord(raw: Partial<SavedWord>): SavedWord {
   const savedAt = raw.savedAt ?? Date.now();
@@ -121,6 +185,7 @@ function migrateWord(raw: Partial<SavedWord>): SavedWord {
     translation: raw.translation ?? '',
     videoId: raw.videoId ?? '',
     cueIndex: raw.cueIndex ?? 0,
+    source: wordSourceOf(raw.source, raw.videoId),
     savedAt,
     ...initialSrs(savedAt),
     ...(typeof raw.box === 'number'
@@ -200,6 +265,7 @@ function toRow(userId: string, w: SavedWord): SavedWordRow {
     incorrect: w.incorrect,
     last_reviewed_at: w.lastReviewedAt != null ? msToIso(w.lastReviewedAt) : null,
     saved_at: msToIso(w.savedAt),
+    source: w.source,
   };
 }
 
@@ -210,6 +276,7 @@ function fromRow(r: SavedWordRow): SavedWord {
     translation: r.translation ?? '',
     videoId: r.video_id,
     cueIndex: r.cue_index ?? 0,
+    source: wordSourceOf(r.source ?? undefined, r.video_id),
     savedAt,
     state: (r.state as WordState) ?? 'new',
     box: r.box ?? 0,
@@ -466,6 +533,222 @@ async function syncSelfLevel(userId: string): Promise<void> {
   if (error) console.error('[loro] self-level sync failed', error.message);
 }
 
+/**
+ * A fresh, stable id for one logged event — the starter-deck funnel and the
+ * paywall funnel both merge on it, and both need the same guarantee.
+ *
+ * crypto.randomUUID() is the right answer but exists only in a SECURE context,
+ * and the device-testing path for this app is http://192.168.x.x on a phone,
+ * where it is undefined — so the fallbacks are load-bearing, not defensive
+ * padding. getRandomValues IS available on insecure origins; the last resort
+ * covers neither being there at all.
+ *
+ * Uniqueness is the only property asked of the result: it is opaque, never
+ * parsed, never compared for order, and only ever used as a merge key.
+ */
+function newEventId(): string {
+  const c = isBrowser ? window.crypto : undefined;
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  if (c && typeof c.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16);
+    c.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Merge the starter-deck funnel with loro_profiles.starter_deck_events.
+ *
+ * A UNION in both directions, the same shape as saved words and progress — not
+ * the blind push that save_prompt_stats uses. Two devices can each hold part of
+ * one user's onboarding (ran the deck on a phone, signed in on a laptop), and a
+ * push-only mirror would delete whichever half went second.
+ *
+ * Safe to repeat because mergeStarterEvents is IDEMPOTENT on the event id
+ * (lib/starterEvents.ts): a retried push, a second tab, or an auth event that
+ * fires twice all converge on the same log rather than duplicating it.
+ *
+ * An unmigrated DB fails on the unknown column — logged, harmless, retried at
+ * the next auth event (same contract as save_prompt_stats and self_level).
+ */
+async function syncStarterEvents(userId: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  // Same cache-owner gate as every other sync: never merge another user's log
+  // into this account.
+  if (readJSON<string | null>(KEYS.syncedUser, null) !== userId) return;
+
+  const local = storage.getStarterEvents();
+  const { data, error } = await supabase
+    .from(TABLES.profiles)
+    .select('starter_deck_events')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) {
+    // Never guess at remote: keep local and retry at the next auth event.
+    console.error('[loro] starter-event fetch failed', error.message);
+    return;
+  }
+
+  const remote = parseStarterEvents(
+    (data as { starter_deck_events?: unknown } | null)?.starter_deck_events ?? []
+  );
+  const merged = mergeStarterEvents(local, remote);
+  if (merged.length === 0) return; // nothing anywhere — no row noise
+  if (merged.length !== local.length) writeJSON(KEYS.starterEvents, merged);
+  // Push whenever remote is not already the merged result. Cheap, and it is
+  // what heals a lost push from an earlier session.
+  if (merged.length !== remote.length) {
+    const { error: pushError } = await supabase
+      .from(TABLES.profiles)
+      .update({ starter_deck_events: merged })
+      .eq('id', userId);
+    if (pushError) {
+      console.error('[loro] starter-event push failed', pushError.message);
+    }
+  }
+}
+
+let starterEventsPushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounced merge-and-push for events logged BY a signed-in user (the sign-in
+    path covers the anonymous-then-signed-in case). Inert while anonymous or
+    before the initial merge claimed the cache — same gate as every other push. */
+function scheduleStarterEventsPush(): void {
+  if (!currentUserId) return;
+  if (readJSON<string | null>(KEYS.syncedUser, null) !== currentUserId) return;
+  const userId = currentUserId;
+  if (starterEventsPushTimer) clearTimeout(starterEventsPushTimer);
+  starterEventsPushTimer = setTimeout(() => {
+    starterEventsPushTimer = null;
+    void syncStarterEvents(userId);
+  }, 4000);
+}
+
+// ---- paywall funnel: monetization instrumentation ------------------------
+//
+// A UNION merge in both directions, unlike the starter-deck log above. The deck
+// is one run on one device, so merging two devices' funnels would invent a run
+// nobody performed. The paywall is met over a lifetime on every device the user
+// owns, and dropping a phone's blocks in favour of a laptop's would understate
+// the exact number the limit is being judged on. lib/entitlements/paywallEvents
+// owns the union rule; this is transport.
+
+async function syncPaywallEvents(userId: string): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  if (readJSON<string | null>(KEYS.syncedUser, null) !== userId) return;
+
+  const local = storage.getPaywallEvents();
+
+  const { data, error } = await supabase
+    .from(TABLES.profiles)
+    .select('paywall_events')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) {
+    // Includes the unmigrated-column case. Keep local, retry at the next auth
+    // event — never guess at remote, and never drop a local event.
+    console.error('[loro] paywall-event fetch failed', error.message);
+    return;
+  }
+
+  const remote = sanitizePaywallLog(
+    (data as { paywall_events?: unknown } | null)?.paywall_events ?? []
+  );
+  const merged = mergePaywallEvents(local, remote);
+  if (merged.length === 0) return; // nothing anywhere — no row noise
+
+  if (merged.length !== local.length) writeJSON(KEYS.paywallEvents, merged);
+  if (merged.length === remote.length) return; // remote already has everything
+
+  const { error: pushError } = await supabase
+    .from(TABLES.profiles)
+    .update({ paywall_events: merged })
+    .eq('id', userId);
+  if (pushError) {
+    console.error('[loro] paywall-event push failed', pushError.message);
+  }
+}
+
+let paywallEventsPushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounced push for events logged BY a signed-in user (the sign-in merge
+    covers the anonymous-then-signed-in case). Inert while anonymous or before
+    the initial merge claimed the cache — same gate as every other push. */
+function schedulePaywallEventsPush(): void {
+  if (!currentUserId) return;
+  if (readJSON<string | null>(KEYS.syncedUser, null) !== currentUserId) return;
+  const userId = currentUserId;
+  if (paywallEventsPushTimer) clearTimeout(paywallEventsPushTimer);
+  paywallEventsPushTimer = setTimeout(() => {
+    paywallEventsPushTimer = null;
+    void syncPaywallEvents(userId);
+  }, 4000);
+}
+
+// ---- the save gate -------------------------------------------------------
+
+/**
+ * Should this NEW word be refused because it would exceed the free-tier limit?
+ *
+ * Side-effecting on purpose, and this is the only place those side effects
+ * happen: a refusal logs save_blocked_by_limit and asks the paywall host to
+ * open (lib/entitlements/paywallBus.ts). Putting both here means every save
+ * surface — the feed's word sheet, the glossary sheet, and whatever is added
+ * next — gets the identical behaviour without knowing the paywall exists.
+ *
+ * WHAT IS NOT GATED, deliberately:
+ *   - re-saving a word the user already has (checked by the caller): not
+ *     growth, and the word is already theirs;
+ *   - words we granted rather than the user choosing — the starter deck and the
+ *     calibration escape hatch, i.e. source: 'deck' (countsTowardLimit);
+ *   - saveWordAtBox / saveLevelWord: the deck, the welcome guide, and the
+ *     feed's blue level-blanks. Gating the last of those would stall the level
+ *     meter, which is core usage;
+ *   - gradeWord, i.e. all SRS review of existing words. A user at the limit
+ *     keeps every word they have and keeps progressing on them. The limit
+ *     blocks growth; it never touches the loop.
+ */
+function refuseSave(words: SavedWord[]): boolean {
+  // Every save that reaches this gate is a 'user' save by construction —
+  // saveWord is the only caller, and grants go through saveWordAtBox, which is
+  // not gated at all. The check stays as the explicit statement of that rule.
+  if (!countsTowardLimit({ source: 'user' })) return false;
+  const limit = effectiveLimit(entitlementInput());
+  if (!Number.isFinite(limit)) return false; // the production default today
+  const count = countedSaved(words);
+  if (canSaveMore(count, limit)) return false;
+
+  storage.logPaywallEvent({
+    name: 'save_blocked_by_limit',
+    at: Date.now(),
+    savedCount: count,
+  });
+  requestPaywall({ reason: 'save_limit', savedCount: count, limit });
+  return true;
+}
+
+/**
+ * Called after any successful save that may have changed the counted total.
+ * Fires the saved-word milestone events, which are the measurement that tells
+ * us whether FREE_TIER_SAVED_WORDS_LIMIT is set anywhere near right — a
+ * conversion rate alone cannot distinguish a limit nobody reaches from one
+ * everybody resents. Once each, ever (appendPaywallEvent enforces it).
+ */
+function noteSavedCountChanged(): void {
+  const count = countedSaved(storage.getSavedWords());
+  const milestone = milestoneFor(count);
+  if (milestone === null) return;
+  storage.logPaywallEvent({
+    name: 'saved_words_count',
+    at: Date.now(),
+    savedCount: count,
+    milestone,
+  });
+}
+
 async function fetchRemoteWords(userId: string): Promise<SavedWord[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -560,6 +843,11 @@ async function handleSession(userId: string | null): Promise<void> {
     // syncing. syncedUser is left as-is so this user re-signs in cleanly.
     currentUserId = null;
     handleFollowsSignOut();
+    // The tier cache is DROPPED, not kept as an anonymous working copy the way
+    // saved words are: an entitlement is not the user's data. A stale 'plus'
+    // would hand a signed-out browser unlimited saves, and a stale 'free'
+    // would gate whoever signs in next.
+    handleEntitlementsSignOut();
     return;
   }
 
@@ -599,6 +887,18 @@ async function handleSession(userId: string | null): Promise<void> {
     // the PREVIOUS owner's answer up into this account's profile row.
     window.localStorage.removeItem(KEYS.level);
     window.localStorage.removeItem(KEYS.starterDone);
+    // The deck funnel is the PREVIOUS owner's run. Left in place, it would be
+    // pushed up under this account's id and misattribute their onboarding.
+    window.localStorage.removeItem(KEYS.starterEvents);
+    // Same for the paywall funnel: the previous owner's blocks and milestones
+    // would be unioned into this account's log and describe a user who never
+    // existed.
+    window.localStorage.removeItem(KEYS.paywallEvents);
+    // Drop the previous owner's tier NOW, synchronously, rather than leaving it
+    // to handleEntitlementsAuth below: that call is awaited on a network round
+    // trip, and until it lands anything reading the cache would be reading
+    // someone else's entitlement.
+    handleEntitlementsSignOut();
     await hydrateFromRemote(userId);
   }
 
@@ -607,6 +907,8 @@ async function handleSession(userId: string | null): Promise<void> {
   void syncProgress(userId);
   void syncSavePrompt(userId);
   void syncSelfLevel(userId);
+  void syncStarterEvents(userId);
+  void syncPaywallEvents(userId);
 
   void flushQueue();
   // Independent of the word sync: a failure above must not skip follows, and
@@ -622,6 +924,23 @@ async function handleSession(userId: string | null): Promise<void> {
   // follow would be silently overwritten, and this call must then become
   // awaited and error-handled before the merge-up branch can be trusted.
   void handleFollowsAuth(userId, followsMode);
+
+  // Entitlements ride the SAME cache-owner verdict as follows — the tier cache
+  // and the word cache must never disagree about which account they belong to.
+  //
+  // Deliberately last, and deliberately after the awaited words branch: the
+  // counted total passed here is the trigger for grandfathering, and before the
+  // merge it would be this device's partial view rather than the account's real
+  // vocabulary. A user with 200 words on another device would be measured at
+  // whatever this browser happened to hold. (The server recounts before
+  // granting, so this is a trigger and not the decision — but a trigger that
+  // never fires grants nothing.)
+  const entitlementsMode: EntitlementsAuthMode = followsMode;
+  void handleEntitlementsAuth(
+    userId,
+    entitlementsMode,
+    storage.getCountedSavedWords()
+  );
 }
 
 export const storage = {
@@ -668,17 +987,40 @@ export const storage = {
    * `ok` is true only after a verified round-trip: the write succeeded AND
    * reading the key back returns the new entry. Callers must not report
    * success to the user unless `ok` is true.
+   *
+   * `blocked` distinguishes the two ways `ok` can be false: the free-tier
+   * limit refused the word (blocked), or the write itself failed (storage
+   * evicted, quota exceeded). Both must look unsuccessful in the UI, but only
+   * one of them is the user's to fix, so a caller that shows a message should
+   * branch on it. Nothing is persisted either way.
    */
   saveWord(
     word: Pick<SavedWord, 'text' | 'translation' | 'videoId' | 'cueIndex'>
-  ): { words: SavedWord[]; ok: boolean } {
+  ): { words: SavedWord[]; ok: boolean; blocked: boolean } {
     const words = storage.getSavedWords();
     const existing = words.find(
       (w) => w.text === word.text && w.videoId === word.videoId
     );
+    // The gate runs before the write, and only for a genuinely new word, so a
+    // blocked save leaves localStorage byte-identical — there is no partial
+    // state to undo and nothing for the sync engine to push.
+    if (!existing && refuseSave(words)) {
+      return { words, ok: false, blocked: true };
+    }
     const next = existing
       ? words
-      : [...words, { ...word, savedAt: Date.now(), ...initialSrs() }];
+      : [
+          ...words,
+          // 'user': a save through this path is always the user choosing a word
+          // (the feed's word sheet, the glossary). Grants come in through
+          // saveWordAtBox instead.
+          {
+            ...word,
+            source: 'user' as WordSource,
+            savedAt: Date.now(),
+            ...initialSrs(),
+          },
+        ];
     const wrote = writeJSON(KEYS.savedWords, next);
     const ok =
       wrote &&
@@ -688,8 +1030,22 @@ export const storage = {
     if (ok) {
       emitWordsChanged();
       enqueue('upsert', word.text, word.videoId);
+      noteSavedCountChanged();
     }
-    return { words: next, ok };
+    return { words: next, ok, blocked: false };
+  },
+
+  /**
+   * Saved words that count toward the free-tier limit — starter-deck and
+   * calibration words excluded (lib/entitlements/limit.ts countsTowardLimit).
+   *
+   * The one number the entitlement seam reads. It lives here rather than in the
+   * hook because the save gate needs it synchronously inside saveWord(), and
+   * because /profile's capacity meter and the milestone events must be counting
+   * the same thing the gate counts.
+   */
+  getCountedSavedWords(): number {
+    return countedSaved(storage.getSavedWords());
   },
 
   /** Apply a review result (typed recall) to a word and persist it. */
@@ -778,7 +1134,14 @@ export const storage = {
 
     const LEVEL_KNOWN_BOX = 4;
     const now = Date.now();
-    const base = { ...word, savedAt: now, ...initialSrs(now) };
+    // 'user': a level blank is the user typing a word back from memory in the
+    // feed. It is behaviour, not a grant, so it counts toward the gates.
+    const base = {
+      ...word,
+      source: 'user' as WordSource,
+      savedAt: now,
+      ...initialSrs(now),
+    };
     const entry: SavedWord = wasCorrect
       ? {
           ...base,
@@ -809,6 +1172,7 @@ export const storage = {
       emitWordsChanged();
       enqueue('upsert', word.text, word.videoId);
       scheduleProgressPush();
+      noteSavedCountChanged();
     }
     return { ok };
   },
@@ -825,6 +1189,14 @@ export const storage = {
    * frequency-ordered wave instead of ~80 words hitting one cliff and
    * pinning every feed video at computeBlankPlan's blank cap.
    *
+   * `source` is EXPLICIT and has no default: every caller of this function is
+   * currently a seeding surface passing 'deck', and the day one is not, that
+   * has to be a decision someone makes rather than a default they inherit —
+   * getting it wrong hands out free words that silently dodge both gates.
+   * Note the source rides on the WORD, not on this function: the deck's words
+   * now carry real clip videoIds, so nothing downstream can identify a grant
+   * by its video any more (which is exactly what countsTowardLimit used to do).
+   *
    * A word that already exists keeps its schedule untouched (ok: true) —
    * the deck skips saved words anyway, so an existing entry here means two
    * surfaces raced; the earlier one owns the history.
@@ -832,7 +1204,8 @@ export const storage = {
   saveWordAtBox(
     word: Pick<SavedWord, 'text' | 'translation' | 'videoId' | 'cueIndex'>,
     box: number,
-    staggerMs = 0
+    staggerMs = 0,
+    source: WordSource = 'deck'
   ): { ok: boolean } {
     const words = storage.getSavedWords();
     const exists = words.some(
@@ -844,6 +1217,7 @@ export const storage = {
     const now = Date.now();
     const entry: SavedWord = {
       ...word,
+      source,
       savedAt: now,
       ...initialSrs(now),
       box: target,
@@ -860,6 +1234,9 @@ export const storage = {
     if (ok) {
       emitWordsChanged();
       enqueue('upsert', word.text, word.videoId);
+      // A no-op for starter-deck words, which do not count toward the limit;
+      // the welcome guide's one real-video save does move the total.
+      noteSavedCountChanged();
     }
     return { ok };
   },
@@ -1057,14 +1434,78 @@ export const storage = {
     window.localStorage.setItem(KEYS.joinPromo, '1');
   },
 
-  /** Unmute choice lives in sessionStorage — it only persists for the session. */
-  getSessionUnmuted(): boolean {
-    if (!isBrowser) return false;
-    return window.sessionStorage.getItem(KEYS.unmuted) === '1';
+  // ---- starter-deck funnel (lib/starterEvents.ts owns the shaping rules) ---
+
+  getStarterEvents(): StarterEvent[] {
+    return parseStarterEvents(readJSON<unknown>(KEYS.starterEvents, []));
   },
 
+  /**
+   * Record one deck event. The caller supplies everything but the id, which is
+   * minted here — the id is what makes the sign-in merge idempotent, so it has
+   * to come from the one place that also does the writing.
+   *
+   * Fire-and-forget by design: instrumentation must never be able to interrupt
+   * the deck, so a failed write is dropped rather than surfaced (unlike a word
+   * save, which the user is promised).
+   */
+  logStarterEvent(event: Omit<StarterEvent, 'id'>): void {
+    const log = storage.getStarterEvents();
+    const next = appendStarterEvent(log, { ...event, id: newEventId() });
+    if (next === log) return; // duplicate or capped — nothing to write
+    if (writeJSON(KEYS.starterEvents, next)) scheduleStarterEventsPush();
+  },
+
+  // ---- paywall funnel (lib/entitlements/paywallEvents.ts owns the rules) ---
+
+  getPaywallEvents(): PaywallEvent[] {
+    return sanitizePaywallLog(readJSON<unknown>(KEYS.paywallEvents, []));
+  },
+
+  /**
+   * Record one paywall event. Fire-and-forget by design, exactly like
+   * logStarterEvent: instrumentation must never be able to break a save or hold a
+   * modal closed, so a failed write is dropped rather than surfaced.
+   */
+  logPaywallEvent(event: Omit<PaywallEvent, 'id'>): void {
+    const log = storage.getPaywallEvents();
+    const next = appendPaywallEvent(log, { ...event, id: newEventId() });
+    if (next === log) return; // duplicate, already-fired milestone, or capped
+    if (writeJSON(KEYS.paywallEvents, next)) schedulePaywallEventsPush();
+  },
+
+  /**
+   * Sound state for THIS session.
+   *
+   * Two layers, deliberately. sessionStorage holds what is true right now —
+   * including a mute the user chose ten seconds ago, which must survive a
+   * navigation but not the session. localStorage holds their standing CHOICE,
+   * so a user who turned sound on in the starter deck is not asked again on
+   * their next visit; without it, the feed's tap-for-sound pill greets every
+   * returning user who has already answered that question.
+   *
+   * Persisting the choice is safe only because YouTubeMedia always starts
+   * muted and restores sound on the first touch of the page load (see the
+   * hasUserActivation note there): a stored "sound on" can therefore never
+   * turn into an unmuted autoplay attempt, which is what phones refuse.
+   */
+  getSessionUnmuted(): boolean {
+    if (!isBrowser) return false;
+    const session = window.sessionStorage.getItem(KEYS.unmuted);
+    if (session !== null) return session === '1';
+    return window.localStorage.getItem(KEYS.soundOn) === '1';
+  },
+
+  /**
+   * Write the sound state. EVERY caller is a real user gesture — the feed's
+   * tap-for-sound overlay, its rail toggle, the starter deck's first card tap
+   * — which is exactly why this may persist the choice. The autoplay-policy
+   * fallback (Feed's onAutoMuted) deliberately does NOT come through here: the
+   * browser refusing sound is not the user choosing silence.
+   */
   setSessionUnmuted(value: boolean): void {
     if (!isBrowser) return;
     window.sessionStorage.setItem(KEYS.unmuted, value ? '1' : '0');
+    window.localStorage.setItem(KEYS.soundOn, value ? '1' : '0');
   },
 };

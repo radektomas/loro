@@ -57,6 +57,9 @@ function buildBlankWord(
     translation,
     videoId: video.id,
     cueIndex,
+    // The guide's throwaway blank word: it is the user's own save, made a
+    // second earlier in the intro, so it is 'user' like any feed save.
+    source: 'user',
     savedAt: now,
     state: 'new',
     box: 0,
@@ -178,7 +181,10 @@ export default function WelcomePage() {
           cueIndex: i,
         },
         3,
-        i * STARTER_STAGGER_MS
+        i * STARTER_STAGGER_MS,
+        // A grant, not behaviour: the user said "I know these" in calibration,
+        // they did not save them. Excluded from both gate counters.
+        'deck'
       );
     }
     storage.setCalibrationKnown([...known]);

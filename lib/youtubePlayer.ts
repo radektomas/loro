@@ -43,6 +43,10 @@ type YTPlayer = {
   unMute(): void;
   getCurrentTime(): number;
   getDuration(): number;
+  /** Load and start a different video on this player. */
+  loadVideoById(videoId: string): void;
+  /** Load a different video and STAY stopped, showing its thumbnail. */
+  cueVideoById(videoId: string): void;
   destroy(): void;
 };
 
@@ -122,11 +126,17 @@ export function loadYouTubeApi(): Promise<YTNamespace> {
 /**
  * Has the user interacted with the page since it loaded?
  *
- * Phones grant audio per page load, not per preference: a stored "sound on"
- * from an earlier visit buys nothing. Unmuting a playing video before that
- * grant does not merely stay silent on Safari — it PAUSES the video. So the
- * adapter restores sound only once this is true; until then playback runs
- * muted, which is always permitted.
+ * Phones grant audio per page load, not per preference. A stored "sound on" is
+ * therefore not permission — but it IS the user's standing choice, and it is
+ * deliberately persisted (lib/storage.ts soundOn): someone who turned sound on
+ * in the starter deck must not be asked again by the feed's tap-for-sound pill
+ * on their next visit.
+ *
+ * This flag is what makes honouring that choice safe. Unmuting a playing video
+ * before the page has been touched does not merely stay silent on Safari — it
+ * PAUSES the video. So a stored choice is applied only once this is true; until
+ * then playback runs muted, which is always permitted, and the queue below
+ * restores sound on the first touch rather than at the next slide.
  *
  * navigator.userActivation would be the direct question to ask, but Safari
  * does not implement it — which is the exact browser this guards. A capture
@@ -180,12 +190,27 @@ const SEEK_CONVERGENCE_S = 0.35;
 /** ...or once this much time has passed (the player simply is where it is). */
 const SEEK_TIMEOUT_MS = 1_500;
 
+/**
+ * Behaviour that differs between the feed and the starter deck.
+ *
+ * `loop` exists because the two surfaces want opposite things from the end of
+ * a clip. A feed slide mirrors `<video loop>`: it restarts silently, and must
+ * never report a pause at the wrap or the paused indicator flashes on every
+ * loop. The starter deck instead needs the end of the clip as a SIGNAL — it is
+ * what advances the round — so with `loop: false` the adapter stops and emits
+ * 'ended'. Feed behaviour is the default; nothing changes for it.
+ */
+export type YouTubeMediaOptions = {
+  loop?: boolean;
+};
+
 export class YouTubeMedia implements FeedMedia {
   readonly preload = 'metadata';
 
   private readonly host: HTMLElement;
-  private readonly videoId: string;
-  private readonly fallbackDuration: number;
+  private videoId: string;
+  private fallbackDuration: number;
+  private readonly loop: boolean;
   private player: YTPlayer | null = null;
   private playerReady = false;
   private creating = false;
@@ -209,11 +234,67 @@ export class YouTubeMedia implements FeedMedia {
   private pendingPlay: PendingPlay | null = null;
   private listeners = new Map<string, Set<() => void>>();
 
-  constructor(host: HTMLElement, videoId: string, durationSeconds?: number) {
+  constructor(
+    host: HTMLElement,
+    videoId: string,
+    durationSeconds?: number,
+    options: YouTubeMediaOptions = {}
+  ) {
     this.host = host;
     this.videoId = videoId;
     this.fallbackDuration = durationSeconds ?? NaN;
+    this.loop = options.loop ?? true;
     this.anchorAt = performance.now();
+  }
+
+  /**
+   * Point this player at a different video WITHOUT rebuilding it.
+   *
+   * The starter deck plays three clips through one instance, and that is a
+   * requirement rather than an optimisation: a new YT.Player means a new
+   * iframe, and on iOS the autoplay permission a user gesture grants belongs
+   * to the player it was granted on. Swapping the video keeps the blessing;
+   * remounting throws it away. (Moving the host element in the DOM would also
+   * reload the iframe, which is why the deck mounts its player once, at the
+   * page root, and never relocates it.)
+   *
+   * `start: 'cue'` loads the video and stays stopped on its thumbnail — what
+   * the deck wants while the word cards are up. `start: 'play'` begins
+   * playback, and belongs inside a user gesture.
+   */
+  loadVideo(
+    videoId: string,
+    durationSeconds?: number,
+    start: 'cue' | 'play' = 'cue'
+  ): void {
+    if (this.destroyed) return;
+    this.videoId = videoId;
+    this.fallbackDuration = durationSeconds ?? NaN;
+    // Reset the clock model: the old video's samples say nothing about this
+    // one, and a stale anchor would have SubtitleTrack highlighting the new
+    // clip from the previous clip's position.
+    this.anchorTime = 0;
+    this.anchorAt = performance.now();
+    this.lastRaw = -1;
+    this.pendingSeek = null;
+    this.desired = start === 'play' ? 'playing' : 'paused';
+    if (!this.playerReady) {
+      // No player yet: ensurePlayer() will build it on the new id, and a
+      // 'play' request is honoured by handleReady's desired check.
+      if (start === 'play') this.play().catch(() => {});
+      return;
+    }
+    if (start === 'play') {
+      this.player!.loadVideoById(videoId);
+    } else {
+      this.player!.cueVideoById(videoId);
+      // cueVideoById stops playback; report it so a UI mirroring `paused`
+      // (and the deck's clip stage) doesn't think the old clip is still on.
+      if (this.playing) {
+        this.playing = false;
+        this.emit('pause');
+      }
+    }
   }
 
   // -------------------------------------------------------------- the clock
@@ -252,9 +333,16 @@ export class YouTubeMedia implements FeedMedia {
       this.anchorAt = performance.now();
     }
 
-    const raw = this.player!.getCurrentTime() ?? 0;
+    const raw = this.player!.getCurrentTime();
     // Re-anchor whenever the iframe posts a fresh sample; extrapolate between.
-    if (raw !== this.lastRaw) {
+    //
+    // The finite check is not defensive padding: for a beat after
+    // loadVideoById() this getter returns undefined (measured in
+    // /dev/autoplay-lab), and re-anchoring on that would set anchorTime to NaN
+    // — which never recovers, because every later extrapolation is NaN too.
+    // One transient reading would freeze the clock, and with it every
+    // subtitle, blank and progress bar, for the rest of the session.
+    if (Number.isFinite(raw) && raw !== this.lastRaw) {
       this.lastRaw = raw;
       this.anchorTime = raw;
       this.anchorAt = performance.now();
@@ -502,6 +590,17 @@ export class YouTubeMedia implements FeedMedia {
     }
   }
 
+  /**
+   * getCurrentTime(), or `fallback` when the player will not give a usable
+   * number. Both callers are state-change handlers, where the answer is
+   * assigned straight into the clock model — a single undefined or NaN there is
+   * permanent, so it must never get in.
+   */
+  private readTime(fallback: number): number {
+    const raw = this.player?.getCurrentTime();
+    return typeof raw === 'number' && Number.isFinite(raw) ? raw : fallback;
+  }
+
   private handleStateChange(state: number): void {
     if (this.destroyed || !this.player) return;
     switch (state) {
@@ -519,7 +618,11 @@ export class YouTubeMedia implements FeedMedia {
           // next slide.
           else awaitingActivation.add(this.restoreSound);
         }
-        this.lastRaw = this.player.getCurrentTime();
+        // Same transient-undefined hazard as the currentTime getter, and this
+        // is the path that matters most now that one player serves every video:
+        // EVERY swap arrives here, moments after loadVideoById, which is
+        // exactly when the getter is least willing to answer.
+        this.lastRaw = this.readTime(0);
         this.anchorTime = this.lastRaw;
         this.anchorAt = performance.now();
         if (this.pendingPlay) {
@@ -538,13 +641,23 @@ export class YouTubeMedia implements FeedMedia {
         // event usually beats the seek. Overwriting the target with the
         // player's pre-seek sample there would drop the clamp on the floor.
         if (!this.pendingSeek) {
-          this.anchorTime = this.player.getCurrentTime();
+          this.anchorTime = this.readTime(this.anchorTime);
           this.anchorAt = performance.now();
         }
         this.emit('pause');
         break;
       }
       case ENDED: {
+        // Non-looping (the starter deck): the end of the clip is the event the
+        // caller is waiting for. Stop, hold the clock at the end so the last
+        // subtitle stays put, and announce it.
+        if (!this.loop) {
+          this.playing = false;
+          this.desired = 'paused';
+          this.emit('pause');
+          this.emit('ended');
+          break;
+        }
         // The <video> equivalent has loop — replicate it: jump home and
         // relaunch without ever reporting a pause, so the paused indicator
         // never flashes at the loop point.
@@ -553,6 +666,12 @@ export class YouTubeMedia implements FeedMedia {
           this.anchorAt = performance.now();
           this.player.seekTo(0, true);
           this.player.playVideo();
+          // Announce the wrap even though we are looping through it. A shared
+          // instance serves both surfaces at once, so the clip really did end
+          // for whoever is listening — and 'ended' without a 'pause' tells them
+          // so without reintroducing the indicator flash this branch exists to
+          // avoid. Nothing in the feed subscribes to it.
+          this.emit('ended');
         } else {
           this.playing = false;
           this.emit('pause');

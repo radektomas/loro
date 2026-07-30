@@ -20,6 +20,8 @@ import { LanguagePicker } from '@/components/LanguagePicker';
 import { SignInCard } from '@/components/SignInCard';
 import { DeleteAccountCard } from '@/components/DeleteAccountCard';
 import { FoundingMemberRow } from '@/components/FoundingMemberRow';
+import { PlusStatistics } from '@/components/paywall/PlusStatistics';
+import { SavedWordsCapacity } from '@/components/paywall/SavedWordsCapacity';
 import {
   BookIcon,
   ChevronLeftIcon,
@@ -331,6 +333,12 @@ export default function ProfilePage() {
               )}
             </div>
 
+            {/* Capacity, right under the Saved tile it qualifies — the two
+                numbers have to be readable together or the meter looks like a
+                second, disagreeing count. Renders nothing while the limit is
+                Infinity, which is every user in production today. */}
+            <SavedWordsCapacity />
+
             {/* Starter deck re-entry — visible to everyone regardless of the
                 self-assessment; a confident user may still want the basics. */}
             <ActionCard
@@ -348,6 +356,13 @@ export default function ProfilePage() {
             </Link>
           </section>
         )}
+
+        {/* Loro Plus statistics — signed-in users only, and only once the
+            paywall exists. Free tier gets the real layout and real labels with
+            no values in the payload at all; plus tier gets the numbers. Its own
+            section rather than more tiles above, because these are Plus metrics
+            and must not blur into the free ones. */}
+        <PlusStatistics />
 
         {/* Pre-launch founding-member offer — dismissible, renders nothing
             once dismissed. Lives between the stats and Create so it reads as

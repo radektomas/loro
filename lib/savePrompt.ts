@@ -1,3 +1,7 @@
+// Relative and extension-ed, not '@/lib/…': this module loads under plain node
+// for its test (same rule as lib/starterDeck.ts).
+import { SAVE_PROMPT_THRESHOLD } from './entitlements/config.ts';
+
 /**
  * The "save your progress" account prompt — pure decision logic.
  *
@@ -12,12 +16,20 @@
  */
 
 /**
- * Tuning knobs — all in one place, deliberately. These are guesses with the
- * current user count; revisit once save_prompt_stats has real data.
+ * Tuning knobs. These are guesses with the current user count; revisit once
+ * save_prompt_stats has real data.
+ *
+ * FIRST_AT_WORDS is NOT one of them — it is re-exported from
+ * lib/entitlements/config.ts, which is the single source of truth for every
+ * number the monetization ladder depends on. The account prompt and the
+ * free-tier ceiling are the two rungs of that ladder and have to be reasoned
+ * about together: the prompt must land before the paywall, and a change to
+ * either only makes sense in view of the other. Two copies of "10" in two
+ * files is how they silently cross.
  */
 export const SAVE_PROMPT = {
   /** Prompt 1: anonymous user has at least this many saved words. */
-  FIRST_AT_WORDS: 10,
+  FIRST_AT_WORDS: SAVE_PROMPT_THRESHOLD,
   /** Prompt 2 (final): this many saved words… */
   SECOND_AT_WORDS: 25,
   /** …or this many completed recall sessions, whichever comes first. */
