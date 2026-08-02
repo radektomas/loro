@@ -1,6 +1,6 @@
 import { getServerSupabase } from '@/lib/supabaseServer';
 import { UGC_TABLES, VIDEOS_BUCKET } from '@/lib/creators';
-import type { Level } from '@/types';
+import type { Level } from '@loro/core/types';
 
 /**
  * Public creator-profile data, read on the SERVER with the anon key.

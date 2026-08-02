@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { languageLabel } from '@/lib/languages';
+import { languageLabel } from '@loro/core/languages';
 import { CheckIcon, CloseIcon, GlobeIcon } from '@/components/icons/Icons';
 
 type LanguagePickerProps = {

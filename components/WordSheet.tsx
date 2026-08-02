@@ -1,7 +1,7 @@
 'use client';
 
-import type { Cue, Gloss, Word } from '@/types';
-import { glossText, normalizeSurface } from '@/lib/dictionary';
+import type { Cue, Gloss, Word } from '@loro/core/types';
+import { glossText, normalizeSurface } from '@loro/core/dictionary';
 import { CloseIcon, BookmarkIcon } from '@/components/icons/Icons';
 import { LoroMascot } from '@/components/LoroMascot';
 import { Sheet } from '@/components/Sheet';

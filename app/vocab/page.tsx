@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { SavedWord, WordState } from '@/types';
+import type { SavedWord, WordState } from '@loro/core/types';
 import { storage } from '@/lib/storage';
-import { formatDue, MAX_BOX } from '@/lib/srs';
-import { nextDueAt } from '@/lib/progress';
+import { formatDue, MAX_BOX } from '@loro/core/srs';
+import { nextDueAt } from '@loro/core/progress';
 import { LoroMascot } from '@/components/LoroMascot';
 import {
   ChartIcon,
@@ -15,8 +15,8 @@ import {
   SearchIcon,
   TrashIcon,
 } from '@/components/icons/Icons';
-import { localVideos } from '@/lib/localVideos';
-import { STARTER_VIDEO_ID } from '@/lib/starterDeck';
+import { localVideos } from '@loro/core/catalog/localVideos';
+import { STARTER_VIDEO_ID } from '@loro/core/starter/deck';
 import { SavePromptSheet } from '@/components/SavePromptSheet';
 
 const videos = localVideos;

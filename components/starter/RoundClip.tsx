@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { normalizeSurface } from '@/lib/dictionary';
+import { normalizeSurface } from '@loro/core/dictionary';
 import { PLAYBACK_STALL_MS, usePlayer } from '@/lib/playerContext';
-import { targetOccurrences, type StarterRound } from '@/lib/starterRounds';
+import { targetOccurrences, type StarterRound } from '@loro/core/starter/rounds';
 
 /**
  * The payoff half of a starter-deck round: the round's clip plays on the

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { TABLES } from '@/lib/supabase';
-import { computeStreaks } from '@/lib/progress';
-import { MAX_BOX } from '@/lib/srs';
-import { PAYWALL_ENABLED } from '@/lib/entitlements/config';
+import { computeStreaks } from '@loro/core/progress';
+import { MAX_BOX } from '@loro/core/srs';
+import { PAYWALL_ENABLED } from '@loro/core/entitlements/config';
 import { requestUser } from '../../_lib/requestUser';
 import {
   STAT_METRICS,
   type StatsResponse,
-} from '@/lib/entitlements/stats';
+} from '@loro/core/entitlements/stats';
 
 /**
  * The Loro Plus statistics, for the /profile hub.

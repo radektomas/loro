@@ -1,6 +1,6 @@
 'use client';
 
-import type { FeedMedia } from '@/types';
+import type { FeedMedia } from '@loro/core/types';
 
 /**
  * YouTube IFrame Player API adapter — implements the FeedMedia surface the

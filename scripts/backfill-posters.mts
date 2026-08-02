@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { getAdminClient } from './lib/supabaseAdmin.mts';
-import { RESERVED_HANDLES } from '../lib/reservedHandles.ts';
+import { RESERVED_HANDLES } from '../packages/core/src/reservedHandles.ts';
 
 /**
  * Backfill poster frames for published videos uploaded before the browser

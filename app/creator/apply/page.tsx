@@ -12,7 +12,7 @@ import {
   PageHeader,
   useSupabaseUser,
 } from '@/components/creator/ugc';
-import { isReservedHandle } from '@/lib/reservedHandles';
+import { isReservedHandle } from '@loro/core/reservedHandles';
 import { SignInCard } from '@/components/SignInCard';
 import { LoroMascot } from '@/components/LoroMascot';
 import { CheckIcon } from '@/components/icons/Icons';

@@ -2,18 +2,18 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { SavedWord } from '@/types';
+import type { SavedWord } from '@loro/core/types';
 import { storage } from '@/lib/storage';
-import { computeStreaks, weekStrip, type WeekDay } from '@/lib/progress';
+import { computeStreaks, weekStrip, type WeekDay } from '@loro/core/progress';
 import {
   INITIAL_LEVEL_STATE,
   MAX_USER_LEVEL,
   tierFor,
   type LevelState,
-} from '@/lib/levels';
-import { localVideos } from '@/lib/localVideos';
-import { normalizeAnswer } from '@/lib/srs';
-import { STARTER_DECK } from '@/lib/starterDeck';
+} from '@loro/core/levels';
+import { localVideos } from '@loro/core/catalog/localVideos';
+import { normalizeAnswer } from '@loro/core/srs';
+import { STARTER_DECK } from '@loro/core/starter/deck';
 import { useMyCreator } from '@/components/creator/ugc';
 import { Avatar } from '@/components/creator/Avatar';
 import { LanguagePicker } from '@/components/LanguagePicker';

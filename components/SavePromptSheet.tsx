@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { authEnabled, getSession, onAuthChange, signInWithGoogle, signInWithMagicLink } from '@/lib/auth';
 import { storage } from '@/lib/storage';
-import { savePromptVariant } from '@/lib/savePrompt';
+import { savePromptVariant } from '@loro/core/savePrompt';
 import { Sheet } from '@/components/Sheet';
 
 /**

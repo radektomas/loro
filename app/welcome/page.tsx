@@ -2,28 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Level, SavedWord, SelfLevel, Video, Word } from '@/types';
+import type { Level, SavedWord, SelfLevel, Video, Word } from '@loro/core/types';
 import { storage } from '@/lib/storage';
-import { normalizeAnswer } from '@/lib/srs';
+import { normalizeAnswer } from '@loro/core/srs';
 import {
   STARTER_DECK,
   STARTER_STAGGER_MS,
   STARTER_VIDEO_ID,
   starterIndexOf,
   starterTranslation,
-} from '@/lib/starterDeck';
-import { glossText, lookupGloss } from '@/lib/dictionary';
-import { languageLabel } from '@/lib/languages';
+} from '@loro/core/starter/deck';
+import { glossText, lookupGloss } from '@loro/core/dictionary';
+import { languageLabel } from '@loro/core/languages';
 import {
   buildCalibrationWords,
   deriveLevel,
   pickGuidedVideo,
   pickTargetWord,
   type TargetWord,
-} from '@/lib/calibration';
+} from '@loro/core/calibration';
 import { VideoSlide, type OnboardingControl } from '@/components/Feed';
 import { LoroMascot } from '@/components/LoroMascot';
-import { staticVideos } from '@/lib/staticVideos';
+import { staticVideos } from '@loro/core/catalog/staticVideos';
 
 // The typed seed list, with `author` mapped in — NOT a cast of the raw JSON.
 // The previous `videosData as unknown as Video[]` here handed VideoSlide

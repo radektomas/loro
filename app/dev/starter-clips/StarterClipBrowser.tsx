@@ -10,7 +10,7 @@ import {
   type StarterCandidateRound,
   type StarterRoundSource,
   type StarterTopic,
-} from '@/lib/starterRounds';
+} from '@loro/core/starter/rounds';
 
 /** Badge copy and styling per topic — 'tech' is the one this whole page exists
     to help a curator spot and skip, so it alone gets a warning treatment. */
@@ -73,7 +73,7 @@ export function StarterClipBrowser() {
     let cancelled = false;
     // Dynamic import for the same reason the deck does it: the catalog carries
     // every embed transcript (~5.4MB of JSON).
-    void import('@/lib/localVideos').then(({ localVideos }) => {
+    void import('@loro/core/catalog/localVideos').then(({ localVideos }) => {
       if (cancelled) return;
       const options = { videos: localVideos, savedIds: new Set<string>() };
       const plan = planStarterDeck(options);

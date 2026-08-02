@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { FeedMedia } from '@/types';
+import type { FeedMedia } from '@loro/core/types';
 import { YouTubeMedia } from '@/lib/youtubePlayer';
 
 /**

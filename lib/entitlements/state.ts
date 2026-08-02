@@ -2,8 +2,8 @@
 
 import { getSupabase, TABLES } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
-import { PAYWALL_ENABLED } from './config.ts';
-import { shouldGrandfather, type Tier } from './limit.ts';
+import { PAYWALL_ENABLED } from '@loro/core/entitlements/config';
+import { shouldGrandfather, type Tier } from '@loro/core/entitlements/limit';
 
 /**
  * The impure half of the entitlement seam: who this user is, what tier they are

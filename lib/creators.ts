@@ -1,6 +1,6 @@
 import { getSupabase } from '@/lib/supabase';
-import { isReservedHandle } from '@/lib/reservedHandles';
-import type { Cue, Gloss } from '@/types';
+import { isReservedHandle } from '@loro/core/reservedHandles';
+import type { Cue, Gloss } from '@loro/core/types';
 
 /**
  * Data layer for Loro UGC: creator applications, uploaded videos, and the

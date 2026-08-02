@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import type { Video } from '@/types';
+import type { Video } from '@loro/core/types';
 import { storage } from '@/lib/storage';
 import {
   BookmarkIcon,

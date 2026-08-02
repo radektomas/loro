@@ -8,9 +8,9 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import type { Cue, FeedMedia, SavedWord, Word } from '@/types';
-import { normalizeAnswer } from '@/lib/srs';
-import { tierFor, type LevelBlankWord } from '@/lib/levels';
+import type { Cue, FeedMedia, SavedWord, Word } from '@loro/core/types';
+import { normalizeAnswer } from '@loro/core/srs';
+import { tierFor, type LevelBlankWord } from '@loro/core/levels';
 import {
   CaretDownIcon,
   ChartIcon,

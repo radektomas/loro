@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { Video } from '@/types';
+import type { Video } from '@loro/core/types';
 import { storage } from '@/lib/storage';
-import { buildGlossary, type GlossaryEntry } from '@/lib/glossary';
-import { glossText, lookupGloss } from '@/lib/dictionary';
-import { formatDue, MAX_BOX } from '@/lib/srs';
+import { buildGlossary, type GlossaryEntry } from '@loro/core/glossary';
+import { glossText, lookupGloss } from '@loro/core/dictionary';
+import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { Sheet } from '@/components/Sheet';
 import {
   CheckIcon,

@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import type { Cue, Word } from '@/types';
+import type { Cue, Word } from '@loro/core/types';
 import { videoPublicUrl, type CreatorVideo } from '@/lib/creators';
-import { normalizeSurface } from '@/lib/dictionary';
+import { normalizeSurface } from '@loro/core/dictionary';
 import { SubtitleTrack } from '@/components/SubtitleTrack';
 import { WordSheet, type WordSheetData } from '@/components/WordSheet';
 import { FilmIcon } from '@/components/icons/Icons';

@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { SavedWord, WordState } from '@/types';
+import type { SavedWord, WordState } from '@loro/core/types';
 import { storage } from '@/lib/storage';
-import { formatDue } from '@/lib/srs';
+import { formatDue } from '@loro/core/srs';
 import {
   INITIAL_LEVEL_STATE,
   TIERS,
   tierFor,
   type LevelState,
-} from '@/lib/levels';
-import { computeStreaks, dueCount, nextDueAt } from '@/lib/progress';
+} from '@loro/core/levels';
+import { computeStreaks, dueCount, nextDueAt } from '@loro/core/progress';
 import { LoroMascot } from '@/components/LoroMascot';
 import { SignInCard } from '@/components/SignInCard';
 import {
@@ -20,7 +20,7 @@ import {
   ChevronLeftIcon,
   LockIcon,
 } from '@/components/icons/Icons';
-import { localVideos } from '@/lib/localVideos';
+import { localVideos } from '@loro/core/catalog/localVideos';
 
 const videos = localVideos;
 

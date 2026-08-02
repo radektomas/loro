@@ -4,52 +4,52 @@ import type {
   SelfLevel,
   WordSource,
   WordState,
-} from '@/types';
+} from '@loro/core/types';
 import {
   BOX_INTERVALS_MS,
   grade,
   initialSrs,
   MAX_BOX,
   stateForBox,
-} from '@/lib/srs';
+} from '@loro/core/srs';
 import {
   applyLevelAnswer,
   INITIAL_LEVEL_STATE,
   MAX_USER_LEVEL,
   type LevelAnswerResult,
   type LevelState,
-} from '@/lib/levels';
-import { dayKey, dueCount } from '@/lib/progress';
+} from '@loro/core/levels';
+import { dayKey, dueCount } from '@loro/core/progress';
 import {
   foldDuplicateWords,
   localAhead,
   mergePrefer,
   mergeWordSets,
-} from '@/lib/wordMerge';
+} from '@loro/core/wordMerge';
 import {
   EMPTY_SAVE_PROMPT_STATE,
   type PromptOutcome,
   type SavePromptState,
-} from '@/lib/savePrompt';
+} from '@loro/core/savePrompt';
 import {
   appendStarterEvent,
   mergeStarterEvents,
   parseStarterEvents,
   type StarterEvent,
-} from '@/lib/starterEvents';
+} from '@loro/core/starterEvents';
 import {
   appendPaywallEvent,
   mergePaywallEvents,
   sanitizePaywallLog,
   type PaywallEvent,
-} from '@/lib/entitlements/paywallEvents';
+} from '@loro/core/entitlements/paywallEvents';
 import {
   canSaveMore,
   countedSaved,
   countsTowardLimit,
   effectiveLimit,
   milestoneFor,
-} from '@/lib/entitlements/limit';
+} from '@loro/core/entitlements/limit';
 // Entitlements are a second localStorage-first cache with the same shape as
 // follows, and the same one-way rule: state.ts must never import storage.ts.
 // This module owns the cache-owner verdict and drives the tier cache's
@@ -68,11 +68,11 @@ import {
   sameProgress,
   type ProgressRow,
   type ProgressSnapshot,
-} from '@/lib/progressSync';
-import { glossText, lookupGloss } from '@/lib/dictionary';
+} from '@loro/core/progressSync';
+import { glossText, lookupGloss } from '@loro/core/dictionary';
 // Only for the provenance back-fill below: rows written by the OLD linear deck
 // and the calibration escape hatch are identifiable by this pseudo video id.
-import { STARTER_VIDEO_ID } from '@/lib/starterDeck';
+import { STARTER_VIDEO_ID } from '@loro/core/starter/deck';
 import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
 import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
 // Follow state is its own localStorage-first cache with the same shape, but it
@@ -86,7 +86,7 @@ import {
   type FollowsAuthMode,
 } from '@/lib/follows';
 // Seed data is only used to upgrade legacy saved words to per-word glosses.
-import { localVideos } from '@/lib/localVideos';
+import { localVideos } from '@loro/core/catalog/localVideos';
 
 // Seed + embed catalog: words saved from either kind must resolve here.
 const videos = localVideos;

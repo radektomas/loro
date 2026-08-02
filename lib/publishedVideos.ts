@@ -1,6 +1,6 @@
 import { getSupabase } from '@/lib/supabase';
 import { UGC_TABLES, videoPublicUrl } from '@/lib/creators';
-import type { Cue, Gloss, Level, Video } from '@/types';
+import type { Cue, Gloss, Level, Video } from '@loro/core/types';
 
 /**
  * Published UGC videos, mapped from loro_videos rows to the app's Video

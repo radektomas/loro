@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { StarterEvent, StarterEventName } from '@/lib/starterEvents';
-import { STARTER_STAGGER_MS, starterTranslation } from '@/lib/starterDeck';
+import type { StarterEvent, StarterEventName } from '@loro/core/starterEvents';
+import { STARTER_STAGGER_MS, starterTranslation } from '@loro/core/starter/deck';
 import {
   describeStarterPlan,
   planStarterDeck,
   targetOccurrences,
   STARTER_ROUNDS,
   type StarterRound,
-} from '@/lib/starterRounds';
-import { foldDuplicateWords } from '@/lib/wordMerge';
-import { normalizeAnswer } from '@/lib/srs';
+} from '@loro/core/starter/rounds';
+import { foldDuplicateWords } from '@loro/core/wordMerge';
+import { normalizeAnswer } from '@loro/core/srs';
 import { storage } from '@/lib/storage';
 import { usePlayer } from '@/lib/playerContext';
 import { LoroMascot } from '@/components/LoroMascot';
@@ -113,7 +113,7 @@ export default function StarterDeckPage() {
     // JSON) and this is an ONBOARDING route. Statically importing it would put
     // the whole catalog in the first bundle a brand-new user downloads — the
     // same reason /welcome imports staticVideos directly instead of localVideos.
-    void import('@/lib/localVideos').then(({ localVideos }) => {
+    void import('@loro/core/catalog/localVideos').then(({ localVideos }) => {
       if (cancelled) return;
       // Fold first: remote fetches can hold duplicate rows per (text, videoId).
       // Identity is normalizeAnswer(text) across ALL videoIds, so a word met in

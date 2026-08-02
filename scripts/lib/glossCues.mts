@@ -1,4 +1,4 @@
-import { normalizeSurface } from '../../lib/dictionary.ts';
+import { normalizeSurface } from '../../packages/core/src/dictionary.ts';
 import { requireEnv } from './env.mts';
 import type { CueOut } from './json3ToCues.mts';
 

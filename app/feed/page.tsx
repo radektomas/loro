@@ -4,8 +4,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Feed } from '@/components/Feed';
 import { fetchCreatorFeed, fetchPublishedVideos } from '@/lib/publishedVideos';
-import { localVideos } from '@/lib/localVideos';
-import type { Video } from '@/types';
+import { localVideos } from '@loro/core/catalog/localVideos';
+import type { Video } from '@loro/core/types';
 
 /**
  * The feed, in one of two modes:

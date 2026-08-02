@@ -8,7 +8,7 @@ import {
   formatStat,
   STAT_METRICS,
   type StatsResponse,
-} from '@/lib/entitlements/stats';
+} from '@loro/core/entitlements/stats';
 import { LockIcon } from '@/components/icons/Icons';
 
 /**

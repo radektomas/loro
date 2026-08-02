@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Sheet } from '@/components/Sheet';
 import { CloseIcon } from '@/components/icons/Icons';
-import { defaultPlan, getPlans, type PricedPlan } from '@/lib/entitlements/plans';
+import { defaultPlan, getPlans, type PricedPlan } from '@loro/core/entitlements/plans';
 import type { PaywallReason } from '@/lib/entitlements/paywallBus';
 
 /**

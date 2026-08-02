@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import { LoroMascot } from '@/components/LoroMascot';
-import { DEFAULT_AUTH_DESTINATION, resolveNext } from '@/lib/authRedirect';
+import { DEFAULT_AUTH_DESTINATION, resolveNext } from '@loro/core/authRedirect';
 
 /**
  * Auth redirect target for magic-link and Google OAuth. We handle the exchange

@@ -7,7 +7,7 @@ import {
   effectiveLimit,
   remainingSaves,
   type Tier,
-} from './limit.ts';
+} from '@loro/core/entitlements/limit';
 import {
   entitlementInput,
   onTierChanged,

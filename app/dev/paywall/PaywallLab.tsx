@@ -8,8 +8,8 @@ import {
   PAYWALL_ENABLED,
   SAVED_WORDS_MILESTONES,
   SAVE_PROMPT_THRESHOLD,
-} from '@/lib/entitlements/config';
-import { getPlans } from '@/lib/entitlements/plans';
+} from '@loro/core/entitlements/config';
+import { getPlans } from '@loro/core/entitlements/plans';
 import {
   devPaywallForced,
   devTierOverride,

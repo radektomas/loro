@@ -4,10 +4,10 @@ import {
   ServiceRoleNotConfiguredError,
 } from '../../_lib/serviceRole';
 import { requestUser } from '../../_lib/requestUser';
-import type { WordSource } from '@/types';
+import type { WordSource } from '@loro/core/types';
 import { TABLES } from '@/lib/supabase';
-import { countsTowardLimit, shouldGrandfather } from '@/lib/entitlements/limit';
-import { PAYWALL_ENABLED } from '@/lib/entitlements/config';
+import { countsTowardLimit, shouldGrandfather } from '@loro/core/entitlements/limit';
+import { PAYWALL_ENABLED } from '@loro/core/entitlements/config';
 
 /**
  * Grant loro_profiles.is_grandfathered to a user who was already over the free

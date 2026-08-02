@@ -9,11 +9,11 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import type { Cue, FeedMedia, SavedWord, Video, Word } from '@/types';
+import type { Cue, FeedMedia, SavedWord, Video, Word } from '@loro/core/types';
 import { storage } from '@/lib/storage';
-import { computeBlankPlan } from '@/lib/srs';
-import { computeLevelBlankPlan, tierFor, type LevelBlankWord } from '@/lib/levels';
-import { glossText, lookupGloss } from '@/lib/dictionary';
+import { computeBlankPlan } from '@loro/core/srs';
+import { computeLevelBlankPlan, tierFor, type LevelBlankWord } from '@loro/core/levels';
+import { glossText, lookupGloss } from '@loro/core/dictionary';
 import type { LoroMascotState } from '@/components/LoroMascot';
 import { SubtitleTrack } from '@/components/SubtitleTrack';
 import { WordSheet, type WordSheetData } from '@/components/WordSheet';
@@ -28,7 +28,7 @@ import {
 import { ProfilePill } from '@/components/creator/ProfilePill';
 import { Avatar } from '@/components/creator/Avatar';
 import { FeedEndCard } from '@/components/FeedEndCard';
-import { orderVideosForLevel } from '@/lib/feedOrder';
+import { orderVideosForLevel } from '@loro/core/feedOrder';
 import {
   BookIcon,
   ChartIcon,
