@@ -1,4 +1,4 @@
-import type { Gloss, Video } from '@/types';
+import type { Gloss, Video } from './types.ts';
 
 /**
  * Word-level dictionary lookups against the per-video dictionary built at

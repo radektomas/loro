@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { Video } from '../types/index.ts';
+import type { Video } from '../types.ts';
 import {
   classifyStarterTopic,
   scoreStarterTopics,
   STARTER_TOPIC_PREFERENCE,
-} from './starterTopics.ts';
+} from './topics.ts';
 
 /** A clip whose transcript is `words`, one cue, one second per word. Content
     doesn't need real timing for a topic classifier — only the vocabulary. */

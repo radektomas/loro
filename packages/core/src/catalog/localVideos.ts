@@ -1,6 +1,6 @@
-import { embedVideos } from '@/lib/embedVideos';
-import { staticVideos } from '@/lib/staticVideos';
-import type { Video } from '@/types';
+import { embedVideos } from './embedVideos.ts';
+import { staticVideos } from './staticVideos.ts';
+import type { Video } from '../types.ts';
 
 /**
  * Every video that ships WITH the app: the static seed set plus the

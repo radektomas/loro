@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { SavedWord } from '../types/index.ts';
+import type { SavedWord } from './types.ts';
 import {
   foldDuplicateWords,
   localAhead,

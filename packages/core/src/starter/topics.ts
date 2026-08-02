@@ -1,7 +1,7 @@
 // Relative and extension-ed, not '@/lib/...': this module loads under plain
 // node for its test (same rule as lib/starterRounds.ts).
-import type { Video } from '../types/index.ts';
-import { normalizeSurface } from './dictionary.ts';
+import type { Video } from '../types.ts';
+import { normalizeSurface } from '../dictionary.ts';
 
 /**
  * Topic classification for starter-deck candidates — read off the clip's own

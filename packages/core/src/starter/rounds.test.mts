@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { Video } from '../types/index.ts';
-import { normalizeAnswer } from './srs.ts';
-import { normalizeSurface } from './dictionary.ts';
-import { STARTER_DECK, starterIndexOf } from './starterDeck.ts';
+import type { Video } from '../types.ts';
+import { normalizeAnswer } from '../srs.ts';
+import { normalizeSurface } from '../dictionary.ts';
+import { STARTER_DECK, starterIndexOf } from './deck.ts';
 import {
   chooseRoundTargets,
   describeStarterPlan,
@@ -24,7 +24,7 @@ import {
   starterCandidates,
   targetOccurrences,
   WORDS_PER_ROUND,
-} from './starterRounds.ts';
+} from './rounds.ts';
 
 /** A clip that speaks `words`, one cue, each word one second long. */
 function clip(
@@ -569,7 +569,7 @@ describe('the real catalog can back a full run', () => {
     // STARTER_CLIP_ALLOWLIST's editorial picks, which trade level for topic
     // quality on purpose (see that constant's doc) and are covered by their
     // own tripwire below.
-    const { default: embeds } = await import('../data/embedVideos.json', {
+    const { default: embeds } = await import('../../../../data/embedVideos.json', {
       with: { type: 'json' },
     });
     const videos = (embeds as unknown as Video[]).map((entry) => ({
@@ -641,7 +641,7 @@ describe('the real catalog can back a full run', () => {
     // back to the ranking and looks fine, so nobody notices the curation was
     // never applied. Empty passes trivially — that is the shipped default.
     if (STARTER_CLIP_ALLOWLIST.length === 0) return;
-    const { default: embeds } = await import('../data/embedVideos.json', {
+    const { default: embeds } = await import('../../../../data/embedVideos.json', {
       with: { type: 'json' },
     });
     const videos = (embeds as unknown as Video[]).map((entry) => ({

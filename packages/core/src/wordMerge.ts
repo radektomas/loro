@@ -1,4 +1,4 @@
-import type { SavedWord } from '@/types';
+import type { SavedWord } from './types.ts';
 
 /**
  * Pure merge logic for saved-word histories — extracted from lib/storage.ts

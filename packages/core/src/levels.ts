@@ -1,7 +1,7 @@
-import type { SavedWord, Video } from '@/types';
-import { normalizeAnswer } from '@/lib/srs';
-import { glossText, lookupGloss, normalizeSurface } from '@/lib/dictionary';
-import { isFunctionWord } from '@/lib/glossary';
+import type { SavedWord, Video } from './types.ts';
+import { normalizeAnswer } from './srs.ts';
+import { glossText, lookupGloss, normalizeSurface } from './dictionary.ts';
+import { isFunctionWord } from './glossary.ts';
 
 /**
  * Level fill-in mode: every word gets an approximate difficulty level, the

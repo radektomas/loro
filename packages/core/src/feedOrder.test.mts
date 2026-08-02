@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { orderVideosForLevel } from './feedOrder.ts';
-import type { Level, Video } from '@/types';
+import type { Level, Video } from './types.ts';
 
 const video = (id: string, level: Level) => ({ id, level, cues: [] }) as unknown as Video;
 

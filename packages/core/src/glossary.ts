@@ -1,5 +1,5 @@
-import type { SavedWord, Video, Word } from '@/types';
-import { normalizeSurface } from '@/lib/dictionary';
+import type { SavedWord, Video, Word } from './types.ts';
+import { normalizeSurface } from './dictionary.ts';
 
 /**
  * Per-video glossary: every unique spoken word of a video, classified by how

@@ -1,4 +1,4 @@
-import type { Level, Video } from '@/types';
+import type { Level, Video } from './types.ts';
 
 /**
  * Feed ordering.

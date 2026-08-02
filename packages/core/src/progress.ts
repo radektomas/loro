@@ -1,4 +1,4 @@
-import type { SavedWord } from '@/types';
+import type { SavedWord } from './types.ts';
 
 /**
  * Progress metrics derived from saved words. Pure functions only — persistence

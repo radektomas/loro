@@ -1,15 +1,15 @@
 // Relative and extension-ed, not '@/lib/...': this module loads under plain
 // node for its test, where neither the bundler alias nor extensionless
 // specifiers resolve (same rule as lib/starterDeck.ts).
-import type { Level, Video } from '../types/index.ts';
-import { normalizeAnswer } from './srs.ts';
-import { normalizeSurface } from './dictionary.ts';
-import { STARTER_DECK, type StarterWord } from './starterDeck.ts';
+import type { Level, Video } from '../types.ts';
+import { normalizeAnswer } from '../srs.ts';
+import { normalizeSurface } from '../dictionary.ts';
+import { STARTER_DECK, type StarterWord } from './deck.ts';
 import {
   classifyStarterTopic,
   STARTER_TOPIC_PREFERENCE,
   type StarterTopic,
-} from './starterTopics.ts';
+} from './topics.ts';
 
 // Re-exported so consumers of the planner (the deck, the curation browser)
 // need one import path for everything curation-related; the classification

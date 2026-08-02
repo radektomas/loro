@@ -1,4 +1,4 @@
-import type { SavedWord, Video, WordState } from '@/types';
+import type { SavedWord, Video, WordState } from './types.ts';
 
 /**
  * Leitner-box spaced repetition for saved words, plus the blank-selection

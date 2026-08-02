@@ -2,13 +2,16 @@
   "name": "loro",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"scripts/**/*.test.mts\" \"lib/**/*.test.mts\" \"app/**/*.test.mts\"",
+    "test": "node --test \"scripts/**/*.test.mts\" \"packages/**/*.test.mts\" \"app/**/*.test.mts\"",
     "harvest": "node scripts/harvest-youtube.mts",
     "refilter": "node scripts/refilter-candidates.mts",
     "backfill-provenance": "node scripts/backfill-provenance.mts",

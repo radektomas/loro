@@ -2,7 +2,7 @@
 // node for its test, where neither the bundler alias nor extensionless
 // specifiers resolve (same rule as scripts/ — see the tsconfig note on
 // allowImportingTsExtensions).
-import { normalizeAnswer } from './srs.ts';
+import { normalizeAnswer } from '../srs.ts';
 
 /**
  * The beginner starter deck: the most common spoken-Spanish words, one card

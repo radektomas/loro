@@ -5,7 +5,7 @@ import {
   GRANDFATHER_EXISTING_USERS,
   SAVED_WORDS_MILESTONES,
 } from './config.ts';
-import type { WordSource } from '../../types/index.ts';
+import type { WordSource } from '../types.ts';
 
 /**
  * The entitlement rules, pure.

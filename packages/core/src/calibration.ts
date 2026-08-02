@@ -1,4 +1,4 @@
-import type { Level, Video, Word } from '@/types';
+import type { Level, Video, Word } from './types.ts';
 // Relative and extension-ed, not '@/lib/…': starterDeck.test.mts imports
 // this module under plain node, where neither the bundler alias nor
 // extensionless specifiers resolve. Type-only alias imports are fine

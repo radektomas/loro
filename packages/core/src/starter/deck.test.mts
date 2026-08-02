@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildCalibrationWords } from './calibration.ts';
-import { normalizeAnswer } from './srs.ts';
+import { buildCalibrationWords } from '../calibration.ts';
+import { normalizeAnswer } from '../srs.ts';
 import {
   STARTER_DECK,
   starterIndexOf,
   starterTranslation,
-} from './starterDeck.ts';
+} from './deck.ts';
 
 describe('starter deck integrity', () => {
   it('has the promised size', () => {

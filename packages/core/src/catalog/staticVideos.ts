@@ -1,5 +1,5 @@
-import videosData from '@/data/videos.json';
-import type { Video } from '@/types';
+import videosData from '../../../../data/videos.json';
+import type { Video } from '../types.ts';
 
 /**
  * The static seed clips, alone — split out of localVideos.ts so /welcome can

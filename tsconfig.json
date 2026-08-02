@@ -23,7 +23,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@loro/core/*": ["./packages/core/src/*"]
     }
   },
   // "**/*.ts" does NOT match .mts — the CLI scripts under scripts/ are .mts

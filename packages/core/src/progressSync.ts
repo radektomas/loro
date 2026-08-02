@@ -1,4 +1,4 @@
-import type { LevelState } from '@/lib/levels';
+import type { LevelState } from './levels.ts';
 
 /**
  * Pure merge logic for account-synced progress (streak days, watch history,
