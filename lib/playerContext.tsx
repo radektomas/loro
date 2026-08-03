@@ -312,7 +312,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         // Hidden, never unmounted and never display:none — both would reload
         // the iframe on Safari and throw the blessing away.
         layer.style.opacity = '0';
-        layer.style.pointerEvents = 'none';
         return true;
       }
       layer.style.width = `${rect.width}px`;
@@ -321,11 +320,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Revealed only once playback has actually started for the video that
       // was asked for. Until then the layer is transparent and the consumer's
       // poster shows through it, which is what hides the black frame during a
-      // swap. Transparent also means non-interactive, so a stall fallback
-      // rendered inside the slot is tappable.
+      // swap.
+      //
+      // The layer is NEVER interactive — pointer-events: none for its whole
+      // life (set once in the JSX below). Every gesture lands on the slot
+      // element underneath instead, which lives inside the consumer's own
+      // scroll context: a swipe over the video scroll-chains into the feed's
+      // snap container natively, and a tap is the consumer's to handle
+      // (Feed's slot toggles play/pause through this module's media API).
+      // Before this, the layer flipped to pointer-events: auto once revealed,
+      // and because it is FIXED — outside every scroll container — a swipe
+      // that started on a playing video could never scroll the feed, and
+      // taps went to the YouTube iframe's internal handler. Nothing is drawn
+      // over the player by any of this: the slot sits visually BENEATH the
+      // layer; it merely receives the input the layer declines.
       const show = revealedRef.current && rect.width >= 1 && rect.height >= 1;
       layer.style.opacity = show ? '1' : '0';
-      layer.style.pointerEvents = show ? 'auto' : 'none';
       return true;
     };
 
@@ -519,6 +529,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           band (which never overlap it geometrically), below the top chrome
           (z-20) and the word/glossary sheets (z-40), which covered the
           per-slide iframe before this existed too.
+
+          pointer-events: none is PERMANENT (see apply() above): the layer is
+          visual only, and all input goes to the slot beneath it. Do not make
+          it interactive again — that re-opens the swipe dead zone over the
+          player, because this element sits outside every scroll container.
         */}
         <div
           ref={layerRef}

@@ -838,9 +838,20 @@ export function VideoSlide({
                 (see lib/playerContext.tsx). The poster sits UNDER that layer
                 and the layer fades in over it once playback starts, so the
                 black frame during a swap is never seen and nothing of ours is
-                ever drawn on top of the player. */}
+                ever drawn on top of the player.
+
+                The slot is also the GESTURE surface. The player layer above
+                it is permanently pointer-events: none, so every touch on the
+                video area lands here — a swipe scroll-chains natively into
+                the snap container (the layer is fixed and outside it, so
+                while it took input, swipes over a playing video could not
+                scroll the feed at all), and a tap toggles playback through
+                the shared media, same semantics as the hosted <video>'s
+                onClick. Tap-vs-swipe needs no slop logic: the browser only
+                fires click when the gesture didn't scroll. */}
             <div
               data-loro-player-slot={active ? '' : undefined}
+              onClick={togglePlayback}
               className="relative h-full max-w-full overflow-hidden rounded-xl bg-black"
               style={{ aspectRatio: '9 / 16' }}
             >
@@ -864,7 +875,12 @@ export function VideoSlide({
               {active && stalled && (
                 <button
                   type="button"
-                  onClick={handleRetryPlayback}
+                  onClick={(e) => {
+                    // The slot underneath toggles playback on tap; without
+                    // this, one tap would retry AND immediately toggle.
+                    e.stopPropagation();
+                    handleRetryPlayback();
+                  }}
                   aria-label="Play"
                   className="absolute inset-0 flex items-center justify-center"
                 >
