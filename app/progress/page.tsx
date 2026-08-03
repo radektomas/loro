@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedWord, WordState } from '@loro/core/types';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { formatDue } from '@loro/core/srs';
 import {
   INITIAL_LEVEL_STATE,

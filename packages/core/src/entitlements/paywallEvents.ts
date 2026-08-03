@@ -19,13 +19,13 @@
  * cannot tell those apart.
  *
  * ANONYMOUS-FIRST, exactly like saved words and the starter deck funnel:
- * localStorage is the truth, lib/storage.ts appends synchronously, and a
+ * localStorage is the truth, storage.ts appends synchronously, and a
  * sign-in mirrors the log to loro_profiles.paywall_events. Anonymous users are
  * the majority of everyone who will ever see a milestone, and they are the
  * population the limit has to be right for, so no event requires an account.
  * Nothing is ever sent from an anonymous session.
  *
- * Persistence lives in lib/storage.ts under a loro.-prefixed key, so the
+ * Persistence lives in storage.ts under a loro.-prefixed key, so the
  * account-deletion prefix wipe (components/DeleteAccountCard.tsx) already
  * covers it. This module stays pure so the rules below are unit-testable.
  */
@@ -45,7 +45,7 @@ export type PaywallEventName =
 export type PaywallEvent = {
   /**
    * Stable identity, generated on this device when the event is created
-   * (lib/storage.ts newEventId). THE MERGE KEY, and never reassigned.
+   * (storage.ts newEventId). THE MERGE KEY, and never reassigned.
    *
    * Content cannot serve as identity here. Two devices can land the same
    * event in the same millisecond, and the same event legitimately recurs —

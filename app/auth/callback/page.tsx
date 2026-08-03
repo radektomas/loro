@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase';
+import { getSupabase } from '@loro/core/supabase';
 import { LoroMascot } from '@/components/LoroMascot';
 import { DEFAULT_AUTH_DESTINATION, resolveNext } from '@loro/core/authRedirect';
 

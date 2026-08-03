@@ -2,7 +2,7 @@ import type { LevelState } from './levels.ts';
 
 /**
  * Pure merge logic for account-synced progress (streak days, watch history,
- * level meter). Persistence and transport live in lib/storage.ts; this module
+ * level meter). Persistence and transport live in storage.ts; this module
  * is side-effect free so the merge semantics are testable in isolation.
  *
  * The one rule: SYNC NEVER MOVES PROGRESS BACKWARDS. Day and video sets are

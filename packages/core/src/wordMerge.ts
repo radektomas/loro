@@ -1,7 +1,7 @@
 import type { SavedWord } from './types.ts';
 
 /**
- * Pure merge logic for saved-word histories — extracted from lib/storage.ts
+ * Pure merge logic for saved-word histories — extracted from storage.ts
  * so the anonymous -> signed-in merge is testable without localStorage or a
  * Supabase client. storage.ts owns transport (fetch, upsert, queues); this
  * module owns only the arithmetic of combining two word sets.

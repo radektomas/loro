@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Sheet } from '@/components/Sheet';
 import { CloseIcon } from '@/components/icons/Icons';
 import { defaultPlan, getPlans, type PricedPlan } from '@loro/core/entitlements/plans';
-import type { PaywallReason } from '@/lib/entitlements/paywallBus';
+import type { PaywallReason } from '@loro/core/entitlements/paywallBus';
 
 /**
  * The paywall moment: what a user sees when a save would exceed the free

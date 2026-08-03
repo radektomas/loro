@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SavedWord, WordState } from '@loro/core/types';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { nextDueAt } from '@loro/core/progress';
 import { LoroMascot } from '@/components/LoroMascot';

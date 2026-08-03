@@ -3,8 +3,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 /**
  * Server-side Supabase client — PUBLIC DATA ONLY.
  *
- * The app's normal client (lib/supabase.ts) is browser-only by design: it
- * returns null on the server and keeps the session in localStorage. This one
+ * The app's normal client (@loro/core supabase.ts) is browser-only by
+ * design: the web only initialises it in a browser (lib/supabaseInit.ts), so
+ * it stays null on the server and keeps the session in localStorage. This one
  * exists for the single case where public data must be readable during a
  * server render — the creator profile page and its link preview, which have
  * to be crawlable and fast without waiting on client-side hydration.

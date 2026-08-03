@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import {
   onPaywallRequested,
   type PaywallRequest,
-} from '@/lib/entitlements/paywallBus';
+} from '@loro/core/entitlements/paywallBus';
 import { PaywallModal } from '@/components/paywall/PaywallModal';
 
 /**
@@ -20,7 +20,7 @@ import { PaywallModal } from '@/components/paywall/PaywallModal';
  * the behaviour by writing no code at all.
  *
  * IT RENDERS NOTHING UNTIL ASKED, and it can only be asked by a save that was
- * actually refused (lib/storage.ts refuseSave). While PAYWALL_ENABLED is false
+ * actually refused (@loro/core storage.ts refuseSave). While PAYWALL_ENABLED is false
  * the gate never fires, so this component is inert in production — no flag check
  * of its own, no branch to get wrong, and nothing to strip out on launch day.
  *

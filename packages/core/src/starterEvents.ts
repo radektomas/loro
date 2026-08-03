@@ -11,7 +11,7 @@
  * everyone who will ever see this screen.
  *
  * Anonymous-first, exactly like saved words: localStorage is the truth,
- * lib/storage.ts appends synchronously, and a sign-in merges the log into
+ * storage.ts appends synchronously, and a sign-in merges the log into
  * loro_profiles.starter_deck_events. Persistence and transport live there; this
  * module stays pure so the rules below are unit-testable.
  *
@@ -42,7 +42,7 @@ export type StarterEventName =
 export type StarterEvent = {
   /**
    * Stable identity, generated on this device when the event is created (see
-   * lib/storage.ts newStarterEventId). Never derived from the payload, never
+   * storage.ts newStarterEventId). Never derived from the payload, never
    * reassigned — the merge's idempotence rests entirely on it.
    */
   id: string;

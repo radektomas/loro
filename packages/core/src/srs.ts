@@ -3,7 +3,7 @@ import type { SavedWord, Video, WordState } from './types.ts';
 /**
  * Leitner-box spaced repetition for saved words, plus the blank-selection
  * planner that decides which words appear as fill-in-the-blank prompts
- * inside the feed. Pure functions only — persistence lives in lib/storage.
+ * inside the feed. Pure functions only — persistence lives in storage.ts.
  */
 
 const MIN = 60_000;

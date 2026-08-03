@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { getUser, onAuthChange } from '@/lib/auth';
+import { getUser, onAuthChange } from '@loro/core/auth';
 import { getMyCreator, type Creator, type UgcVideoStatus } from '@/lib/creators';
 import { ChevronLeftIcon } from '@/components/icons/Icons';
 

@@ -1,9 +1,8 @@
-'use client';
-
 /**
  * The one-line seam between "a save was refused" and "the paywall is on
- * screen": a window event, and a single host component that listens for it
- * (components/paywall/PaywallHost.tsx, mounted once in app/layout.tsx).
+ * screen": a tiny in-process event bus, and a single host component that
+ * subscribes to it (on web, components/paywall/PaywallHost.tsx, mounted once
+ * in app/layout.tsx).
  *
  * WHY AN EVENT RATHER THAN A PROP. The gate lives in storage.saveWord(), which
  * is called from the feed's word sheet, the glossary sheet, and anything added
@@ -16,9 +15,13 @@
  * The event is a NOTIFICATION, not the decision. storage.saveWord() has already
  * refused and already logged save_blocked_by_limit by the time this fires; the
  * host's only job is presentation. Nothing here can grant or deny anything.
+ *
+ * This used to be a CustomEvent on window; it is now a typed emitter so React
+ * Native can subscribe to the same bus. Dispatch keeps the DOM's semantics —
+ * see ../emitter.ts, which is the one emitter implementation core uses.
  */
 
-const PAYWALL_REQUESTED = 'loro:paywall-requested';
+import { createEmitter } from '../emitter.ts';
 
 /**
  * Why the paywall is being shown. The modal's copy branches on it, because the
@@ -49,23 +52,17 @@ export type PaywallRequest = {
   limit: number;
 };
 
-/** Ask the host to show the paywall. Safe to call outside the browser (no-op)
-    and safe to call when no host is mounted (nothing listens; nothing breaks). */
+const bus = createEmitter<PaywallRequest>('paywallBus');
+
+/** Ask the host to show the paywall. Safe to call when no host is mounted
+    (nothing listens; nothing breaks). */
 export function requestPaywall(request: PaywallRequest): void {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(
-    new CustomEvent<PaywallRequest>(PAYWALL_REQUESTED, { detail: request })
-  );
+  bus.emit(request);
 }
 
 /** Subscribe to paywall requests. Returns an unsubscribe function. */
 export function onPaywallRequested(
   callback: (request: PaywallRequest) => void
 ): () => void {
-  if (typeof window === 'undefined') return () => {};
-  const handler = (e: Event) => {
-    callback((e as CustomEvent<PaywallRequest>).detail);
-  };
-  window.addEventListener(PAYWALL_REQUESTED, handler);
-  return () => window.removeEventListener(PAYWALL_REQUESTED, handler);
+  return bus.subscribe(callback);
 }

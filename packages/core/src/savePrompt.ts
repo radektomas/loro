@@ -10,7 +10,7 @@ import { SAVE_PROMPT_THRESHOLD } from './entitlements/config.ts';
  * never a gate. Two asks total, ever; after the second dismissal the only
  * remaining entry point is the normal one on /profile.
  *
- * Persistence lives in lib/storage.ts under a loro.-prefixed key, so the
+ * Persistence lives in storage.ts under a loro.-prefixed key, so the
  * account-deletion prefix wipe already covers it. This module is pure so
  * every rule below is unit-testable.
  */

@@ -128,7 +128,7 @@ export function loadYouTubeApi(): Promise<YTNamespace> {
  *
  * Phones grant audio per page load, not per preference. A stored "sound on" is
  * therefore not permission — but it IS the user's standing choice, and it is
- * deliberately persisted (lib/storage.ts soundOn): someone who turned sound on
+ * deliberately persisted (@loro/core storage.ts soundOn): someone who turned sound on
  * in the starter deck must not be asked again by the feed's tap-for-sound pill
  * on their next visit.
  *

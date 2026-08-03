@@ -10,7 +10,7 @@ import {
   type RefObject,
 } from 'react';
 import type { Cue, FeedMedia, SavedWord, Video, Word } from '@loro/core/types';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { computeBlankPlan } from '@loro/core/srs';
 import { computeLevelBlankPlan, tierFor, type LevelBlankWord } from '@loro/core/levels';
 import { glossText, lookupGloss } from '@loro/core/dictionary';
@@ -793,7 +793,7 @@ export function VideoSlide({
     } else if (!blocked) {
       // Only a genuine write failure says so. A `blocked` save gets NO toast:
       // storage.saveWord has already asked the paywall to open (refuseSave in
-      // lib/storage.ts), the modal is the explanation, and a second message
+      // @loro/core storage.ts), the modal is the explanation, and a second message
       // underneath it would compete with it and outlive it. It must certainly
       // not get this copy — nothing is broken when a user reaches a limit, and
       // "storage unavailable" sends them off to fix the wrong thing.

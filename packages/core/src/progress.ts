@@ -2,7 +2,7 @@ import type { SavedWord } from './types.ts';
 
 /**
  * Progress metrics derived from saved words. Pure functions only — persistence
- * lives in lib/storage.
+ * lives in storage.ts.
  *
  * Everything here counts real, honest effort: reviews due, and streaks of days
  * with a correct recall. There is deliberately no "comprehension" metric —

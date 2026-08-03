@@ -5,7 +5,7 @@ import {
 } from '../../_lib/serviceRole';
 import { requestUser } from '../../_lib/requestUser';
 import type { WordSource } from '@loro/core/types';
-import { TABLES } from '@/lib/supabase';
+import { TABLES } from '@loro/core/supabase';
 import { countsTowardLimit, shouldGrandfather } from '@loro/core/entitlements/limit';
 import { PAYWALL_ENABLED } from '@loro/core/entitlements/config';
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
   // unlimited saves.
   //
   // A null source reads as 'user', which matches the client's wordSourceOf
-  // (lib/storage.ts) because the migration that adds this column back-fills the
+  // (@loro/core storage.ts) because the migration that adds this column back-fills the
   // old deck's 'starter' rows to 'deck' in the same file. The two steps cannot
   // come apart, so there is no window where the server counts a grant that the
   // client exempts.

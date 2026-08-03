@@ -15,10 +15,10 @@ import {
   devTierOverride,
   setDevPaywall,
   type Tier,
-} from '@/lib/entitlements/state';
-import { requestPaywall } from '@/lib/entitlements/paywallBus';
+} from '@loro/core/entitlements/state';
+import { requestPaywall } from '@loro/core/entitlements/paywallBus';
 import { useEntitlements } from '@/lib/entitlements/useEntitlements';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { PaywallModal } from '@/components/paywall/PaywallModal';
 import { PlusStatistics } from '@/components/paywall/PlusStatistics';
 import { SavedWordsCapacity } from '@/components/paywall/SavedWordsCapacity';
@@ -37,8 +37,9 @@ import { SavedWordsCapacity } from '@/components/paywall/SavedWordsCapacity';
  *     log. This is the only way to find out whether the seam works, as opposed
  *     to whether the component renders.
  *
- * The force switch is sessionStorage-backed and compiles away in production
- * (lib/entitlements/state.ts), so nothing here can leak into a real deployment.
+ * The force switch is session-layer-backed and compiles away in production
+ * (@loro/core entitlements/state.ts), so nothing here can leak into a real
+ * deployment.
  */
 
 function Row({ label, value }: { label: string; value: string }) {

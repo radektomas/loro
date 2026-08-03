@@ -1,4 +1,4 @@
-import { getSupabase } from '@/lib/supabase';
+import { getSupabase } from '@loro/core/supabase';
 import { UGC_TABLES, videoPublicUrl } from '@/lib/creators';
 import type { Cue, Gloss, Level, Video } from '@loro/core/types';
 

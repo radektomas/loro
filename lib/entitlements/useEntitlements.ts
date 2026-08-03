@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import {
   canSaveMore as canSaveMoreRule,
   effectiveLimit,
@@ -13,7 +13,7 @@ import {
   onTierChanged,
   paywallActive,
   readTierState,
-} from './state.ts';
+} from '@loro/core/entitlements/state';
 
 /**
  * THE entitlement hook. The only way a component may ask what a user is

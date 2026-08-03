@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getSession } from '@/lib/auth';
+import { getSession } from '@loro/core/auth';
 import { useEntitlements } from '@/lib/entitlements/useEntitlements';
-import { requestPaywall } from '@/lib/entitlements/paywallBus';
+import { requestPaywall } from '@loro/core/entitlements/paywallBus';
 import {
   formatStat,
   STAT_METRICS,

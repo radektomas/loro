@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Level, SavedWord, SelfLevel, Video, Word } from '@loro/core/types';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { normalizeAnswer } from '@loro/core/srs';
 import {
   STARTER_DECK,

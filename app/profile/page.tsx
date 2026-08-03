@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SavedWord } from '@loro/core/types';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { computeStreaks, weekStrip, type WeekDay } from '@loro/core/progress';
 import {
   INITIAL_LEVEL_STATE,

@@ -1,32 +1,32 @@
-'use client';
-
-import { getSupabase, TABLES } from '@/lib/supabase';
-import { getSession } from '@/lib/auth';
-import { PAYWALL_ENABLED } from '@loro/core/entitlements/config';
-import { shouldGrandfather, type Tier } from '@loro/core/entitlements/limit';
+import { getSupabase, TABLES } from '../supabase.ts';
+import { getSession } from '../auth.ts';
+import { apiUrl, getStorageDriver } from '../platform.ts';
+import { createEmitter } from '../emitter.ts';
+import { PAYWALL_ENABLED } from './config.ts';
+import { shouldGrandfather, type Tier } from './limit.ts';
 
 /**
  * The impure half of the entitlement seam: who this user is, what tier they are
  * on, and whether the paywall is live right now.
  *
- * ONE-WAY DEPENDENCY, deliberately. This module must never import
- * lib/storage.ts. storage.ts owns the single verdict on whose data localStorage
- * holds (its KEYS.syncedUser cache-owner read) and drives this module's
- * transitions from handleSession, exactly as it drives lib/follows.ts. A second
+ * ONE-WAY DEPENDENCY, deliberately. This module must never import storage.ts.
+ * storage.ts owns the single verdict on whose data the local cache holds (its
+ * KEYS.syncedUser cache-owner read) and drives this module's transitions from
+ * handleSession, exactly as it drives the follows engine (follows.ts). A second
  * auth observer here would be a second opinion about which account the cache
  * belongs to, and the two could disagree.
  *
  * SYNCHRONOUS BY DESIGN. The save gate runs inside storage.saveWord(), which is
  * promise-free and must stay that way — every caller in the app treats saving
- * as an immediate, verified operation. So the tier lives in localStorage and is
- * read synchronously; the network is only ever the thing that updates it.
+ * as an immediate, verified operation. So the tier lives in the driver's
+ * persistent layer and is read synchronously; the network is only ever the
+ * thing that updates it.
  */
 
 const KEY = 'loro.tier';
-/** Fired on window whenever the cached tier changes (same-tab updates). */
-const TIER_CHANGED = 'loro:tier-changed';
 
-const isBrowser = typeof window !== 'undefined';
+/** Same-tab change bus; cross-tab arrives via the driver's external feed. */
+const tierChanged = createEmitter<void>('tierChanged');
 
 /**
  * NODE_ENV is inlined at build time, so every dev-only branch below folds to
@@ -35,8 +35,9 @@ const isBrowser = typeof window !== 'undefined';
  */
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
-/** sessionStorage, not localStorage: a forced paywall is a thing you are doing
-    right now while testing, not a preference that should outlive the tab. */
+/** The driver's SESSION layer, not local: a forced paywall is a thing you are
+    doing right now while testing, not a preference that should outlive the
+    session. */
 const DEV_FORCE_KEY = 'loro.dev.paywall';
 const DEV_TIER_KEY = 'loro.dev.tier';
 
@@ -63,22 +64,24 @@ const ANONYMOUS: TierState = {
 // ------------------------------------------------------------------ cache
 
 function write(state: TierState): void {
-  if (!isBrowser) return;
+  const driver = getStorageDriver();
+  if (!driver) return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(state));
+    driver.local.setItem(KEY, JSON.stringify(state));
   } catch (err) {
     // Surface it. A tier that silently failed to cache means the next read
     // falls back to free, and a paying user gets gated.
     console.error('[loro] tier cache write failed', err);
   }
-  window.dispatchEvent(new Event(TIER_CHANGED));
+  tierChanged.emit();
 }
 
 /** The cached tier. Anonymous whenever there is nothing trustworthy to read. */
 export function readTierState(): TierState {
-  if (!isBrowser) return ANONYMOUS;
+  const driver = getStorageDriver();
+  if (!driver) return ANONYMOUS;
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = driver.local.getItem(KEY);
     if (!raw) return ANONYMOUS;
     const parsed = JSON.parse(raw) as Partial<TierState>;
     if (typeof parsed.userId !== 'string') return ANONYMOUS;
@@ -95,18 +98,17 @@ export function readTierState(): TierState {
   }
 }
 
-/** Subscribe to tier changes: same-tab (custom event) and cross-tab (storage).
+/** Subscribe to tier changes: same-tab (bus) and, where the platform has one,
+    cross-context (the driver's external feed — the browser 'storage' event).
     Returns an unsubscribe function. Mirrors storage.onWordsChanged. */
 export function onTierChanged(callback: () => void): () => void {
-  if (!isBrowser) return () => {};
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === null || e.key === KEY) callback();
-  };
-  window.addEventListener(TIER_CHANGED, callback);
-  window.addEventListener('storage', onStorage);
+  const offBus = tierChanged.subscribe(callback);
+  const offExternal = getStorageDriver()?.onExternalChange?.((key) => {
+    if (key === null || key === KEY) callback();
+  });
   return () => {
-    window.removeEventListener(TIER_CHANGED, callback);
-    window.removeEventListener('storage', onStorage);
+    offBus();
+    offExternal?.();
   };
 }
 
@@ -114,15 +116,15 @@ export function onTierChanged(callback: () => void): () => void {
 
 /** Is the paywall forced on for this dev session? Always false in production. */
 export function devPaywallForced(): boolean {
-  if (!IS_DEV || !isBrowser) return false;
-  return window.sessionStorage.getItem(DEV_FORCE_KEY) === '1';
+  if (!IS_DEV) return false;
+  return getStorageDriver()?.session.getItem(DEV_FORCE_KEY) === '1';
 }
 
 /** Dev-only tier override, so both sides of every gate are reachable without
     a real subscription to buy. Null = use the real cached tier. */
 export function devTierOverride(): Tier | null {
-  if (!IS_DEV || !isBrowser) return null;
-  const v = window.sessionStorage.getItem(DEV_TIER_KEY);
+  if (!IS_DEV) return null;
+  const v = getStorageDriver()?.session.getItem(DEV_TIER_KEY);
   return v === 'free' || v === 'plus' ? v : null;
 }
 
@@ -131,15 +133,17 @@ export function setDevPaywall(opts: {
   forced?: boolean;
   tier?: Tier | null;
 }): void {
-  if (!IS_DEV || !isBrowser) return;
+  if (!IS_DEV) return;
+  const driver = getStorageDriver();
+  if (!driver) return;
   if (opts.forced !== undefined) {
-    window.sessionStorage.setItem(DEV_FORCE_KEY, opts.forced ? '1' : '0');
+    driver.session.setItem(DEV_FORCE_KEY, opts.forced ? '1' : '0');
   }
   if (opts.tier !== undefined) {
-    if (opts.tier === null) window.sessionStorage.removeItem(DEV_TIER_KEY);
-    else window.sessionStorage.setItem(DEV_TIER_KEY, opts.tier);
+    if (opts.tier === null) driver.session.removeItem(DEV_TIER_KEY);
+    else driver.session.setItem(DEV_TIER_KEY, opts.tier);
   }
-  window.dispatchEvent(new Event(TIER_CHANGED));
+  tierChanged.emit();
 }
 
 // --------------------------------------------------------- runtime verdict
@@ -161,7 +165,7 @@ export function paywallActive(): boolean {
  * identity". Two very different situations collapse to null here, and both
  * must resolve to unlimited:
  *
- *  - ANONYMOUS. Paywalling a stranger's own localStorage asks for money before
+ *  - ANONYMOUS. Paywalling a stranger's own local cache asks for money before
  *    the product has proven anything, and they already have the account prompt.
  *  - TIER NOT YET READ. On a first sign-in on a new device the profile fetch
  *    has not landed. Erring permissive costs a free user one or two extra
@@ -176,7 +180,7 @@ export function paywallIdentity(state: TierState = readTierState()): Tier | null
   return state.tier;
 }
 
-/** Everything limit.ts needs, resolved from the live browser state. */
+/** Everything limit.ts needs, resolved from the live platform state. */
 export function entitlementInput(state: TierState = readTierState()) {
   return {
     paywallActive: paywallActive(),
@@ -187,7 +191,7 @@ export function entitlementInput(state: TierState = readTierState()) {
 
 // ------------------------------------------------------------ transitions
 //
-// Called by lib/storage.ts handleSession — never self-driven. `mode` mirrors
+// Called by storage.ts handleSession — never self-driven. `mode` mirrors
 // the follows engine's FollowsAuthMode and comes from the same cache-owner
 // verdict.
 
@@ -195,12 +199,13 @@ export type EntitlementsAuthMode = 'hydrate' | 'merge-up' | 'switch-user';
 
 /** Signed out: stop claiming a tier. The cache is dropped rather than kept as
     a "working copy" (which is what saved words do) because an entitlement is
-    not the user's data — a stale 'plus' would grant a signed-out browser
+    not the user's data — a stale 'plus' would grant a signed-out device
     unlimited saves, and a stale 'free' would gate the next account. */
 export function handleEntitlementsSignOut(): void {
-  if (!isBrowser) return;
-  window.localStorage.removeItem(KEY);
-  window.dispatchEvent(new Event(TIER_CHANGED));
+  const driver = getStorageDriver();
+  if (!driver) return;
+  driver.local.removeItem(KEY);
+  tierChanged.emit();
 }
 
 /**
@@ -222,7 +227,7 @@ export async function handleEntitlementsAuth(
   mode: EntitlementsAuthMode,
   savedCount: number
 ): Promise<void> {
-  if (!isBrowser) return;
+  if (!getStorageDriver()) return;
 
   // A different account owned the cache — drop it before anything can read a
   // tier belonging to someone else.
@@ -272,9 +277,9 @@ export async function handleEntitlementsAuth(
  * tampered savedCount buys nothing.
  *
  * Failures are swallowed after logging and retried at the next auth event, the
- * same contract as every other profile-row mirror in lib/storage.ts. The cost
- * of a missed grant is one app open, and the flag is checked before every
- * grant so a retry cannot double-apply.
+ * same contract as every other profile-row mirror in storage.ts. The cost of a
+ * missed grant is one app open, and the flag is checked before every grant so
+ * a retry cannot double-apply.
  */
 async function maybeGrandfather(
   state: TierState,
@@ -297,7 +302,7 @@ async function maybeGrandfather(
   if (!token) return;
 
   try {
-    const res = await fetch('/api/entitlements/grandfather', {
+    const res = await fetch(apiUrl('/api/entitlements/grandfather'), {
       method: 'POST',
       headers: { authorization: `Bearer ${token}` },
     });

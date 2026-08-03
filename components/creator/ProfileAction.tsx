@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { follows } from '@/lib/follows';
+import { follows } from '@loro/core/follows';
 import {
   avatarPathFromUrl,
   deleteAvatarObject,

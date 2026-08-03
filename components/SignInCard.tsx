@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import {
-  authEnabled,
   getSession,
   onAuthChange,
   signInWithGoogle,
   signInWithMagicLink,
   signOut,
-} from '@/lib/auth';
+} from '@loro/core/auth';
+import { authEnabled } from '@/lib/supabaseInit';
 import { CheckIcon, CloseIcon, GlobeIcon } from '@/components/icons/Icons';
 
 function GoogleGlyph() {

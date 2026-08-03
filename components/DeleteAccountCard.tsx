@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { authEnabled, getSession, onAuthChange, signOut } from '@/lib/auth';
-import { getSupabase } from '@/lib/supabase';
+import { getSession, onAuthChange, signOut } from '@loro/core/auth';
+import { getSupabase } from '@loro/core/supabase';
+import { getStorageDriver } from '@loro/core/platform';
+import { authEnabled } from '@/lib/supabaseInit';
 import { UGC_TABLES } from '@/lib/creators';
 import { Sheet } from '@/components/Sheet';
 
@@ -21,21 +23,19 @@ import { Sheet } from '@/components/Sheet';
 type Phase = 'idle' | 'confirming' | 'deleting' | 'kept';
 
 /**
- * Remove everything Loro (and the Supabase session) from browser storage.
- * Swept by PREFIX rather than a hand-kept list: every Loro key starts with
- * 'loro.' or 'loro:' (lib/storage.ts KEYS, lib/follows.ts KEYS, the
- * 'loro.auth' Supabase storageKey) and Supabase's own fallbacks start with
- * 'sb-'. A future key added to KEYS is covered the day it ships; a list here
- * would go stale exactly like the one this comment replaces.
+ * Remove everything Loro (and the Supabase session) from browser storage —
+ * both layers, via the platform driver's prefix sweep. Swept by PREFIX
+ * rather than a hand-kept list: every Loro key starts with 'loro.' or
+ * 'loro:' (storage.ts KEYS, @loro/core follows.ts KEYS, the 'loro.auth'
+ * Supabase storageKey) and Supabase's own fallbacks start with 'sb-'. A
+ * future key added to KEYS is covered the day it ships; a list here would
+ * go stale exactly like the one this comment replaces.
  */
 function wipeLocalState(): void {
-  for (const store of [window.localStorage, window.sessionStorage]) {
-    for (let i = store.length - 1; i >= 0; i--) {
-      const key = store.key(i);
-      if (key && (key.startsWith('loro.') || key.startsWith('loro:') || key.startsWith('sb-'))) {
-        store.removeItem(key);
-      }
-    }
+  const driver = getStorageDriver();
+  if (!driver) return;
+  for (const prefix of ['loro.', 'loro:', 'sb-']) {
+    driver.clearByPrefix(prefix);
   }
 }
 

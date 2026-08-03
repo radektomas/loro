@@ -1,37 +1,21 @@
 import type { Session, User } from '@supabase/supabase-js';
-import { getSupabase, isSupabaseConfigured, TABLES } from '@/lib/supabase';
+import { getAuthRedirectTo, getSupabase, TABLES } from './supabase.ts';
 
 /**
  * Supabase Auth for Loro — email magic-link and Google OAuth.
  *
  * Signing in is always optional: it backs up progress and syncs it across
  * devices. Nothing in the core loop depends on any of these resolving, so
- * every function no-ops gracefully when Supabase isn't configured.
+ * every function no-ops gracefully when Supabase isn't configured (or not
+ * yet initialised — see initSupabase in ./supabase.ts).
+ *
+ * EVERY auth entry point below must pass the platform's redirect target
+ * (getAuthRedirectTo) — omit it and Supabase falls back to the project's
+ * Site URL, which lands sign-in on whatever domain that happens to name.
+ * The web's "is auth enabled" render flag deliberately does NOT live here:
+ * it must agree between server render and hydration, so the web derives it
+ * from env vars in lib/supabaseInit.ts.
  */
-
-export const authEnabled = isSupabaseConfigured;
-
-/**
- * Where the provider sends the user back to. EVERY auth entry point below must
- * pass this — omit it and Supabase falls back to the project's Site URL, which
- * lands sign-in on whatever domain that happens to name.
- *
- * Built from window.location.origin rather than an env var on purpose: it means
- * localhost, tunnel previews and production each return to themselves with no
- * per-environment configuration.
- *
- * The one thing code cannot cover: Supabase only honours this if the URL
- * matches the project's Redirect URLs allowlist. An origin missing from that
- * list is silently replaced by the Site URL, which looks exactly like a bug in
- * here. Add each origin (and a wildcard for preview URLs) in the dashboard.
- *
- * Returns undefined only when there is no window — unreachable in practice,
- * since getSupabase() is client-only and every caller bails on its null first.
- */
-function redirectTo(): string | undefined {
-  if (typeof window === 'undefined') return undefined;
-  return `${window.location.origin}/auth/callback`;
-}
 
 export async function getSession(): Promise<Session | null> {
   const supabase = getSupabase();
@@ -64,18 +48,19 @@ export async function signInWithMagicLink(email: string): Promise<SignInResult> 
   if (!supabase) return { ok: false, error: 'Sync is not configured.' };
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim(),
-    options: { emailRedirectTo: redirectTo() },
+    options: { emailRedirectTo: getAuthRedirectTo() },
   });
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
-/** Google OAuth — redirects out to Google and back to /auth/callback. */
+/** Google OAuth — redirects out to Google and back to the platform's
+    auth-callback surface. */
 export async function signInWithGoogle(): Promise<SignInResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, error: 'Sync is not configured.' };
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: redirectTo() },
+    options: { redirectTo: getAuthRedirectTo() },
   });
   return error ? { ok: false, error: error.message } : { ok: true };
 }

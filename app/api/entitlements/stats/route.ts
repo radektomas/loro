@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { TABLES } from '@/lib/supabase';
+import { TABLES } from '@loro/core/supabase';
 import { computeStreaks } from '@loro/core/progress';
 import { MAX_BOX } from '@loro/core/srs';
 import { PAYWALL_ENABLED } from '@loro/core/entitlements/config';

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Video } from '@loro/core/types';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { buildGlossary, type GlossaryEntry } from '@loro/core/glossary';
 import { glossText, lookupGloss } from '@loro/core/dictionary';
 import { formatDue, MAX_BOX } from '@loro/core/srs';

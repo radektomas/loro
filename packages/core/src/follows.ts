@@ -1,19 +1,22 @@
-import { getSupabase, TABLES } from '@/lib/supabase';
+import { getSupabase, TABLES } from './supabase.ts';
+import { getStorageDriver } from './platform.ts';
+import { createEmitter } from './emitter.ts';
 
 /**
- * Follow state for creators — localStorage-first, mirroring the saved-words
- * engine in lib/storage.ts:
+ * Follow state for creators — local-first, mirroring the saved-words engine
+ * in storage.ts:
  *
- *  - localStorage is the synchronous source of truth the UI reads; the whole
- *    public API is promise-free. Anonymous users touch localStorage only.
+ *  - The driver's persistent layer is the synchronous source of truth the UI
+ *    reads; the whole public API is promise-free. Anonymous users touch the
+ *    local cache only.
  *  - When a user is signed in, writes are queued and pushed to Supabase
  *    (loro_follows) in the background — optimistic, debounced, retried on
  *    failure. The UI never awaits any of it.
  *  - Auth transitions (merge-on-signin, hydrate, switch-user) are DRIVEN BY
  *    storage.ts: its handleSession owns the single cache-owner decision
  *    (loro.syncedUser) and calls handleFollowsAuth with the verdict, so both
- *    caches always agree on whose data localStorage holds. This module must
- *    never import storage.ts — that would be a cycle.
+ *    caches always agree on whose data the local cache holds. This module
+ *    must never import storage.ts — that would be a cycle.
  *
  * One deliberate difference from words: merge-up and hydrate share one
  * implementation. A follow has no per-item history to reconcile (no boxes,
@@ -27,18 +30,17 @@ const KEYS = {
   queue: 'loro.followsQueue', // pending remote writes (survives reload)
 } as const;
 
-/** Fired on window whenever follow state changes (same-tab updates). */
-const FOLLOWS_CHANGED = 'loro:follows-changed';
-
-const isBrowser = typeof window !== 'undefined';
+/** Same-tab change bus; cross-tab arrives via the driver's external feed. */
+const followsChanged = createEmitter<void>('followsChanged');
 
 // Read/write helpers duplicated from storage.ts on purpose: storage.ts calls
 // into this module on auth changes, so importing them back would be circular.
 
 function readJSON<T>(key: string, fallback: T): T {
-  if (!isBrowser) return fallback;
+  const driver = getStorageDriver();
+  if (!driver) return fallback;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = driver.local.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
@@ -47,18 +49,19 @@ function readJSON<T>(key: string, fallback: T): T {
 
 /** Returns true only if the value was actually written. Never throws. */
 function writeJSON(key: string, value: unknown): boolean {
-  if (!isBrowser) return false;
+  const driver = getStorageDriver();
+  if (!driver) return false;
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    driver.local.setItem(key, JSON.stringify(value));
     return true;
   } catch (err) {
-    console.error(`[loro] localStorage write failed for "${key}"`, err);
+    console.error(`[loro] local write failed for "${key}"`, err);
     return false;
   }
 }
 
 function emitFollowsChanged(): void {
-  if (isBrowser) window.dispatchEvent(new Event(FOLLOWS_CHANGED));
+  followsChanged.emit();
 }
 
 function readFollows(): string[] {
@@ -88,7 +91,7 @@ function enqueue(op: 'follow' | 'unfollow', creatorId: string): void {
 }
 
 function scheduleFlush(delayMs = 800): void {
-  if (!isBrowser || !currentUserId) return;
+  if (!getStorageDriver() || !currentUserId) return;
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
     flushTimer = null;
@@ -270,19 +273,18 @@ export const follows = {
   },
 
   /**
-   * Subscribe to follow changes: same-tab (custom event) and cross-tab
-   * (native storage event). Returns an unsubscribe function.
+   * Subscribe to follow changes: same-tab (bus) and, where the platform has
+   * one, cross-context (the driver's external feed — the browser 'storage'
+   * event). Returns an unsubscribe function.
    */
   onFollowsChanged(callback: () => void): () => void {
-    if (!isBrowser) return () => {};
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === null || e.key === KEYS.follows) callback();
-    };
-    window.addEventListener(FOLLOWS_CHANGED, callback);
-    window.addEventListener('storage', onStorage);
+    const offBus = followsChanged.subscribe(callback);
+    const offExternal = getStorageDriver()?.onExternalChange?.((key) => {
+      if (key === null || key === KEYS.follows) callback();
+    });
     return () => {
-      window.removeEventListener(FOLLOWS_CHANGED, callback);
-      window.removeEventListener('storage', onStorage);
+      offBus();
+      offExternal?.();
     };
   },
 };

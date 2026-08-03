@@ -1,4 +1,4 @@
-import { getSupabase } from '@/lib/supabase';
+import { getSupabase } from '@loro/core/supabase';
 import { isReservedHandle } from '@loro/core/reservedHandles';
 import type { Cue, Gloss } from '@loro/core/types';
 

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { authEnabled, getSession, onAuthChange, signInWithGoogle, signInWithMagicLink } from '@/lib/auth';
-import { storage } from '@/lib/storage';
+import { getSession, onAuthChange, signInWithGoogle, signInWithMagicLink } from '@loro/core/auth';
+import { authEnabled } from '@/lib/supabaseInit';
+import { storage } from '@loro/core/storage';
 import { savePromptVariant } from '@loro/core/savePrompt';
 import { Sheet } from '@/components/Sheet';
 
@@ -12,8 +13,8 @@ import { Sheet } from '@/components/Sheet';
  * the product and is never interrupted (lib/savePrompt.ts encodes the same
  * rule, so even a future mis-mount decides null outside 'vocab').
  *
- * Auth goes through the same lib/auth entry points as SignInCard (magic
- * link + Google) — no duplicated sign-in logic. Conversion is recorded by
+ * Auth goes through the same @loro/core auth entry points as SignInCard
+ * (magic link + Google) — no duplicated sign-in logic. Conversion is recorded by
  * the sync engine when the session actually arrives (the magic link may
  * complete in another tab), not optimistically here.
  *

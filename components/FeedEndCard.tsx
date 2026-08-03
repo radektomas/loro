@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { BookIcon, ChartIcon, ReplayIcon } from '@/components/icons/Icons';
 
 type FeedEndCardProps = {

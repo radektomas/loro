@@ -13,7 +13,7 @@ import {
 } from '@loro/core/starter/rounds';
 import { foldDuplicateWords } from '@loro/core/wordMerge';
 import { normalizeAnswer } from '@loro/core/srs';
-import { storage } from '@/lib/storage';
+import { storage } from '@loro/core/storage';
 import { usePlayer } from '@/lib/playerContext';
 import { LoroMascot } from '@/components/LoroMascot';
 import { RoundClip } from '@/components/starter/RoundClip';

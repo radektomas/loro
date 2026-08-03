@@ -10,8 +10,8 @@ import { requireEnv } from './env.mts';
  * database. Keeping the only createClient(SERVICE_ROLE) call outside the
  * Next.js source tree makes that mistake impossible to make by accident.
  *
- * lib/supabase.ts is the browser counterpart (anon key, RLS enforced), and
- * the two must never be merged.
+ * packages/core/src/supabase.ts is the app counterpart (anon key, RLS
+ * enforced), and the two must never be merged.
  *
  * loro_video_candidates has RLS on with no policies, so this client is the
  * only thing in the codebase that can read or write it — the same posture

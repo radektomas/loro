@@ -4,53 +4,53 @@ import type {
   SelfLevel,
   WordSource,
   WordState,
-} from '@loro/core/types';
+} from './types.ts';
 import {
   BOX_INTERVALS_MS,
   grade,
   initialSrs,
   MAX_BOX,
   stateForBox,
-} from '@loro/core/srs';
+} from './srs.ts';
 import {
   applyLevelAnswer,
   INITIAL_LEVEL_STATE,
   MAX_USER_LEVEL,
   type LevelAnswerResult,
   type LevelState,
-} from '@loro/core/levels';
-import { dayKey, dueCount } from '@loro/core/progress';
+} from './levels.ts';
+import { dayKey, dueCount } from './progress.ts';
 import {
   foldDuplicateWords,
   localAhead,
   mergePrefer,
   mergeWordSets,
-} from '@loro/core/wordMerge';
+} from './wordMerge.ts';
 import {
   EMPTY_SAVE_PROMPT_STATE,
   type PromptOutcome,
   type SavePromptState,
-} from '@loro/core/savePrompt';
+} from './savePrompt.ts';
 import {
   appendStarterEvent,
   mergeStarterEvents,
   parseStarterEvents,
   type StarterEvent,
-} from '@loro/core/starterEvents';
+} from './starterEvents.ts';
 import {
   appendPaywallEvent,
   mergePaywallEvents,
   sanitizePaywallLog,
   type PaywallEvent,
-} from '@loro/core/entitlements/paywallEvents';
+} from './entitlements/paywallEvents.ts';
 import {
   canSaveMore,
   countedSaved,
   countsTowardLimit,
   effectiveLimit,
   milestoneFor,
-} from '@loro/core/entitlements/limit';
-// Entitlements are a second localStorage-first cache with the same shape as
+} from './entitlements/limit.ts';
+// Entitlements are a second local-first cache with the same shape as
 // follows, and the same one-way rule: state.ts must never import storage.ts.
 // This module owns the cache-owner verdict and drives the tier cache's
 // transitions from handleSession.
@@ -59,8 +59,8 @@ import {
   handleEntitlementsAuth,
   handleEntitlementsSignOut,
   type EntitlementsAuthMode,
-} from '@/lib/entitlements/state';
-import { requestPaywall } from '@/lib/entitlements/paywallBus';
+} from './entitlements/state.ts';
+import { requestPaywall } from './entitlements/paywallBus.ts';
 import {
   EMPTY_PROGRESS,
   mergeProgress,
@@ -68,14 +68,14 @@ import {
   sameProgress,
   type ProgressRow,
   type ProgressSnapshot,
-} from '@loro/core/progressSync';
-import { glossText, lookupGloss } from '@loro/core/dictionary';
+} from './progressSync.ts';
+import { glossText, lookupGloss } from './dictionary.ts';
 // Only for the provenance back-fill below: rows written by the OLD linear deck
 // and the calibration escape hatch are identifiable by this pseudo video id.
-import { STARTER_VIDEO_ID } from '@loro/core/starter/deck';
-import { getSupabase, TABLES, type SavedWordRow } from '@/lib/supabase';
-import { ensureProfile, getSession, onAuthChange } from '@/lib/auth';
-// Follow state is its own localStorage-first cache with the same shape, but it
+import { STARTER_VIDEO_ID } from './starter/deck.ts';
+import { getSupabase, TABLES, type SavedWordRow } from './supabase.ts';
+import { ensureProfile, getSession, onAuthChange } from './auth.ts';
+// Follow state is its own local-first cache with the same shape, but it
 // does NOT observe auth itself: this module owns the single cache-owner
 // verdict and drives the follows engine's transitions from handleSession.
 // The dependency is one-way (follows.ts must never import storage.ts).
@@ -84,9 +84,15 @@ import {
   handleFollowsAuth,
   handleFollowsSignOut,
   type FollowsAuthMode,
-} from '@/lib/follows';
+} from './follows.ts';
+import {
+  getPlatformCrypto,
+  getStorageDriver,
+  onFlushSignal,
+} from './platform.ts';
+import { createEmitter } from './emitter.ts';
 // Seed data is only used to upgrade legacy saved words to per-word glosses.
-import { localVideos } from '@loro/core/catalog/localVideos';
+import { localVideos } from './catalog/localVideos.ts';
 
 // Seed + embed catalog: words saved from either kind must resolve here.
 const videos = localVideos;
@@ -94,12 +100,13 @@ const videos = localVideos;
 /**
  * Typed persistence layer for Loro.
  *
- * localStorage is always the synchronous source of truth the UI reads, so the
+ * The driver's persistent layer (localStorage on web, MMKV in RN — see
+ * platform.ts) is always the synchronous source of truth the UI reads, so the
  * whole API stays promise-free and every caller keeps working unchanged. When
  * a user signs in, a background sync engine mirrors that cache to and from
  * Supabase (loro_saved_words) — optimistic, debounced, and queued on failure —
  * so signing in never blocks the feed, saving, or review. Anonymous users
- * touch localStorage only, exactly as before.
+ * touch the local cache only, exactly as before.
  */
 
 const KEYS = {
@@ -114,24 +121,24 @@ const KEYS = {
   levelState: 'loro.levelState', // level fill-in mode: current level + meter
   calibrationKnown: 'loro.calibrationKnown', // words tapped as known in calibration
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
-  savePrompt: 'loro.savePrompt', // account-nudge state — see lib/savePrompt.ts
+  savePrompt: 'loro.savePrompt', // account-nudge state — see savePrompt.ts
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
   joinPromo: 'loro.joinPromoDismissed', // /profile founding-member row hidden
-  starterEvents: 'loro.starterEvents', // deck funnel — see lib/starterEvents.ts
-  paywallEvents: 'loro.paywallEvents', // see lib/entitlements/paywallEvents.ts
-  unmuted: 'loro.session.unmuted', // sessionStorage — THIS session's sound state
+  starterEvents: 'loro.starterEvents', // deck funnel — see starterEvents.ts
+  paywallEvents: 'loro.paywallEvents', // see entitlements/paywallEvents.ts
+  unmuted: 'loro.session.unmuted', // session layer — THIS session's sound state
   soundOn: 'loro.soundOn', // the user's standing sound CHOICE (see below)
 } as const;
 
-/** Fired on window whenever any learning data changes (same-tab updates). */
-const WORDS_CHANGED = 'loro:words-changed';
-
-const isBrowser = typeof window !== 'undefined';
+/** Same-tab change bus for any learning data; cross-tab arrives via the
+    driver's external feed. */
+const wordsChanged = createEmitter<void>('wordsChanged');
 
 function readJSON<T>(key: string, fallback: T): T {
-  if (!isBrowser) return fallback;
+  const driver = getStorageDriver();
+  if (!driver) return fallback;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = driver.local.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
@@ -140,19 +147,20 @@ function readJSON<T>(key: string, fallback: T): T {
 
 /** Returns true only if the value was actually written. Never throws. */
 function writeJSON(key: string, value: unknown): boolean {
-  if (!isBrowser) return false;
+  const driver = getStorageDriver();
+  if (!driver) return false;
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    driver.local.setItem(key, JSON.stringify(value));
     return true;
   } catch (err) {
     // Surface it — a swallowed write failure looks like a successful save.
-    console.error(`[loro] localStorage write failed for "${key}"`, err);
+    console.error(`[loro] local write failed for "${key}"`, err);
     return false;
   }
 }
 
 function emitWordsChanged(): void {
-  if (isBrowser) window.dispatchEvent(new Event(WORDS_CHANGED));
+  wordsChanged.emit();
 }
 
 /**
@@ -287,7 +295,7 @@ function fromRow(r: SavedWordRow): SavedWord {
   };
 }
 
-// mergeSum / mergePrefer / mergeWordSets live in lib/wordMerge.ts — pure and
+// mergeSum / mergePrefer / mergeWordSets live in wordMerge.ts — pure and
 // tested there; this module owns only transport and persistence.
 
 /** Overwrite the cache and notify the UI in one place. */
@@ -313,7 +321,7 @@ function enqueue(op: 'upsert' | 'delete', text: string, videoId: string): void {
 }
 
 function scheduleFlush(delayMs = 800): void {
-  if (!isBrowser || !currentUserId) return;
+  if (!getStorageDriver() || !currentUserId) return;
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
     flushTimer = null;
@@ -382,9 +390,9 @@ async function flushQueue(): Promise<void> {
 
 // ---- progress sync: streak days, watch history, level meter --------------
 //
-// Same architecture as words: localStorage is the synchronous truth, the
+// Same architecture as words: the local cache is the synchronous truth, the
 // loro_progress row is a one-per-user mirror, and merges only ever UNION —
-// sync cannot move progress backwards (lib/progressSync.ts). Pushes are
+// sync cannot move progress backwards (progressSync.ts). Pushes are
 // whole-row and debounced; a lost push self-heals at the next hydrate, which
 // runs on every app open with a session.
 
@@ -537,23 +545,19 @@ async function syncSelfLevel(userId: string): Promise<void> {
  * A fresh, stable id for one logged event — the starter-deck funnel and the
  * paywall funnel both merge on it, and both need the same guarantee.
  *
- * crypto.randomUUID() is the right answer but exists only in a SECURE context,
- * and the device-testing path for this app is http://192.168.x.x on a phone,
- * where it is undefined — so the fallbacks are load-bearing, not defensive
- * padding. getRandomValues IS available on insecure origins; the last resort
- * covers neither being there at all.
+ * The id source is the platform's injected crypto (platform.ts). The web's
+ * implementation carries the load-bearing fallback chain — randomUUID exists
+ * only in a SECURE context, and the device-testing path for this app is
+ * http://192.168.x.x on a phone, where it is undefined (see lib/platformInit.ts);
+ * RN supplies expo-crypto. The last resort here covers no crypto being
+ * injected at all (server render, node tests).
  *
  * Uniqueness is the only property asked of the result: it is opaque, never
  * parsed, never compared for order, and only ever used as a merge key.
  */
 function newEventId(): string {
-  const c = isBrowser ? window.crypto : undefined;
-  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
-  if (c && typeof c.getRandomValues === 'function') {
-    const bytes = new Uint8Array(16);
-    c.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  }
+  const c = getPlatformCrypto();
+  if (c) return c.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
@@ -566,7 +570,7 @@ function newEventId(): string {
  * push-only mirror would delete whichever half went second.
  *
  * Safe to repeat because mergeStarterEvents is IDEMPOTENT on the event id
- * (lib/starterEvents.ts): a retried push, a second tab, or an auth event that
+ * (starterEvents.ts): a retried push, a second tab, or an auth event that
  * fires twice all converge on the same log rather than duplicating it.
  *
  * An unmigrated DB fails on the unknown column — logged, harmless, retried at
@@ -632,7 +636,7 @@ function scheduleStarterEventsPush(): void {
 // is one run on one device, so merging two devices' funnels would invent a run
 // nobody performed. The paywall is met over a lifetime on every device the user
 // owns, and dropping a phone's blocks in favour of a laptop's would understate
-// the exact number the limit is being judged on. lib/entitlements/paywallEvents
+// the exact number the limit is being judged on. entitlements/paywallEvents
 // owns the union rule; this is transport.
 
 async function syncPaywallEvents(userId: string): Promise<void> {
@@ -695,7 +699,7 @@ function schedulePaywallEventsPush(): void {
  *
  * Side-effecting on purpose, and this is the only place those side effects
  * happen: a refusal logs save_blocked_by_limit and asks the paywall host to
- * open (lib/entitlements/paywallBus.ts). Putting both here means every save
+ * open (@loro/core entitlements/paywallBus). Putting both here means every save
  * surface — the feed's word sheet, the glossary sheet, and whatever is added
  * next — gets the identical behaviour without knowing the paywall exists.
  *
@@ -855,7 +859,7 @@ async function handleSession(userId: string | null): Promise<void> {
   void ensureProfile(userId);
 
   // Read the cache owner ONCE, before any branch writes syncedUser: it is the
-  // single verdict on whose data localStorage holds, and every localStorage-
+  // single verdict on whose data the local cache holds, and every local-
   // first feature transitions on it. Follows ride the same verdict rather than
   // keeping their own owner key, so the two caches can never disagree about
   // which account they belong to.
@@ -882,18 +886,18 @@ async function handleSession(userId: string | null): Promise<void> {
     // writeProgressSnapshot leaves levelState alone when null — remove the
     // key outright so the new account starts untouched, not at the previous
     // owner's level.
-    window.localStorage.removeItem(KEYS.levelState);
+    getStorageDriver()?.local.removeItem(KEYS.levelState);
     // Same for the self-assessment: without this, syncSelfLevel would push
     // the PREVIOUS owner's answer up into this account's profile row.
-    window.localStorage.removeItem(KEYS.level);
-    window.localStorage.removeItem(KEYS.starterDone);
+    getStorageDriver()?.local.removeItem(KEYS.level);
+    getStorageDriver()?.local.removeItem(KEYS.starterDone);
     // The deck funnel is the PREVIOUS owner's run. Left in place, it would be
     // pushed up under this account's id and misattribute their onboarding.
-    window.localStorage.removeItem(KEYS.starterEvents);
+    getStorageDriver()?.local.removeItem(KEYS.starterEvents);
     // Same for the paywall funnel: the previous owner's blocks and milestones
     // would be unioned into this account's log and describe a user who never
     // existed.
-    window.localStorage.removeItem(KEYS.paywallEvents);
+    getStorageDriver()?.local.removeItem(KEYS.paywallEvents);
     // Drop the previous owner's tier NOW, synchronously, rather than leaving it
     // to handleEntitlementsAuth below: that call is awaited on a network round
     // trip, and until it lands anything reading the cache would be reading
@@ -950,9 +954,9 @@ export const storage = {
    * effect near the app root.
    */
   initSync(): void {
-    if (syncStarted || !isBrowser) return;
+    if (syncStarted || !getStorageDriver()) return;
     syncStarted = true;
-    if (!getSupabase()) return; // sync disabled — pure localStorage mode
+    if (!getSupabase()) return; // sync disabled — pure local-cache mode
 
     void getSession().then((session) =>
       handleSession(session?.user?.id ?? null)
@@ -962,17 +966,13 @@ export const storage = {
     });
 
     // Both queues flush on the same signals — a pending follow is as easy to
-    // strand on a backgrounded tab as a pending word.
-    const flushAll = () => {
+    // strand on a backgrounded tab as a pending word. The signals themselves
+    // are the platform's (platform.ts onFlushSignal): on web, today's three
+    // events — visibilitychange-hidden, online, beforeunload — unchanged.
+    onFlushSignal(() => {
       void flushQueue();
       void flushFollowsQueue();
-    };
-    const flushSoon = () => {
-      if (document.visibilityState === 'hidden') flushAll();
-    };
-    document.addEventListener('visibilitychange', flushSoon);
-    window.addEventListener('online', flushAll);
-    window.addEventListener('beforeunload', flushAll);
+    });
   },
 
   getSavedWords(): SavedWord[] {
@@ -1002,7 +1002,7 @@ export const storage = {
       (w) => w.text === word.text && w.videoId === word.videoId
     );
     // The gate runs before the write, and only for a genuinely new word, so a
-    // blocked save leaves localStorage byte-identical — there is no partial
+    // blocked save leaves the local cache byte-identical — there is no partial
     // state to undo and nothing for the sync engine to push.
     if (!existing && refuseSave(words)) {
       return { words, ok: false, blocked: true };
@@ -1037,7 +1037,7 @@ export const storage = {
 
   /**
    * Saved words that count toward the free-tier limit — starter-deck and
-   * calibration words excluded (lib/entitlements/limit.ts countsTowardLimit).
+   * calibration words excluded (entitlements/limit.ts countsTowardLimit).
    *
    * The one number the entitlement seam reads. It lives here rather than in the
    * hook because the save gate needs it synchronously inside saveWord(), and
@@ -1064,7 +1064,7 @@ export const storage = {
     const ok = writeJSON(KEYS.savedWords, next);
     // A completed recall session = the grading that empties the due queue
     // (the graded word reschedules into the future either way). Feeds the
-    // second save-prompt threshold; see lib/savePrompt.ts.
+    // second save-prompt threshold; see savePrompt.ts.
     if (ok) {
       const nowMs = Date.now();
       if (dueCount(words, nowMs) > 0 && dueCount(next, nowMs) === 0) {
@@ -1241,7 +1241,7 @@ export const storage = {
     return { ok };
   },
 
-  // ---- account-nudge state (lib/savePrompt.ts owns the rules) ------------
+  // ---- account-nudge state (savePrompt.ts owns the rules) ------------
 
   getSavePromptState(): SavePromptState {
     return readJSON<SavePromptState>(KEYS.savePrompt, EMPTY_SAVE_PROMPT_STATE);
@@ -1323,36 +1323,35 @@ export const storage = {
 
   /**
    * Subscribe to learning-data changes (saved words, watch log, recall
-   * days): same-tab (custom event) and cross-tab (native storage event).
+   * days): same-tab (bus) and, where the platform has one, cross-context
+   * (the driver's external feed — the browser 'storage' event).
    * Returns an unsubscribe function.
    */
   onWordsChanged(callback: () => void): () => void {
-    if (!isBrowser) return () => {};
     const watchedKeys: readonly string[] = [
       KEYS.savedWords,
       KEYS.watched,
       KEYS.recallDays,
       KEYS.levelState,
     ];
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === null || watchedKeys.includes(e.key)) callback();
-    };
-    window.addEventListener(WORDS_CHANGED, callback);
-    window.addEventListener('storage', onStorage);
+    const offBus = wordsChanged.subscribe(callback);
+    const offExternal = getStorageDriver()?.onExternalChange?.((key) => {
+      if (key === null || watchedKeys.includes(key)) callback();
+    });
     return () => {
-      window.removeEventListener(WORDS_CHANGED, callback);
-      window.removeEventListener('storage', onStorage);
+      offBus();
+      offExternal?.();
     };
   },
 
   getLanguage(): string {
-    if (!isBrowser) return 'en';
-    return window.localStorage.getItem(KEYS.language) ?? 'en';
+    const driver = getStorageDriver();
+    if (!driver) return 'en';
+    return driver.local.getItem(KEYS.language) ?? 'en';
   },
 
   setLanguage(code: string): void {
-    if (!isBrowser) return;
-    window.localStorage.setItem(KEYS.language, code);
+    getStorageDriver()?.local.setItem(KEYS.language, code);
   },
 
   /**
@@ -1362,54 +1361,56 @@ export const storage = {
    * onboarding just because the flag postdates their data.
    */
   isOnboarded(): boolean {
-    if (!isBrowser) return true; // SSR: never redirect from the server
-    if (window.localStorage.getItem(KEYS.onboarded) === '1') return true;
+    const driver = getStorageDriver();
+    if (!driver) return true; // SSR: never redirect from the server
+    if (driver.local.getItem(KEYS.onboarded) === '1') return true;
     if (storage.getSavedWords().length > 0) return true;
     if (readJSON<string[]>(KEYS.watched, []).length > 0) return true;
     return false;
   },
 
   setOnboarded(value = true): void {
-    if (!isBrowser) return;
-    if (value) window.localStorage.setItem(KEYS.onboarded, '1');
-    else window.localStorage.removeItem(KEYS.onboarded);
+    const driver = getStorageDriver();
+    if (!driver) return;
+    if (value) driver.local.setItem(KEYS.onboarded, '1');
+    else driver.local.removeItem(KEYS.onboarded);
   },
 
   /** Onboarding self-assessment. Distinct from getStartLevel (CEFR): this is
       what the user SAID, and it routes onboarding ('zero' -> starter deck). */
   getSelfLevel(): SelfLevel | null {
-    if (!isBrowser) return null;
-    const v = window.localStorage.getItem(KEYS.level);
+    const driver = getStorageDriver();
+    if (!driver) return null;
+    const v = driver.local.getItem(KEYS.level);
     return v === 'zero' || v === 'some' || v === 'confident' ? v : null;
   },
 
   setSelfLevel(level: SelfLevel): void {
-    if (!isBrowser) return;
-    window.localStorage.setItem(KEYS.level, level);
+    getStorageDriver()?.local.setItem(KEYS.level, level);
   },
 
   /** Has the starter deck been finished or skipped? Gates only the resume
       forward from /welcome — never access to the feed. */
   isStarterDone(): boolean {
-    if (!isBrowser) return true; // SSR: never redirect from the server
-    return window.localStorage.getItem(KEYS.starterDone) === '1';
+    const driver = getStorageDriver();
+    if (!driver) return true; // SSR: never redirect from the server
+    return driver.local.getItem(KEYS.starterDone) === '1';
   },
 
   setStarterDone(): void {
-    if (!isBrowser) return;
-    window.localStorage.setItem(KEYS.starterDone, '1');
+    getStorageDriver()?.local.setItem(KEYS.starterDone, '1');
   },
 
   /** CEFR level from calibration. Seeds feed order only; behaviour corrects it. */
   getStartLevel(): Level | null {
-    if (!isBrowser) return null;
-    const v = window.localStorage.getItem(KEYS.startLevel);
+    const driver = getStorageDriver();
+    if (!driver) return null;
+    const v = driver.local.getItem(KEYS.startLevel);
     return v === 'A1' || v === 'A2' || v === 'B1' || v === 'B2' ? v : null;
   },
 
   setStartLevel(level: Level): void {
-    if (!isBrowser) return;
-    window.localStorage.setItem(KEYS.startLevel, level);
+    getStorageDriver()?.local.setItem(KEYS.startLevel, level);
   },
 
   /** Words the user marked as already-known during CEFR calibration. The
@@ -1425,16 +1426,16 @@ export const storage = {
   /** Has the /profile founding-member row been dismissed? Dismissal is
       final on this device — the pre-launch offer never nags twice. */
   isJoinPromoDismissed(): boolean {
-    if (!isBrowser) return true; // SSR: render nothing until hydrated
-    return window.localStorage.getItem(KEYS.joinPromo) === '1';
+    const driver = getStorageDriver();
+    if (!driver) return true; // SSR: render nothing until hydrated
+    return driver.local.getItem(KEYS.joinPromo) === '1';
   },
 
   dismissJoinPromo(): void {
-    if (!isBrowser) return;
-    window.localStorage.setItem(KEYS.joinPromo, '1');
+    getStorageDriver()?.local.setItem(KEYS.joinPromo, '1');
   },
 
-  // ---- starter-deck funnel (lib/starterEvents.ts owns the shaping rules) ---
+  // ---- starter-deck funnel (starterEvents.ts owns the shaping rules) ---
 
   getStarterEvents(): StarterEvent[] {
     return parseStarterEvents(readJSON<unknown>(KEYS.starterEvents, []));
@@ -1456,7 +1457,7 @@ export const storage = {
     if (writeJSON(KEYS.starterEvents, next)) scheduleStarterEventsPush();
   },
 
-  // ---- paywall funnel (lib/entitlements/paywallEvents.ts owns the rules) ---
+  // ---- paywall funnel (entitlements/paywallEvents.ts owns the rules) ---
 
   getPaywallEvents(): PaywallEvent[] {
     return sanitizePaywallLog(readJSON<unknown>(KEYS.paywallEvents, []));
@@ -1477,12 +1478,13 @@ export const storage = {
   /**
    * Sound state for THIS session.
    *
-   * Two layers, deliberately. sessionStorage holds what is true right now —
-   * including a mute the user chose ten seconds ago, which must survive a
-   * navigation but not the session. localStorage holds their standing CHOICE,
-   * so a user who turned sound on in the starter deck is not asked again on
-   * their next visit; without it, the feed's tap-for-sound pill greets every
-   * returning user who has already answered that question.
+   * Two layers, deliberately. The driver's session layer holds what is true
+   * right now — including a mute the user chose ten seconds ago, which must
+   * survive a navigation but not the session. The persistent layer holds
+   * their standing CHOICE, so a user who turned sound on in the starter deck
+   * is not asked again on their next visit; without it, the feed's
+   * tap-for-sound pill greets every returning user who has already answered
+   * that question.
    *
    * Persisting the choice is safe only because YouTubeMedia always starts
    * muted and restores sound on the first touch of the page load (see the
@@ -1490,10 +1492,11 @@ export const storage = {
    * turn into an unmuted autoplay attempt, which is what phones refuse.
    */
   getSessionUnmuted(): boolean {
-    if (!isBrowser) return false;
-    const session = window.sessionStorage.getItem(KEYS.unmuted);
+    const driver = getStorageDriver();
+    if (!driver) return false;
+    const session = driver.session.getItem(KEYS.unmuted);
     if (session !== null) return session === '1';
-    return window.localStorage.getItem(KEYS.soundOn) === '1';
+    return driver.local.getItem(KEYS.soundOn) === '1';
   },
 
   /**
@@ -1504,8 +1507,9 @@ export const storage = {
    * browser refusing sound is not the user choosing silence.
    */
   setSessionUnmuted(value: boolean): void {
-    if (!isBrowser) return;
-    window.sessionStorage.setItem(KEYS.unmuted, value ? '1' : '0');
-    window.localStorage.setItem(KEYS.soundOn, value ? '1' : '0');
+    const driver = getStorageDriver();
+    if (!driver) return;
+    driver.session.setItem(KEYS.unmuted, value ? '1' : '0');
+    driver.local.setItem(KEYS.soundOn, value ? '1' : '0');
   },
 };
