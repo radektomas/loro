@@ -7,7 +7,7 @@ import { isFunctionWord } from './glossary.ts';
  * Level fill-in mode: every word gets an approximate difficulty level, the
  * user climbs from level 1 by typing words of their current level that are
  * blanked inline in the feed. Pure functions only — persistence lives in
- * lib/storage, the blank UI is the same one typed recall uses
+ * storage.ts, the blank UI is the same one typed recall uses
  * (components/SubtitleTrack.tsx).
  *
  * The video dictionaries carry no CEFR/frequency field, so levels are
@@ -237,9 +237,39 @@ const MIN_CUE_INDEX = 2;
 const MIN_CUE_GAP = 2;
 
 /**
+ * The bands to draw blanks from, best first, for a user at `userLevel`.
+ *
+ * The exact band always wins — that is what "practice at your level" means —
+ * but it cannot be the only source. The bands are hand-cut and wildly uneven
+ * against real footage: band 4 covers 0.7% of the catalog's word tokens, so
+ * asking only for band 4 leaves 58% of videos with NO blue words at all, and
+ * band 6 does not exist (MAX_WORD_LEVEL is 5, the ladder goes to 6), so a
+ * Nativo saw zero on EVERY video. Both were silent — a video with no
+ * matching word simply renders nothing.
+ *
+ * So the exact band is a preference, not a filter: each further step out is
+ * only reached once the closer ones have nothing left to offer in this
+ * video. Easier before harder at equal distance, because an easy blank costs
+ * a moment while a rare one (band 5 is everything unlisted — names, slang,
+ * technical words) can be genuinely unanswerable. Levelling self-corrects
+ * the rest: filling easier blanks climbs the meter toward the band where
+ * the user's real level has material.
+ */
+function bandPreference(userLevel: number): number[] {
+  const target = Math.min(Math.max(1, Math.round(userLevel)), MAX_WORD_LEVEL);
+  const order = [target];
+  for (let step = 1; step < MAX_WORD_LEVEL; step++) {
+    if (target - step >= 1) order.push(target - step);
+    if (target + step <= MAX_WORD_LEVEL) order.push(target + step);
+  }
+  return order;
+}
+
+/**
  * Decide which cue positions of `video` become LEVEL blanks. Returns
  * cueIndex -> the word to blank. Rules:
- *  - only words whose level equals the user's current level
+ *  - words at the user's level first, then the nearest bands out
+ *    (bandPreference) — so a video always offers practice if it can
  *  - never a word already in the SRS (those belong to the recall flow)
  *  - never the same word twice in one video, at most `maxLevelBlanks` per
  *    video, never in the first two cues, and never in back-to-back cues
@@ -257,36 +287,51 @@ export function computeLevelBlankPlan(
   const plan = new Map<number, LevelBlankWord>();
   const used = new Set<string>();
   const maxBlanks = maxLevelBlanks(video.cues.length);
-  let lastCue = -Infinity;
 
-  for (let ci = MIN_CUE_INDEX; ci < video.cues.length; ci++) {
+  // Checked against every planned cue rather than a running maximum: later
+  // passes fill gaps left by earlier ones, so they can land BEFORE a cue
+  // that is already planned.
+  const tooClose = (ci: number): boolean => {
+    for (const planned of plan.keys()) {
+      if (Math.abs(ci - planned) < MIN_CUE_GAP) return true;
+    }
+    return false;
+  };
+
+  for (const band of bandPreference(userLevel)) {
     if (plan.size >= maxBlanks) break;
-    if (excludeCues.has(ci) || ci - lastCue < MIN_CUE_GAP) continue;
 
-    for (const word of video.cues[ci].words) {
-      // Zero-length timings are alignment artifacts (UGC pipeline data can
-      // carry them). The blank interaction is "hear the word, then type it"
-      // — a word with no audible span was never heard, so never blank it.
-      if (word.end - word.start <= 0.05) continue;
-      const key = normalizeAnswer(word.text);
-      if (key.length < 2 || saved.has(key) || used.has(key)) continue;
-      const gloss = lookupGloss(video, word.text);
-      if (wordLevel(normalizeSurface(word.text), gloss?.lemma) !== userLevel) {
-        continue;
+    for (let ci = MIN_CUE_INDEX; ci < video.cues.length; ci++) {
+      if (plan.size >= maxBlanks) break;
+      if (excludeCues.has(ci) || plan.has(ci) || tooClose(ci)) continue;
+
+      for (const word of video.cues[ci].words) {
+        // Zero-length timings are alignment artifacts (UGC pipeline data can
+        // carry them). The blank interaction is "hear the word, then type it"
+        // — a word with no audible span was never heard, so never blank it.
+        if (word.end - word.start <= 0.05) continue;
+        const key = normalizeAnswer(word.text);
+        if (key.length < 2 || saved.has(key) || used.has(key)) continue;
+        const gloss = lookupGloss(video, word.text);
+        if (wordLevel(normalizeSurface(word.text), gloss?.lemma) !== band) {
+          continue;
+        }
+        const translation = gloss && glossText(gloss, language);
+        if (!translation) continue;
+
+        plan.set(ci, {
+          text: word.text,
+          translation,
+          videoId: video.id,
+          cueIndex: ci,
+          // The word's OWN band, which is what the tier chip names. Equal to
+          // the user's level whenever the exact band had material, and
+          // honest about the step out when it did not.
+          level: band,
+        });
+        used.add(key);
+        break;
       }
-      const translation = gloss && glossText(gloss, language);
-      if (!translation) continue;
-
-      plan.set(ci, {
-        text: word.text,
-        translation,
-        videoId: video.id,
-        cueIndex: ci,
-        level: userLevel,
-      });
-      used.add(key);
-      lastCue = ci;
-      break;
     }
   }
   return plan;
