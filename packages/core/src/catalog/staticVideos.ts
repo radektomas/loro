@@ -1,4 +1,8 @@
-import videosData from '../../../../data/videos.json';
+// The `with { type: 'json' }` attribute is REQUIRED, not decoration: bundlers
+// accept a bare JSON import, plain node does not, and core's modules have to
+// load under `node --test`. Without it this file — and therefore catalog.ts
+// and storage.ts, which import it — cannot be tested at all.
+import videosData from '../../../../data/videos.json' with { type: 'json' };
 import type { Video } from '../types.ts';
 
 /**

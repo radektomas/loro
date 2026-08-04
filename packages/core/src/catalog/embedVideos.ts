@@ -1,4 +1,6 @@
-import embedData from '../../../../data/embedVideos.json';
+// See the note in staticVideos.ts: the attribute is what lets this module
+// load under plain node as well as through the bundler.
+import embedData from '../../../../data/embedVideos.json' with { type: 'json' };
 import type { Level, Video, VideoAttribution } from '../types.ts';
 
 /**
