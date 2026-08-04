@@ -20,6 +20,7 @@
     "rate-candidates": "node scripts/rate-candidates.mts",
     "prune-embeds": "node scripts/prune-embeds.mts",
     "publish-embeds": "node scripts/publish-embeds.mts",
+    "publish-catalog": "node scripts/publish-catalog.mts",
     "sweep-embeds": "node scripts/sweep-embeds.mts",
     "probe-captions": "node scripts/probe-captions.mts"
   },
