@@ -11,7 +11,7 @@ import {
   tierFor,
   type LevelState,
 } from '@loro/core/levels';
-import { localVideos } from '@loro/core/catalog/localVideos';
+import { getCatalog } from '@loro/core/catalog';
 import { normalizeAnswer } from '@loro/core/srs';
 import { STARTER_DECK } from '@loro/core/starter/deck';
 import { useMyCreator } from '@/components/creator/ugc';
@@ -217,11 +217,11 @@ export default function ProfilePage() {
     storage.setLanguage(code);
   }, []);
 
-  // Every translation language present in the shipped catalogue — the same
+  // Every translation language present in the installed catalogue — the same
   // rule the feed used when this picker lived in its top bar.
   const languages = useMemo(() => {
     const set = new Set<string>();
-    for (const video of localVideos)
+    for (const video of getCatalog())
       for (const cue of video.cues)
         for (const code of Object.keys(cue.translations)) set.add(code);
     return [...set].sort();

@@ -91,11 +91,11 @@ import {
   onFlushSignal,
 } from './platform.ts';
 import { createEmitter } from './emitter.ts';
-// Seed data is only used to upgrade legacy saved words to per-word glosses.
-import { localVideos } from './catalog/localVideos.ts';
-
-// Seed + embed catalog: words saved from either kind must resolve here.
-const videos = localVideos;
+// Read through the catalog SEAM, never a direct catalog import: core must not
+// pull the embed-transcript JSON into its own module graph (the web bundles it
+// and hands it over at boot; RN serves it from Supabase). Only used to upgrade
+// legacy saved words to per-word glosses — see upgradeTranslation.
+import { getCatalog } from './catalog.ts';
 
 /**
  * Typed persistence layer for Loro.
@@ -215,7 +215,13 @@ function migrateWord(raw: Partial<SavedWord>): SavedWord {
  * sentence translations) and swap in the per-word gloss.
  */
 function upgradeTranslation(word: SavedWord): SavedWord {
-  const video = videos.find((v) => v.id === word.videoId);
+  // Resolved per call, not hoisted to a module constant: the catalog seam is
+  // filled at boot and may be replaced later (an RN background refresh), and a
+  // snapshot taken at module-evaluation time would pin this to the seed set
+  // forever. Words that resolve to nothing are returned untouched, which is
+  // also the correct answer for a word saved from a UGC video (never in the
+  // catalog) — the same behaviour as before the seam.
+  const video = getCatalog().find((v) => v.id === word.videoId);
   const cue = video?.cues[word.cueIndex];
   if (!video || !cue) return word;
   const isCueTranslation = Object.values(cue.translations).includes(

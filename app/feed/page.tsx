@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Feed } from '@/components/Feed';
 import { fetchCreatorFeed, fetchPublishedVideos } from '@/lib/publishedVideos';
-import { localVideos } from '@loro/core/catalog/localVideos';
+import { getCatalog } from '@loro/core/catalog';
 import type { Video } from '@loro/core/types';
 
 /**
@@ -49,9 +49,9 @@ function FeedRoute() {
   const creatorHandle = useSearchParams().get('creator');
   const scoped = creatorHandle !== null;
 
-  // Scoped mode starts empty: seeding with localVideos would flash the whole
+  // Scoped mode starts empty: seeding with the catalog would flash the whole
   // catalogue before narrowing to one creator.
-  const [videos, setVideos] = useState<Video[]>(scoped ? [] : localVideos);
+  const [videos, setVideos] = useState<Video[]>(scoped ? [] : getCatalog());
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +64,7 @@ function FeedRoute() {
         cancelled = true;
       };
     }
-    setVideos(localVideos);
+    setVideos(getCatalog());
     void fetchPublishedVideos().then((published) => {
       if (cancelled || published.length === 0) return;
       setVideos((prev) => {

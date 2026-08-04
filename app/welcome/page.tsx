@@ -29,6 +29,14 @@ import { staticVideos } from '@loro/core/catalog/staticVideos';
 // The previous `videosData as unknown as Video[]` here handed VideoSlide
 // videos with no author field and crashed AuthorLine for every onboarding
 // user. lib/staticVideos.ts is the one place seed entries become Video.
+//
+// DELIBERATELY the seed set, not getCatalog(). The guided intro drives precise
+// seeks and mid-word pauses, and seed playback is frame-exact where embeds are
+// not — reading the full catalog here would let pickGuidedVideo open the intro
+// on a YouTube embed. This is the same list that backs the catalog seam's
+// resting state (@loro/core/catalog), so the empty-catalog crash it used to be
+// exposed to — pickGuidedVideo returning undefined through a signature that
+// promises a Video, then dereferenced as video.cues — cannot occur here.
 const videos = staticVideos;
 
 type Phase = 'hook' | 'assess' | 'calibration' | 'result' | 'guide';

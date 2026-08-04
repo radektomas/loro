@@ -20,9 +20,7 @@ import {
   ChevronLeftIcon,
   LockIcon,
 } from '@/components/icons/Icons';
-import { localVideos } from '@loro/core/catalog/localVideos';
-
-const videos = localVideos;
+import { getCatalog } from '@loro/core/catalog';
 
 /** Segment styling for the word-state bar. Red is reserved for lapses;
     green is earned by knowing; the pipeline states stay neutral. */
@@ -117,7 +115,7 @@ export default function ProgressPage() {
       if (w.state === 'known') e.learned++;
       byVideo.set(w.videoId, e);
     }
-    return videos
+    return getCatalog()
       .map((video) => {
         const e = byVideo.get(video.id) ?? { saved: 0, learned: 0 };
         return { video, saved: e.saved, learned: e.learned };

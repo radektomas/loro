@@ -15,17 +15,18 @@ import {
   SearchIcon,
   TrashIcon,
 } from '@/components/icons/Icons';
-import { localVideos } from '@loro/core/catalog/localVideos';
+import { getCatalog } from '@loro/core/catalog';
 import { STARTER_VIDEO_ID } from '@loro/core/starter/deck';
 import { SavePromptSheet } from '@/components/SavePromptSheet';
-
-const videos = localVideos;
 
 const wordKey = (w: SavedWord) => `${w.videoId}-${w.text}`;
 
 /** Resolve the deep-link target (/?v=...&t=...) for a saved word. */
 function replayHref(word: SavedWord): string {
-  const video = videos.find((v) => v.id === word.videoId);
+  // Read through the seam at call time rather than snapshotting the catalog
+  // into a module constant — the seam is filled at boot, after this module is
+  // evaluated.
+  const video = getCatalog().find((v) => v.id === word.videoId);
   const cueStart = video?.cues[word.cueIndex]?.start ?? 0;
   return `/?v=${encodeURIComponent(word.videoId)}&t=${cueStart}`;
 }
@@ -380,7 +381,7 @@ function VocabContent() {
   // Only offer video filters that would show something.
   const videoOptions = useMemo(() => {
     const withWords = new Set(words.map((w) => w.videoId));
-    return videos.filter((v) => withWords.has(v.id));
+    return getCatalog().filter((v) => withWords.has(v.id));
   }, [words]);
 
   const handleRemove = (word: SavedWord) => {
