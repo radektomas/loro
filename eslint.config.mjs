@@ -14,6 +14,7 @@ const eslintConfig = [
   {
     ignores: [
       "node_modules/**",
+      "apps/**", // React Native, linted by its own config — see tsconfig exclude
       ".next/**",
       "out/**",
       "build/**",

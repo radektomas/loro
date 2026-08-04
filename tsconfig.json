@@ -37,5 +37,5 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "apps"] // apps/* is React Native, not this app
 }
