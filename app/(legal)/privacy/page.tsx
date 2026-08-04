@@ -9,14 +9,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Written from a code-level data inventory (2026-07-28), not from a template.
+ * Written from a code-level data inventory (2026-07-28; re-verified and
+ * extended 2026-08-03), not from a template.
  * Every claim below maps to something the app verifiably does. If the app
  * changes, this page must change with it.
  */
 export default function PrivacyPage() {
   return (
     <article>
-      <PageTitle title="Privacy Policy" updated="28 July 2026" />
+      <PageTitle title="Privacy Policy" updated="3 August 2026" />
 
       <Section title="The short version">
         <p>
@@ -24,8 +25,9 @@ export default function PrivacyPage() {
           account, and in that mode your learning data lives only in your
           browser — we never see it. Data reaches our servers only when you
           choose something that needs them: signing in to sync, joining the
-          launch waitlist, or applying as a creator. There are no ads and no
-          analytics of any kind.
+          launch waitlist, or applying as a creator. There are no ads, no
+          third-party analytics and no trackers; the only usage measurement is
+          our own product telemetry, described below.
         </p>
       </Section>
 
@@ -62,11 +64,15 @@ export default function PrivacyPage() {
           rows={[
             {
               term: 'Account data — GDPR Art. 6(1)(b), contract',
-              def: 'If you sign in: your email address (magic-link sign-in) or your Google account basics (email, name, profile picture — Google sign-in), plus sign-in timestamps and a profile row (level, onboarding date, statistics about whether our "save your progress" prompt was shown and what you chose). Used to operate your account and sync.',
+              def: 'If you sign in: your email address (magic-link sign-in) or your Google account basics (email, name, profile picture — Google sign-in), plus sign-in timestamps and a profile row (level, onboarding date, statistics about whether our "save your progress" prompt was shown and what you chose, and your plan tier — free or plus, when it began, and whether you keep unlimited saves from before a saved-word limit existed). Used to operate your account and sync.',
             },
             {
               term: 'Learning data — GDPR Art. 6(1)(b), contract',
               def: 'Saved words (word, translation, which video and sentence it came from, review schedule and results), practice-day dates, watched-video list, level state, and creators you follow. This is the product; syncing it is why accounts exist.',
+            },
+            {
+              term: 'Product telemetry — GDPR Art. 6(1)(f), legitimate interest',
+              def: 'First-party event logs we write ourselves — there are no third-party analytics or trackers. The starter-deck log records progress through the onboarding deck: each card shown and answered (round, card number, the word and whether you said you knew it), each clip started or completed, and where you left if you quit early, all timestamped. The paywall log records when your saved-word count first reaches a milestone (10, 25, 40 or 50) and — only if a free-tier saved-word limit is active, which it currently is not — when a save is blocked and how the upgrade screen was answered, including the plan chosen. Collected to see where people drop off and whether the limits are set right. Stored in your browser like everything else; mirrored to your profile row while signed in. Anonymous sessions never send them.',
             },
             {
               term: 'Waitlist — GDPR Art. 6(1)(a), consent',
@@ -156,11 +162,15 @@ export default function PrivacyPage() {
             },
             {
               term: 'Preferences and app state',
-              def: 'loro.language, loro.onboarded, loro.level, loro.starterDone, loro.savePrompt, loro.joinPromoDismissed, and loro.session.unmuted (sound choice, kept only for the session).',
+              def: 'loro.language, loro.onboarded, loro.level, loro.starterDone, loro.savePrompt, loro.joinPromoDismissed, loro.soundOn (your standing sound choice), and loro.session.unmuted (this session’s sound state, kept only for the session).',
             },
             {
               term: 'Sync machinery',
-              def: 'loro.syncQueue, loro.syncedUser, loro.follows, loro.followsQueue — pending writes and follow state.',
+              def: 'loro.syncQueue, loro.syncedUser, loro.follows, loro.followsQueue — pending writes and follow state — and loro.tier, a cached copy of your account’s plan tier, cleared on sign-out.',
+            },
+            {
+              term: 'Telemetry',
+              def: 'loro.starterEvents and loro.paywallEvents — the on-device half of the product telemetry described above. Without an account it never leaves your browser.',
             },
             {
               term: 'Session',
@@ -192,7 +202,8 @@ export default function PrivacyPage() {
       <Section title="How long we keep things">
         <UL>
           <li>
-            Account and learning data: until you delete your account (below).
+            Account data, learning data and product telemetry: until you
+            delete your account (below).
           </li>
           <li>
             On-device data: until you clear your browser storage — it is yours,
@@ -220,8 +231,9 @@ export default function PrivacyPage() {
           In the app: <strong className="text-text">Profile → Account → Delete
           account</strong> (<Link href="/profile" className="text-text underline decoration-white/25 underline-offset-2">open your profile</Link>).
           This permanently deletes your saved words, progress, follows,
-          profile, creator application, uploaded videos and files, and the
-          sign-in itself. One honest caveat: if your sign-in is also used by
+          profile — including the onboarding and paywall telemetry and the
+          plan tier stored on it — creator application, uploaded videos and
+          files, and the sign-in itself. One honest caveat: if your sign-in is also used by
           another service run by the same developer on the same
           infrastructure, all Loro data is deleted but the shared sign-in
           identity is kept — the app tells you when that is the case.
