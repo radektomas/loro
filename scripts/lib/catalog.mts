@@ -380,9 +380,25 @@ export type CatalogPointer = {
   generatedAt: string;
 };
 
+/**
+ * The bucket. Publisher-side only, and therefore declared here: the client is
+ * handed a base URL that already names it, so the loader never needs it.
+ */
 export const SNAPSHOT_BUCKET = 'loro-catalog';
-export const POINTER_PATH = 'catalog/latest.json';
 
-export function snapshotPath(hash: string): string {
-  return `catalog/${hash}.json`;
-}
+/**
+ * The object paths come from the LOADER, which owns them.
+ *
+ * The publisher and the client have to agree on these two strings exactly, and
+ * a disagreement is the worst kind: the client 404s forever while the publisher
+ * reports success. They were briefly declared in both places; now there is one
+ * declaration and this is a re-export, so drift is not expressible.
+ *
+ * Relative and extension-ed because these scripts run under plain node, outside
+ * the bundler's alias — the same specifier style scripts/lib/glossCues.mts
+ * already uses to reach core.
+ */
+export {
+  POINTER_PATH,
+  snapshotPath,
+} from '../../packages/core/src/catalogLoader.ts';
