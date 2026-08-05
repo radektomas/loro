@@ -1,29 +1,55 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BOX_INTERVALS_MS, MAX_BOX, normalizeAnswer } from '@loro/core/srs';
+import { getCatalog, isCatalogReady } from '@loro/core/catalog';
+import { staticVideos } from '@loro/core/catalog/staticVideos';
 
 /**
  * CHECKPOINT A — does the phone import @loro/core?
  *
- * The only job of this screen is to prove the workspace wiring end to end
- * before any real screen exists: that Metro follows the `file:` symlink out of
- * this project, resolves core's "./*": "./src/*.ts" exports pattern, transforms
- * core's raw TypeScript, and honours its extension-ed internal imports.
+ * Proves the workspace wiring end to end: that Metro follows the `file:`
+ * symlink out of this project, resolves core's "./*": "./src/*.ts" exports
+ * pattern, transforms core's raw TypeScript, and honours its extension-ed
+ * internal imports. @loro/core/srs is the narrowest possible probe for that —
+ * one type-only import, no JSON, no third-party package.
  *
- * It imports from @loro/core/srs SPECIFICALLY, and nothing else. srs.ts has one
- * import, it is type-only, and it reaches no JSON and no third-party package —
- * so if this screen renders, the failure surface is exactly the four mechanisms
- * above and nothing more.
+ * CHECKPOINT B — does core's CATALOG resolve, with its data outside the package?
  *
- * @loro/core/catalog and @loro/core/storage are deliberately NOT imported here.
- * Those pull data/videos.json from outside the package, which needs Metro's
- * watchFolders and possibly the import-attributes babel plugin. That is
- * checkpoint B, kept separate so a failure says WHICH mechanism broke instead
- * of just "it doesn't build".
+ * Two further mechanisms, neither exercised by checkpoint A, and kept in
+ * separate cards so an on-device failure says which one broke:
+ *
+ *  1. WATCHFOLDERS. catalog/staticVideos.ts imports
+ *     '../../../../data/videos.json' — four levels up out of packages/core,
+ *     landing at <repoRoot>/data/. Metro serves nothing outside projectRoot
+ *     unless a watch folder covers it, so this only resolves because
+ *     metro.config.js sets watchFolders = [repoRoot]. A break here reads
+ *     "Unable to resolve ../../../../data/videos.json".
+ *
+ *  2. THE IMPORT ATTRIBUTE. That same import carries `with { type: 'json' }`,
+ *     which core needs so its modules load under `node --test`. Metro's babel
+ *     has to at least PARSE the attribute. A break here is a syntax error
+ *     naming staticVideos.ts, not a resolution error.
+ *
+ * getCatalog() is read BEFORE any initCatalog call on purpose: core's resting
+ * state is the seed set, not [], and this screen is the on-device proof of
+ * that invariant — it must print the same 8 the seed has.
+ *
+ * DELIBERATELY NOT IMPORTED: @loro/core/catalog/localVideos, which adds
+ * data/embedVideos.json — 7.2MB of embed transcripts that RN will fetch from
+ * Supabase instead of bundling. The seed alone proves both mechanisms; pulling
+ * localVideos would prove nothing further and inflate the bundle ~7MB.
  */
 
 /** The real accent-folding used to grade every typed recall answer. */
 const SAMPLES = ['¡Están!', 'Qué', 'niño', 'ACUERDO'] as const;
+
+/**
+ * Read at module scope, exactly as core's own consumers do, and before
+ * anything calls initCatalog — so `resting` IS the seed.
+ */
+const resting = getCatalog();
+const seed = staticVideos[0];
+const firstLine = seed.cues[0].words.map((w) => w.text).join(' ');
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -36,21 +62,21 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function App() {
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <StatusBar style="light" />
 
       <Text style={styles.title}>@loro/core is on the phone</Text>
-      <Text style={styles.subtitle}>checkpoint A — srs.ts, imported from packages/core</Text>
+      <Text style={styles.subtitle}>checkpoints A + B — imported from packages/core</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>normalizeAnswer()</Text>
+        <Text style={styles.cardTitle}>A · normalizeAnswer()</Text>
         {SAMPLES.map((sample) => (
           <Row key={sample} label={sample} value={normalizeAnswer(sample)} />
         ))}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Leitner schedule</Text>
+        <Text style={styles.cardTitle}>A · Leitner schedule</Text>
         <Row label="boxes" value={String(BOX_INTERVALS_MS.length)} />
         <Row label="MAX_BOX" value={String(MAX_BOX)} />
         <Row
@@ -60,7 +86,28 @@ export default function App() {
           }d`}
         />
       </View>
-    </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>B · seed from ../../../../data</Text>
+        <Row label="staticVideos.length" value={String(staticVideos.length)} />
+        <Row label="getCatalog().length" value={String(resting.length)} />
+        <Row label="isCatalogReady()" value={String(isCatalogReady())} />
+        <Row label="resting === seed" value={String(resting.length === staticVideos.length)} />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>B · first seed video</Text>
+        {/* Video has no title field — creator is the display label, and the
+            first cue's words are real transcript content out of the JSON. */}
+        <Row label="creator" value={seed.creator} />
+        <Row label="level" value={seed.level} />
+        <Row label="author.kind" value={seed.author.kind} />
+        <Row label="cues" value={String(seed.cues.length)} />
+        <Row label="dictionary" value={String(Object.keys(seed.dictionary).length)} />
+        <Text style={styles.id}>{seed.id}</Text>
+        <Text style={styles.line}>{firstLine}</Text>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -68,8 +115,11 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#0a0d0b',
+  },
+  content: {
     paddingHorizontal: 24,
     paddingTop: 96,
+    paddingBottom: 48,
     gap: 16,
   },
   title: {
@@ -110,5 +160,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
+  },
+  id: {
+    color: '#7d8a83',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  line: {
+    color: '#f2f5f3',
+    fontSize: 15,
+    fontStyle: 'italic',
   },
 });
