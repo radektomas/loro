@@ -1,55 +1,145 @@
+// FIRST IMPORT, DELIBERATELY. Installs the platform + catalog seams as a module
+// side effect before anything below can read storage. index.js imports it too;
+// a module body runs once, so this is free insurance against a reorder there.
+import { catalogSource, finishBoot } from './src/platform/boot';
+
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { BOX_INTERVALS_MS, MAX_BOX, normalizeAnswer } from '@loro/core/srs';
-import { getCatalog, isCatalogReady } from '@loro/core/catalog';
+import { storage } from '@loro/core/storage';
+import { getCatalog, isCatalogReady, onCatalogChanged } from '@loro/core/catalog';
 import { staticVideos } from '@loro/core/catalog/staticVideos';
+import type { SavedWord } from '@loro/core/types';
 
 /**
- * CHECKPOINT A — does the phone import @loro/core?
+ * CHECKPOINT C — real persistence.
  *
- * Proves the workspace wiring end to end: that Metro follows the `file:`
- * symlink out of this project, resolves core's "./*": "./src/*.ts" exports
- * pattern, transforms core's raw TypeScript, and honours its extension-ed
- * internal imports. @loro/core/srs is the narrowest possible probe for that —
- * one type-only import, no JSON, no third-party package.
+ * Checkpoints A and B proved that core's code and data RESOLVE on the phone.
+ * This one proves the drivers actually STORE: words go through core's real
+ * save path into MMKV, and the catalog comes off disk rather than the bundle.
  *
- * CHECKPOINT B — does core's CATALOG resolve, with its data outside the package?
+ * Still a harness, not UI. The two things it exists to show are the two things
+ * a screenshot cannot fake:
  *
- * Two further mechanisms, neither exercised by checkpoint A, and kept in
- * separate cards so an on-device failure says which one broke:
- *
- *  1. WATCHFOLDERS. catalog/staticVideos.ts imports
- *     '../../../../data/videos.json' — four levels up out of packages/core,
- *     landing at <repoRoot>/data/. Metro serves nothing outside projectRoot
- *     unless a watch folder covers it, so this only resolves because
- *     metro.config.js sets watchFolders = [repoRoot]. A break here reads
- *     "Unable to resolve ../../../../data/videos.json".
- *
- *  2. THE IMPORT ATTRIBUTE. That same import carries `with { type: 'json' }`,
- *     which core needs so its modules load under `node --test`. Metro's babel
- *     has to at least PARSE the attribute. A break here is a syntax error
- *     naming staticVideos.ts, not a resolution error.
- *
- * getCatalog() is read BEFORE any initCatalog call on purpose: core's resting
- * state is the seed set, not [], and this screen is the on-device proof of
- * that invariant — it must print the same 8 the seed has.
- *
- * DELIBERATELY NOT IMPORTED: @loro/core/catalog/localVideos, which adds
- * data/embedVideos.json — 7.2MB of embed transcripts that RN will fetch from
- * Supabase instead of bundling. The seed alone proves both mechanisms; pulling
- * localVideos would prove nothing further and inflate the bundle ~7MB.
+ *   1. a word survives a force-quit          → MMKV persists, not a Map
+ *   2. the catalog count goes 8 → 216        → the Supabase loader + the file
+ *                                              cache work end to end
  */
 
-/** The real accent-folding used to grade every typed recall answer. */
-const SAMPLES = ['¡Están!', 'Qué', 'niño', 'ACUERDO'] as const;
+/** The first bundled seed clip. Real id, so upgradeTranslation resolves the
+    video on every read instead of silently skipping the word. */
+const SEED_VIDEO = staticVideos[0];
 
-/**
- * Read at module scope, exactly as core's own consumers do, and before
- * anything calls initCatalog — so `resting` IS the seed.
- */
-const resting = getCatalog();
-const seed = staticVideos[0];
-const firstLine = seed.cues[0].words.map((w) => w.text).join(' ');
+export default function App() {
+  const [words, setWords] = useState<SavedWord[]>([]);
+  const [catalogCount, setCatalogCount] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState('');
+
+  const readAll = useCallback(() => {
+    setWords(storage.getSavedWords());
+    setCatalogCount(getCatalog().length);
+    setReady(isCatalogReady());
+  }, []);
+
+  useEffect(() => {
+    // Safe here and not a frame earlier: boot ran at module scope, so the
+    // driver is installed and this subscription gets a live channel.
+    readAll();
+    finishBoot();
+    const offWords = storage.onWordsChanged(readAll);
+    const offCatalog = onCatalogChanged(readAll);
+    return () => {
+      offWords();
+      offCatalog();
+    };
+  }, [readAll]);
+
+  const save = useCallback(() => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    // core's real save path — the same gate, the same verified read-back, the
+    // same sync queue the web uses. Nothing about this call is RN-specific.
+    const result = storage.saveWord({
+      text: trimmed,
+      translation: `[${trimmed}]`,
+      videoId: SEED_VIDEO.id,
+      cueIndex: 0,
+    });
+    setStatus(
+      result.ok
+        ? `saved "${trimmed}"`
+        : result.blocked
+          ? 'blocked by the free-tier limit'
+          : 'write FAILED (storage did not read back)'
+    );
+    if (result.ok) setText('');
+    readAll();
+  }, [text, readAll]);
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <StatusBar style="light" />
+
+      <Text style={styles.title}>checkpoint C — persistence</Text>
+      <Text style={styles.subtitle}>MMKV + expo-file-system, through @loro/core</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>catalog</Text>
+        <Row label="getCatalog().length" value={String(catalogCount)} />
+        <Row label="isCatalogReady()" value={String(ready)} />
+        <Row label="booted from" value={catalogSource} />
+        <Text style={styles.note}>
+          {catalogCount > staticVideos.length
+            ? 'full snapshot installed'
+            : `seed only (${staticVideos.length}) — waiting on the loader`}
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>save a word</Text>
+        <TextInput
+          style={styles.input}
+          value={text}
+          onChangeText={setText}
+          placeholder="type a Spanish word"
+          placeholderTextColor="#4a554e"
+          autoCapitalize="none"
+          autoCorrect={false}
+          onSubmitEditing={save}
+          returnKeyType="done"
+        />
+        <Pressable style={styles.button} onPress={save}>
+          <Text style={styles.buttonText}>save word</Text>
+        </Pressable>
+        {status !== '' && <Text style={styles.note}>{status}</Text>}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>getSavedWords() — {words.length}</Text>
+        {words.length === 0 ? (
+          <Text style={styles.note}>nothing saved yet</Text>
+        ) : (
+          words.map((word) => (
+            <Row
+              key={`${word.videoId}:${word.text}`}
+              label={word.text}
+              value={`box ${word.box}`}
+            />
+          ))
+        )}
+      </View>
+    </ScrollView>
+  );
+}
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -60,84 +150,12 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function App() {
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <StatusBar style="light" />
-
-      <Text style={styles.title}>@loro/core is on the phone</Text>
-      <Text style={styles.subtitle}>checkpoints A + B — imported from packages/core</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>A · normalizeAnswer()</Text>
-        {SAMPLES.map((sample) => (
-          <Row key={sample} label={sample} value={normalizeAnswer(sample)} />
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>A · Leitner schedule</Text>
-        <Row label="boxes" value={String(BOX_INTERVALS_MS.length)} />
-        <Row label="MAX_BOX" value={String(MAX_BOX)} />
-        <Row
-          label="box 1 → box 6"
-          value={`${BOX_INTERVALS_MS[1] / 60_000}min → ${
-            BOX_INTERVALS_MS[MAX_BOX] / 86_400_000
-          }d`}
-        />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>B · seed from ../../../../data</Text>
-        <Row label="staticVideos.length" value={String(staticVideos.length)} />
-        <Row label="getCatalog().length" value={String(resting.length)} />
-        <Row label="isCatalogReady()" value={String(isCatalogReady())} />
-        <Row label="resting === seed" value={String(resting.length === staticVideos.length)} />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>B · first seed video</Text>
-        {/* Video has no title field — creator is the display label, and the
-            first cue's words are real transcript content out of the JSON. */}
-        <Row label="creator" value={seed.creator} />
-        <Row label="level" value={seed.level} />
-        <Row label="author.kind" value={seed.author.kind} />
-        <Row label="cues" value={String(seed.cues.length)} />
-        <Row label="dictionary" value={String(Object.keys(seed.dictionary).length)} />
-        <Text style={styles.id}>{seed.id}</Text>
-        <Text style={styles.line}>{firstLine}</Text>
-      </View>
-    </ScrollView>
-  );
-}
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#0a0d0b',
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 96,
-    paddingBottom: 48,
-    gap: 16,
-  },
-  title: {
-    color: '#f2f5f3',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  subtitle: {
-    color: '#7d8a83',
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  card: {
-    backgroundColor: '#141a16',
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-  },
+  screen: { flex: 1, backgroundColor: '#0a0d0b' },
+  content: { paddingHorizontal: 24, paddingTop: 72, paddingBottom: 48, gap: 16 },
+  title: { color: '#f2f5f3', fontSize: 24, fontWeight: '700' },
+  subtitle: { color: '#7d8a83', fontSize: 13, marginBottom: 8 },
+  card: { backgroundColor: '#141a16', borderRadius: 16, padding: 16, gap: 8 },
   cardTitle: {
     color: '#7d8a83',
     fontSize: 12,
@@ -146,29 +164,23 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 4,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  label: { color: '#f2f5f3', fontSize: 16, flexShrink: 1, paddingRight: 12 },
+  value: { color: '#5ee6a8', fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  note: { color: '#7d8a83', fontSize: 12, marginTop: 4 },
+  input: {
+    backgroundColor: '#0a0d0b',
+    borderRadius: 10,
+    color: '#f2f5f3',
+    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  button: {
+    backgroundColor: '#5ee6a8',
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
-  label: {
-    color: '#f2f5f3',
-    fontSize: 16,
-  },
-  value: {
-    color: '#5ee6a8',
-    fontSize: 16,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
-  },
-  id: {
-    color: '#7d8a83',
-    fontSize: 11,
-    marginTop: 4,
-  },
-  line: {
-    color: '#f2f5f3',
-    fontSize: 15,
-    fontStyle: 'italic',
-  },
+  buttonText: { color: '#06130d', fontSize: 15, fontWeight: '700' },
 });
