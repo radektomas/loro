@@ -1,0 +1,15 @@
+# apps/mobile keeps its OWN ignores: the repo root's .gitignore anchors
+# node_modules with a leading slash (/node_modules), so it only covers the root
+# install and would leave this app's ~300MB tree showing as untracked.
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Native projects are generated (continuous native generation) by
+# `npx expo prebuild` / `expo run:ios`. They are build output, not source.
+/ios
+/android
+
+*.log
+.DS_Store

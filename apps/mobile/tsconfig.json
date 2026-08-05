@@ -1,0 +1,18 @@
+{
+  // Expo's base, NOT the repo root's tsconfig. The root config is the web app's
+  // — lib:["dom"], jsx:"preserve", Next's plugin — and inheriting it would
+  // typecheck React Native screens against the DOM. The root now excludes
+  // "apps" for the mirror-image reason.
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    // @loro/core's internal imports are extension-ed ('./srs.ts') so the same
+    // sources load under plain `node --test`. Typechecking follows into them,
+    // so this app has to accept that style too. Requires noEmit, which
+    // expo/tsconfig.base already sets — restated because the two are a pair.
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}

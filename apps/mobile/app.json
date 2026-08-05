@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Loro",
+    "slug": "radektomas",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0d0b",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "eu.flytriply.loro",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b91fb9e8-66c2-453e-91a5-4dbc71ec571b"
+      }
+    },
+    "owner": "radektomass-team"
+  }
+}
