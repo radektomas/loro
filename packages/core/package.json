@@ -5,5 +5,13 @@
   "type": "module",
   "exports": {
     "./*": "./src/*.ts"
+  },
+  "peerDependencies": {
+    "@supabase/supabase-js": "^2.110.5"
+  },
+  "peerDependenciesMeta": {
+    "@supabase/supabase-js": {
+      "optional": false
+    }
   }
 }
