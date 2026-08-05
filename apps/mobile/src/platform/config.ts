@@ -41,3 +41,21 @@ export const CATALOG_BASE_URL =
  * new native build.
  */
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_ORIGIN ?? '';
+
+/**
+ * The document origin the player page is served under, and the `origin`
+ * playerVar it hands the IFrame API. They must be the SAME value — the API's
+ * handshake compares them — which is why this is one constant.
+ *
+ * ⚠️ PLACEHOLDER, and it is the value the spike measured with. rn-lab used
+ * https://example.com for exactly this reason: WKWebView needs a real,
+ * reachable https origin for an inline-HTML document to be representative, and
+ * the app had no origin of its own. Every §5e result was produced under it.
+ *
+ * Replace with the web deployment's origin once it exists — the same
+ * unresolved value as EXPO_PUBLIC_API_ORIGIN above. Note the spike's own
+ * warning: loro.vercel.app is NOT this app (verified 2026-08-02 — it serves an
+ * unrelated page), so it must not be used as a stand-in.
+ */
+export const PLAYER_EMBED_ORIGIN =
+  process.env.EXPO_PUBLIC_API_ORIGIN ?? 'https://example.com';
