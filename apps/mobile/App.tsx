@@ -3,7 +3,7 @@
 // a module body runs once, so this is free insurance against a reorder there.
 import { finishBoot } from './src/platform/boot';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
@@ -11,7 +11,10 @@ import {
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { FeedScreen } from './src/feed/FeedScreen';
+import { PlayerHost } from './src/player/PlayerHost';
+import { Shell } from './src/shell/Shell';
+import { Onboarding } from './src/onboarding/Onboarding';
+import { shouldShowOnboarding } from './src/onboarding/flow';
 
 /**
  * CHECKPOINT E — the feed, with sound and word-saving.
@@ -45,6 +48,22 @@ import { FeedScreen } from './src/feed/FeedScreen';
  * null phase. This is the library's own documented remedy for it.
  */
 export default function App() {
+  /**
+   * CHECKPOINT H — the first-launch gate, decided ONCE at mount.
+   *
+   * Read in a lazy initialiser rather than an effect, so the very first frame
+   * is already the right screen: a gate resolved after mount flashes the feed
+   * behind onboarding, which is precisely the bug the web's `gate` state
+   * exists to prevent (components/Feed.tsx:84-86). The read is safe this early
+   * because the storage seam is installed as a module side effect of the
+   * boot import at the top of this file — before any component renders.
+   *
+   * Held in state, not recomputed: onDone flips it, and re-reading storage on
+   * every render would be a redundant MMKV hit for a decision that changes at
+   * most once per launch.
+   */
+  const [onboarding, setOnboarding] = useState(shouldShowOnboarding);
+
   useEffect(() => {
     // Hides the splash and kicks the background catalog refresh, now that
     // something is actually on screen.
@@ -56,7 +75,27 @@ export default function App() {
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <BottomSheetModalProvider>
           <StatusBar style="light" />
-          <FeedScreen />
+          {/* PLAYERHOST WRAPS THE TABS, and that placement is the whole reason
+              the feed survives a tab switch. Its contract is one WebView for
+              the session, never unmounted (PlayerHost.tsx) — a host rendered
+              inside the feed tab would be torn down on every switch to Words,
+              and each rebuild is a fresh iframe boot. Keeping it here also
+              keeps the page's own sound and playback-rate state alive, since
+              both are variables inside a document that is never reloaded. */}
+          {/* PlayerHost wraps BOTH so the WebView is created once per launch
+              and never re-parented — including across the onboarding -> feed
+              handoff. Onboarding uses no player and never calls usePlayerBox,
+              so the box stays at HIDDEN_BOX: 0x0 and invisible, with nothing
+              drawn over these screens. Rendering Onboarding INSTEAD OF Shell
+              is what keeps the tab bar and the feed's FlashList unmounted
+              during the flow. */}
+          <PlayerHost>
+            {onboarding ? (
+              <Onboarding onDone={() => setOnboarding(false)} />
+            ) : (
+              <Shell />
+            )}
+          </PlayerHost>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

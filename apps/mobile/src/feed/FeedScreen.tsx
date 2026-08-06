@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   Image,
   LayoutChangeEvent,
   Pressable,
@@ -7,20 +8,30 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
 import {
-  PlayerHost,
   usePlayerApi,
+  usePlayerBox,
   usePlayerStatus,
   type PlayerBox,
 } from '../player/PlayerHost';
 import { setStoredRate } from '../player/rate';
 import { AuthorLine } from './AuthorLine';
 import { Karaoke } from './Karaoke';
+import { RecallBar } from './RecallBar';
+import { RecallHost } from './RecallHost';
 import { WordSheet, type WordSheetData } from './WordSheet';
 
 /**
@@ -35,8 +46,13 @@ import { WordSheet, type WordSheetData } from './WordSheet';
  * muted autoplay, the drift/PLAYING readouts, the pointerEvents player layer,
  * attribution, karaoke, swipe.
  *
- * NOT HERE, on purpose (F/G): blanks and recall, the paused-state mirror, the
- * action rail, deep links, feed ordering, onboarding hooks, the account prompt.
+ * CHECKPOINT F adds in-cue fill-in-the-blank recall — BEHIND RECALL_ENABLED
+ * (recall.ts), which is false by default. With the flag off, RecallHost plans
+ * nothing, runs no frame callback and publishes a null context, so every line
+ * below behaves exactly as checkpoint E left it.
+ *
+ * NOT HERE, on purpose (G): the paused-state mirror, the action rail, deep
+ * links, feed ordering, onboarding hooks, the account prompt.
  */
 
 /** Matches the web's VISIBILITY_THRESHOLD = 0.6 exactly. */
@@ -51,7 +67,7 @@ const PLAYER_ASPECT = 9 / 16;
 
 type EmbedVideo = Video & { youtubeId: string };
 
-export function FeedScreen() {
+export function FeedScreen({ active }: { active: boolean }) {
   const [videos, setVideos] = useState<EmbedVideo[]>(() => embedsFrom(getCatalog()));
 
   // The catalog arrives from the Supabase snapshot shortly after boot (8 → 216)
@@ -118,6 +134,7 @@ export function FeedScreen() {
       videos={videos}
       box={box}
       bandTop={bandTop}
+      active={active}
       onAreaLayout={onAreaLayout}
     />
   );
@@ -136,16 +153,28 @@ function FeedBody({
   videos,
   box,
   bandTop,
+  active,
   onAreaLayout,
 }: {
   videos: EmbedVideo[];
   box: Omit<PlayerBox, 'visible'> | null;
   bandTop: number | null;
+  /** Is the feed the visible tab? Gates the player, the karaoke loop and the
+      blank hold — everything that should go quiet behind another screen. */
+  active: boolean;
   onAreaLayout: (event: LayoutChangeEvent) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [pageHeight, setPageHeight] = useState(0);
+
+  /**
+   * CHECKPOINT F. Raised while the recall answer bar has been lifted by the
+   * keyboard into the player's region — see HIDE_PLAYER_WHILE_TYPING in
+   * recall.ts. The player yields exactly the way it already does for a swipe:
+   * the WebView layer fades and the poster underneath carries the frame.
+   */
+  const [playerObscured, setPlayerObscured] = useState(false);
 
   /**
    * The tapped word, or null. Held HERE rather than in the slide because the
@@ -164,66 +193,121 @@ function FeedBody({
   // previous render", thrown the moment the layout lands.
   const onViewableItemsChanged = useStableViewability(setActiveIndex);
 
-  const active = videos[activeIndex] ?? null;
+  const activeVideo = videos[activeIndex] ?? null;
+
+  /**
+   * Publish the player's geometry and visibility upward. PlayerHost now wraps
+   * the whole app, so the box travels through context instead of a prop — see
+   * usePlayerBox.
+   *
+   * Four things can hide the player, and all four live here because all four
+   * are facts about the feed:
+   *   !box          nothing has measured the player area yet
+   *   !active       the feed is not the visible tab — the WebView is absolutely
+   *                 positioned over the window and would otherwise float over
+   *                 Vocab and Progress
+   *   dragging      a finger is down; the player does not follow the scroll, so
+   *                 leaving it visible parks the outgoing video over the
+   *                 incoming slide. The poster underneath covers the gap.
+   *   playerObscured the recall answer bar sits over the player area, which is
+   *                 what keeps "nothing is drawn over the player" true with a
+   *                 keyboard up.
+   */
+  const setPlayerBox = usePlayerBox();
+  useEffect(() => {
+    setPlayerBox({
+      top: box?.top ?? 0,
+      left: box?.left ?? 0,
+      width: box?.width ?? 0,
+      height: box?.height ?? 0,
+      visible: Boolean(box) && active && !dragging && !playerObscured,
+    });
+  }, [box, active, dragging, playerObscured, setPlayerBox]);
+
+  /**
+   * PAUSE ON BLUR, AND STAY PAUSED ON RETURN.
+   *
+   * Leaving the tab must not leave audio playing under Vocab. Coming back
+   * deliberately does NOT auto-resume: the player keeps its position and waits
+   * for a tap, because a video that starts talking the moment a tab appears is
+   * worse than one extra tap. PlayerDriver cannot undo this — its loadAndPlay
+   * early-returns on an unchanged id (requestedIdRef), so returning to the same
+   * slide issues no play.
+   */
+  const api = usePlayerApi();
+  useEffect(() => {
+    if (!active) api.pause();
+  }, [active, api]);
 
   return (
-    <PlayerHost
-      box={{
-        top: box?.top ?? 0,
-        left: box?.left ?? 0,
-        width: box?.width ?? 0,
-        height: box?.height ?? 0,
-        // Hidden while the finger is down. The player does not follow the
-        // scroll (it repositions on the active change, per the checkpoint
-        // brief), so leaving it visible would park the outgoing video over the
-        // incoming slide. The poster underneath covers the gap — the same
-        // cross-fade the web uses while `started` is false.
-        visible: Boolean(box) && !dragging,
-      }}
-    >
-      <View
-        style={styles.root}
-        onLayout={(event) => setPageHeight(event.nativeEvent.layout.height)}
+    <>
+      {/* CHECKPOINT F. Wraps the list because every slide's Karaoke reads the
+          plan. It only ever sees the ACTIVE video — there is one session, not
+          one per slide. `active` disarms the hold entirely off-tab: without it
+          the frame callback would keep firing pause/seek at a hidden player and
+          could engage a hold on a screen the user cannot see. */}
+      <RecallHost
+        video={active ? activeVideo : null}
+        language={language}
+        onObscurePlayer={setPlayerObscured}
       >
-        {pageHeight > 0 && (
-          <FlashList
-            data={videos}
-            keyExtractor={(video) => video.id}
-            extraData={activeIndex}
-            renderItem={({ item, index }) => (
-              <Slide
-                video={item}
-                height={pageHeight}
-                isActive={index === activeIndex}
-                box={box}
-                language={language}
-                onWordTap={(word, cueIndex) =>
-                  setSheet({ video: item, word, cueIndex })
-                }
-                onAreaLayout={index === 0 ? onAreaLayout : undefined}
-              />
-            )}
-            pagingEnabled
-            showsVerticalScrollIndicator={false}
-            // The web's IntersectionObserver at 0.6, expressed for a list.
-            viewabilityConfig={VIEWABILITY_CONFIG}
-            onViewableItemsChanged={onViewableItemsChanged}
-            onScrollBeginDrag={() => setDragging(true)}
-            onMomentumScrollEnd={() => setDragging(false)}
-            onScrollEndDrag={() => setDragging(false)}
-          />
-        )}
+        <View
+          style={styles.root}
+          onLayout={(event) => setPageHeight(event.nativeEvent.layout.height)}
+        >
+          {pageHeight > 0 && (
+            <FlashList
+              data={videos}
+              keyExtractor={(video) => video.id}
+              extraData={activeIndex}
+              renderItem={({ item, index }) => (
+                <Slide
+                  video={item}
+                  height={pageHeight}
+                  // Slide-active AND tab-active. Gating here is what stops the
+                  // karaoke frame callback, the sound/speed controls and the
+                  // video tap handler from running for a feed nobody is looking
+                  // at.
+                  isActive={active && index === activeIndex}
+                  box={box}
+                  language={language}
+                  onWordTap={(word, cueIndex) =>
+                    setSheet({ video: item, word, cueIndex })
+                  }
+                  onAreaLayout={index === 0 ? onAreaLayout : undefined}
+                />
+              )}
+              pagingEnabled
+              showsVerticalScrollIndicator={false}
+              // R4. The default is 'never', which spends the first tap on
+              // dismissing the keyboard and never delivers it — so with a
+              // recall keyboard up, tapping a word to save it would silently
+              // need two taps. 'handled' delivers the tap AND keeps the
+              // keyboard, letting the child decide.
+              keyboardShouldPersistTaps="handled"
+              // The web's IntersectionObserver at 0.6, expressed for a list.
+              viewabilityConfig={VIEWABILITY_CONFIG}
+              onViewableItemsChanged={onViewableItemsChanged}
+              onScrollBeginDrag={() => setDragging(true)}
+              onMomentumScrollEnd={() => setDragging(false)}
+              onScrollEndDrag={() => setDragging(false)}
+            />
+          )}
 
-        <PlayerDriver video={active} />
-        <Readouts total={videos.length} index={activeIndex} />
-        <WordSheet
-          data={sheet}
-          language={language}
-          bandTop={bandTop}
-          onClose={() => setSheet(null)}
-        />
-      </View>
-    </PlayerHost>
+          <PlayerDriver video={activeVideo} />
+          <Readouts total={videos.length} index={activeIndex} />
+          <WordSheet
+            data={sheet}
+            language={language}
+            bandTop={bandTop}
+            onClose={() => setSheet(null)}
+          />
+          {/* Hoisted out of the list for the same reason WordSheet is, plus
+              two of its own — see the header note in RecallBar.tsx. */}
+          <RecallBar />
+        </View>
+      </RecallHost>
+    </>
   );
 }
 
@@ -291,6 +375,17 @@ function Slide({
    */
   const ownsMedia = status.loadedVideoId === video.youtubeId;
 
+  /**
+   * Watch tracking, feeding Progress's video counts and the feed-order
+   * planner's unseen-first rule. The web does exactly this on slide activation
+   * (Feed.tsx:558-560). `isActive` already means slide-active AND tab-active,
+   * so a video is never marked watched because it happened to be the active
+   * slide of a feed nobody was looking at.
+   */
+  useEffect(() => {
+    if (isActive) storage.markWatched(video.id);
+  }, [isActive, video.id]);
+
   return (
     <View style={[styles.slide, { height }]}>
       <View style={{ height: insets.top + HEADER_HEIGHT }} />
@@ -338,6 +433,10 @@ function Slide({
                   // persisted (core/storage.ts setSessionUnmuted: every caller
                   // is a user gesture; an auto-mute must never write here).
                   storage.setSessionUnmuted(true);
+                  // Sound has been found. Stops the prompt's pulse for the
+                  // rest of the session — this is the path most users take,
+                  // so missing it here would leave it pulsing forever.
+                  hasUnmutedOnce = true;
                   if (!status.playing) api.play();
                   return;
                 }
@@ -351,16 +450,30 @@ function Slide({
       {/* THE BAND. Everything Loro draws lives here, BELOW the player, never
           over it. Its height is whatever its content needs. */}
       <View style={[styles.band, { paddingBottom: insets.bottom + 8 }]}>
+        {/* TWO EXPLICIT ROWS, replacing one wrapping row of four children.
+            The old row relied on wrap to push the attribution onto line 2,
+            which meant the sound pill sat wherever the level chip and speed
+            control left it — mid-line, next to everything else. Naming the
+            rows lets the sound prompt own the empty right end of line 1
+            (marginLeft:'auto') while the attribution keeps a full-width line
+            of its own. Spacing is unchanged: the old row's `gap: 8` supplied
+            the vertical gap between wrapped lines, so bandAuthor carries the
+            same 8 as paddingTop. */}
         <View style={styles.bandTop}>
-          <Text style={styles.level}>{video.level}</Text>
-          {isActive && <SoundPill />}
-          {isActive && <SpeedPill />}
+          <View style={styles.bandTopLeft}>
+            <Text style={styles.level}>{video.level}</Text>
+            {isActive && <SpeedControl />}
+          </View>
+          {isActive && <SoundControl />}
+        </View>
+        <View style={styles.bandAuthor}>
           <AuthorLine video={video} />
         </View>
         <Karaoke
           cues={video.cues}
           language={language}
           active={isActive && ownsMedia}
+          videoKey={video.id}
           onWordTap={onWordTap}
         />
       </View>
@@ -383,105 +496,240 @@ function Slide({
  * the page from isMuted(), so if an unmute is ever refused the pill keeps
  * saying "Muted" instead of claiming sound that isn't there.
  */
-function SoundPill() {
+/**
+ * Has sound been turned on at least once this session?
+ *
+ * Module-scoped rather than component state because SoundControl unmounts and
+ * remounts on every slide change (`isActive &&`), and this must not reset with
+ * it. It gates the pulse only: once the user has found sound, the prompt is a
+ * reminder rather than a discovery aid, and a chip that keeps pulsing at
+ * someone who already knows is just noise.
+ *
+ * Not persisted. A fresh launch is a fresh chance to miss the control.
+ */
+let hasUnmutedOnce = false;
+
+/**
+ * The sound control. IT LIVES IN THE BAND — never over the player. That is the
+ * embed-terms rule the whole slide layout exists to satisfy, and it is why the
+ * web puts sound in the ActionRail for embeds rather than in the centred
+ * overlay it uses for its own files. This component is inside the band's top
+ * row and cannot be moved over the frame under any interpretation.
+ *
+ * TWO STATES, AND THE PROMPT IS NOT ONE OF THEM ONCE SOUND IS ON.
+ *
+ *   muted    a solid mint prompt — "🔇 Tap for sound" — pulsing until the
+ *            first unmute of the session. This is a call to action and is
+ *            styled like one.
+ *   unmuted  the prompt is GONE. What remains is a quiet 🔊 toggle, because
+ *            the video tap is play/pause from here on and this becomes the
+ *            only way back to muted.
+ *
+ * WHY THE PROMPT USED TO LINGER, since it looked like a state bug and was not.
+ * The old pill read `status.muted` correctly — that value comes from the page
+ * calling the PLAYER's own isMuted() (page.ts postMuted) and crossing the
+ * bridge, so it was never stale. What it did was swap its label to "🔊 Sound"
+ * and keep sitting there at 60% white on a 16%-mint ground: low contrast,
+ * no longer prompting anything, still taking band width. The fix is not to the
+ * state read — that was already right — it is that an answered prompt should
+ * stop being a prompt.
+ */
+function SoundControl() {
   const api = usePlayerApi();
   const status = usePlayerStatus();
 
+  // Respect Reduce Motion. Starts true so a motion-sensitive user never sees
+  // even one frame of pulse before the answer comes back.
+  const [reduceMotion, setReduceMotion] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
+      if (alive) setReduceMotion(on);
+    });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+
+  const shouldPulse = status.muted && !hasUnmutedOnce && !reduceMotion;
+
+  // Scale, not opacity or layout: a transform never re-measures, so the band
+  // cannot change height mid-pulse and the player cannot resize under it.
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    if (!shouldPulse) {
+      cancelAnimation(pulse);
+      pulse.value = 1;
+      return;
+    }
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.06, { duration: 650 }),
+        withTiming(1, { duration: 650 })
+      ),
+      -1,
+      false
+    );
+    return () => {
+      cancelAnimation(pulse);
+      pulse.value = 1;
+    };
+  }, [shouldPulse, pulse]);
+
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
+
+  // The bridge calls are untouched — same two lines, same order, same
+  // persisted-choice split between a deliberate unmute and a deliberate mute.
+  const toggle = useCallback(() => {
+    if (status.muted) {
+      api.unmute();
+      storage.setSessionUnmuted(true);
+      hasUnmutedOnce = true;
+    } else {
+      // A deliberate mute is also a user choice, and is persisted as one —
+      // the same split the web draws between handleUserMute (persisted) and
+      // handleAutoMuted (never persisted).
+      api.mute();
+      storage.setSessionUnmuted(false);
+    }
+  }, [api, status.muted]);
+
+  if (!status.muted) {
+    return (
+      <Pressable
+        onPress={toggle}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Sound on. Tap to mute."
+        style={({ pressed }) => [
+          styles.soundSlot,
+          styles.soundToggle,
+          pressed && styles.soundPressed,
+        ]}
+      >
+        <Text style={styles.soundToggleText}>🔊</Text>
+      </Pressable>
+    );
+  }
+
   return (
-    <Pressable
-      onPress={() => {
-        if (status.muted) {
-          api.unmute();
-          storage.setSessionUnmuted(true);
-        } else {
-          // A deliberate mute is also a user choice, and is persisted as one —
-          // the same split the web draws between handleUserMute (persisted) and
-          // handleAutoMuted (never persisted).
-          api.mute();
-          storage.setSessionUnmuted(false);
-        }
-      }}
-      hitSlop={8}
-      style={[styles.soundPill, !status.muted && styles.soundPillOn]}
-    >
-      <Text style={[styles.soundText, !status.muted && styles.soundTextOn]}>
-        {status.muted ? '🔇 Tap video for sound' : '🔊 Sound'}
-      </Text>
-    </Pressable>
+    <Animated.View style={[styles.soundSlot, pulseStyle]}>
+      <Pressable
+        onPress={toggle}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Turn on sound"
+        accessibilityHint="Plays this video with sound"
+        style={({ pressed }) => [styles.soundPrompt, pressed && styles.soundPressed]}
+      >
+        <Text style={styles.soundPromptText}>🔇 Tap for sound</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 /**
  * The speed control. IT LIVES IN THE BAND, next to the level chip and the sound
- * pill — never over the player, for the same embed-terms reason SoundPill is
- * here and not floating over the frame.
+ * control — never over the player, for the same embed-terms reason
+ * SoundControl is here and not floating over the frame.
  *
- * A CYCLING CHIP RATHER THAN A PICKER. The band is a wrapping row that already
- * carries the level, the sound pill and the attribution line, and a segmented
- * 0.5/0.75/1 control would either crowd that or push the attribution onto a
- * second line — attribution staying visible is an embed obligation, not a
- * layout preference. One chip, one tap, current value always on its face.
+ * A SEGMENTED CONTROL, NOT A CYCLING CHIP. Three side-by-side rates, tap one to
+ * go straight to it. The cycling chip it replaces made 0.5× a two-tap journey
+ * through 0.75× — and every intermediate tap actually changed playback speed,
+ * so the user heard a rate they did not ask for on the way.
  *
- * SLOW ONLY. The ladder walks 1 → 0.75 → 0.5 → 1 and never above 1: the feature
- * exists because some videos speak too fast for a learner, and a 2x option in a
- * comprehension app is a trap rather than a feature.
+ * THE OLD COMMENT HERE CLAIMED A SEGMENTED CONTROL WOULD PUSH THE ATTRIBUTION
+ * ONTO A SECOND LINE. Measured, that premise was wrong: the attribution line is
+ * ~220pt for a median channel name and has NEVER fitted beside the level chip
+ * and sound pill — the band is already a two-line wrapping row today, on every
+ * device width, in both sound states. At ~118pt this control still fits on
+ * line 1 (worst case 303 of 335pt usable, muted, on a 375pt device), so the
+ * band stays two lines and the player does not shrink. ~32pt of headroom; if a
+ * larger text setting ever eats it, this control wraps to line 2 and the band
+ * grows — degraded layout, never a player overlap.
  *
- * THE LADDER IS INTERSECTED WITH WHAT THE PLAYER REPORTS, never hardcoded.
+ * SLOW ONLY, and never above 1: the feature exists because some videos speak
+ * too fast for a learner, and a 2x option in a comprehension app is a trap.
+ *
+ * THE OPTIONS ARE INTERSECTED WITH WHAT THE PLAYER REPORTS, never hardcoded.
  * getAvailablePlaybackRates() is per-video, and offering a rate the video does
- * not support means setPlaybackRate is silently ignored — the chip would appear
- * to do nothing. Until the player has reported, the chip is disabled rather than
- * guessing.
+ * not support means setPlaybackRate is silently ignored — a segment that looks
+ * live and does nothing. Fewer than two real options is not a choice, so the
+ * control falls back to a read-only reading of the current rate.
  */
-const SLOW_LADDER = [1, 0.75, 0.5];
+const SPEED_OPTIONS = [0.5, 0.75, 1];
 
-function SpeedPill() {
+function SpeedControl() {
   const api = usePlayerApi();
   const status = usePlayerStatus();
 
-  // Only rates this video actually offers, in descending order.
-  const ladder = useMemo(() => {
+  // Only rates this video actually offers, slowest first — reading order
+  // matches the ladder, so "further left = slower" is learnable at a glance.
+  const options = useMemo(() => {
     if (!status.availableRates) return null;
-    const offered = SLOW_LADDER.filter((r) => status.availableRates?.includes(r));
-    // A single entry is not a cycle — nothing to switch between.
+    const offered = SPEED_OPTIONS.filter((r) => status.availableRates?.includes(r));
     return offered.length > 1 ? offered : null;
   }, [status.availableRates]);
 
-  const isSlowed = status.rate !== 1;
+  // Nothing to choose between — or the player has not reported yet, which is
+  // the case for the moment after every swap. Show the truth, offer nothing.
+  if (!options) {
+    return (
+      <View
+        accessibilityRole="text"
+        accessibilityLabel={`Playback speed ${formatRate(status.rate)} times`}
+        style={[styles.speedGroup, styles.speedGroupIdle]}
+      >
+        <Text style={styles.speedIdleText}>{formatRate(status.rate)}×</Text>
+      </View>
+    );
+  }
 
   return (
-    <Pressable
-      disabled={!ladder}
-      accessibilityRole="button"
-      accessibilityLabel={`Playback speed ${formatRate(status.rate)} times. Tap to change.`}
-      onPress={() => {
-        if (!ladder) return;
-        // Step from where the PLAYER is, not from where we last asked. If a
-        // request was ignored, the next tap still moves relative to reality.
-        const current = ladder.indexOf(status.rate);
-        const next = ladder[(current + 1) % ladder.length] ?? 1;
-        api.setRate(next);
-        // The standing choice is recorded on the tap, because it is the user's
-        // intent whether or not this particular video honours it. The page
-        // re-asserts it on every PLAYING from here on.
-        setStoredRate(next);
-      }}
-      hitSlop={8}
-      style={({ pressed }) => [
-        styles.speedPill,
-        isSlowed && styles.speedPillOn,
-        !ladder && styles.speedPillIdle,
-        pressed && styles.speedPillPressed,
-      ]}
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel="Playback speed"
+      style={styles.speedGroup}
     >
-      <Text style={[styles.speedValue, isSlowed && styles.speedValueOn]}>
-        {formatRate(status.rate)}×
-      </Text>
-      {/* The step glyph, and it is honest about the interaction: this control
-          ADVANCES to the next rate, it does not open a menu. A chevron would
-          promise a picker that is not there. Dimmer than the value so the rate
-          stays the thing you read. */}
-      <Text style={[styles.speedStep, isSlowed && styles.speedStepOn]}>»</Text>
-    </Pressable>
+      {options.map((rate) => {
+        // Compared against the PLAYER's confirmed rate, never what we asked
+        // for. A request the video ignored must leave the old segment lit.
+        const active = status.rate === rate;
+        return (
+          <Pressable
+            key={rate}
+            onPress={() => {
+              // EXACTLY the two calls the cycling chip made — the bridge and
+              // the persisted preference are untouched by this change. Only
+              // which value gets passed is different: the one tapped, rather
+              // than the next one round the loop.
+              api.setRate(rate);
+              setStoredRate(rate);
+            }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={`Playback speed ${formatRate(rate)} times`}
+            // Vertical only. The segments touch, so horizontal slop would
+            // overlap a neighbour's target and hand taps to the wrong rate.
+            // 11pt each way lifts the ~22pt row to a 44pt effective target.
+            hitSlop={{ top: 11, bottom: 11 }}
+            style={({ pressed }) => [
+              styles.speedSegment,
+              active && styles.speedSegmentOn,
+              pressed && !active && styles.speedSegmentPressed,
+            ]}
+          >
+            <Text
+              style={[styles.speedSegmentText, active && styles.speedSegmentTextOn]}
+            >
+              {formatRate(rate)}×
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -540,9 +788,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 20,
-    paddingBottom: 6,
+    // Kept as a safety net rather than a mechanism: measured, this row is
+    // 277.8 of 335pt usable on the narrowest supported device in its widest
+    // (muted) state, so it fits. If a larger text setting ever breaks that,
+    // the sound control drops to its own line still right-aligned — the band
+    // grows, and nothing is ever drawn over the player.
     flexWrap: 'wrap',
   },
+  bandTopLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: 8,
+  },
+  /** paddingTop 8 reproduces exactly what the old row's `gap` gave between its
+      wrapped lines, so splitting the row did not change the band's height. */
+  bandAuthor: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6 },
   level: {
     backgroundColor: 'rgba(94,230,168,0.16)',
     borderRadius: 6,
@@ -554,64 +815,105 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  soundPill: {
-    backgroundColor: 'rgba(242,245,243,0.10)',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  /** Anchors the control to the empty right end of the band's top row. */
+  soundSlot: { marginLeft: 'auto' },
+  /**
+   * THE PROMPT, and it is deliberately the loudest thing in the band.
+   *
+   * The old treatment was a 10%-white chip with 60%-white text — quieter than
+   * the level chip beside it, for the one control the user MUST find before
+   * the app makes any sense. This inverts that: solid mint, near-black 800
+   * text. It is the only filled-mint element in the band while it shows, and
+   * it stops existing the moment sound is on, so it can afford to shout.
+   */
+  soundPrompt: {
+    backgroundColor: '#5ee6a8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  soundPillOn: { backgroundColor: 'rgba(94,230,168,0.16)' },
+  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800' },
+  /**
+   * Sound is already on, so this is not a prompt — it is the way back to
+   * muted, and nothing more. Quiet by design; minWidth keeps a lone glyph from
+   * being a sliver of a tap target.
+   */
+  soundToggle: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.10)',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  soundToggleText: { fontSize: 13 },
+  soundPressed: { opacity: 0.7 },
   /**
    * THE SPEED CONTROL DOES NOT SHARE THE LEVEL CHIP'S SHAPE, ON PURPOSE.
    *
    * The level chip is a borderless radius-6 tag and is NOT interactive. Anything
-   * that looks like it reads as a label, which is exactly why the old speed
-   * chip — same radius, same padding, same 12pt — went unnoticed at 1×. Three
-   * differences carry the affordance, none of which touch behaviour:
+   * that looks like it reads as a label. The outer border and full rounding are
+   * what say "this is a control" on a dark ground — and here they do a second
+   * job: they GROUP the three segments. Without the container, three loose
+   * numbers next to a "B1" tag read as metadata, not as a choice.
    *
-   *   fully rounded  a pill reads as a button; a squared tag reads as metadata
-   *   a visible border  an outline is the cheapest "this is a control" signal
-   *                     on a dark ground, and the level chip has none
-   *   a brighter, heavier value  near-white 13pt/800 against the tag's 12pt
-   *
-   * Tabular numerals so 0.75 → 0.5 → 1 does not jitter the pill's width mid-tap.
+   * Measured ~118pt with all three options (37.5 + 44.9 + 30 + 4 padding + 2
+   * border). See SpeedControl's header for how that lands in the band.
    */
-  speedPill: {
+  speedGroup: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.10)',
     borderColor: 'rgba(242,245,243,0.32)',
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  speedPillOn: {
-    backgroundColor: 'rgba(94,230,168,0.18)',
-    borderColor: 'rgba(94,230,168,0.65)',
+    padding: 2,
   },
   /**
-   * Before the player has reported its rates.
+   * Before the player has reported its rates — the state every slide starts in
+   * for a moment after a swap.
    *
-   * 0.78, not the old 0.45. At 45% on a #0a0d0b ground the whole pill read as
-   * disabled chrome — and since every slide starts in this state, that was the
-   * first impression the control ever made. This is dimmed enough to say "not
-   * live yet" and bright enough to still read as a control.
+   * 0.78, not 0.45. At 45% on a #0a0d0b ground the whole control read as
+   * disabled chrome, and since this is the first thing every slide shows, that
+   * was the first impression the control ever made.
    */
-  speedPillIdle: { opacity: 0.78 },
-  speedPillPressed: { opacity: 0.6 },
-  speedValue: {
+  speedGroupIdle: { opacity: 0.78, paddingHorizontal: 8 },
+  speedIdleText: {
     color: '#f2f5f3',
-    fontSize: 13,
+    fontSize: 12,
     fontVariant: ['tabular-nums'],
-    fontWeight: '800',
+    fontWeight: '700',
   },
-  speedValueOn: { color: '#5ee6a8' },
-  speedStep: { color: 'rgba(242,245,243,0.55)', fontSize: 12, fontWeight: '700' },
-  speedStepOn: { color: 'rgba(94,230,168,0.75)' },
-  soundText: { color: 'rgba(242,245,243,0.6)', fontSize: 12, fontWeight: '600' },
-  soundTextOn: { color: '#5ee6a8' },
+  /**
+   * minWidth keeps "1×" from collapsing to a sliver next to "0.75×" — a target
+   * you can hit without aiming. Tabular numerals so the segments do not
+   * re-measure when the active one changes weight.
+   */
+  speedSegment: {
+    alignItems: 'center',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 30,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  /**
+   * THE ACTIVE SEGMENT IS MARKED THREE WAYS, NOT JUST BY COLOUR: a filled pill
+   * behind it (shape), 800 against the others' 600 (weight), and
+   * accessibilityState.selected (assistive tech). Any one of the three carries
+   * the state on its own, so colour-blind users and VoiceOver users are not
+   * relying on the mint fill to know which rate is live.
+   */
+  speedSegmentOn: { backgroundColor: '#5ee6a8' },
+  speedSegmentPressed: { backgroundColor: 'rgba(242,245,243,0.14)' },
+  speedSegmentText: {
+    color: 'rgba(242,245,243,0.62)',
+    fontSize: 12,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '600',
+  },
+  speedSegmentTextOn: { color: '#06130d', fontWeight: '800' },
   readouts: {
     position: 'absolute',
     left: 12,

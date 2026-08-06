@@ -89,6 +89,18 @@ const PAGE_TEMPLATE = `<!doctype html>
    */
   var rate = 1;
   var desiredRate = 1;
+  /**
+   * Re-assert budget for the CURRENT load, reset on every load and on every
+   * fresh user choice.
+   *
+   * assertDesiredRate() runs from onPlaybackRateChange, and its own
+   * setPlaybackRate call fires that same event — so without a bound, a video
+   * that refuses the rate would trade events with us forever. Three is enough
+   * for the real case (the player resets once, we put it back once) and small
+   * enough that a refusal costs nothing.
+   */
+  var rateAsserts = 0;
+  var MAX_RATE_ASSERTS = 3;
   var anchorTime = 0, anchorAt = now(), lastRaw = -1;
   var pendingSeek = null;
   var pendingPlay = null;
@@ -177,6 +189,49 @@ const PAGE_TEMPLATE = `<!doctype html>
     postRate();
     postAnchor('rate');
   }
+  /**
+   * PUT THE PLAYER BACK ON THE STANDING RATE IF IT HAS DRIFTED OFF IT.
+   *
+   * WHY THIS IS NOT A ONE-SHOT CHECK ON PLAYING, WHICH IS WHAT IT USED TO BE.
+   * Mute and rate look like the same problem and are not: loadVideoById does
+   * NOT reset mute (see desiredMuted above), so for sound a single check at
+   * the PLAYING transition is sufficient — nothing can undo it afterwards. It
+   * DOES reset rate, and that reset arrives with the new video's metadata,
+   * which can land AFTER PLAYING. A single check therefore read
+   * getPlaybackRate() while it still reported the outgoing video's value,
+   * concluded there was nothing to do, and left the reset to 1x uncorrected
+   * with no second chance. That is why speed held on the first video (set
+   * directly by the user's tap) and died on every swap after it.
+   *
+   * So the assert is driven by the event that actually signals the drift —
+   * onPlaybackRateChange — as well as by PLAYING. Whoever notices first wins;
+   * the other is a no-op.
+   *
+   * IT NEVER FIGHTS A VIDEO THAT DOES NOT OFFER THE RATE. setPlaybackRate is
+   * silently ignored for an unsupported value, so re-asserting into one would
+   * spin against a player that will never agree. When the rate is not on the
+   * video's own list we leave it alone and let the chip report the truth —
+   * the existing contract, unchanged.
+   */
+  function assertDesiredRate(reason) {
+    if (!playerReady) return;
+    if (rateAsserts >= MAX_RATE_ASSERTS) return;
+    var live = player.getPlaybackRate();
+    if (!(typeof live === 'number' && isFinite(live))) return;
+    if (live === desiredRate) return;
+    var list = null;
+    try { list = player.getAvailablePlaybackRates(); } catch (e) { list = null; }
+    // An empty/absent list means metadata is not in yet — try anyway, the
+    // budget bounds it. A populated list that lacks the rate is a real refusal.
+    if (list && list.length && list.indexOf(desiredRate) === -1) {
+      post({ type: 'log', msg: '[loro:rate] ' + reason + ': video does not offer ' + desiredRate + 'x, leaving at ' + live + 'x' });
+      return;
+    }
+    rateAsserts++;
+    player.setPlaybackRate(desiredRate);
+    post({ type: 'log', msg: '[loro:rate] ' + reason + ': re-asserting ' + desiredRate + 'x over ' + live + 'x (' + rateAsserts + '/' + MAX_RATE_ASSERTS + ')' });
+  }
+
   // The PLAYER's real mute state, never RN's hope of it. The indicator reads
   // this, so a refused unmute shows as still-muted instead of lying.
   function postMuted() {
@@ -222,15 +277,18 @@ const PAGE_TEMPLATE = `<!doctype html>
         postMuted();
       }
       // STAY AT THE CHOSEN SPEED ACROSS SLIDE CHANGES, same contract as mute
-      // above and for the same reason: loadVideoById may reset the rate, and
-      // re-asserting here — beside the player, on the transition — keeps it out
-      // of a race with the swap that an RN-side effect would be in. Compared
-      // against the PLAYER's value, not our mirror, so a reset we were never
-      // told about is still caught. onPlaybackRateChange confirms.
-      var live = player.getPlaybackRate();
-      if (typeof live === 'number' && isFinite(live) && live !== desiredRate) {
-        player.setPlaybackRate(desiredRate);
-      }
+      // above. This is one of the two triggers, not the only one — the reset
+      // this corrects can land after PLAYING, so onPlaybackRateChange asserts
+      // too. See assertDesiredRate.
+      assertDesiredRate('playing');
+      // RE-READ THE VIDEO'S OWN RATE LIST HERE, because it is per-video and
+      // this is the first moment the new one's metadata is reliably in.
+      // Without it the list RN holds is whatever the LAST video reported —
+      // and before this line existed, the only refresh was
+      // onPlaybackRateChange, so a swap that kept the same rate never
+      // refreshed at all and the speed chip was built from another video's
+      // capabilities.
+      postRates();
       var raw = readFinite();
       if (raw !== null) { lastRaw = raw; anchorTime = raw; anchorAt = now(); }
       postAnchor('play');
@@ -322,6 +380,10 @@ const PAGE_TEMPLATE = `<!doctype html>
       // samples say nothing about the new one, and leaving them would let the
       // outgoing clock drive the incoming slide's highlighting.
       anchorTime = 0; anchorAt = now(); lastRaw = -1; pendingSeek = null;
+      // A new video gets a fresh re-assert budget: the standing rate has to be
+      // put back once per load, and a refusal by the LAST video must not spend
+      // this one's allowance.
+      rateAsserts = 0;
       postAnchor('load');
       if (c.andPlay) {
         desiredPlay = true;
@@ -366,6 +428,10 @@ const PAGE_TEMPLATE = `<!doctype html>
       // which is exactly what the user needs to know.
       if (typeof c.rate === 'number' && isFinite(c.rate) && c.rate > 0) {
         desiredRate = c.rate;
+        // A deliberate choice earns a fresh budget — otherwise a video that
+        // spent the allowance refusing the PREVIOUS rate could not be asked
+        // for a new one the user has just picked.
+        rateAsserts = 0;
         if (playerReady) player.setPlaybackRate(c.rate);
       }
     } else if (c.cmd === 'rates') {
@@ -426,6 +492,11 @@ const PAGE_TEMPLATE = `<!doctype html>
         onPlaybackRateChange: function (e) {
           applyRate(e && typeof e.data === 'number' ? e.data : 1);
           postRates();
+          // THE TRIGGER THAT ACTUALLY CATCHES A SWAP RESET. loadVideoById
+          // resets the rate when the new video's metadata lands, which can be
+          // after PLAYING has already been and gone — this is the event that
+          // announces it, so it is the event that must put the choice back.
+          assertDesiredRate('rateChange');
         },
         onError: function (e) {
           // 100/101/150 = removed or embed-disabled. Settle the pending play

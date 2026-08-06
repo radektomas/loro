@@ -182,16 +182,58 @@ export type PlayerBox = {
   visible: boolean;
 };
 
+/**
+ * Where the player sits before anything has measured it — off-screen and
+ * invisible. The host now mounts ABOVE the feed, so it renders for a while
+ * before any slide has reported a layout, and must not flash a black box in
+ * the corner meanwhile.
+ */
+const HIDDEN_BOX: PlayerBox = {
+  top: 0,
+  left: 0,
+  width: 0,
+  height: 0,
+  visible: false,
+};
+
+const BoxContext = createContext<(box: PlayerBox) => void>(() => {});
+
+/**
+ * Report where the player should sit, and whether it should be seen.
+ *
+ * THE BOX IS PUSHED UP RATHER THAN PASSED DOWN, and that inverted because the
+ * host moved. PlayerHost used to be rendered BY the feed, so the feed could
+ * hand it a measured box as a prop. Now the host wraps the whole app (the
+ * WebView must outlive a tab switch — see the note on the component), so the
+ * only component that can measure the box sits INSIDE the host. A context
+ * setter is how the measurement gets back up.
+ *
+ * Whoever calls this owns visibility too: the feed hides the player while a
+ * finger is down, while the recall answer bar covers the player area, and
+ * whenever the feed is not the visible tab.
+ */
+export const usePlayerBox = () => useContext(BoxContext);
+
 /** Ground-truth sampling cadence for the drift readout. */
 const DRIFT_SAMPLE_MS = 3000;
 
-export function PlayerHost({
-  box,
-  children,
-}: {
-  box: PlayerBox;
-  children: ReactNode;
-}) {
+export function PlayerHost({ children }: { children: ReactNode }) {
+  /**
+   * MOUNTED ABOVE THE TAB BAR, so switching tabs cannot unmount the WebView.
+   *
+   * The contract at the top of this file — one player for the whole session,
+   * never unmounted, never re-parented — was safe while the feed was the only
+   * screen. With tabs it stops being automatic: a host rendered inside the
+   * feed tab would be torn down on every switch to Vocab and rebuilt on the
+   * way back, and each rebuild is a fresh iframe boot (256-1403ms, §5e).
+   *
+   * Keeping it here also keeps the page's own state alive for free. The sound
+   * choice and the standing playback rate are `var`s INSIDE the page
+   * (page.ts desiredMuted / desiredRate) — they survive a tab round trip
+   * because the document is never reloaded, so no RN-side re-assert exists or
+   * is needed. Move this back inside a tab and both silently reset.
+   */
+  const [box, setBox] = useState<PlayerBox>(HIDDEN_BOX);
   const webRef = useRef<WebView>(null);
   const seqRef = useRef(0);
 
@@ -310,7 +352,27 @@ export function PlayerHost({
         case 'sample': {
           const raw = msg.raw as number | null;
           if (raw !== null) {
-            setStatus((s) => ({ ...s, driftMs: (extrapolate() - raw) * 1000 }));
+            /**
+             * THE CLOCK IS READ HERE, NOT INSIDE THE UPDATER — and that is the
+             * whole of the "Reading from value during component render" fix.
+             *
+             * A setState UPDATER IS NOT EVENT-HANDLER CODE. React only
+             * evaluates it eagerly when the fiber has no pending work;
+             * otherwise it is stashed and invoked during the RENDER phase
+             * (updateReducer). This handler fires several setStatus calls in a
+             * row, so the queue is routinely non-empty and the updater
+             * routinely ran under render — which is why the warning was
+             * intermittent rather than constant. Every `.value` read inside
+             * extrapolate() was therefore a read during render.
+             *
+             * Hoisting the call out makes the read happen in the message
+             * handler, where it belongs, and hands the updater a plain number.
+             * The value read is identical: extrapolate() has no dependency on
+             * React state, so evaluating it a tick earlier changes nothing but
+             * the phase it runs in.
+             */
+            const driftMs = (extrapolate() - raw) * 1000;
+            setStatus((s) => ({ ...s, driftMs }));
           }
           if (typeof msg.nonFinite === 'number') {
             setStatus((s) =>
@@ -326,6 +388,17 @@ export function PlayerHost({
         case 'muted': {
           const next = msg.muted as boolean;
           setStatus((s) => (s.muted === next ? s : { ...s, muted: next }));
+          break;
+        }
+        /**
+         * The page's own diagnostics, which until now went nowhere: page.ts
+         * has always posted these (boot origin, "FAILED to load iframe_api",
+         * and now the rate re-assert trail) and this switch had no case for
+         * them, so they fell through to default and were dropped. A silent
+         * iframe_api failure is not a thing worth hiding.
+         */
+        case 'log': {
+          console.log(`[loro:player] ${String(msg.msg ?? '')}`);
           break;
         }
         case 'spuriousPause': {
@@ -358,6 +431,15 @@ export function PlayerHost({
           playing: false,
           lastPlayMs: null,
           lastPlayError: null,
+          // THE RATE LIST IS PER-VIDEO AND THE OUTGOING VIDEO'S IS NOT
+          // EVIDENCE ABOUT THIS ONE. Leaving it in place let the speed chip
+          // offer rates the new video does not support, and setPlaybackRate
+          // ignores those silently — a chip that looks live and does nothing,
+          // which is exactly the failure this field exists to prevent (see
+          // SpeedPill: "offering a rate the video does not offer means
+          // setPlaybackRate is silently ignored"). Null disables the chip for
+          // the moment it takes the page to report the new list from PLAYING.
+          availableRates: null,
         }));
         send({ cmd: 'load', videoId: youtubeId, andPlay: true });
       },
@@ -427,7 +509,7 @@ export function PlayerHost({
     <ApiContext.Provider value={api}>
       <ClockContext.Provider value={clock}>
         <StatusContext.Provider value={status}>
-          {children}
+          <BoxContext.Provider value={setBox}>{children}</BoxContext.Provider>
           <Animated.View
             pointerEvents="none"
             style={[
