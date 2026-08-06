@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
+import { orderVideosForLevel } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import {
   usePlayerApi,
@@ -67,13 +68,91 @@ const PLAYER_ASPECT = 9 / 16;
 
 type EmbedVideo = Video & { youtubeId: string };
 
-export function FeedScreen({ active }: { active: boolean }) {
-  const [videos, setVideos] = useState<EmbedVideo[]>(() => embedsFrom(getCatalog()));
+/** Feed-side diagnostics. Its own tag rather than recall's flog, so filtering
+    for one does not drag in the other. */
+function feedLog(message: string): void {
+  console.log(`[loro:feed] ${message}`);
+}
 
-  // The catalog arrives from the Supabase snapshot shortly after boot (8 → 216)
-  // and the seam announces it. Without this the feed would keep whatever list
-  // existed at first render.
-  useEffect(() => onCatalogChanged(() => setVideos(embedsFrom(getCatalog()))), []);
+export function FeedScreen({ active }: { active: boolean }) {
+  /**
+   * The order settled on for THIS mount, or null before anything has settled.
+   *
+   * ORDERING ONCE IS THE WHOLE CONTRACT. Re-running it on a catalog change
+   * would rearrange the feed under someone already scrolling it, which is a
+   * bug rather than a refresh — the web keeps the same ref for the same reason
+   * (Feed.tsx:90-91).
+   */
+  const orderedRef = useRef<EmbedVideo[] | null>(null);
+
+  const [videos, setVideos] = useState<EmbedVideo[]>(() => {
+    const ordered = orderFeed(embedsFrom(getCatalog()));
+    // An EMPTY list settles nothing — see the note on the effect below.
+    if (ordered.length > 0) orderedRef.current = ordered;
+    return ordered;
+  });
+
+  /**
+   * The catalog arrives from the Supabase snapshot shortly after boot and the
+   * seam announces it. Two shapes of change reach here, and they are handled
+   * differently on purpose.
+   *
+   * WHAT THE GROWTH ACTUALLY LOOKS LIKE, because "8 → 216" is not what the
+   * feed sees. embedsFrom keeps only videos with a youtubeId, and NONE of the
+   * 8 bundled seed clips has one (verified: 8 seed videos, 0 with an id). So a
+   * first-ever launch renders an EMPTY feed and the first refresh takes it
+   * 0 → 208. There is no provisional content on screen to disturb, which is
+   * why settling on the first non-empty list is safe rather than a reshuffle:
+   * the alternative — settling an empty order at mount — would freeze the feed
+   * empty for the session.
+   *
+   * A returning device never sees that at all: the cached snapshot is parsed
+   * synchronously during boot (platform/catalog.ts installCachedCatalog), so
+   * the first render already holds all 208 and the mount settles them.
+   *
+   * ONCE SETTLED, THE ORDER IS APPEND-ONLY. New arrivals are ordered among
+   * themselves and go on the end; nothing above them moves.
+   *
+   * REMOVALS ARE HONOURED, unlike on the web. A refresh can drop a video —
+   * that is exactly what the denylist does (platform/denylist.ts) — and a
+   * settled order that kept its own copy would go on rendering content the
+   * refresh just took away. Anything missing from the incoming catalog is
+   * dropped from the settled order before the append.
+   */
+  useEffect(
+    () =>
+      onCatalogChanged(() => {
+        setVideos(() => {
+          const incoming = embedsFrom(getCatalog());
+          const settled = orderedRef.current;
+
+          if (!settled) {
+            const ordered = orderFeed(incoming);
+            if (ordered.length > 0) orderedRef.current = ordered;
+            return ordered;
+          }
+
+          const live = new Set(incoming.map((video) => video.id));
+          const kept = settled.filter((video) => live.has(video.id));
+          const placed = new Set(kept.map((video) => video.id));
+          const fresh = incoming.filter((video) => !placed.has(video.id));
+
+          // Same list: return the SAME array so nothing re-renders. A refresh
+          // that finds an unchanged snapshot still re-installs it, so this is
+          // the common case, not an edge one.
+          if (kept.length === settled.length && fresh.length === 0) return settled;
+
+          const next = fresh.length > 0 ? [...kept, ...orderFeed(fresh)] : kept;
+          orderedRef.current = next;
+          feedLog(
+            `catalog change: +${fresh.length} appended, ` +
+              `-${settled.length - kept.length} removed, ${next.length} total`
+          );
+          return next;
+        });
+      }),
+    []
+  );
 
   /**
    * The player area's rect inside a slide, reported by the active slide's
@@ -138,6 +217,70 @@ export function FeedScreen({ active }: { active: boolean }) {
       onAreaLayout={onAreaLayout}
     />
   );
+}
+
+/**
+ * Fisher-Yates. Local because core's copy is module-private to feedOrder.ts —
+ * it is used there to seed the tie-break and is not exported, and reaching into
+ * core to export it would be a change to a package this checkpoint does not
+ * touch. Unbiased, unlike sort(() => Math.random() - 0.5).
+ */
+function shuffled(list: EmbedVideo[]): EmbedVideo[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/**
+ * The feed's order for this session.
+ *
+ * TWO PATHS, AND THE ONLY THING THAT PICKS BETWEEN THEM IS whether
+ * getStartLevel() has an answer. It returns a Level or null (storage.ts:
+ * 1411-1416), and null is not a degenerate case to paper over: it means this
+ * device has never completed calibration. Two kinds of user land there — anyone
+ * who skipped onboarding before the grid, and anyone grandfathered past the
+ * gate by isOnboarded()'s "has saved words or watched videos" clause.
+ *
+ *   level known    orderVideosForLevel: unseen first, then closest to the
+ *                  calibrated CEFR band, shuffled within ties. The web's exact
+ *                  call and guard (Feed.tsx:98-103).
+ *   level null     a plain shuffle. NOT source order, which is what this used
+ *                  to be and is why the feed opened identically every launch.
+ *                  Guessing a level instead would be worse than not knowing
+ *                  one: it would quietly bury content for a user we have no
+ *                  reading on.
+ *
+ * Nothing here is persisted, deliberately. A fresh order per session is the
+ * point, and feedOrder.ts says so in its own header — a remembered shuffle
+ * reproduces the "same videos every time" complaint one step later.
+ *
+ * WATCHED IDS ARE READ HERE, at order time, so they are a snapshot of the
+ * session start. markWatched fires as slides activate, and re-reading it per
+ * change is what makes the append below place new arrivals against current
+ * watch state rather than against boot's.
+ */
+function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
+  const level = storage.getStartLevel();
+  if (!level) {
+    if (list.length > 0) feedLog(`order: no startLevel, shuffling ${list.length}`);
+    return shuffled(list);
+  }
+  const watchedIds = new Set(storage.getWatchedVideoIds());
+  if (list.length > 0) {
+    feedLog(
+      `order: startLevel=${level}, ${list.length} videos, ${watchedIds.size} watched`
+    );
+  }
+  /**
+   * orderVideosForLevel is declared over Video and REORDERS ONLY — it never
+   * constructs an element — so every member of the result is one of the
+   * EmbedVideo values passed in. The assertion restores what the signature
+   * widens; it is not hiding a shape difference.
+   */
+  return orderVideosForLevel(list, level, { watchedIds }) as EmbedVideo[];
 }
 
 function embedsFrom(catalog: Video[]): EmbedVideo[] {
