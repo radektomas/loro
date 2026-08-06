@@ -18,6 +18,7 @@ import Animated, {
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { PLAYER_EMBED_ORIGIN } from '../platform/config';
 import { buildPlayerPage } from './page';
+import { getStoredRate } from './rate';
 
 /**
  * The one persistent player. ONE WebView for the whole session, mounted here,
@@ -64,6 +65,16 @@ export type PlayerClock = {
   anchorTime: SharedValue<number>;
   anchorAt: SharedValue<number>;
   isPlaying: SharedValue<boolean>;
+  /**
+   * The PLAYER's confirmed playback rate, and part of the clock rather than of
+   * status because the karaoke worklet needs it on the UI thread every frame.
+   *
+   * EVERY EXTRAPOLATION MUST MULTIPLY BY THIS. Wall-clock elapsed is only media
+   * elapsed at 1x; at 0.5x an unscaled model runs twice as fast and highlights
+   * words before they are spoken. It arrives inside the anchor message, so a
+   * base and its multiplier can never be applied out of order.
+   */
+  rate: SharedValue<number>;
 };
 
 export type PlayerApi = {
@@ -73,6 +84,23 @@ export type PlayerApi = {
   pause(): void;
   togglePlay(): void;
   seek(seconds: number): void;
+  /**
+   * MUST BE CALLED SYNCHRONOUSLY INSIDE A REAL TOUCH HANDLER.
+   *
+   * That is the shape §5e card 6 measured (PASS by state — unmuted and still
+   * PLAYING), and the same contract the web's SharedPlayer.unmute() carries.
+   * Calling it from an effect or a timer is untested here and is exactly the
+   * gesture-free unmute phones are entitled to refuse.
+   */
+  unmute(): void;
+  /** A deliberate user mute. Persists as a standing choice via the caller. */
+  mute(): void;
+  /**
+   * Ask for a playback rate. ASKING IS NOT GETTING — YouTube ignores a rate the
+   * video does not offer, silently and without an event, so the caller must
+   * read status.rate to learn what actually happened rather than assuming.
+   */
+  setRate(rate: number): void;
 };
 
 /** What the player is currently doing — reactive, drives posters and readouts. */
@@ -89,6 +117,21 @@ export type PlayerStatus = {
   driftMs: number | null;
   nonFinite: number;
   spuriousPause: number;
+  /**
+   * The PLAYER's own isMuted(), reported by the page — not what RN last asked
+   * for. Starts true because the player is created muted, which is what makes
+   * gesture-free autoplay legal. The sound indicator reads this, so an unmute
+   * the platform refuses shows as still-muted rather than as a lying pill.
+   */
+  muted: boolean;
+  /** The player's CONFIRMED rate, reported by the page. Never what RN asked. */
+  rate: number;
+  /**
+   * getAvailablePlaybackRates() for the loaded video, or null before the player
+   * has reported. Per-video and re-read on every rate change and swap, because
+   * the API's list is not a constant — see the note in page.ts postRates.
+   */
+  availableRates: number[] | null;
 };
 
 const NOOP_API: PlayerApi = {
@@ -97,6 +140,9 @@ const NOOP_API: PlayerApi = {
   pause: () => {},
   togglePlay: () => {},
   seek: () => {},
+  unmute: () => {},
+  mute: () => {},
+  setRate: () => {},
 };
 
 const ApiContext = createContext<PlayerApi>(NOOP_API);
@@ -111,6 +157,9 @@ const StatusContext = createContext<PlayerStatus>({
   driftMs: null,
   nonFinite: 0,
   spuriousPause: 0,
+  muted: true,
+  rate: 1,
+  availableRates: null,
 });
 
 export const usePlayerApi = () => useContext(ApiContext);
@@ -149,6 +198,11 @@ export function PlayerHost({
   const anchorTime = useSharedValue(0);
   const anchorAt = useSharedValue(Date.now());
   const isPlaying = useSharedValue(false);
+  // Seeded at 1 rather than from the stored preference: this mirrors the
+  // PLAYER, and the player starts at 1 until it tells us otherwise. Seeding it
+  // from the preference would make the clock believe a rate the page has not
+  // confirmed — the exact assumption this design exists to avoid.
+  const rate = useSharedValue(1);
 
   const [status, setStatus] = useState<PlayerStatus>({
     ready: false,
@@ -160,6 +214,9 @@ export function PlayerHost({
     driftMs: null,
     nonFinite: 0,
     spuriousPause: 0,
+    muted: true,
+    rate: 1,
+    availableRates: null,
   });
 
   /** The id the current play request belongs to — what `started` refers to. */
@@ -178,8 +235,11 @@ export function PlayerHost({
       copy of this arithmetic in a worklet). */
   const extrapolate = useCallback((): number => {
     if (!isPlaying.value) return anchorTime.value;
-    return anchorTime.value + (Date.now() - anchorAt.value) / 1000;
-  }, [anchorTime, anchorAt, isPlaying]);
+    // Scaled by the rate — see PlayerClock.rate. Without it the drift readout
+    // would report the rate error rather than clock quality, and MEASUREMENT 2
+    // would stop meaning anything at any speed but 1x.
+    return anchorTime.value + ((Date.now() - anchorAt.value) / 1000) * rate.value;
+  }, [anchorTime, anchorAt, isPlaying, rate]);
 
   const onMessage = useCallback(
     (event: WebViewMessageEvent) => {
@@ -195,6 +255,10 @@ export function PlayerHost({
           anchorTime.value = msg.time as number;
           anchorAt.value = Date.now();
           isPlaying.value = msg.playing as boolean;
+          // The base and its multiplier land together, in this order, from one
+          // message — the page banks the elapsed media time before switching
+          // rate, so applying both here is the whole re-base.
+          if (typeof msg.rate === 'number' && msg.rate > 0) rate.value = msg.rate;
           setStatus((s) =>
             s.playing === (msg.playing as boolean) ? s : { ...s, playing: msg.playing as boolean }
           );
@@ -203,6 +267,28 @@ export function PlayerHost({
         case 'ready': {
           readyRef.current = true;
           setStatus((s) => ({ ...s, ready: true }));
+          // Hand the page the standing preference ONCE, as intent. From here on
+          // the page owns re-assertion — it re-applies on every PLAYING, beside
+          // the player, rather than RN chasing each swap with an effect.
+          send({ cmd: 'rate', rate: getStoredRate() });
+          break;
+        }
+        case 'rate': {
+          const next = msg.rate as number;
+          if (typeof next === 'number' && next > 0) {
+            // The clock's multiplier is set from the anchor that accompanies a
+            // real change; this is the status copy the chip renders.
+            setStatus((s) => (s.rate === next ? s : { ...s, rate: next }));
+          }
+          break;
+        }
+        case 'rates': {
+          const list = Array.isArray(msg.rates)
+            ? (msg.rates as unknown[]).filter(
+                (value): value is number => typeof value === 'number' && value > 0
+              )
+            : null;
+          setStatus((s) => ({ ...s, availableRates: list && list.length ? list : null }));
           break;
         }
         case 'playResult': {
@@ -235,6 +321,11 @@ export function PlayerHost({
         }
         case 'nonFinite': {
           setStatus((s) => ({ ...s, nonFinite: msg.count as number }));
+          break;
+        }
+        case 'muted': {
+          const next = msg.muted as boolean;
+          setStatus((s) => (s.muted === next ? s : { ...s, muted: next }));
           break;
         }
         case 'spuriousPause': {
@@ -284,13 +375,25 @@ export function PlayerHost({
       seek(seconds: number) {
         send({ cmd: 'seek', time: seconds });
       },
+      unmute() {
+        send({ cmd: 'unmute' });
+      },
+      mute() {
+        send({ cmd: 'mute' });
+      },
+      setRate(next: number) {
+        // Intent only. status.rate does not move until the page reports that
+        // the PLAYER changed — a rate this video does not offer is ignored by
+        // YouTube with no error, and the chip must show that rather than lie.
+        send({ cmd: 'rate', rate: next });
+      },
     }),
     [send, anchorTime, anchorAt, isPlaying]
   );
 
   const clock = useMemo<PlayerClock>(
-    () => ({ anchorTime, anchorAt, isPlaying }),
-    [anchorTime, anchorAt, isPlaying]
+    () => ({ anchorTime, anchorAt, isPlaying, rate }),
+    [anchorTime, anchorAt, isPlaying, rate]
   );
 
   // MEASUREMENT 2. Ground truth every few seconds while playing — the raw

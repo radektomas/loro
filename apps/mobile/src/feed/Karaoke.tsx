@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
@@ -7,7 +7,7 @@ import Animated, {
   useFrameCallback,
   useSharedValue,
 } from 'react-native-reanimated';
-import type { Cue } from '@loro/core/types';
+import type { Cue, Word } from '@loro/core/types';
 import { usePlayerClock } from '../player/PlayerHost';
 import { buildCueSpans, cueIndexAt, wordIndexAt } from './subtitles';
 
@@ -39,14 +39,21 @@ export function Karaoke({
   cues,
   language,
   active,
+  onWordTap,
 }: {
   cues: Cue[];
   language: string;
   /** Only the slide that owns the player runs its loop. A background slide
       reading the shared clock would highlight against another video's time. */
   active: boolean;
+  /**
+   * Tapping a word opens the save sheet. Only the ACTIVE slide renders words at
+   * all (cueIndex stays -1 otherwise), so this can never fire for a background
+   * slide — the guard is structural rather than a check.
+   */
+  onWordTap?: (word: Word, cueIndex: number) => void;
 }) {
-  const { anchorTime, anchorAt, isPlaying } = usePlayerClock();
+  const { anchorTime, anchorAt, isPlaying, rate } = usePlayerClock();
   const spans = useMemo(() => buildCueSpans(cues), [cues]);
 
   const cueIndexSv = useSharedValue(-1);
@@ -64,8 +71,14 @@ export function Karaoke({
     'worklet';
     // The same arithmetic as the JS-side extrapolate(), deliberately duplicated
     // rather than called: this must not leave the UI thread.
+    //
+    // THE RATE FACTOR IS WHAT KEEPS WORDS ON THE BEAT AT NON-1x SPEEDS. Wall
+    // clock is not media clock below 1x — at 0.5x an unscaled model advances
+    // twice as fast as the speech, so the highlight reaches the end of the line
+    // while the speaker is halfway through it, then snaps back on the next
+    // anchor. Multiplying here is the entire fix, and at rate 1 it is a no-op.
     const t = isPlaying.value
-      ? anchorTime.value + (Date.now() - anchorAt.value) / 1000
+      ? anchorTime.value + ((Date.now() - anchorAt.value) / 1000) * rate.value
       : anchorTime.value;
 
     const ci = cueIndexAt(spans, t, cueIndexSv.value);
@@ -101,6 +114,9 @@ export function Karaoke({
                 text={word.text}
                 index={index}
                 current={wordIndexSv}
+                onPress={
+                  onWordTap ? () => onWordTap(word, cueIndex) : undefined
+                }
               />
             ))}
           </View>
@@ -127,10 +143,12 @@ function KaraokeWord({
   text,
   index,
   current,
+  onPress,
 }: {
   text: string;
   index: number;
   current: { value: number };
+  onPress?: () => void;
 }) {
   const boxStyle = useAnimatedStyle(() => ({
     backgroundColor: current.value === index ? '#5ee6a8' : 'transparent',
@@ -139,10 +157,20 @@ function KaraokeWord({
     color: current.value === index ? '#06130d' : '#f2f5f3',
   }));
 
+  /**
+   * Pressable OUTSIDE the animated view, so the touch target is the word's own
+   * padded box and the highlight styling stays untouched — the highlight is a
+   * UI-thread animated style and must not be re-rendered by press state.
+   *
+   * `hitSlop` widens the target without widening the layout: the words wrap as
+   * a line of text, so growing the box would re-flow the line mid-playback.
+   */
   return (
-    <Animated.View style={[styles.word, boxStyle]}>
-      <Animated.Text style={[styles.wordText, textStyle]}>{text}</Animated.Text>
-    </Animated.View>
+    <Pressable onPress={onPress} disabled={!onPress} hitSlop={6}>
+      <Animated.View style={[styles.word, boxStyle]}>
+        <Animated.Text style={[styles.wordText, textStyle]}>{text}</Animated.Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 

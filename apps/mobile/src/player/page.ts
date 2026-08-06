@@ -61,6 +61,34 @@ const PAGE_TEMPLATE = `<!doctype html>
 
   var player = null, playerReady = false;
   var playing = false;
+  /**
+   * THE SOUND STATE LIVES HERE, not in RN, and that is deliberate.
+   *
+   * The player is created muted (playerVars.mute = 1) because gesture-free
+   * autoplay depends on it, and loadVideoById does NOT reset mute — so once the
+   * user has unmuted, a swap should stay unmuted. Keeping the intent inside the
+   * page means "stay unmuted across slide changes" is re-asserted next to the
+   * player itself, on the PLAYING transition, rather than as an RN-side effect
+   * racing the swap. It also keeps the re-assert inside the document that owns
+   * the user activation the first tap granted.
+   */
+  var desiredMuted = true;
+  /**
+   * PLAYBACK RATE — TWO VARIABLES, AND THEY ARE NOT THE SAME THING.
+   *
+   *   rate         what the PLAYER is actually doing, mirrored from
+   *                onPlaybackRateChange. The clock below multiplies by this,
+   *                so it must never be a guess: YouTube silently ignores
+   *                setPlaybackRate for a value the video does not offer, and a
+   *                clock that believed the request would drift by exactly the
+   *                amount the request was wrong by.
+   *   desiredRate  the user's standing choice, re-asserted on PLAYING for the
+   *                same reason desiredMuted is — loadVideoById may reset the
+   *                rate, and re-asserting beside the player rather than from an
+   *                RN effect keeps it out of a race with the swap.
+   */
+  var rate = 1;
+  var desiredRate = 1;
   var anchorTime = 0, anchorAt = now(), lastRaw = -1;
   var pendingSeek = null;
   var pendingPlay = null;
@@ -99,14 +127,61 @@ const PAGE_TEMPLATE = `<!doctype html>
     countNonFinite();
     return null;
   }
+  // THE RATE FACTOR IS THE WHOLE POINT OF THE SPEED FEATURE'S CLOCK WORK.
+  // Wall-clock elapsed is not media elapsed at anything but 1x: at 0.5x the
+  // media advances half as fast, so without this the model runs 2x fast and the
+  // karaoke highlights words before they are spoken. At rate 1 this is a
+  // multiply by one and the arithmetic is identical to what §5e measured.
   function localNow() {
     if (pendingSeek) return pendingSeek.target;  // a fresh write wins
     if (!playing) return anchorTime;
-    return anchorTime + (now() - anchorAt) / 1000;
+    return anchorTime + ((now() - anchorAt) / 1000) * rate;
   }
+  // The anchor carries the rate it was taken at, so the RN side can never hold
+  // a base from one rate and a multiplier from another — the two cross the
+  // bridge in the same message rather than as two that could be reordered.
   function postAnchor(reason) {
     lastPostedAnchorAt = now();
-    post({ type: 'anchor', time: r3(localNow()), playing: playing, reason: reason });
+    post({ type: 'anchor', time: r3(localNow()), playing: playing, rate: rate, reason: reason });
+  }
+  function postRate() {
+    post({ type: 'rate', rate: rate, desired: desiredRate });
+  }
+  /**
+   * What this video actually offers. READ, NEVER ASSUMED — the API's list is
+   * per-video and the docs are explicit that it varies, so a hardcoded ladder
+   * would eventually offer a rate that setPlaybackRate silently ignores, and
+   * the chip would show a speed the player is not running at.
+   */
+  function postRates() {
+    var list = null;
+    try { list = player.getAvailablePlaybackRates(); } catch (e) { list = null; }
+    post({ type: 'rates', rates: (list && list.length) ? list : null });
+  }
+  /**
+   * Adopt a rate the PLAYER has reported, re-basing the clock at the switch.
+   *
+   * THE RE-BASE IS NOT OPTIONAL. localNow() multiplies the whole span since
+   * anchorAt by the current rate, so changing the multiplier without first
+   * banking the elapsed media time would retroactively re-price every second
+   * since the last anchor at the new rate — a jump of (elapsed x rate delta)
+   * the instant the user taps. Bank first, then switch.
+   */
+  function applyRate(next) {
+    if (!(typeof next === 'number' && isFinite(next) && next > 0)) return;
+    if (next === rate) return;
+    var banked = localNow();
+    anchorTime = banked;
+    anchorAt = now();
+    rate = next;
+    postRate();
+    postAnchor('rate');
+  }
+  // The PLAYER's real mute state, never RN's hope of it. The indicator reads
+  // this, so a refused unmute shows as still-muted instead of lying.
+  function postMuted() {
+    var m = playerReady ? player.isMuted() : true;
+    post({ type: 'muted', muted: m === true });
   }
 
   // play() emulation: the IFrame API has no rejection for blocked playback —
@@ -138,6 +213,24 @@ const PAGE_TEMPLATE = `<!doctype html>
     if (s === 1) {
       playing = true;
       closeSwapWindow();
+      // STAY UNMUTED ACROSS SLIDE CHANGES. A swap should not silently return
+      // the feed to muted; if the user has granted sound, re-assert it as each
+      // new video reaches PLAYING. Idempotent — isMuted() gates the call — and
+      // harmless when the player already carried the state across the swap.
+      if (!desiredMuted && player.isMuted()) {
+        player.unMute();
+        postMuted();
+      }
+      // STAY AT THE CHOSEN SPEED ACROSS SLIDE CHANGES, same contract as mute
+      // above and for the same reason: loadVideoById may reset the rate, and
+      // re-asserting here — beside the player, on the transition — keeps it out
+      // of a race with the swap that an RN-side effect would be in. Compared
+      // against the PLAYER's value, not our mirror, so a reset we were never
+      // told about is still caught. onPlaybackRateChange confirms.
+      var live = player.getPlaybackRate();
+      if (typeof live === 'number' && isFinite(live) && live !== desiredRate) {
+        player.setPlaybackRate(desiredRate);
+      }
       var raw = readFinite();
       if (raw !== null) { lastRaw = raw; anchorTime = raw; anchorAt = now(); }
       postAnchor('play');
@@ -251,9 +344,32 @@ const PAGE_TEMPLATE = `<!doctype html>
       if (playerReady) player.seekTo(c.time, true);
       postAnchor('seek-write');
     } else if (c.cmd === 'mute') {
+      // A DELIBERATE mute — the user tapping the sound pill off. Recorded as
+      // intent so the PLAYING re-assert above does not undo it on the next swap.
+      desiredMuted = true;
       if (playerReady) player.mute();
+      postMuted();
     } else if (c.cmd === 'unmute') {
+      // §5e card 6 measured this exact path — unMute() driven from a real RN
+      // touch handler — as PASS by state: unmuted and still PLAYING. It is
+      // issued from inside the Pressable's onPress for that reason; do not move
+      // it to an effect or a timer.
+      desiredMuted = false;
       if (playerReady) player.unMute();
+      postMuted();
+    } else if (c.cmd === 'rate') {
+      // Intent is recorded whether or not the player honours it: an unsupported
+      // value is IGNORED by setPlaybackRate with no error and no event, so
+      // the rate mirror stays where it was and RN keeps displaying the truth.
+      // The chip
+      // showing 1x after a tap therefore means "this video will not go slower",
+      // which is exactly what the user needs to know.
+      if (typeof c.rate === 'number' && isFinite(c.rate) && c.rate > 0) {
+        desiredRate = c.rate;
+        if (playerReady) player.setPlaybackRate(c.rate);
+      }
+    } else if (c.cmd === 'rates') {
+      if (playerReady) postRates();
     } else if (c.cmd === 'sample') {
       // Ground truth for the drift readout: the RAW player clock, deliberately
       // NOT the model, so the RN extrapolation can be checked against it.
@@ -288,6 +404,9 @@ const PAGE_TEMPLATE = `<!doctype html>
           playerReady = true;
           player.mute();
           post({ type: 'ready' });
+          postMuted();
+          postRate();
+          postRates();
           if (pendingLoad) {
             var c = pendingLoad; pendingLoad = null;
             if (c.andPlay) player.loadVideoById(c.videoId);
@@ -299,6 +418,15 @@ const PAGE_TEMPLATE = `<!doctype html>
           }
         },
         onStateChange: onState,
+        // The ONLY writer of the rate mirror. Every path that wants a new speed goes
+        // through setPlaybackRate and waits to be told — so the clock's
+        // multiplier is always something the player confirmed, never something
+        // RN asked for. The available list is re-read here too: it is per-video
+        // and a swap can change it.
+        onPlaybackRateChange: function (e) {
+          applyRate(e && typeof e.data === 'number' ? e.data : 1);
+          postRates();
+        },
         onError: function (e) {
           // 100/101/150 = removed or embed-disabled. Settle the pending play
           // so the slide falls to its stall path instead of hanging.
