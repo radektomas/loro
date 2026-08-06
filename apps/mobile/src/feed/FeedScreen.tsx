@@ -29,6 +29,7 @@ import {
   type PlayerBox,
 } from '../player/PlayerHost';
 import { setStoredRate } from '../player/rate';
+import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
 import { Karaoke } from './Karaoke';
 import { RecallBar } from './RecallBar';
@@ -506,6 +507,8 @@ function Slide({
   onAreaLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const insets = useSafeAreaInsets();
+  /** Zero when there is no tab bar below the slide — see the band's padding. */
+  const tabBarHeight = useTabBarHeight();
   const api = usePlayerApi();
   const status = usePlayerStatus();
 
@@ -599,8 +602,30 @@ function Slide({
       </View>
 
       {/* THE BAND. Everything Loro draws lives here, BELOW the player, never
-          over it. Its height is whatever its content needs. */}
-      <View style={[styles.band, { paddingBottom: insets.bottom + 8 }]}>
+          over it. Its height is whatever its content needs.
+
+          THE HOME-INDICATOR INSET IS PAID BY WHOEVER TOUCHES THE SCREEN EDGE,
+          AND THAT IS NO LONGER THIS. The band used to be the last thing above
+          the window's bottom, so it owed insets.bottom. The tab bar (checkpoint
+          G) now sits between them and already carries that inset
+          (Shell.tsx: paddingBottom insets.bottom + 6), so paying it here counts
+          it TWICE — ~34pt of dead space under the karaoke line on a notched
+          phone, and 34pt taken off the player area, which is flex:1 and
+          absorbs whatever the band leaves.
+
+          This is the same rule RecallBar.tsx:89-95 already applies to the
+          answer bar, for the same reason and against the same measurement;
+          the band was simply missed when the tab bar landed. Measured, not
+          assumed — see tabBar.tsx. The fallback keeps the old behaviour for
+          any host without a tab bar (onboarding renders the shell-less tree),
+          so the band still clears the home indicator when it IS the last thing
+          on screen. */}
+      <View
+        style={[
+          styles.band,
+          { paddingBottom: tabBarHeight > 0 ? 8 : insets.bottom + 8 },
+        ]}
+      >
         {/* TWO EXPLICIT ROWS, replacing one wrapping row of four children.
             The old row relied on wrap to push the attribution onto line 2,
             which meant the sound pill sat wherever the level chip and speed

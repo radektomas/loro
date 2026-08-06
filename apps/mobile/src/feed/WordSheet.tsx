@@ -449,9 +449,31 @@ function ModalShell({ data, language, onClose, onSaved }: ShellProps) {
    * Presentation only: every interaction still runs off the controller's real
    * `data`, and nothing is interactive once `visible` is false.
    */
+  /**
+   * THE GLOSS IS HELD OVER WITH IT, and leaving it out defeated the hold.
+   *
+   * `gloss` is memoised on `data` in the controller, so it goes null in the
+   * same commit `data` does — while `shown` keeps the word. WordSheetText
+   * branches on the gloss, so for the length of the slide-out the panel
+   * switched from the with-gloss shape (word + gloss + lemma + note + labelled
+   * context) to the no-entry fallback (word + "≈ …" + one label). The panel
+   * hugs its content, so that is not just a text swap: it is a visible
+   * collapse of ~100pt WHILE the panel is sliding away, which reads as the
+   * sheet jumping. Exactly the failure the note above says holding `shown`
+   * exists to prevent — it just fixed one of the two inputs.
+   *
+   * The controller's live `gloss` is untouched and still what saveWord reads;
+   * only what is DRAWN is held. Both refs are written in the same branch, so
+   * the word and its gloss can never be a frame out of step.
+   */
   const lastShown = useRef<WordSheetData | null>(null);
-  if (data) lastShown.current = data;
+  const lastGloss = useRef<Gloss | null>(null);
+  if (data) {
+    lastShown.current = data;
+    lastGloss.current = gloss;
+  }
   const shown = data ?? lastShown.current;
+  const shownGloss = data ? gloss : lastGloss.current;
 
   return (
     <Modal
@@ -477,7 +499,7 @@ function ModalShell({ data, language, onClose, onSaved }: ShellProps) {
           style={styles.modalScroll}
           contentContainerStyle={styles.modalScrollContent}
         >
-          <WordSheetText data={shown} language={language} gloss={gloss} />
+          <WordSheetText data={shown} language={language} gloss={shownGloss} />
         </ScrollView>
         {shown && (
           <View style={styles.modalFooter}>
