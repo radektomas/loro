@@ -212,6 +212,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 update={update}
                 next={next}
                 finish={finish}
+                // Anything animated or timed keys off this rather than off
+                // mount — see StepProps.isCurrent. Every screen is mounted
+                // from the start, so without it the building-plan loader
+                // would run, finish and advance the flow from off-stage.
+                isCurrent={i === index}
               />
             </View>
           ))}

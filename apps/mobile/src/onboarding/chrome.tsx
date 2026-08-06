@@ -111,28 +111,49 @@ export function ChoiceCard({
   label,
   body,
   selected,
+  multi,
   onPress,
 }: {
   label: string;
   body?: string;
   selected?: boolean;
+  /**
+   * Several answers allowed. Changes what the card SAYS about itself, not just
+   * how it looks: a box that can stay ticked alongside its neighbours is a
+   * checkbox, and screen readers are told exactly that. Without it, a card
+   * announced as a radio would promise that choosing one clears the rest.
+   */
+  multi?: boolean;
   onPress: () => void;
 }) {
+  const on = Boolean(selected);
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ selected: Boolean(selected) }}
+      accessibilityRole={multi ? 'checkbox' : 'radio'}
+      accessibilityState={multi ? { checked: on } : { selected: on }}
       style={({ pressed }) => [
         styles.choice,
-        selected && styles.choiceOn,
+        on && styles.choiceOn,
         pressed && styles.pressed,
       ]}
     >
-      <Text style={[styles.choiceLabel, selected && styles.choiceLabelOn]}>
-        {label}
-      </Text>
-      {body && <Text style={styles.choiceBody}>{body}</Text>}
+      <View style={styles.choiceRow}>
+        <View style={styles.choiceText}>
+          <Text style={[styles.choiceLabel, on && styles.choiceLabelOn]}>
+            {label}
+          </Text>
+          {body && <Text style={styles.choiceBody}>{body}</Text>}
+        </View>
+        {/* The tick box is drawn only in multi mode, and it is always drawn
+            there: an empty box is what tells you more than one is allowed
+            before you have tapped anything. */}
+        {multi && (
+          <View style={[styles.tick, on && styles.tickOn]}>
+            {on && <Text style={styles.tickMark}>✓</Text>}
+          </View>
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -203,8 +224,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(94,230,168,0.12)',
     borderColor: 'rgba(94,230,168,0.4)',
   },
+  choiceRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  choiceText: { flex: 1 },
   choiceLabel: { color: TEXT, fontSize: 16, fontWeight: '700' },
   choiceLabelOn: { color: ACCENT },
+  tick: {
+    alignItems: 'center',
+    borderColor: 'rgba(242,245,243,0.25)',
+    borderRadius: 8,
+    borderWidth: 2,
+    height: 26,
+    justifyContent: 'center',
+    width: 26,
+  },
+  tickOn: { backgroundColor: ACCENT, borderColor: ACCENT },
+  tickMark: { color: ON_ACCENT, fontSize: 14, fontWeight: '800' },
   choiceBody: {
     color: 'rgba(242,245,243,0.5)',
     fontSize: 13,

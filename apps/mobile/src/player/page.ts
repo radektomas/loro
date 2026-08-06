@@ -417,7 +417,44 @@ const PAGE_TEMPLATE = `<!doctype html>
       // issued from inside the Pressable's onPress for that reason; do not move
       // it to an effect or a timer.
       desiredMuted = false;
-      if (playerReady) player.unMute();
+      if (playerReady) {
+        player.unMute();
+        /**
+         * AND KEEP PLAYING — one tap, sound on, still running.
+         *
+         * THE DECISION BELONGS HERE, NOT IN RN, and that is the whole fix.
+         * The web's handleUnmuteTap (components/Feed.tsx:711-718) is two
+         * lines: set el.muted = false, then "if (el.paused) safePlay()".
+         * What makes it work is that el.paused is read from the element
+         * AFTER the unmute, live, inside the same gesture.
+         *
+         * (No backticks anywhere in this file: everything here is inside a
+         * template literal, so one would end the page.)
+         *
+         * RN cannot do that. Its port read status.playing, a React value
+         * fed across the bridge, so it described the player as it was BEFORE
+         * this command — it could not reflect a pause the unmute itself
+         * caused, and the resume never fired. The video ended up unmuted and
+         * not playing, which is silence, and the user's next tap on the
+         * video (now taking the play/pause branch) is what started it. Hence
+         * two taps for sound.
+         *
+         * getPlayerState() is the live read RN does not have. Skipping the
+         * call while PLAYING keeps this a no-op in the common case, so
+         * nothing here disturbs the play-latency measurement.
+         *
+         * This is also where the other two "make it stick" rules live —
+         * re-assert sound on PLAYING (onState), re-assert rate
+         * (assertDesiredRate). Sound that survives its own tap is the same
+         * kind of rule and belongs beside them, which is why both RN callers
+         * (the video tap and the band's sound pill) now get it for free.
+         */
+        var pstate = player.getPlayerState();
+        if (typeof pstate === 'number' && pstate !== 1) {
+          desiredPlay = true;
+          player.playVideo();
+        }
+      }
       postMuted();
     } else if (c.cmd === 'rate') {
       // Intent is recorded whether or not the player honours it: an unsupported

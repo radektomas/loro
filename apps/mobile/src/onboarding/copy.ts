@@ -3,65 +3,84 @@
  * ALL ONBOARDING COPY LIVES HERE. ONE FILE, NOTHING INLINE IN THE SCREENS.
  * ============================================================================
  *
- * Every block below is tagged one of two ways, and the difference matters:
+ * TONE: warm, plain, second person. Short sentences. Spanish only where it is
+ * doing something (the buttons, which teach three words by using them).
+ * Encouraging without being chirpy, and never corporate.
  *
- *   PLACEHOLDER    invented for this flow. Rewrite freely — nothing else in
- *                  the app says these words. Grep "PLACEHOLDER" to find them
- *                  all; there are seven blocks.
+ * NO EM-DASHES IN ANY STRING BELOW. They read as machine-written, so every
+ * clause that wanted one is a comma, a full stop, or a rewritten sentence.
+ * That rule holds for this whole file, comments included. Grep the file for
+ * the character before adding copy: there should be zero hits.
  *
- *   PORTED         the web already shows this exact string
- *                  (app/welcome/page.tsx). Changing it here makes the two
- *                  products say different things at the same moment, so
- *                  change the web too or decide the divergence on purpose.
+ * Blocks are tagged one of three ways:
  *
- * The option IDs (`id` fields) are NOT copy — they are what gets written to
- * MMKV. Renaming a label is free; renaming an id changes stored data.
+ *   REWRITTEN   written for this flow. Yours to change freely.
+ *   PORTED      the web shows this exact string (app/welcome/page.tsx).
+ *               Changing it here makes the two products say different things
+ *               at the same moment.
+ *   DIVERGED    started as the web's, changed here. The divergence is noted
+ *               so it can be pushed back to the web or reverted on purpose.
+ *
+ * The option `id` fields are NOT copy. They are the values written to MMKV:
+ * renaming a label is free, renaming an id changes stored data.
  */
 
 // ---------------------------------------------------------------- 1. hook
 
-/** PORTED — app/welcome/page.tsx:366-375. */
+/** PORTED, app/welcome/page.tsx:366-375. No em-dash, nothing to fix. */
 export const HOOK = {
   title: 'Learn Spanish from real people talking.',
+  body: 'Not textbook Spanish. Real clips, real speed, real accents.',
   cta: 'Empezar',
 };
 
 // ------------------------------------------------------------ 2. motivation
 
-/** PLACEHOLDER — no web counterpart. Answers persist to loro.mobile.motivation
-    and are inert today; the ids are the stored values. */
+/** REWRITTEN. Multi-select, so the body has to say so before the first tap.
+    Answers persist to loro.mobile.motivation as an array. */
 export const MOTIVATION = {
-  title: 'What brings you to Spanish?',
-  body: 'No wrong answer — it just helps us pick what to show you.',
+  title: 'What’s pulling you toward Spanish?',
+  body: 'Pick as many as you like. It helps us choose what to put in front of you.',
   options: [
-    { id: 'travel', label: 'Travel', body: 'I want to get by when I go.' },
+    { id: 'travel', label: 'Travel', body: 'So I can actually talk when I get there.' },
     { id: 'people', label: 'People', body: 'Family, a partner, friends.' },
-    { id: 'work', label: 'Work', body: 'I need it professionally.' },
+    { id: 'work', label: 'Work', body: 'I need it for my job.' },
     { id: 'culture', label: 'Culture', body: 'Music, film, football, books.' },
   ],
+  cta: 'Continuar',
 };
 
 // ----------------------------------------------------------- 3. self-assess
 
-/** PORTED — app/welcome/page.tsx:381-406. The three ids are core's SelfLevel
-    union and must not be renamed: they are written to loro.level and routed on. */
+/**
+ * DIVERGED from app/welcome/page.tsx:381-406.
+ *
+ * The web asks "How much Spanish do you have?", which nobody says out loud,
+ * and its third option ("I want to grow my vocabulary") answers a different
+ * question from the other two. Both are fixed here. The body also loses an
+ * em-dash and makes a truer promise: the level is not locked in because the
+ * feed reorders around what you actually do, not because there is a setting.
+ *
+ * The three ids are core's SelfLevel union and must not be renamed: they are
+ * written to loro.level and routed on.
+ */
 export const SELF_LEVEL = {
-  title: 'How much Spanish do you have?',
-  body: 'This just picks your starting point — nothing is locked in.',
+  title: 'How much Spanish do you know already?',
+  body: 'This only sets your starting point. Your feed moves as you do.',
   options: [
     {
       id: 'zero' as const,
-      label: 'Starting from zero',
-      body: 'We’ll build your first words together before the videos.',
+      label: 'I’m starting from zero',
+      body: 'We’ll build your first words together.',
     },
     {
       id: 'some' as const,
-      label: 'I know some Spanish',
+      label: 'I know a bit',
       body: 'A quick word check tunes where you start.',
     },
     {
       id: 'confident' as const,
-      label: 'I want to grow my vocabulary',
+      label: 'I’m fairly comfortable',
       body: 'Jump into real videos and mine them for words.',
     },
   ],
@@ -69,58 +88,58 @@ export const SELF_LEVEL = {
 
 // ------------------------------------------------------ 4. calibration intro
 
-/** PLACEHOLDER — no web counterpart. The web drops straight into the grid;
-    this screen exists so the grid does not read as a test. */
+/** REWRITTEN. No web counterpart: the web drops straight into the grid. This
+    screen exists so the grid does not read as a test. */
 export const CALIBRATION_INTRO = {
-  title: 'Fifteen words. Tap the ones you know.',
-  body: 'It takes about twenty seconds and sets where your feed starts. You can be generous — nothing is graded.',
+  title: 'Quick word check.',
+  body: 'Fifteen words, about twenty seconds. Nothing is graded, so be generous with yourself.',
   cta: 'Vale',
 };
 
 // ---------------------------------------------------------------- 5. grid
 
-/** PORTED — app/welcome/page.tsx:435-467. Both button labels included: the web
-    switches on whether anything is selected. */
+/** DIVERGED, app/welcome/page.tsx:435-467: the body's em-dash became a full
+    stop. Both button labels are the web's, which switches on whether anything
+    is selected. */
 export const GRID = {
   title: 'Tap the words you already know.',
-  body: 'No timer, no right answers — this just tunes where you start.',
+  body: 'No timer, no right answers. It just tunes where you start.',
   ctaSome: 'Continuar',
   ctaNone: 'None of these yet',
 };
 
 // --------------------------------------------------------------- 6. result
 
-/** PORTED (kicker) + PLACEHOLDER (body, cta) — the web shows only the kicker
-    and the level, then auto-advances into the guided video after 1900ms. We
-    have no guided video yet, so this screen has to end in a tap and needs a
-    line explaining what the level means. */
+/** PORTED (kicker) + REWRITTEN (body, cta). The web shows only the kicker and
+    the level, then auto-advances into the guided video after 1900ms. We have
+    no guided video yet, so this screen ends in a tap and needs a line saying
+    what the level actually means. */
 export const RESULT = {
   kicker: 'Empecemos con',
-  body: 'That sets where your feed starts. Watch and save, and it moves on its own.',
+  body: 'That’s where your feed starts. Watch, save what you don’t know, and it moves with you.',
   cta: 'Seguir',
 };
 
 // --------------------------------------------------------- 7. how it works
 
-/** PORTED (title) + PLACEHOLDER (steps, cta) — the title is the web's closing
-    line, app/welcome/page.tsx:534-537. */
+/** PORTED (title, app/welcome/page.tsx:534-537) + REWRITTEN (steps, cta). */
 export const HOW_IT_WORKS = {
   title: 'Save what you don’t know, and it comes back right before you forget it.',
   steps: [
-    'Watch a real clip with the words lit up as they’re spoken.',
-    'Tap any word you don’t know to save it.',
-    'It returns days later, right when it’s about to slip.',
+    'Watch real clips. Words light up as they’re spoken.',
+    'Tap anything you don’t recognise. That saves it.',
+    'It returns days later, right as it’s about to slip away.',
   ],
   cta: 'Continuar',
 };
 
 // -------------------------------------------------------------- 8. blanks
 
-/** PLACEHOLDER — no web counterpart. The mock underneath is the real dashed
-    slot, so this screen teaches the mechanic before it appears mid-video. */
+/** REWRITTEN. No web counterpart. The mock underneath is the real dashed slot,
+    so this teaches the mechanic before it interrupts a video. */
 export const BLANKS = {
-  title: 'That’s a blank.',
-  body: 'Your saved words come back as gaps in the subtitles. The video waits, you type, and it carries on.',
+  title: 'This is how a word comes back.',
+  body: 'It turns into a gap in the subtitles. The video waits for you, you type it, and it carries on.',
   mockSentence: ['Vivo', 'en', '__BLANK__', 'ciudad'],
   mockGloss: 'this',
   cta: 'Entendido',
@@ -128,42 +147,123 @@ export const BLANKS = {
 
 // ------------------------------------------------------------ 9. frequency
 
-/** PLACEHOLDER — no web counterpart. Answers persist to loro.mobile.frequency
-    and are inert today; the ids are the stored values. No notification
-    permission is requested — that would need expo-notifications and a rebuild. */
+/** REWRITTEN. No web counterpart. Answers persist to loro.mobile.frequency.
+    No notification permission is requested anywhere in this flow: that would
+    need expo-notifications, a native module, and a rebuild. */
 export const FREQUENCY = {
   title: 'How often do you want to practise?',
-  body: 'Nothing is enforced and there are no reminders yet — this sets the pace we aim for.',
+  body: 'No reminders, no pressure. It just sets the pace we aim for.',
   options: [
-    { id: 'light', label: 'A few times a week', body: 'Around 5 minutes.' },
-    { id: 'daily', label: 'Every day', body: 'Around 10 minutes.' },
-    { id: 'serious', label: 'Seriously', body: '20 minutes or more.' },
+    { id: 'light', label: 'A few times a week', body: 'About 5 minutes.' },
+    { id: 'daily', label: 'Every day', body: 'About 10 minutes.' },
+    { id: 'serious', label: 'As much as I can', body: '20 minutes or more.' },
   ],
 };
 
-// -------------------------------------------------------------- 10. paywall
+// ------------------------------------------------------- 10. fluency goal
 
-/** PLACEHOLDER — and dark. Nothing renders while PAYWALL_ENABLED is false. */
+/**
+ * PLACEHOLDER. No web counterpart. Display only: the number the user picks and
+ * the date derived from it are never written anywhere.
+ *
+ * Month names are listed rather than formatted through Intl, so the derived
+ * line reads identically on every device and Hermes' ICU build never comes
+ * into it.
+ */
+export const FLUENCY_GOAL = {
+  title: 'When do you want to be fluent in Spanish?',
+  body: 'Drag to set your target. Nothing is locked in, and you can move it whenever you like.',
+  /** Suffixed with the number, so singular matters. */
+  unitOne: 'month',
+  unitMany: 'months',
+  derivedPrefix: 'On track for',
+  cta: 'Continuar',
+  months: [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ],
+};
+
+// -------------------------------------------------- 11. progress comparison
+
+/**
+ * PLACEHOLDER, AND ONE LINE OF IT IS A CLAIM RATHER THAN COPY.
+ *
+ * "Twice as much progress" is drawn as a precise 2:1 bar chart, which reads as
+ * a measured result. It is not one. Nothing in this repo measures it, and
+ * shipping a comparative performance claim against unnamed competitors needs
+ * either data behind it or wording that does not assert a number. Treat the
+ * ratio in steps.tsx as part of this copy, not as layout.
+ */
+export const PROGRESS_COMPARISON = {
+  title: 'Make twice as much progress with Loro.',
+  body: 'Learning from real speech beats drilling flashcards, because the words arrive the way you will actually hear them.',
+  otherLabel: 'Other apps',
+  otherValue: '1x',
+  loroLabel: 'Loro',
+  loroValue: '2x',
+  cta: 'Continuar',
+};
+
+// ------------------------------------------------------- 12. building plan
+
+/**
+ * PLACEHOLDER, AND THE TESTIMONIALS ARE FABRICATED.
+ *
+ * Invented quotes attached to invented people. They are fine as a layout
+ * placeholder and are NOT fine in a shipped build: presented in a review card,
+ * they read as real users saying real things. Replace them with attributed
+ * quotes you actually have, or drop the cards and leave the loader alone.
+ */
+export const BUILDING_PLAN = {
+  title: 'Building your plan',
+  body: 'Matching clips to your level and setting up your first reviews.',
+  testimonials: [
+    {
+      quote: 'I finally understand people talking at normal speed.',
+      name: 'Ana M.',
+      detail: '3 months with Loro',
+    },
+    {
+      quote: 'Ten minutes on the bus and the words actually stick.',
+      name: 'Tom K.',
+      detail: '6 months with Loro',
+    },
+    {
+      quote: 'The blanks are the bit I look forward to.',
+      name: 'Priya S.',
+      detail: '2 months with Loro',
+    },
+    {
+      quote: 'First Spanish app that kept me past week two.',
+      name: 'Marco L.',
+      detail: '5 months with Loro',
+    },
+  ],
+};
+
+// -------------------------------------------------------------- 13. paywall
+
+/** REWRITTEN, and dark. Nothing renders while PAYWALL_ENABLED is false. */
 export const PAYWALL = {
   title: 'Loro Pro',
-  body: 'Placeholder surface — no plans, no prices, no purchase. This screen exists so the flow has the right shape when entitlements land.',
+  body: 'Placeholder surface. No plans, no prices, nothing to buy. This screen holds the space for when entitlements land.',
   cta: 'Continuar',
   dismiss: 'Not now',
 };
 
-// ------------------------------------------------------------- 11. handoff
+// ------------------------------------------------------------- 14. handoff
 
-/** PORTED (cta) + PLACEHOLDER (title, body) — '¡Vamos!' is the web's,
-    app/welcome/page.tsx:550. */
+/** PORTED (cta, app/welcome/page.tsx:550) + REWRITTEN (title, body). */
 export const HANDOFF = {
-  title: 'Listo.',
-  body: 'Your feed is ready. Swipe through it like any other, and tap a word the moment it stops making sense.',
+  title: '¡Listo!',
+  body: 'Your feed is ready. Swipe it like anything else, and tap a word the moment it stops making sense.',
   cta: '¡Vamos!',
 };
 
 // -------------------------------------------------------------- chrome
 
-/** PORTED — the web shows a Skip on every phase (app/welcome/page.tsx:351-359)
+/** PORTED. The web shows a Skip on every phase (app/welcome/page.tsx:351-359)
     and it commits the same finish() as completing the flow. */
 export const CHROME = {
   skip: 'Skip',

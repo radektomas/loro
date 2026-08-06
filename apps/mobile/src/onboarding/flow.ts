@@ -70,13 +70,40 @@ export const MOBILE_KEYS = {
   frequency: 'loro.mobile.frequency',
 } as const;
 
-export function setMotivation(value: string): void {
-  storageDriver.local.setItem(MOBILE_KEYS.motivation, value);
-  olog(`motivation=${value} -> ${MOBILE_KEYS.motivation}`);
+/**
+ * MULTI-SELECT, so the stored value is a JSON ARRAY of option ids.
+ *
+ * Written whole rather than appended to: the screen holds the full selection
+ * and commits it once, so there is no read-modify-write to get wrong, and
+ * de-selecting is just a shorter array.
+ */
+export function setMotivation(values: string[]): void {
+  storageDriver.local.setItem(MOBILE_KEYS.motivation, JSON.stringify(values));
+  olog(`motivation=[${values.join(', ')}] -> ${MOBILE_KEYS.motivation}`);
 }
 
-export function getMotivation(): string | null {
-  return storageDriver.local.getItem(MOBILE_KEYS.motivation);
+/**
+ * Always an array, whatever is on disk.
+ *
+ * The lone string case is real rather than defensive: this key held a single
+ * id before the screen became multi-select, so any device that ran the flow in
+ * between has a bare `"travel"` sitting there. Reading it back as one-element
+ * array costs three lines and means no migration and no crash. Anything else
+ * unparseable reads as no answer.
+ */
+export function getMotivation(): string[] {
+  const raw = storageDriver.local.getItem(MOBILE_KEYS.motivation);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((v): v is string => typeof v === 'string');
+    }
+    return typeof parsed === 'string' ? [parsed] : [];
+  } catch {
+    // Not JSON at all: the pre-array format was the bare id, unquoted.
+    return [raw];
+  }
 }
 
 export function setFrequency(value: string): void {

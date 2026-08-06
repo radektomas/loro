@@ -426,6 +426,15 @@ function Slide({
                  *
                  * unmute() is issued synchronously inside this handler — the
                  * exact shape §5e card 6 measured as PASS. Do not defer it.
+                 *
+                 * KEEPING IT PLAYING IS THE PAGE'S JOB, and used to be tried
+                 * here as `if (!status.playing) api.play()`. That guard could
+                 * never fire when it mattered: status.playing is a
+                 * bridge-fed React value describing the player BEFORE this
+                 * command, so it cannot see a pause the unmute itself causes.
+                 * The result was one tap for sound and a second tap to start
+                 * the video again. page.ts reads the player's live state
+                 * inside the unmute command instead — see cmd:'unmute'.
                  */
                 if (status.muted) {
                   api.unmute();
@@ -437,7 +446,6 @@ function Slide({
                   // rest of the session — this is the path most users take,
                   // so missing it here would leave it pulsing forever.
                   hasUnmutedOnce = true;
-                  if (!status.playing) api.play();
                   return;
                 }
                 api.togglePlay();
@@ -582,6 +590,10 @@ function SoundControl() {
 
   // The bridge calls are untouched — same two lines, same order, same
   // persisted-choice split between a deliberate unmute and a deliberate mute.
+  //
+  // This pill never had a resume of its own, so on a player the unmute
+  // paused it turned sound on over a stopped video. It gets the fix for free
+  // now that keeping playback running is decided inside cmd:'unmute'.
   const toggle = useCallback(() => {
     if (status.muted) {
       api.unmute();
