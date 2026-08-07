@@ -3,6 +3,7 @@
     "name": "Loro",
     "slug": "radektomas",
     "version": "0.1.0",
+    "scheme": "loro",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0a0d0b",

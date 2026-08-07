@@ -217,6 +217,9 @@ export const usePlayerBox = () => useContext(BoxContext);
 /** Ground-truth sampling cadence for the drift readout. */
 const DRIFT_SAMPLE_MS = 3000;
 
+/** How long the player takes to appear. Hiding is instant — see layerStyle. */
+const PLAYER_FADE_IN_MS = 200;
+
 export function PlayerHost({ children }: { children: ReactNode }) {
   /**
    * MOUNTED ABOVE THE TAB BAR, so switching tabs cannot unmount the WebView.
@@ -489,8 +492,25 @@ export function PlayerHost({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [send, isPlaying]);
 
+  /**
+   * ASYMMETRIC, AND THE ASYMMETRY IS THE POINT.
+   *
+   * Hiding is a CUT; showing is a fade. The old style timed both at 180ms,
+   * which read as jank on a swipe for a reason that is about geometry rather
+   * than taste: this layer does not scroll with the list. It is pinned to a
+   * measured screen box, so during those 180ms of fade-out the outgoing
+   * video sits still at a fixed position while the slide it belongs to slides
+   * out from under it — the frame visibly detaches from its own content. The
+   * poster underneath is a pixel-identical still of that same frame, so
+   * cutting to it costs the viewer nothing and removes the detachment
+   * entirely.
+   *
+   * The fade IN is kept, and slightly longer than it was. That direction has
+   * no such problem — the list is settled by then — and it is what softens the
+   * poster-to-live-video hand-off once the player has something real to show.
+   */
   const layerStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(box.visible ? 1 : 0, { duration: 180 }),
+    opacity: box.visible ? withTiming(1, { duration: PLAYER_FADE_IN_MS }) : 0,
   }));
 
   const page = useMemo(

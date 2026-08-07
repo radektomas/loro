@@ -309,6 +309,10 @@ function FeedBody({
   onAreaLayout: (event: LayoutChangeEvent) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  /**
+   * A SWIPE IS IN FLIGHT — finger down OR still settling. Both halves matter,
+   * and the second one is what this used to get wrong.
+   */
   const [dragging, setDragging] = useState(false);
   const [pageHeight, setPageHeight] = useState(0);
 
@@ -336,6 +340,8 @@ function FeedBody({
   // on some renders and not others — "rendered more hooks than during the
   // previous render", thrown the moment the layout lands.
   const onViewableItemsChanged = useStableViewability(setActiveIndex);
+
+  const swipe = useSwipeLifecycle(setDragging);
 
   const activeVideo = videos[activeIndex] ?? null;
 
@@ -432,9 +438,13 @@ function FeedBody({
               // The web's IntersectionObserver at 0.6, expressed for a list.
               viewabilityConfig={VIEWABILITY_CONFIG}
               onViewableItemsChanged={onViewableItemsChanged}
-              onScrollBeginDrag={() => setDragging(true)}
-              onMomentumScrollEnd={() => setDragging(false)}
-              onScrollEndDrag={() => setDragging(false)}
+              // FOUR HANDLERS, NOT THREE — see useSwipeLifecycle. The old
+              // trio cleared `dragging` on onScrollEndDrag, which is the
+              // moment the FINGER lifts, not the moment the swipe ends.
+              onScrollBeginDrag={swipe.onBeginDrag}
+              onScrollEndDrag={swipe.onEndDrag}
+              onMomentumScrollBegin={swipe.onMomentumBegin}
+              onMomentumScrollEnd={swipe.onSettled}
             />
           )}
 
@@ -456,6 +466,84 @@ function FeedBody({
 }
 
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: VISIBLE_PERCENT } as const;
+
+/**
+ * How long to wait for momentum before deciding the swipe is over.
+ *
+ * A lift with no velocity — a short drag released while the list is already on
+ * a page boundary — produces NO momentum callbacks at all, so there would be
+ * nothing left to clear `dragging` and the player would stay hidden for good.
+ * This is the escape hatch for exactly that case, and nothing else: any real
+ * fling fires onMomentumScrollBegin within a frame or two and cancels it.
+ *
+ * 150ms is chosen to be comfortably longer than that couple of frames and
+ * still short enough that the poster does not visibly linger when it fires.
+ */
+const NO_MOMENTUM_MS = 150;
+
+/**
+ * IS A SWIPE IN FLIGHT? The player is hidden for as long as the answer is yes.
+ *
+ * WHY THIS IS NOT JUST setDragging ON TWO CALLBACKS. The player layer is
+ * absolutely positioned over a MEASURED box and does not scroll with the list
+ * (PlayerHost: one WebView, never re-parented). So anything visible while the
+ * list is moving is parked at a fixed screen position while its own slide
+ * travels out from under it. Hiding it and letting each slide's poster carry
+ * the frame is the whole transition design.
+ *
+ * The bug that made swipes look janky was in when that hiding STOPPED.
+ * `onScrollEndDrag` fires when the finger lifts — but with pagingEnabled the
+ * list then runs a snap animation, and clearing there brought the player back
+ * DURING it: the outgoing video faded in at its fixed box, over a half-scrolled
+ * pair of slides, and stayed until viewability crossed 60% and the new video
+ * finished booting. That is the "it stays there" — a stale frame, pinned, over
+ * moving content.
+ *
+ * So the finger lifting no longer ends the swipe; the list coming to rest
+ * does. onMomentumScrollBegin also RAISES the flag rather than only clearing
+ * it, so a fling chained onto a settling list cannot leave it down.
+ */
+function useSwipeLifecycle(setDragging: (dragging: boolean) => void) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelFallback = useCallback(() => {
+    if (timer.current === null) return;
+    clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+
+  // The timer outlives a tab switch otherwise, and would clear `dragging` for
+  // a feed that has since been swiped again.
+  useEffect(() => cancelFallback, [cancelFallback]);
+
+  return useMemo(
+    () => ({
+      onBeginDrag: () => {
+        cancelFallback();
+        setDragging(true);
+      },
+      /** Finger up. NOT the end of the swipe — only the end of the drag. */
+      onEndDrag: () => {
+        cancelFallback();
+        timer.current = setTimeout(() => {
+          timer.current = null;
+          setDragging(false);
+        }, NO_MOMENTUM_MS);
+      },
+      /** Momentum took over, so the fallback above was wrong. Stay hidden. */
+      onMomentumBegin: () => {
+        cancelFallback();
+        setDragging(true);
+      },
+      /** The list is at rest. This is the end of the swipe. */
+      onSettled: () => {
+        cancelFallback();
+        setDragging(false);
+      },
+    }),
+    [cancelFallback, setDragging]
+  );
+}
 
 /**
  * onViewableItemsChanged must keep ONE identity for the life of the list —

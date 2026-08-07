@@ -43,6 +43,9 @@ const STATE_SEGMENTS: { state: WordState; label: string; color: string }[] = [
   { state: 'known', label: 'Known', color: '#5ee6a8' },
 ];
 
+/** How many answered words show before "See all". */
+const CORRECT_PREVIEW = 3;
+
 function SectionTitle({ children }: { children: string }) {
   return <Text style={styles.sectionTitle}>{children}</Text>;
 }
@@ -129,6 +132,8 @@ export function ProgressScreen({
   const [levelState, setLevelState] = useState<LevelState>(() =>
     storage.getLevelState()
   );
+  /** Collapsed to CORRECT_PREVIEW until asked — see the section itself. */
+  const [showAllCorrect, setShowAllCorrect] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -169,6 +174,31 @@ export function ProgressScreen({
     for (const w of words) counts[w.state]++;
     return counts;
   }, [words]);
+
+  /**
+   * The words you have actually answered correctly, freshest first.
+   *
+   * `correct > 0` IS THE WHOLE TEST, and it is deliberately not "came from a
+   * blue blank". A level fill and a green recall review both land in the same
+   * SavedWord with the same counter (storage.saveLevelWord / gradeWord), and
+   * nothing on the row records which flow produced it. Inventing a
+   * distinction the data does not carry would mean guessing from box/state
+   * shape — box 4 + state 'known' + correct 1 is what a correct level fill
+   * looks like, but it is also what a tapped word looks like after it has
+   * been reviewed up the ladder. So this is honestly "words you got right",
+   * which is what it says, rather than a claim it cannot support.
+   *
+   * lastReviewedAt is non-null for anything with correct > 0 — it is written
+   * in the same branch as the counter — but it is typed nullable, so the
+   * coalesce is for the type rather than for a case that occurs.
+   */
+  const correctWords = useMemo(
+    () =>
+      words
+        .filter((w) => w.correct > 0)
+        .sort((a, b) => (b.lastReviewedAt ?? 0) - (a.lastReviewedAt ?? 0)),
+    [words]
+  );
 
   const due = useMemo(() => dueCount(words, now), [words, now]);
   const nextDue = useMemo(() => nextDueAt(words, now), [words, now]);
@@ -299,6 +329,69 @@ export function ProgressScreen({
                 );
               })}
             </View>
+
+            {/* 2b — what the ladder above was actually built out of.
+                Directly under Level on purpose: the meter is a number you
+                climbed, and this is the evidence. A tier that moved with
+                nothing to show for it reads as a score; the words are what
+                make it a record. */}
+            {correctWords.length > 0 && (
+              <View style={styles.section}>
+                <SectionTitle>Words you got right</SectionTitle>
+                {/*
+                  THREE, THEN THE REST ON REQUEST. The list is unbounded — it
+                  grows with every correct fill and every review — and this
+                  screen is a ScrollView with five other sections under it, so
+                  rendering all of them would push Streak, Reviews, Words and
+                  Videos off the bottom for anyone who has been using the app.
+                  Three is enough to show the shape and recognise the last
+                  thing answered without displacing what follows.
+                */}
+                {(showAllCorrect
+                  ? correctWords
+                  : correctWords.slice(0, CORRECT_PREVIEW)
+                ).map((word) => (
+                  // text+videoId is core's own dedupe key for a saved word
+                  // (storage.saveWord), so it is unique by construction here.
+                  <View key={`${word.videoId}:${word.text}`} style={styles.correctRow}>
+                    <View style={styles.correctCheck}>
+                      <Text style={styles.correctCheckText}>✓</Text>
+                    </View>
+                    <View style={styles.correctText}>
+                      <Text style={styles.correctWord} numberOfLines={1}>
+                        {word.text}
+                      </Text>
+                      <Text style={styles.correctGloss} numberOfLines={1}>
+                        {word.translation}
+                      </Text>
+                    </View>
+                    {/* Only once it means something. "x1" on every row is
+                        noise; a repeat is the interesting case. */}
+                    {word.correct > 1 && (
+                      <Text style={styles.correctCount}>×{word.correct}</Text>
+                    )}
+                  </View>
+                ))}
+                {correctWords.length > CORRECT_PREVIEW && (
+                  <Pressable
+                    onPress={() => setShowAllCorrect((shown) => !shown)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: showAllCorrect }}
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                      styles.seeAll,
+                      pressed && styles.seeAllPressed,
+                    ]}
+                  >
+                    <Text style={styles.seeAllText}>
+                      {showAllCorrect
+                        ? 'Show fewer'
+                        : `See all ${correctWords.length}`}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
 
             {/* 3 — streak: consecutive days with a correct recall */}
             <View style={styles.section}>
@@ -476,6 +569,57 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 8,
     paddingHorizontal: 2,
+  },
+  /** One answered word. Same 16-radius card family as `tier` above, at row
+      scale, so the two read as one column rather than two treatments. */
+  correctRow: {
+    alignItems: 'center',
+    backgroundColor: '#141a17',
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  correctCheck: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.16)',
+    borderRadius: 999,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  correctCheckText: { color: '#5ee6a8', fontSize: 12, fontWeight: '800' },
+  /** flex:1 is what makes numberOfLines bite — without it the text sizes to
+      content and a long gloss pushes the count off the row instead of
+      ellipsising. */
+  correctText: { flex: 1 },
+  correctWord: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
+  correctGloss: {
+    color: 'rgba(242,245,243,0.55)',
+    fontSize: 12,
+    marginTop: 1,
+  },
+  correctCount: {
+    color: 'rgba(94,230,168,0.8)',
+    fontSize: 12,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '700',
+  },
+  seeAll: {
+    alignItems: 'center',
+    borderColor: 'rgba(242,245,243,0.14)',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 2,
+    paddingVertical: 10,
+  },
+  seeAllPressed: { backgroundColor: 'rgba(242,245,243,0.06)' },
+  seeAllText: {
+    color: 'rgba(242,245,243,0.75)',
+    fontSize: 13,
+    fontWeight: '700',
   },
   card: { backgroundColor: '#141a17', borderRadius: 18, padding: 16 },
   cardAccent: {

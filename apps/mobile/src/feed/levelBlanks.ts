@@ -28,8 +28,41 @@ import { locateBlank, llog, type BlankEntry } from './recall';
  *
  * Independent of RECALL_ENABLED on purpose — the two can be flipped in any
  * combination, and all four states are meant to work.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * NOW ON. Measured against the real catalog (data/embedVideos.json, 207
+ * embeds, all of them carrying a dictionary) before flipping, because the
+ * failure mode of this feature is silence rather than an error — a video with
+ * no glossable word in any reachable band simply renders nothing, so "on but
+ * invisible" is a state it can sit in indefinitely without complaining:
+ *
+ *   206 of 207 videos yield at least one blue blank
+ *   601 blanks total, 2.90 per video, at every user level
+ *
+ * WHAT A NEW USER ACTUALLY SEES, since that is the part the aggregate hides.
+ * Band 1 IS the function-word list by construction (wordLevel: isFunctionWord
+ * returns 1), so a fresh device at level 1 draws 91% articles and
+ * prepositions — "la" prompted as "the". That reads badly in isolation and is
+ * why this note exists rather than a bare `true`.
+ *
+ * It self-corrects in about two videos, which is the reason it is acceptable
+ * rather than a bug to fix first: METER_UP is 20, so five correct fills is a
+ * level, and at 2.9 blanks per video that is ~2 videos per rung. Simulated
+ * over the real catalog, a user answering correctly sees function words on
+ * videos 1-2 and real vocabulary from video 3 ("llaman", "verdad", "país",
+ * "probar"), reaching the top of the ladder around video 10. levels.ts:250-256
+ * predicts exactly this — "filling easier blanks climbs the meter toward the
+ * band where the user's real level has material" — and the measurement agrees.
+ *
+ * ⚠️ KNOWN ROUGH EDGE, NOT FIXED HERE. Band 5 is "everything unlisted", which
+ * includes numerals and proper nouns, so the top of the ladder can blank
+ * "1979", "000" or "fei". Those are unanswerable as vocabulary practice. A
+ * letter-bearing filter in computeLevelBlankPlan would remove them; that is a
+ * change to core's selection rules and its test suite, so it is deliberately
+ * left as a separate decision rather than smuggled in with the flag.
+ * ─────────────────────────────────────────────────────────────────────────
  */
-export const LEVELS_ENABLED = false;
+export const LEVELS_ENABLED = true;
 
 /**
  * core's level-blank plan, resolved into positions.

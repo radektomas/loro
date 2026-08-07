@@ -234,9 +234,34 @@ const PAGE_TEMPLATE = `<!doctype html>
 
   // The PLAYER's real mute state, never RN's hope of it. The indicator reads
   // this, so a refused unmute shows as still-muted instead of lying.
+  //
+  // DO NOT CALL postMuted() SYNCHRONOUSLY AFTER mute()/unMute(). THAT IS THE
+  // BUG THIS PAIR EXISTS TO PREVENT. The IFrame API is a postMessage proxy:
+  // unMute() QUEUES a message into the iframe, while isMuted() returns a value
+  // cached on THIS side and refreshed asynchronously by the iframe's
+  // infoDelivery events. A read in the same tick as the write therefore
+  // returns the state from BEFORE the write.
+  //
+  // That is exactly how the band's pill came to sit on "Tap for sound" while
+  // sound was playing: the unmute landed, the read that followed it in the
+  // same tick still said muted, RN was told muted:true, and nothing on the
+  // sound path ever posted again to correct it — the PLAYING re-assert below
+  // only posts when it actually HAS to re-assert, which a successful unmute
+  // means it does not. The pill was not reporting a refused unmute, which was
+  // the stated intent; it was reporting a stale read, for the whole session.
+  //
+  // So: emitMuted(intent) at the moment of the command, for a pill that moves
+  // on the tap, and the mirror in the 250ms tick for the truth. Deduped, so
+  // the common case where the two agree costs one message, not two.
+  var lastPostedMuted = null;
+  function emitMuted(m) {
+    m = m === true;
+    if (m === lastPostedMuted) return;
+    lastPostedMuted = m;
+    post({ type: 'muted', muted: m });
+  }
   function postMuted() {
-    var m = playerReady ? player.isMuted() : true;
-    post({ type: 'muted', muted: m === true });
+    emitMuted(playerReady ? player.isMuted() : true);
   }
 
   // play() emulation: the IFrame API has no rejection for blocked playback —
@@ -274,7 +299,9 @@ const PAGE_TEMPLATE = `<!doctype html>
       // harmless when the player already carried the state across the swap.
       if (!desiredMuted && player.isMuted()) {
         player.unMute();
-        postMuted();
+        // Intent again, for the same proxy reason — the read here would be as
+        // stale as the one in cmd 'unmute' was.
+        emitMuted(false);
       }
       // STAY AT THE CHOSEN SPEED ACROSS SLIDE CHANGES, same contract as mute
       // above. This is one of the two triggers, not the only one — the reset
@@ -326,6 +353,24 @@ const PAGE_TEMPLATE = `<!doctype html>
   // keeps the bridge quiet while the RN side extrapolates.
   setInterval(function () {
     if (!playerReady) return;
+    /**
+     * THE MUTE MIRROR, AND IT RUNS BEFORE EVERY OTHER RETURN IN THIS TICK.
+     *
+     * Two returns follow — the pendingSeek branch and "if (!playing) return" —
+     * and mute is not subject to either. It can be changed while the video is
+     * paused (the band's pill is tappable then) and while a seek is settling,
+     * so mirroring it after those guards would reproduce the same class of
+     * stuck indicator this is here to kill, just less often.
+     *
+     * emitMuted dedupes, so a state that is not moving costs nothing on the
+     * bridge — this adds messages only when the answer actually changes, which
+     * is the same discipline as the anchor's REANCHOR_EPS_S / PERIODIC_MS.
+     *
+     * This is also what makes a REFUSED unmute honest again. The optimistic
+     * emit in the command flips the pill on the tap; if the platform declined,
+     * the next read here disagrees and corrects it within 250ms.
+     */
+    postMuted();
     if (pendingSeek) {
       var ps = pendingSeek;
       var raw = readFinite();
@@ -410,7 +455,9 @@ const PAGE_TEMPLATE = `<!doctype html>
       // intent so the PLAYING re-assert above does not undo it on the next swap.
       desiredMuted = true;
       if (playerReady) player.mute();
-      postMuted();
+      // The INTENT, not a read — see emitMuted. The tick's mirror is what
+      // turns this into the truth (or corrects it, if the mute was refused).
+      emitMuted(true);
     } else if (c.cmd === 'unmute') {
       // §5e card 6 measured this exact path — unMute() driven from a real RN
       // touch handler — as PASS by state: unmuted and still PLAYING. It is
@@ -455,7 +502,10 @@ const PAGE_TEMPLATE = `<!doctype html>
           player.playVideo();
         }
       }
-      postMuted();
+      // THE LINE THE STUCK PILL WAS. This used to be postMuted(), i.e.
+      // isMuted() read one statement after unMute() — guaranteed stale, and
+      // never corrected. It is the intent now; the tick confirms it.
+      emitMuted(false);
     } else if (c.cmd === 'rate') {
       // Intent is recorded whether or not the player honours it: an unsupported
       // value is IGNORED by setPlaybackRate with no error and no event, so
@@ -507,7 +557,11 @@ const PAGE_TEMPLATE = `<!doctype html>
           playerReady = true;
           player.mute();
           post({ type: 'ready' });
-          postMuted();
+          // Intent, matching the other three sites. It is also simply true:
+          // the player is CREATED muted (playerVars.mute above), which is what
+          // makes gesture-free autoplay legal, so this seeds the pill's
+          // starting state rather than guessing at it.
+          emitMuted(true);
           postRate();
           postRates();
           if (pendingLoad) {
