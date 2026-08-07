@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -14,6 +14,12 @@ import { tierFor } from '@loro/core/levels';
 import { normalizeAnswer } from '@loro/core/srs';
 import { usePlayerClock } from '../player/PlayerHost';
 import { useRecallAnswer, useRecallView } from './RecallHost';
+import {
+  CELEBRATE_MS,
+  FeatherBurst,
+  LoroCelebration,
+  useReduceMotion,
+} from './Celebration';
 import { flog } from './recall';
 import { buildCueSpans, cueIndexAt, wordIndexAt } from './subtitles';
 
@@ -139,6 +145,54 @@ export function Karaoke({
   const blankResult = blank ? (recall?.results.get(cueIndex) ?? null) : null;
 
   /**
+   * CELEBRATING — true for CELEBRATE_MS after a correct answer, exactly the
+   * web's `celebrating` (SubtitleTrack.tsx:97, set in gradeBlank).
+   *
+   * FIRED ON THE TRANSITION, NOT ON THE VALUE, and the difference is what
+   * keeps a recycled cell honest. `results` is a Map that PERSISTS for the
+   * life of the plan, so a cue that was answered ten seconds ago still reads
+   * 'correct' — rendering the hop whenever blankResult === 'correct' would
+   * replay it every time the cue came back on screen, and again on every
+   * FlashList remount. Only a null -> 'correct' change is a fresh answer.
+   *
+   * The `undefined` seed is the other half of that: on the first run of this
+   * effect there is no previous value to compare against, and a cell that
+   * mounts already showing a graded cue must not read as a new answer. So the
+   * first observation only records, never celebrates.
+   */
+  const previousResult = useRef<'correct' | 'wrong' | null | undefined>(undefined);
+  const [celebrating, setCelebrating] = useState(false);
+  /**
+   * THE TIMER IS A REF, NOT AN EFFECT CLEANUP, and that is a bug fix rather
+   * than a style preference. Tying it to this effect's cleanup means the cue
+   * advancing cancels it — and the cue DOES advance mid-celebration, because
+   * the player resumes 600ms after grading while this runs for 1200ms. The
+   * clear would fire with no re-arm, `celebrating` would stick at true
+   * forever, and because the flag never falls back to false the NEXT correct
+   * answer could not remount the hop: setCelebrating(true) on an already-true
+   * flag changes nothing, so Loro would appear exactly once per session.
+   *
+   * Clear-then-set on a ref is the web's own shape (SubtitleTrack.tsx:269-270)
+   * and survives any number of cue changes underneath it.
+   */
+  const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
+    },
+    []
+  );
+  useEffect(() => {
+    const previous = previousResult.current;
+    previousResult.current = blankResult;
+    if (previous === undefined) return;
+    if (blankResult !== 'correct' || previous === 'correct') return;
+    setCelebrating(true);
+    if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
+    celebrationTimer.current = setTimeout(() => setCelebrating(false), CELEBRATE_MS);
+  }, [blankResult]);
+
+  /**
    * TEMPORARY [loro:F] diagnostic. If a blank is planned for the visible cue
    * but its wordIndex does not point at the word core chose, the line renders
    * that word normally — karaoke-highlighted green as it is spoken, which
@@ -159,6 +213,10 @@ export function Karaoke({
 
   return (
     <View style={styles.track}>
+      {/* Loro, absolute at the top of THIS box — which is the band, below the
+          player. Mounted only while celebrating so the hop restarts cleanly on
+          the next correct answer rather than needing a reset. */}
+      {celebrating && <LoroCelebration />}
       {cue ? (
         <>
           <View style={styles.line}>
@@ -173,6 +231,7 @@ export function Karaoke({
                       text={word.text}
                       result={blankResult}
                       kind={blank.kind}
+                      celebrating={celebrating}
                     />
                   );
                 }
@@ -413,23 +472,41 @@ function RevealedWord({
   text,
   result,
   kind,
+  celebrating,
 }: {
   text: string;
   result: 'correct' | 'wrong';
   kind: 'recall' | 'level';
+  /** Whether the burst should be thrown — owned by Karaoke, see `celebrating`. */
+  celebrating: boolean;
 }) {
+  const reduceMotion = useReduceMotion();
   const scale = useSharedValue(1);
   const shift = useSharedValue(0);
   const glow = useSharedValue(0);
 
   useEffect(() => {
+    // globals.css drops .animate-correct/.animate-wrong to `animation: none`
+    // under prefers-reduced-motion — the tint alone carries the result.
+    if (reduceMotion) return;
     if (result === 'correct') {
-      glow.value = 1;
+      /**
+       * loro-snap, transcribed. The web starts the word at 1.25 and lets it
+       * settle THROUGH 1 rather than easing up to it: 1.25 -> 0.96 at 60% ->
+       * 1.04 at 80% -> 1. The undershoot is what makes it read as a snap
+       * rather than a zoom, and dropping it (this used to be a plain
+       * 1.14 -> 1) is most of why the old version felt flat.
+       */
+      scale.value = 1.25;
       scale.value = withSequence(
-        withTiming(1.14, { duration: 130 }),
-        withTiming(1, { duration: 170 })
+        withTiming(0.96, { duration: 210 }),
+        withTiming(1.04, { duration: 70 }),
+        withTiming(1, { duration: 70 })
       );
-      glow.value = withTiming(0, { duration: 480 });
+      // loro-bloom, 600ms. RN cannot animate textShadow, so the glow is a
+      // fill behind the word — same read, and it was already built that way.
+      glow.value = 1;
+      glow.value = withTiming(0, { duration: 600 });
       return;
     }
     shift.value = withSequence(
@@ -437,7 +514,7 @@ function RevealedWord({
       withTiming(3, { duration: 55 }),
       withTiming(0, { duration: 55 })
     );
-  }, [result, scale, shift, glow]);
+  }, [result, scale, shift, glow, reduceMotion]);
 
   const boxStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateX: shift.value }],
@@ -452,15 +529,28 @@ function RevealedWord({
         : styles.revealOk;
   const glowColor = kind === 'level' ? LEVEL : ACCENT;
 
+  /**
+   * TWO BOXES, AND THE OUTER ONE EXISTS ONLY SO THE FEATHERS CAN LEAVE.
+   *
+   * revealBox clips (overflow:'hidden'), which it must — the glow is an
+   * absolutely positioned fill and would otherwise square off the rounded
+   * corners. The burst throws feathers up to 50pt out of a ~40pt box, so
+   * nesting it inside that clip would cut every one of them off at the word's
+   * edge. The wrapper does not clip and sizes to the same content, so the
+   * feathers escape while the glow stays contained.
+   */
   return (
-    <Animated.View style={[styles.word, styles.revealBox, boxStyle]}>
-      {/* The fill sits behind the text so the word stays readable through it. */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.revealGlow, { backgroundColor: glowColor }, glowStyle]}
-      />
-      <Text style={[styles.wordText, tint]}>{text}</Text>
-    </Animated.View>
+    <View style={styles.revealWrap}>
+      <Animated.View style={[styles.word, styles.revealBox, boxStyle]}>
+        {/* The fill sits behind the text so the word stays readable through it. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.revealGlow, { backgroundColor: glowColor }, glowStyle]}
+        />
+        <Text style={[styles.wordText, tint]}>{text}</Text>
+      </Animated.View>
+      {result === 'correct' && celebrating && <FeatherBurst />}
+    </View>
   );
 }
 
@@ -547,6 +637,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
+  /** Non-clipping host for the feather burst — see RevealedWord. Sizes to the
+      word, so the line's wrap behaviour is unchanged by the extra level. */
+  revealWrap: { position: 'relative' },
   /** The reveal needs its own box so the glow can be absolutely positioned
       behind the word without escaping the rounded corners. */
   revealBox: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
