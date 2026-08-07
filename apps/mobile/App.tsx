@@ -15,6 +15,7 @@ import { PlayerHost } from './src/player/PlayerHost';
 import { Shell } from './src/shell/Shell';
 import { Onboarding } from './src/onboarding/Onboarding';
 import { shouldShowOnboarding } from './src/onboarding/flow';
+import { onAuthDeepLink } from './src/auth/exchange';
 
 /**
  * CHECKPOINT E — the feed, with sound and word-saving.
@@ -69,6 +70,35 @@ export default function App() {
     // something is actually on screen.
     finishBoot();
   }, []);
+
+  /**
+   * The magic-link callback, listened for at the ROOT and for the whole app
+   * lifetime — deliberately not inside the sign-in card.
+   *
+   * The card that started the flow is routinely gone by the time the link is
+   * tapped: the user leaves for Mail, and iOS may evict the app entirely, so
+   * the URL frequently arrives as a COLD START with no card mounted and no
+   * React state surviving. A listener owned by a screen would miss exactly the
+   * case it exists for. App never unmounts, so this one cannot.
+   *
+   * There is nothing to do on success: the exchange establishes the session,
+   * and the auth listener storage.initSync() registered at boot picks it up
+   * and runs the merge. Screens re-render from their own useSession. Errors
+   * are logged rather than surfaced — this fires with no UI context, and there
+   * is no honest place to put a banner for a link tapped ten minutes ago.
+   *
+   * Google does NOT come through here: openAuthSessionAsync captures its own
+   * redirect and returns it inline (see providers.ts).
+   */
+  useEffect(
+    () =>
+      onAuthDeepLink((result) => {
+        if (result.status === 'error') {
+          console.error('[loro] auth callback failed', result.message);
+        }
+      }),
+    []
+  );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

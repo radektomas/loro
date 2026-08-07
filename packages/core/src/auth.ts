@@ -2,7 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { getAuthRedirectTo, getSupabase, TABLES } from './supabase.ts';
 
 /**
- * Supabase Auth for Loro — email magic-link and Google OAuth.
+ * Supabase Auth for Loro — email magic-link, Google OAuth, Apple id-token.
  *
  * Signing in is always optional: it backs up progress and syncs it across
  * devices. Nothing in the core loop depends on any of these resolving, so
@@ -42,6 +42,17 @@ export function onAuthChange(
 
 export type SignInResult = { ok: boolean; error?: string };
 
+/**
+ * An OAuth start, which on some platforms is only HALF the flow.
+ *
+ * `url` is the provider's consent page. The web never needs it — supabase-js
+ * navigates there itself — but RN has no navigation to hijack: it must open
+ * the URL in a native auth session and catch the redirect back. So the URL is
+ * surfaced rather than discarded, and `skipBrowserRedirect` lets the caller
+ * say "hand me the URL, don't try to navigate".
+ */
+export type OAuthSignInResult = SignInResult & { url?: string };
+
 /** Email magic link — no password. Sends a one-tap sign-in link. */
 export async function signInWithMagicLink(email: string): Promise<SignInResult> {
   const supabase = getSupabase();
@@ -53,14 +64,67 @@ export async function signInWithMagicLink(email: string): Promise<SignInResult> 
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
-/** Google OAuth — redirects out to Google and back to the platform's
-    auth-callback surface. */
-export async function signInWithGoogle(): Promise<SignInResult> {
+/**
+ * Google OAuth — out to Google and back to the platform's auth-callback
+ * surface.
+ *
+ * Called with no arguments this is byte-for-byte the old behaviour: supabase-js
+ * only self-navigates when `isBrowser() && !skipBrowserRedirect`, and an
+ * absent option is `undefined`, which is falsy — so the web's two call sites
+ * (SignInCard, SavePromptSheet) keep redirecting exactly as before and read
+ * only `ok`/`error` from the result.
+ *
+ * RN passes `skipBrowserRedirect: true` and drives the returned `url` through
+ * its own auth session instead.
+ */
+export async function signInWithGoogle(options?: {
+  skipBrowserRedirect?: boolean;
+}): Promise<OAuthSignInResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, error: 'Sync is not configured.' };
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: getAuthRedirectTo() },
+    options: {
+      redirectTo: getAuthRedirectTo(),
+      skipBrowserRedirect: options?.skipBrowserRedirect,
+    },
+  });
+  return error
+    ? { ok: false, error: error.message }
+    : { ok: true, url: data?.url ?? undefined };
+}
+
+/**
+ * Apple Sign-In — exchange an Apple identity token for a Supabase session.
+ *
+ * DELIBERATELY TAKES THE CREDENTIAL RATHER THAN FETCHING IT. Obtaining the
+ * token means expo-apple-authentication, a native iOS module; core is imported
+ * by the Next.js web app and must stay platform-free (see the header of
+ * ./supabase.ts — "core reads no env vars and touches no window"). So the
+ * platform runs the native sheet and core owns only the exchange, which is the
+ * half that is genuinely shared.
+ *
+ * THE NONCE IS TWO DIFFERENT VALUES AND MIXING THEM UP FAILS VERIFICATION.
+ * The caller generates one random string, hands Apple its SHA-256 (Apple
+ * embeds that hash in the token's `nonce` claim), and hands US the raw string.
+ * Supabase hashes what it is given and compares. Passing the hash here means
+ * comparing sha256(sha256(n)) against sha256(n) — a rejected token that looks
+ * like a provider misconfiguration.
+ *
+ * Ships correct while the Apple provider is disabled project-side: Supabase
+ * answers with an error, which becomes {ok:false} like any other failure.
+ */
+export async function signInWithApple(credential: {
+  identityToken: string;
+  /** The RAW nonce — NOT the hash that went to Apple. See above. */
+  rawNonce: string;
+}): Promise<SignInResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: 'Sync is not configured.' };
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce: credential.rawNonce,
   });
   return error ? { ok: false, error: error.message } : { ok: true };
 }

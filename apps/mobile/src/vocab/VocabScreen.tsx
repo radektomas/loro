@@ -12,6 +12,7 @@ import type { SavedWord, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { enableRecallForSession } from '../feed/recall';
+import { SavePromptCard } from '../auth/SavePromptCard';
 
 /**
  * VOCAB — port of the web's app/vocab/page.tsx.
@@ -287,6 +288,14 @@ export function VocabScreen({
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        {/* THE ONLY SURFACE THIS MAY EVER MOUNT ON. The feed is structurally
+            uninterruptible; core enforces the same rule independently
+            (savePromptVariant returns null unless surface === 'vocab'), so
+            this placement and that guard have to agree. Above the list rather
+            than over it: nothing is covered and nothing is trapping. It
+            renders null until core says otherwise, which is almost always. */}
+        <SavePromptCard />
+
         {words.length === 0 ? (
           // Honest empty state — no fabricated sample words.
           <View style={styles.empty}>

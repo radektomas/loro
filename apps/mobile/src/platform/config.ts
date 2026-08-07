@@ -59,3 +59,34 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_ORIGIN ?? '';
  */
 export const PLAYER_EMBED_ORIGIN =
   process.env.EXPO_PUBLIC_API_ORIGIN ?? 'https://example.com';
+
+/**
+ * Supabase project credentials, or empty strings when unset.
+ *
+ * BOTH ARE PUBLIC. The anon key is RLS-scoped and is meant to ship inside the
+ * client — it is the same value the web serves to every browser. The service
+ * role key is the one that must never come near this file.
+ *
+ * Empty is a supported resting state, not a misconfiguration: supabaseInit.ts
+ * simply skips initSupabase, getSupabase() stays null, and the app runs fully
+ * anonymously on MMKV. That is the same "unconfigured" contract core documents
+ * (supabase.ts) and the web enforces via lib/supabaseInit.ts's env check.
+ */
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+export const SUPABASE_ANON_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+/**
+ * Where auth providers send the user back to — the app's own URL scheme.
+ *
+ * The scheme half (`loro`) is app.json's `scheme`, which becomes a native
+ * Info.plist entry at prebuild; changing one without the other silently breaks
+ * every sign-in. The path half is arbitrary but mirrors the web's
+ * /auth/callback so the two platforms read the same.
+ *
+ * ⚠️ MUST BE ON THE SUPABASE PROJECT'S REDIRECT URLS ALLOWLIST. An entry that
+ * is missing is not rejected — it is silently replaced by the project's Site
+ * URL, which on this SHARED project is another product's domain. Verified
+ * present 2026-08-07.
+ */
+export const AUTH_REDIRECT_URL = 'loro://auth/callback';

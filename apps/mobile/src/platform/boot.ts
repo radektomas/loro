@@ -1,9 +1,11 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { initPlatform } from '@loro/core/platform';
+import { storage } from '@loro/core/storage';
 import { API_BASE_URL } from './config';
 import { platformCrypto } from './crypto';
 import { lifecycle } from './lifecycle';
 import { storageDriver } from './storage';
+import { initAuth } from './supabaseInit';
 import { installCachedCatalog, refreshCatalog, type CatalogSource } from './catalog';
 
 /**
@@ -44,6 +46,37 @@ initPlatform({
   lifecycle,
   crypto: platformCrypto,
 });
+
+/**
+ * The auth seam, and then the sync engine — in that order, at module scope,
+ * for the same reason everything else here is.
+ *
+ * WHY THE ORDER IS NOT NEGOTIABLE. storage.initSync() reads both seams and
+ * bails if either is missing — and the two bails are not equally forgiving.
+ * No storage driver returns BEFORE setting syncStarted, so a later call could
+ * still recover; no client sets syncStarted and only then returns, which makes
+ * that one PERMANENT for the process. Calling initSync before initAuth would
+ * therefore not merely delay sync, it would disable it for the whole launch,
+ * silently and with the app looking entirely healthy.
+ *
+ * WHAT initSync ACTUALLY DOES, and why it belongs at module scope rather than
+ * in App's first effect. It subscribes to auth changes and kicks a getSession()
+ * — that listener is what runs the anonymous → signed-in merge. The web gets
+ * this from SyncInit in the root layout, which mounts before anything that can
+ * offer a sign-in button. Here, module scope is strictly earlier still: the
+ * subscription is live before React renders a frame, so a session restored
+ * from MMKV on a cold start is merged without a UI event to trigger it, and no
+ * sign-in can ever fire before something is listening.
+ *
+ * Nothing is awaited. initSync's own work is async and self-healing (a merge
+ * that fails is repeated at the next auth event), so boot does not wait on the
+ * network — the feed is interactive on the local cache exactly as before.
+ *
+ * A no-op when Supabase is unconfigured: initAuth skips, getSupabase() stays
+ * null, initSync returns at its own guard, and the app is anonymous-only.
+ */
+initAuth();
+storage.initSync();
 
 /**
  * The catalog seam, filled immediately after the platform seam and before any

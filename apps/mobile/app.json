@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "eu.flytriply.loro",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -21,7 +22,8 @@
     },
     "owner": "radektomass-team",
     "plugins": [
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-web-browser"
     ]
   }
 }

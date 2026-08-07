@@ -16,6 +16,7 @@ import { formatDue } from '@loro/core/srs';
 import { computeStreaks, dueCount, nextDueAt } from '@loro/core/progress';
 import { enableRecallForSession } from '../feed/recall';
 import { resetForColdStart } from '../onboarding/flow';
+import { SignInCard } from '../auth/SignInCard';
 import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
 
 /**
@@ -512,6 +513,16 @@ export function ProgressScreen({
           </>
         )}
 
+        {/* Outside the empty/populated split for the same reason as the reset
+            row: the offer to back up progress is worth making whether or not
+            there is a full page of it, and a brand-new user who signs in here
+            takes the merge-up path with an empty local cache, which is the
+            cheapest possible version of it. Placed last so it never pushes the
+            actual progress down the screen. */}
+        <View style={styles.signIn}>
+          <SignInCard />
+        </View>
+
         {/* Outside the empty/populated split on purpose: the reset is most
             useful precisely when the panels are empty and you are re-running
             onboarding. */}
@@ -561,6 +572,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  signIn: { marginTop: 4 },
   section: { marginBottom: 22 },
   sectionTitle: {
     color: 'rgba(242,245,243,0.5)',
