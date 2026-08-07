@@ -1,12 +1,15 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Service-role Supabase client — ROUTE HANDLERS ONLY.
+ * Service-role Supabase client — SERVER-ONLY CALLERS.
  *
  * Modelled on scripts/lib/supabaseAdmin.mts, which stays the CLI's copy. This
- * one exists for the single server-side operation that cannot run under RLS:
+ * one exists for the server-side operations that cannot run under RLS:
  * account deletion (/api/account/delete), which must delete rows across every
- * loro_ table and remove the auth user itself.
+ * loro_ table and remove the auth user itself, and the /waitlist dashboard,
+ * which counts a table whose only policy is an anon INSERT. Route handlers and
+ * server components both qualify; anything that could render in the browser
+ * does not, which is what the window guard below enforces.
  *
  * Why it lives under app/api/_lib and not lib/: lib/ is importable from
  * client components, and the repo's standing rule is that the service role
