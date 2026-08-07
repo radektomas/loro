@@ -92,7 +92,7 @@ export function WaitlistForm({ source, align = 'start' }: WaitlistFormProps) {
               : 'You’re already on the list.'}
           </p>
           <p className="mt-0.5 text-sm text-muted">
-            The beta is open in the meantime — keep scrolling real Spanish.
+            We’ll email you the moment it opens.
           </p>
         </div>
       </div>

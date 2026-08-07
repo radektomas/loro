@@ -218,12 +218,6 @@ export default function JoinPage() {
             </p>
             <div className="mt-9">
               <WaitlistForm source="landing-hero" />
-              <Link
-                href="/feed"
-                className="mt-5 inline-flex h-11 items-center rounded-2xl px-4 text-sm font-semibold text-text ring-1 ring-white/15 transition-colors duration-150 hover:bg-white/5"
-              >
-                Try the beta →
-              </Link>
             </div>
           </div>
           <div className="order-1 lg:order-2">
