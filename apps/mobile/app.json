@@ -10,7 +10,7 @@
     "backgroundColor": "#0a0d0b",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "eu.flytriply.loro",
+      "bundleIdentifier": "app.getloro",
       "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
