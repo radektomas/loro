@@ -16,6 +16,7 @@ import { Shell } from './src/shell/Shell';
 import { Onboarding } from './src/onboarding/Onboarding';
 import { shouldShowOnboarding } from './src/onboarding/flow';
 import { onAuthDeepLink } from './src/auth/exchange';
+import { onAppReset } from './src/platform/appReset';
 
 /**
  * CHECKPOINT E — the feed, with sound and word-saving.
@@ -64,6 +65,24 @@ export default function App() {
    * most once per launch.
    */
   const [onboarding, setOnboarding] = useState(shouldShowOnboarding);
+
+  /**
+   * Bumped when account deletion wipes local storage, to remount the subtree
+   * below. Screens hold their data in React state from mount — without this a
+   * deleted account keeps its saved words on screen until the next launch,
+   * which reads as a deletion that silently failed. The onboarding gate is
+   * re-read at the same time because a wiped device IS a first launch again.
+   */
+  const [resetKey, setResetKey] = useState(0);
+
+  useEffect(
+    () =>
+      onAppReset(() => {
+        setResetKey((n) => n + 1);
+        setOnboarding(shouldShowOnboarding());
+      }),
+    []
+  );
 
   useEffect(() => {
     // Hides the splash and kicks the background catalog refresh, now that
@@ -119,11 +138,18 @@ export default function App() {
               drawn over these screens. Rendering Onboarding INSTEAD OF Shell
               is what keeps the tab bar and the feed's FlashList unmounted
               during the flow. */}
+          {/* resetKey re-keys ONLY this subtree, never PlayerHost: the host's
+              contract is one WebView per launch, and the onboarding -> Shell
+              handoff already swaps exactly this subtree beneath a persistent
+              host, so a reset reuses a transition the tree is built for. */}
           <PlayerHost>
             {onboarding ? (
-              <Onboarding onDone={() => setOnboarding(false)} />
+              <Onboarding
+                key={`onboarding-${resetKey}`}
+                onDone={() => setOnboarding(false)}
+              />
             ) : (
-              <Shell />
+              <Shell key={`shell-${resetKey}`} />
             )}
           </PlayerHost>
         </BottomSheetModalProvider>

@@ -17,6 +17,8 @@ import { computeStreaks, dueCount, nextDueAt } from '@loro/core/progress';
 import { enableRecallForSession } from '../feed/recall';
 import { resetForColdStart } from '../onboarding/flow';
 import { SignInCard } from '../auth/SignInCard';
+import { DeleteAccountCard } from '../auth/DeleteAccountCard';
+import { LegalLinks } from './LegalLinks';
 import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
 
 /**
@@ -523,6 +525,19 @@ export function ProgressScreen({
           <SignInCard />
         </View>
 
+        {/* Directly under the account card, mirroring the web's placement.
+            Renders itself away when signed out, so an anonymous user is never
+            offered the deletion of an account they do not have. */}
+        <View style={styles.deleteAccount}>
+          <DeleteAccountCard />
+        </View>
+
+        {/* Last thing on the page, shown to everyone — the policy covers
+            anonymous use too, so this is not gated on a session. */}
+        <View style={styles.legal}>
+          <LegalLinks />
+        </View>
+
         {/* Outside the empty/populated split on purpose: the reset is most
             useful precisely when the panels are empty and you are re-running
             onboarding. */}
@@ -573,6 +588,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   signIn: { marginTop: 4 },
+  deleteAccount: { marginTop: 12 },
+  legal: { marginTop: 20 },
   section: { marginBottom: 22 },
   sectionTitle: {
     color: 'rgba(242,245,243,0.5)',
