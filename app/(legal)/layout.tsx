@@ -2,9 +2,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 /**
- * Shared chrome for the legal pages (/privacy, /terms) — route group only,
- * does not affect URLs. Server-rendered, zero client JS, same design
- * language as the landing: dark base, generous air, muted body type.
+ * Shared chrome for the public info pages (/privacy, /terms, /support) —
+ * route group only, does not affect URLs. Server-rendered, zero client JS,
+ * same design language as the landing: dark base, generous air, muted body
+ * type.
  */
 export default function LegalLayout({
   children,
@@ -31,6 +32,9 @@ export default function LegalLayout({
           </Link>
           <Link href="/terms" className="transition-colors hover:text-text">
             Terms
+          </Link>
+          <Link href="/support" className="transition-colors hover:text-text">
+            Support
           </Link>
           <span className="ml-auto">© 2026 Loro</span>
         </footer>

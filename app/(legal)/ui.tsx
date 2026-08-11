@@ -9,14 +9,16 @@ export function PageTitle({
   updated,
 }: {
   title: string;
-  updated: string;
+  updated?: string;
 }) {
   return (
     <header>
       <h1 className="text-3xl font-bold tracking-[-0.02em] text-text">
         {title}
       </h1>
-      <p className="mt-2 text-xs text-muted">Last updated: {updated}</p>
+      {updated && (
+        <p className="mt-2 text-xs text-muted">Last updated: {updated}</p>
+      )}
     </header>
   );
 }

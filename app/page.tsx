@@ -336,6 +336,12 @@ export default function JoinPage() {
               >
                 Terms
               </Link>
+              <Link
+                href="/support"
+                className="transition-colors duration-150 hover:text-text"
+              >
+                Support
+              </Link>
               <span>© 2026</span>
             </div>
           </div>
