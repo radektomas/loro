@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     'Get help with Loro — contact, frequently asked questions, and legal information.',
 };
 
-const CONTACT_EMAIL = 'radektygrtomas@gmail.com';
+const CONTACT_EMAIL = 'support@getloro.app';
 
 /**
  * Public support page (App Store requirement, among others). Static and
@@ -56,11 +56,11 @@ export default function SupportPage() {
             },
             {
               term: 'Where do the videos come from?',
-              def: 'Most videos are YouTube clips their creators published under a Creative Commons licence; each one is credited in the app with a link to the original video. Some videos are uploaded directly by creators in Loro’s creator programme.',
+              def: 'Most videos are YouTube clips their creators published under a Creative Commons licence; each one is credited in the app with a link to the original video.',
             },
             {
               term: 'Is Loro free?',
-              def: 'Yes — Loro is currently free to use, with no paid plan. If a paid tier is introduced later, it will be announced clearly in the app first.',
+              def: 'Loro offers a 7-day free trial, and after that a paid subscription. The exact price is always shown in the app before any purchase.',
             },
           ]}
         />
