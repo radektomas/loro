@@ -1,13 +1,11 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
-  withTiming,
 } from 'react-native-reanimated';
 import type { Level, SelfLevel } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
@@ -25,7 +23,6 @@ import {
 import { BRAND } from './brand';
 import {
   BLANKS,
-  BUILDING_PLAN,
   CALIBRATION_INTRO,
   FLUENCY_GOAL,
   FREQUENCY,
@@ -42,8 +39,13 @@ import {
 import { PAYWALL_ENABLED, olog, setFrequency, setMotivation } from './flow';
 
 /**
- * The eleven screens, in order. Each one is a pure component over the flow
- * state; the host (Onboarding.tsx) owns the state, the index and the slide.
+ * The screens, in order. Each one is a pure component over the flow state; the
+ * host (Onboarding.tsx) owns the state, the index and the slide.
+ *
+ * NO COUNT IS QUOTED HERE ON PURPOSE. Two things already vary it: the 'zero'
+ * self-assessment drops three screens, and the paywall is filtered out while
+ * its flag is false. Nothing in the app indexes these by number either, so a
+ * count in a comment is a fact that only ever goes stale. Read STEPS.
  *
  * WHERE THE WRITES HAPPEN, because this is the part that has to match the web:
  *
@@ -95,9 +97,13 @@ export type StepProps = {
    * (Onboarding.tsx), which is what makes a transition one transform instead
    * of a mount. That is free for a static screen and wrong for a moving one:
    * an intro animation would play to an empty room and be over before the user
-   * arrived, and the building-plan loader would start its timer, finish, and
-   * advance the flow from five screens away. Anything time-based keys off
-   * this and tears itself down when it goes false.
+   * arrived, and a timed screen would run its clock from five screens away.
+   *
+   * NO STEP CONSUMES THIS TODAY. The two that did are gone: the bar chart that
+   * grew in on arrival, and the "Building your plan" loader whose timer
+   * advanced the flow on its own. The prop stays because it is the host's
+   * contract rather than any one screen's, and it is the thing a future timed
+   * or animated step must key off instead of mount.
    */
   isCurrent: boolean;
 };
@@ -114,7 +120,6 @@ export type StepId =
   | 'frequency'
   | 'fluencyGoal'
   | 'progressComparison'
-  | 'buildingPlan'
   | 'paywall'
   | 'handoff';
 
@@ -575,32 +580,25 @@ function FluencyGoalStep({ next }: StepProps) {
   );
 }
 
-// -------------------------------------------------- 11. progress comparison
+// ------------------------------------------------------------ 11. reassurance
 
-/** Bar heights in points. The 2:1 ratio IS the claim the copy makes, so it
-    lives beside the copy's warning rather than being quietly tuned here. */
-const BAR_OTHER = 92;
-const BAR_LORO = 184;
-
-function ProgressComparisonStep({ isCurrent, next }: StepProps) {
-  const reducedMotion = useReducedMotion();
-  const grow = useSharedValue(0);
-
-  // Grows in on ARRIVAL, not on mount. Reset on leave so coming back replays
-  // it rather than showing a chart that is already over.
-  useEffect(() => {
-    if (!isCurrent) {
-      grow.value = 0;
-      return;
-    }
-    grow.value = withTiming(1, { duration: reducedMotion ? 0 : 900 });
-  }, [isCurrent, reducedMotion, grow]);
-
-  /** scaleY from the foot of the bar, so the growth costs no layout pass and
-      the labels underneath cannot shift while it runs. */
-  const otherStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: grow.value }] }));
-  const loroStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: grow.value }] }));
-
+/**
+ * A STATIC SCREEN, AND THAT IS THE CHANGE.
+ *
+ * This used to be a 2:1 bar chart growing in on arrival, "Other apps 1x"
+ * beside "Loro 2x". The ratio was the comparative claim, so the chart could
+ * not stay once the claim went, and no chart can replace it here: any two bars
+ * side by side re-assert a comparison. See the note in copy.ts.
+ *
+ * The parrot takes its place, at the same size and treatment ResultStep uses.
+ * That is a deliberate reuse rather than a new illustration: this screen is
+ * now reassurance, which is what the mascot already means everywhere else in
+ * the flow.
+ *
+ * NOTHING ANIMATES, so nothing keys off isCurrent. That is why this component
+ * takes only `next`.
+ */
+function ProgressComparisonStep({ next }: StepProps) {
   return (
     <Screen
       footer={<PrimaryButton label={PROGRESS_COMPARISON.cta} onPress={next} />}
@@ -608,27 +606,13 @@ function ProgressComparisonStep({ isCurrent, next }: StepProps) {
       <Title>{PROGRESS_COMPARISON.title}</Title>
       <Body>{PROGRESS_COMPARISON.body}</Body>
 
-      <View style={styles.chart}>
-        <View style={styles.column}>
-          <Text style={styles.barValue}>{PROGRESS_COMPARISON.otherValue}</Text>
-          <Animated.View style={[styles.bar, styles.barOther, otherStyle]} />
-          <Text style={styles.barLabel}>{PROGRESS_COMPARISON.otherLabel}</Text>
-        </View>
-
-        <View style={styles.column}>
-          <Text style={[styles.barValue, styles.barValueLoro]}>
-            {PROGRESS_COMPARISON.loroValue}
-          </Text>
-          <Animated.View style={[styles.bar, styles.barLoro, loroStyle]} />
-          <Text style={[styles.barLabel, styles.barLabelLoro]}>
-            {PROGRESS_COMPARISON.loroLabel}
-          </Text>
-        </View>
-
-        {/* Beside the tall bar, standing on the same baseline. */}
+      {/* Centred on its own, so the headline and body above keep their
+          left-aligned reading rhythm. Same asset and same sizing as
+          ResultStep; only the wrapper's spacing differs. */}
+      <View style={styles.reassureArt}>
         <Image
           source={BRAND.parrot}
-          style={styles.chartParrot}
+          style={styles.parrot}
           resizeMode="contain"
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot"
@@ -638,92 +622,7 @@ function ProgressComparisonStep({ isCurrent, next }: StepProps) {
   );
 }
 
-// ------------------------------------------------------- 12. building plan
-
-/** How long the loader runs, and how long each review card is up. */
-const BUILD_MS = 4200;
-const CARD_MS = 1400;
-
-/**
- * The loading screen, and the one screen allowed to advance on its own.
- *
- * A RESULT SCREEN THAT AUTO-ADVANCES READS AS A GLITCH; a loader that does not
- * reads as a hang. That is the whole difference, and it is why the calibration
- * result ends in a tap (the web's 1900ms auto-advance there had a guided video
- * to land on) while this one does not.
- *
- * REDUCE MOTION SHORTENS THE ANIMATION, NOT THE WAIT. A progress bar is
- * information, not decoration: filling it instantly and then sitting still for
- * four seconds is exactly the broken-looking state the bar exists to prevent.
- * The cross-fade and the bar's growth are what get suppressed.
- */
-function BuildingPlanStep({ isCurrent, next }: StepProps) {
-  const reducedMotion = useReducedMotion();
-  const [card, setCard] = useState(0);
-  const fill = useSharedValue(0);
-  const fade = useSharedValue(1);
-
-  useEffect(() => {
-    if (!isCurrent) {
-      // Reset rather than freeze: coming back to a half-filled bar would look
-      // like the plan half-built.
-      fill.value = 0;
-      setCard(0);
-      return;
-    }
-
-    fill.value = withTiming(1, { duration: BUILD_MS });
-
-    const rotate = setInterval(() => {
-      setCard((current) => (current + 1) % BUILDING_PLAN.testimonials.length);
-    }, CARD_MS);
-
-    // The advance. Cleared on leave, so going back mid-load cannot leave a
-    // timer alive that jumps the flow forward from another screen.
-    const advance = setTimeout(next, BUILD_MS + 350);
-
-    return () => {
-      clearInterval(rotate);
-      clearTimeout(advance);
-    };
-  }, [isCurrent, next, fill]);
-
-  // Cross-fade on each swap. Driven from the card index rather than from the
-  // interval so the two can never disagree about which card is showing.
-  useEffect(() => {
-    if (reducedMotion) return;
-    fade.value = 0;
-    fade.value = withTiming(1, { duration: 260 });
-  }, [card, reducedMotion, fade]);
-
-  const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: fill.value }],
-  }));
-  const cardStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
-
-  const review = BUILDING_PLAN.testimonials[card];
-
-  return (
-    <Screen>
-      <Title>{BUILDING_PLAN.title}</Title>
-      <Body>{BUILDING_PLAN.body}</Body>
-
-      <View style={styles.loaderTrack}>
-        <Animated.View style={[styles.loaderFill, fillStyle]} />
-      </View>
-
-      <Animated.View style={[styles.review, cardStyle]}>
-        <Text style={styles.reviewStars}>★★★★★</Text>
-        <Text style={styles.reviewQuote}>“{review.quote}”</Text>
-        <Text style={styles.reviewName}>
-          {review.name} · {review.detail}
-        </Text>
-      </Animated.View>
-    </Screen>
-  );
-}
-
-// -------------------------------------------------------------- 13. paywall
+// -------------------------------------------------------------- 12. paywall
 
 /**
  * The dark seam. Unreachable while PAYWALL_ENABLED is false — the step is
@@ -787,21 +686,20 @@ export const STEPS: StepDef[] = [
    * THE CONVERSION TAIL, and the order is an argument rather than a list.
    *
    * fluencyGoal sits against frequency because they are one beat: "how often"
-   * and "by when" are both the user setting their own stakes, and asking them
-   * together is what lets buildingPlan look like it consumed both.
+   * and "by when" are both the user setting their own stakes.
    *
-   * progressComparison follows the goal rather than preceding it, so the chart
-   * answers the question the goal has just raised ("can I actually do that?")
-   * instead of arriving as an unprompted boast. Swap these two lines to try it
-   * the other way round; nothing else depends on the order.
+   * progressComparison follows the goal rather than preceding it, so the
+   * screen answers the question the goal has just raised ("can I actually do
+   * that?") instead of arriving unprompted. Swap these two lines to try it the
+   * other way round; nothing else depends on the order.
    *
-   * buildingPlan is last of the three because it can only claim to be building
-   * a plan once there are answers to build it from. It must stay after the
-   * calibration block.
+   * THERE WAS A THIRD, and its absence is deliberate: a "Building your plan"
+   * loader that sat for four seconds rotating fabricated five-star reviews. It
+   * is deleted, not disabled. Nothing in the flow depended on it, and nothing
+   * indexes these steps by number, so removing it needed no other change.
    */
   { id: 'fluencyGoal', Component: FluencyGoalStep },
   { id: 'progressComparison', Component: ProgressComparisonStep },
-  { id: 'buildingPlan', Component: BuildingPlanStep },
   { id: 'paywall', Component: PaywallStep, skip: () => !PAYWALL_ENABLED },
   { id: 'handoff', Component: HandoffStep },
 ];
@@ -915,59 +813,8 @@ const styles = StyleSheet.create({
   },
   goalDerivedStrong: { color: TEXT, fontWeight: '800' },
 
-  // ---- progress comparison ----
-  chart: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: 22,
-    justifyContent: 'center',
-    marginTop: 36,
-  },
-  column: { alignItems: 'center', gap: 8 },
-  bar: { borderRadius: 12, transformOrigin: 'bottom', width: 62 },
-  barOther: { backgroundColor: 'rgba(242,245,243,0.16)', height: BAR_OTHER },
-  barLoro: { backgroundColor: ACCENT, height: BAR_LORO },
-  barValue: {
-    color: 'rgba(242,245,243,0.45)',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  barValueLoro: { color: ACCENT, fontSize: 19 },
-  barLabel: { color: 'rgba(242,245,243,0.55)', fontSize: 13, fontWeight: '600' },
-  barLabelLoro: { color: TEXT, fontWeight: '800' },
-  chartParrot: { height: 104, marginBottom: 22, width: 70 },
-
-  // ---- building plan ----
-  loaderTrack: {
-    backgroundColor: 'rgba(242,245,243,0.12)',
-    borderRadius: 999,
-    height: 6,
-    marginTop: 30,
-    overflow: 'hidden',
-  },
-  loaderFill: {
-    backgroundColor: ACCENT,
-    height: '100%',
-    transformOrigin: 'left',
-    width: '100%',
-  },
-  review: {
-    backgroundColor: '#141a17',
-    borderRadius: 18,
-    marginTop: 30,
-    padding: 18,
-  },
-  reviewStars: { color: '#f5c451', fontSize: 13, letterSpacing: 2 },
-  reviewQuote: {
-    color: TEXT,
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 24,
-    marginTop: 8,
-  },
-  reviewName: {
-    color: 'rgba(242,245,243,0.45)',
-    fontSize: 13,
-    marginTop: 10,
-  },
+  // ---- reassurance ----
+  /** The one thing left of the old bar chart's block of styles: a centred slot
+      for the mascot, at roughly the spacing the chart used to sit at. */
+  reassureArt: { alignItems: 'center', marginTop: 30 },
 });

@@ -15,6 +15,8 @@ import type { Video } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { tierFor } from '@loro/core/levels';
 import { usePlayerApi, usePlayerClock, usePlayerStatus } from '../player/PlayerHost';
+import { maybeAskForPermission, noteCorrectRecall } from '../platform/notifications';
+import { CELEBRATE_MS } from './Celebration';
 import { LEVELS_ENABLED, buildLevelPlan } from './levelBlanks';
 import {
   buildRecallPlan,
@@ -288,9 +290,20 @@ export function RecallHost({
     Keyboard.dismiss();
   }, [plan, heldSv, resolvedMask, lastActionAt, measuredSv]);
 
+  /**
+   * Holds the gap between a correct answer and the notification explainer, so
+   * the sheet lands after the celebration rather than on top of it.
+   *
+   * THE DELAY LIVES HERE RATHER THAN IN THE NOTIFICATIONS MODULE because
+   * "after the celebration" is a fact about this screen's animation. A platform
+   * seam importing CELEBRATE_MS would point the dependency the wrong way.
+   */
+  const askTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(
     () => () => {
       if (resumeTimer.current) clearTimeout(resumeTimer.current);
+      if (askTimer.current) clearTimeout(askTimer.current);
     },
     []
   );
@@ -535,6 +548,34 @@ export function RecallHost({
             (result.leveledUp ? ' LEVELLED UP' : '') +
             (result.leveledDown ? ' LEVELLED DOWN' : '')
         );
+      }
+
+      /**
+       * THE DAY IS NOW COMPLETE, AND THIS IS THE ONLY PLACE THAT KNOWS IT.
+       *
+       * Hooked here rather than around storage.gradeWord deliberately: BOTH
+       * branches above log a streak day (gradeWord for a recall, saveLevelWord
+       * for a level fill), and LEVELS_ENABLED is true, so a user can complete
+       * their day from the ordinary feed without ever opening a review. Wrapping
+       * only the recall path would miss them entirely.
+       *
+       * ⚠️ IT MUST STAY BELOW THE GRADING, NOT ABOVE IT. reconcile() reads
+       * getCorrectRecallDays to decide whether today still needs the at-risk
+       * nudge, so running it before the day is written would re-arm the very
+       * notification this call exists to cancel. It happens to survive above the
+       * branches today because reconcile defers its body to a microtask, but
+       * that is an accident of scheduling and not something to depend on.
+       *
+       * The explainer waits for the celebration to finish, and raises nothing
+       * unless this is a moment worth asking in (see maybeAskForPermission).
+       */
+      if (wasCorrect) {
+        noteCorrectRecall();
+        if (askTimer.current) clearTimeout(askTimer.current);
+        askTimer.current = setTimeout(() => {
+          askTimer.current = null;
+          void maybeAskForPermission();
+        }, CELEBRATE_MS);
       }
 
       // The web's rhythm verbatim: resume quickly on success, leave time to

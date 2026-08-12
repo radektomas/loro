@@ -147,12 +147,30 @@ export const BLANKS = {
 
 // ------------------------------------------------------------ 9. frequency
 
-/** REWRITTEN. No web counterpart. Answers persist to loro.mobile.frequency.
-    No notification permission is requested anywhere in this flow: that would
-    need expo-notifications, a native module, and a rebuild. */
+/**
+ * REWRITTEN. No web counterpart. Answers persist to loro.mobile.frequency.
+ *
+ * NOTIFICATION PERMISSION IS NEVER REQUESTED IN THIS FLOW, AND THAT IS A RULE
+ * RATHER THAN A GAP. The app does send reminders, and expo-notifications is
+ * installed, so nothing technical is stopping a prompt here. It is deliberately
+ * absent: iOS grants one system prompt per install, and spending it on someone
+ * who has not yet felt what a reminder is for is how an app ends up permanently
+ * unable to send any. The ask happens after the user's first correct answer,
+ * behind an in-app explainer, in the feed. See src/platform/notifications.ts.
+ *
+ * Do not add a permission request, a reminder-time step, or a "turn on
+ * notifications" screen to this flow. The reminder time is set in Progress, by
+ * people who have already opted in.
+ *
+ * THE BODY MAKES NO PROMISE ABOUT REMINDERS EITHER WAY. It used to say "No
+ * reminders, no pressure", which was true when nothing could send one and
+ * became a broken promise the moment daily reminders shipped. This screen asks
+ * about practice frequency; what it must not do is describe notification
+ * behaviour it does not control.
+ */
 export const FREQUENCY = {
   title: 'How often do you want to practise?',
-  body: 'No reminders, no pressure. It just sets the pace we aim for.',
+  body: 'There is no wrong answer. It just sets the pace we aim for.',
   options: [
     { id: 'light', label: 'A few times a week', body: 'About 5 minutes.' },
     { id: 'daily', label: 'Every day', body: 'About 10 minutes.' },
@@ -184,65 +202,34 @@ export const FLUENCY_GOAL = {
   ],
 };
 
-// -------------------------------------------------- 11. progress comparison
+// -------------------------------------------------------- 11. reassurance
 
 /**
- * PLACEHOLDER, AND ONE LINE OF IT IS A CLAIM RATHER THAN COPY.
+ * REWRITTEN. No web counterpart.
  *
- * "Twice as much progress" is drawn as a precise 2:1 bar chart, which reads as
- * a measured result. It is not one. Nothing in this repo measures it, and
- * shipping a comparative performance claim against unnamed competitors needs
- * either data behind it or wording that does not assert a number. Treat the
- * ratio in steps.tsx as part of this copy, not as layout.
+ * WHAT THIS BLOCK USED TO BE, because the screen still occupies its slot. It
+ * was "Make twice as much progress with Loro", drawn as a precise 2:1 bar
+ * chart against a bar labelled "Other apps". Nothing in this repo measures
+ * that, so it was a comparative performance claim with no data under it, and
+ * the chart asserted the ratio whatever the headline above it said. Both are
+ * gone. The screen now describes what Loro does and leaves ranking out of it.
+ *
+ * KEEP IT THAT WAY. Copy here that names a competitor, a category of app, or a
+ * multiplier needs evidence before it ships.
+ *
+ * The screen that followed this one, a fake "Building your plan" loader with
+ * four invented five-star testimonials attached to invented people, is gone
+ * outright. It is not commented out and it is not waiting for real quotes:
+ * both the copy and the step were deleted. If real, attributable testimonials
+ * ever exist, that is a new screen written from scratch.
  */
 export const PROGRESS_COMPARISON = {
-  title: 'Make twice as much progress with Loro.',
-  body: 'Learning from real speech beats drilling flashcards, because the words arrive the way you will actually hear them.',
-  otherLabel: 'Other apps',
-  otherValue: '1x',
-  loroLabel: 'Loro',
-  loroValue: '2x',
+  title: 'Make significant progress',
+  body: 'You learn from real speech at real speed, and the words you save come back on a schedule. A few minutes a day is enough to keep moving.',
   cta: 'Continuar',
 };
 
-// ------------------------------------------------------- 12. building plan
-
-/**
- * PLACEHOLDER, AND THE TESTIMONIALS ARE FABRICATED.
- *
- * Invented quotes attached to invented people. They are fine as a layout
- * placeholder and are NOT fine in a shipped build: presented in a review card,
- * they read as real users saying real things. Replace them with attributed
- * quotes you actually have, or drop the cards and leave the loader alone.
- */
-export const BUILDING_PLAN = {
-  title: 'Building your plan',
-  body: 'Matching clips to your level and setting up your first reviews.',
-  testimonials: [
-    {
-      quote: 'I finally understand people talking at normal speed.',
-      name: 'Ana M.',
-      detail: '3 months with Loro',
-    },
-    {
-      quote: 'Ten minutes on the bus and the words actually stick.',
-      name: 'Tom K.',
-      detail: '6 months with Loro',
-    },
-    {
-      quote: 'The blanks are the bit I look forward to.',
-      name: 'Priya S.',
-      detail: '2 months with Loro',
-    },
-    {
-      quote: 'First Spanish app that kept me past week two.',
-      name: 'Marco L.',
-      detail: '5 months with Loro',
-    },
-  ],
-};
-
-// -------------------------------------------------------------- 13. paywall
+// -------------------------------------------------------------- 12. paywall
 
 /** REWRITTEN, and dark. Nothing renders while PAYWALL_ENABLED is false. */
 export const PAYWALL = {
@@ -252,7 +239,7 @@ export const PAYWALL = {
   dismiss: 'Not now',
 };
 
-// ------------------------------------------------------------- 14. handoff
+// ------------------------------------------------------------- 13. handoff
 
 /** PORTED (cta, app/welcome/page.tsx:550) + REWRITTEN (title, body). */
 export const HANDOFF = {

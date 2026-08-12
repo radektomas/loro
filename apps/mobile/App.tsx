@@ -3,7 +3,8 @@
 // a module body runs once, so this is free insurance against a reorder there.
 import { finishBoot } from './src/platform/boot';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
@@ -17,6 +18,9 @@ import { Onboarding } from './src/onboarding/Onboarding';
 import { shouldShowOnboarding } from './src/onboarding/flow';
 import { onAuthDeepLink } from './src/auth/exchange';
 import { onAppReset } from './src/platform/appReset';
+import { usePurchaseGate } from './src/platform/purchases';
+import { PaywallScreen } from './src/paywall/PaywallScreen';
+import { GROUND } from './src/onboarding/chrome';
 
 /**
  * CHECKPOINT E — the feed, with sound and word-saving.
@@ -84,11 +88,34 @@ export default function App() {
     []
   );
 
+  /**
+   * THE HARD PAYWALL GATE. Everything except onboarding renders behind it:
+   * ready + entitled → Shell; ready + not entitled → PaywallScreen; not ready
+   * → a bare ground view UNDER THE HELD SPLASH (see the finishBoot effect
+   * below). The verdict is RevenueCat CustomerInfo, never local storage —
+   * purchases.ts owns it, including the fail-open paths (no SDK key, or the
+   * first fetch timing out) that keep a config mistake from bricking every
+   * install. Purchase and restore never report back to this component: the
+   * CustomerInfo listener flips `entitled` and the right screen renders.
+   */
+  const gate = usePurchaseGate();
+
+  /**
+   * Splash release, now conditional on the gate. Onboarding releases it
+   * immediately (first launch — the wall comes AFTER onboarding, which is
+   * never gated); otherwise the splash holds until the entitlement verdict so
+   * a subscriber never sees the paywall flash on a cold start. Bounded: the
+   * gate self-resolves within purchases.ts's safety timeout no matter what
+   * the network does. The ref keeps finishBoot to exactly one call.
+   */
+  const bootFinished = useRef(false);
   useEffect(() => {
-    // Hides the splash and kicks the background catalog refresh, now that
-    // something is actually on screen.
-    finishBoot();
-  }, []);
+    if (bootFinished.current) return;
+    if (onboarding || gate.ready) {
+      bootFinished.current = true;
+      finishBoot();
+    }
+  }, [onboarding, gate.ready]);
 
   /**
    * The magic-link callback, listened for at the ROOT and for the whole app
@@ -148,8 +175,12 @@ export default function App() {
                 key={`onboarding-${resetKey}`}
                 onDone={() => setOnboarding(false)}
               />
-            ) : (
+            ) : !gate.ready ? (
+              <View style={{ backgroundColor: GROUND, flex: 1 }} />
+            ) : gate.entitled ? (
               <Shell key={`shell-${resetKey}`} />
+            ) : (
+              <PaywallScreen />
             )}
           </PlayerHost>
         </BottomSheetModalProvider>

@@ -6,6 +6,8 @@ import { platformCrypto } from './crypto';
 import { lifecycle } from './lifecycle';
 import { storageDriver } from './storage';
 import { initAuth } from './supabaseInit';
+import { initNotifications } from './notifications';
+import { captureCampaignAttribution, initPurchases } from './purchases';
 import { installCachedCatalog, refreshCatalog, type CatalogSource } from './catalog';
 
 /**
@@ -79,6 +81,16 @@ initAuth();
 storage.initSync();
 
 /**
+ * RevenueCat, immediately after the auth seam for the same reason initSync
+ * sits there: it subscribes to the SAME onAuthChange bus (its logIn is how a
+ * purchase follows the anonymous → signed-in merge), so it must be listening
+ * before any UI event can produce a session. Also fills the entitlement gate
+ * App.tsx renders on — a no-op with the gate OPEN when the SDK key is unset
+ * (see purchases.ts / config.ts on failing open).
+ */
+initPurchases();
+
+/**
  * The catalog seam, filled immediately after the platform seam and before any
  * render. 'seed' means the bundled 8 are installed and a refresh will replace
  * them; 'cache' means the full snapshot was already on disk.
@@ -95,8 +107,21 @@ export const catalogSource: CatalogSource = installCachedCatalog();
  * The refresh is kicked from the same place because it is genuinely background
  * work — the app is already interactive and running on either the cache or the
  * seed, and onCatalogChanged updates whatever is mounted when it lands.
+ *
+ * NOTIFICATIONS INITIALISE HERE FOR THE SAME REASON, and specifically NOT at
+ * module scope beside initPlatform. Its listeners read learning data through
+ * core, so they need the storage seam already filled; and its first reconcile
+ * is async native work that nothing on screen waits for. The one part that
+ * genuinely cannot wait — the foreground presentation handler — is registered
+ * at module scope inside notifications.ts, so importing this file is enough to
+ * install it. See the note there on the split.
  */
 export function finishBoot(): void {
   void SplashScreen.hideAsync();
   void refreshCatalog();
+  initNotifications();
+  // First-launch campaign capture + subscriber attribute. Here and not at
+  // module scope because getInitialURL is async native work nothing waits on,
+  // and the token can only matter once purchases are configured anyway.
+  void captureCampaignAttribution();
 }

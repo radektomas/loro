@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AppState,
   DevSettings,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -15,6 +17,18 @@ import { getCatalog } from '@loro/core/catalog';
 import { formatDue } from '@loro/core/srs';
 import { computeStreaks, dueCount, nextDueAt } from '@loro/core/progress';
 import { enableRecallForSession } from '../feed/recall';
+import {
+  formatTime,
+  getPermissionState,
+  getPrefs,
+  isNotificationSeamAvailable,
+  openSystemSettings,
+  requestPermission,
+  sendTestNotification,
+  setEnabled,
+  setReminderTime,
+  type PermissionState,
+} from '../platform/notifications';
 import { resetForColdStart } from '../onboarding/flow';
 import { SignInCard } from '../auth/SignInCard';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
@@ -97,6 +111,188 @@ function DevResetRow() {
           : 'DEV · Reset device (cold start)'}
       </Text>
     </Pressable>
+  );
+}
+
+/**
+ * DEV ONLY — fire a reminder five seconds from now.
+ *
+ * THIS IS A FILMING TOOL AND THAT IS WHY IT LOOKS LIKE NOTHING SPECIAL. It
+ * schedules through the same content builder the real 19:00 reminder uses, so
+ * what lands on the lock screen is byte-for-byte the product, streak line and
+ * due count included. Five seconds is enough to background the app and catch
+ * the banner.
+ *
+ * Dead-code eliminated from production alongside DevResetRow: `__DEV__` is
+ * inlined by the bundler, so the guard at the call site removes this too.
+ */
+function DevNotificationRow() {
+  const [sent, setSent] = useState(false);
+  return (
+    <Pressable
+      onPress={() => {
+        void sendTestNotification();
+        setSent(true);
+        setTimeout(() => setSent(false), 6000);
+      }}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.devRow, pressed && styles.pressed]}
+    >
+      <Text style={styles.devText}>
+        {sent ? 'Scheduled. Background the app…' : 'DEV · Send test notification (5s)'}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** 30-minute granularity. Fine enough to matter, coarse enough that setting it
+    is two or three taps rather than a scrub. */
+const TIME_STEP_MINUTES = 30;
+const MINUTES_IN_DAY = 24 * 60;
+
+/**
+ * The notification settings, and the app's only place to change them.
+ *
+ * NO DATE PICKER COMPONENT. @react-native-community/datetimepicker is a NATIVE
+ * module, so adding it costs an EAS rebuild for a control this screen needs
+ * exactly one of. A stepper over 30-minute increments is built from the
+ * Pressables already here, needs no rebuild, and is easier to hit on camera
+ * than a spinner.
+ *
+ * THREE PERMISSION STATES, ALL SURFACED. A toggle that silently does nothing
+ * because iOS said no is the worst version of this screen, so a denial says so
+ * and offers the only route back, which is Settings.
+ */
+function NotificationsSection() {
+  const [permission, setPermission] = useState<PermissionState | null>(null);
+  const [prefs, setPrefs] = useState(getPrefs);
+
+  const refreshPermission = useCallback(() => {
+    void getPermissionState().then(setPermission);
+  }, []);
+
+  // Re-read on every foreground: the user may have just come back from iOS
+  // Settings, which is the one place this can change behind our back.
+  useEffect(() => {
+    refreshPermission();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') refreshPermission();
+    });
+    return () => sub.remove();
+  }, [refreshPermission]);
+
+  const granted = permission === 'granted';
+  const denied = permission === 'denied';
+  const on = granted && prefs.enabled;
+
+  const shiftTime = (delta: number) => {
+    const total =
+      (prefs.hour * 60 + prefs.minute + delta * TIME_STEP_MINUTES + MINUTES_IN_DAY) %
+      MINUTES_IN_DAY;
+    const hour = Math.floor(total / 60);
+    const minute = total % 60;
+    setReminderTime(hour, minute);
+    setPrefs((current) => ({ ...current, hour, minute }));
+  };
+
+  const toggle = (next: boolean) => {
+    // Turning it on with no answer from iOS yet is a legitimate second route to
+    // the system prompt, for anyone who said "Not now" in the feed. Turning it
+    // off never asks anything.
+    if (next && permission === 'undetermined') {
+      void requestPermission().then((state) => {
+        setPermission(state);
+        if (state === 'granted') {
+          setEnabled(true);
+          setPrefs((current) => ({ ...current, enabled: true }));
+        }
+      });
+      return;
+    }
+    setEnabled(next);
+    setPrefs((current) => ({ ...current, enabled: next }));
+  };
+
+  // Nothing until the first permission read lands, which is one tick. Rendering
+  // a default-off toggle first would flash the wrong state at anyone who has
+  // already allowed it.
+  //
+  // Nothing either on a binary whose notification module is missing: a toggle
+  // that cannot do anything is worse than no toggle, and "Open Settings" would
+  // send the user somewhere that cannot help them.
+  if (permission === null || !isNotificationSeamAvailable()) return null;
+
+  return (
+    <View style={styles.section}>
+      <SectionTitle>Notifications</SectionTitle>
+      <View style={styles.card}>
+        <View style={styles.notifRow}>
+          <View style={styles.notifLabel}>
+            <Text style={styles.notifTitle}>Daily reminder</Text>
+            <Text style={styles.notifBody}>
+              {denied
+                ? 'Turned off in iOS Settings'
+                : on
+                  ? 'One nudge a day, plus a gentle one in the evening if the day is still open'
+                  : 'Off. No reminders are sent'}
+            </Text>
+          </View>
+          <Switch
+            value={on}
+            onValueChange={toggle}
+            disabled={denied}
+            accessibilityLabel="Daily reminder"
+            trackColor={{ false: 'rgba(242,245,243,0.16)', true: '#5ee6a8' }}
+            thumbColor="#f2f5f3"
+            ios_backgroundColor="rgba(242,245,243,0.16)"
+          />
+        </View>
+
+        {on && (
+          <View style={styles.timeRow}>
+            <Text style={styles.notifTitle}>Time</Text>
+            <View style={styles.stepper}>
+              <Pressable
+                onPress={() => shiftTime(-1)}
+                accessibilityRole="button"
+                accessibilityLabel="Earlier"
+                hitSlop={8}
+                style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.stepButtonText}>−</Text>
+              </Pressable>
+              <Text
+                style={styles.stepValue}
+                accessibilityRole="text"
+                accessibilityLabel={`Reminder at ${formatTime(prefs.hour, prefs.minute)}`}
+              >
+                {formatTime(prefs.hour, prefs.minute)}
+              </Text>
+              <Pressable
+                onPress={() => shiftTime(1)}
+                accessibilityRole="button"
+                accessibilityLabel="Later"
+                hitSlop={8}
+                style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.stepButtonText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {denied && (
+          <Pressable
+            onPress={openSystemSettings}
+            accessibilityRole="button"
+            accessibilityHint="Opens this app's page in iOS Settings"
+            style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+          >
+            <Text style={styles.ctaText}>Open Settings</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -515,6 +711,13 @@ export function ProgressScreen({
           </>
         )}
 
+        {/* ABOVE the account block, not inside it. SignIn -> Delete -> Legal is
+            a deliberate descending-commitment run and slotting a settings
+            control between them would split it. Outside the empty/populated
+            branch because reminders matter most to someone who has just started
+            and has nothing on this screen yet. */}
+        <NotificationsSection />
+
         {/* Outside the empty/populated split for the same reason as the reset
             row: the offer to back up progress is worth making whether or not
             there is a full page of it, and a brand-new user who signs in here
@@ -541,6 +744,10 @@ export function ProgressScreen({
         {/* Outside the empty/populated split on purpose: the reset is most
             useful precisely when the panels are empty and you are re-running
             onboarding. */}
+        {/* Hidden rather than left to no-op when the seam is missing: a filming
+            tool that silently does nothing is a worse debugging experience than
+            a button that is not there. */}
+        {__DEV__ && isNotificationSeamAvailable() && <DevNotificationRow />}
         {__DEV__ && <DevResetRow />}
       </ScrollView>
     </View>
@@ -740,6 +947,58 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingTop: 4,
     textAlign: 'center',
+  },
+  /** One settings line: label block on the left, control hard right. */
+  notifRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 14,
+    justifyContent: 'space-between',
+  },
+  /** flex:1 is what makes the body wrap instead of shoving the switch off the
+      row on a narrow device. */
+  notifLabel: { flex: 1 },
+  notifTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
+  notifBody: {
+    color: 'rgba(242,245,243,0.55)',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  timeRow: {
+    alignItems: 'center',
+    borderTopColor: 'rgba(242,245,243,0.08)',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 14,
+  },
+  stepper: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+  },
+  stepButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  stepButtonText: { color: '#5ee6a8', fontSize: 19, fontWeight: '800' },
+  /** Tabular numerals and a fixed width so the row does not twitch as the
+      digits change under a repeated tap. */
+  stepValue: {
+    color: '#f2f5f3',
+    fontSize: 15,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '800',
+    textAlign: 'center',
+    width: 54,
   },
   devRow: {
     alignItems: 'center',

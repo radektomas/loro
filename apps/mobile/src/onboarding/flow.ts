@@ -6,7 +6,7 @@ import { storageDriver } from '../platform/storage';
  *
  * WHAT IS PORTED AND WHAT IS NEW. Calibration is the web's, exactly: the same
  * seed list, the same deriveLevel, the same four writes (app/welcome/page.tsx).
- * The eleven conversational screens around it are new design and have no web
+ * The conversational screens around it are new design and have no web
  * counterpart. Everything core-owned is imported; nothing in packages/core is
  * modified, and NO new key is added to core's KEYS map — the two mobile-only
  * answers below are written straight through the driver instead.

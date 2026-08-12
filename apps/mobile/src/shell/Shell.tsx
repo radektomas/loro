@@ -1,6 +1,8 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { subscribeToNotificationRoute } from '../platform/notifications';
+import { enableRecallForSession } from '../feed/recall';
 import { FeedScreen } from '../feed/FeedScreen';
 import { VocabScreen } from '../vocab/VocabScreen';
 import { ProgressScreen } from '../progress/ProgressScreen';
@@ -56,6 +58,31 @@ export function Shell() {
   /** Published so the recall answer bar can sit flush on the keyboard — see
       tabBar.tsx for why it cannot just use the raw keyboard height. */
   const [tabBarHeight, setTabBarHeight] = useState(0);
+
+  /**
+   * A TAPPED NOTIFICATION LANDS IN REVIEW, NOT THE FEED.
+   *
+   * This IS the routing layer. There is no navigator to wait on: the app is
+   * three sibling tabs behind a useState, so "route to review" is the same pair
+   * of calls the Review buttons in Progress and Words already make.
+   *
+   * enableRecallForSession IS NOT OPTIONAL. RECALL_ENABLED is false, so without
+   * arming, the tap lands on a feed that will never blank a due word and the
+   * notification would be a lie (see the note in recall.ts).
+   *
+   * COLD START IS HANDLED BY SUBSCRIBING, not by a second code path.
+   * subscribeToNotificationRoute drains a route parked before anything mounted,
+   * which covers both a launch-from-notification and a tap that arrived during
+   * onboarding, when this component was not rendered at all.
+   */
+  useEffect(
+    () =>
+      subscribeToNotificationRoute(() => {
+        enableRecallForSession();
+        setTab('feed');
+      }),
+    []
+  );
 
   return (
     <TabBarHeightContext.Provider value={tabBarHeight}>

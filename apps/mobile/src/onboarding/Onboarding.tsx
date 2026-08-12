@@ -45,7 +45,7 @@ import {
  * THE ROW IS ONE TRANSFORM. Every in-play step is rendered side by side in a
  * row `n * width` wide and the row is translated — so a transition is a single
  * shared value with a single withTiming, entirely on the UI thread, with no
- * mount or unmount mid-animation. Eleven static screens cost nothing to keep
+ * mount or unmount mid-animation. A dozen static screens cost nothing to keep
  * mounted; the feed's FlashList and the tab bar are NOT among them, because
  * this component renders instead of Shell rather than inside it (App.tsx).
  */
@@ -214,8 +214,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 finish={finish}
                 // Anything animated or timed keys off this rather than off
                 // mount — see StepProps.isCurrent. Every screen is mounted
-                // from the start, so without it the building-plan loader
-                // would run, finish and advance the flow from off-stage.
+                // from the start, so a screen that ran a clock on mount would
+                // run it, and finish it, from off-stage. No step needs this
+                // today; it stays as the contract for the next one that does.
                 isCurrent={i === index}
               />
             </View>

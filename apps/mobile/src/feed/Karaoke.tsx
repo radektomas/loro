@@ -91,8 +91,9 @@ export function Karaoke({
 
   const frame = useFrameCallback(() => {
     'worklet';
-    // The same arithmetic as the JS-side extrapolate(), deliberately duplicated
-    // rather than called: this must not leave the UI thread.
+    // Extrapolation from the anchor, done here on the UI thread. PlayerHost
+    // used to carry a JS-thread twin of this arithmetic for its drift readout;
+    // that readout and its sampler are gone, so this is now the only copy.
     //
     // THE RATE FACTOR IS WHAT KEEPS WORDS ON THE BEAT AT NON-1x SPEEDS. Wall
     // clock is not media clock below 1x — at 0.5x an unscaled model advances

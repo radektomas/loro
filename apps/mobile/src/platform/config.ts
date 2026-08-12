@@ -1,9 +1,23 @@
+import Constants from 'expo-constants';
+
 /**
  * Platform constants for the RN drivers.
  *
  * Kept in one file so the two values that differ per environment are visible
  * together rather than buried in the modules that consume them.
  */
+
+/**
+ * The EAS build profile this binary was built with ('development' |
+ * 'preview' | 'production'), or null outside EAS (expo start, bare prebuild).
+ * EAS_BUILD_PROFILE exists only on the build machine and is not an
+ * EXPO_PUBLIC_ var, so babel never inlines it into the bundle — app.config.ts
+ * threads it through `extra` at build time and this is the read-back.
+ */
+export const EAS_BUILD_PROFILE: string | null = (() => {
+  const raw: unknown = Constants.expoConfig?.extra?.easBuildProfile;
+  return typeof raw === 'string' && raw !== '' ? raw : null;
+})();
 
 /**
  * The public Supabase Storage origin for the catalog snapshot bucket.
@@ -75,6 +89,23 @@ export const PLAYER_EMBED_ORIGIN =
 export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+/**
+ * RevenueCat public iOS SDK key (appl_…). PUBLIC by design, like the anon key
+ * above — it identifies the app to RevenueCat and can grant nothing by itself.
+ *
+ * Empty is the supported resting state, and it FAILS OPEN: purchases.ts skips
+ * configure, the entitlement gate reports entitled, and the app runs as if no
+ * paywall shipped. Chosen deliberately over failing closed — a missing env var
+ * must never brick every install behind a wall nothing can open. The cost of
+ * the open direction is a free build, which is what the app was yesterday.
+ * purchases.ts logs loudly when this happens.
+ *
+ * Set per EAS profile: dev/preview read eas.json's env block; production reads
+ * the EAS project environment ("environment": "production" in eas.json).
+ */
+export const REVENUECAT_IOS_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '';
 
 /**
  * Where auth providers send the user back to — the app's own URL scheme.

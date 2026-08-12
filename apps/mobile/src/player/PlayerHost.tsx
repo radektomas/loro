@@ -2,7 +2,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -42,8 +41,13 @@ import { getStoredRate } from './rate';
  * awaitingActivation. §5e measured gesture-free autoplay working in
  * react-native-webview with mediaPlaybackRequiresUserAction={false}, and the
  * grant surviving both a swap and a pause. The web's blessing machinery exists
- * for mobile Safari and buys nothing here. The two on-screen readouts below are
- * what re-confirm that on SDK 57.
+ * for mobile Safari and buys nothing here.
+ *
+ * THE TWO ON-SCREEN READOUTS THAT RE-CONFIRMED THAT ON SDK 57 ARE GONE, with
+ * the feed row that displayed them. So is the 3s `cmd:'sample'` interval that
+ * fed the drift half: it ran for the whole session to compute a number with no
+ * consumer. page.ts still measures and posts both; to read them again, restore
+ * the fields on PlayerStatus and their cases in onMessage.
  */
 
 // ---------------------------------------------------------------- the clock
@@ -103,20 +107,20 @@ export type PlayerApi = {
   setRate(rate: number): void;
 };
 
-/** What the player is currently doing — reactive, drives posters and readouts. */
+/**
+ * What the player is currently doing — reactive, drives posters and controls.
+ *
+ * DIAGNOSTICS USED TO LIVE HERE AND NO LONGER DO. lastPlayMs, lastPlayError,
+ * driftMs, nonFinite, spuriousPause and started were read by exactly one
+ * consumer, the feed's on-screen readouts row, and died with it. page.ts still
+ * POSTS all of them; the messages simply go unhandled now, which is the
+ * cheapest way to keep the instrumentation available without paying for it on
+ * every frame. Re-adding a field means re-adding its case below.
+ */
 export type PlayerStatus = {
   ready: boolean;
   loadedVideoId: string | null;
-  /** True once PLAYING was reached for loadedVideoId. Reset by the next swap. */
-  started: boolean;
   playing: boolean;
-  /** MEASUREMENT 1: ms from load to PLAYING, with no gesture. */
-  lastPlayMs: number | null;
-  lastPlayError: string | null;
-  /** MEASUREMENT 2: RN extrapolation minus ground-truth getCurrentTime(). */
-  driftMs: number | null;
-  nonFinite: number;
-  spuriousPause: number;
   /**
    * The PLAYER's own isMuted(), reported by the page — not what RN last asked
    * for. Starts true because the player is created muted, which is what makes
@@ -150,13 +154,7 @@ const ClockContext = createContext<PlayerClock | null>(null);
 const StatusContext = createContext<PlayerStatus>({
   ready: false,
   loadedVideoId: null,
-  started: false,
   playing: false,
-  lastPlayMs: null,
-  lastPlayError: null,
-  driftMs: null,
-  nonFinite: 0,
-  spuriousPause: 0,
   muted: true,
   rate: 1,
   availableRates: null,
@@ -214,9 +212,6 @@ const BoxContext = createContext<(box: PlayerBox) => void>(() => {});
  */
 export const usePlayerBox = () => useContext(BoxContext);
 
-/** Ground-truth sampling cadence for the drift readout. */
-const DRIFT_SAMPLE_MS = 3000;
-
 /** How long the player takes to appear. Hiding is instant — see layerStyle. */
 const PLAYER_FADE_IN_MS = 200;
 
@@ -252,22 +247,15 @@ export function PlayerHost({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<PlayerStatus>({
     ready: false,
     loadedVideoId: null,
-    started: false,
     playing: false,
-    lastPlayMs: null,
-    lastPlayError: null,
-    driftMs: null,
-    nonFinite: 0,
-    spuriousPause: 0,
     muted: true,
     rate: 1,
     availableRates: null,
   });
 
-  /** The id the current play request belongs to — what `started` refers to. */
+  /** The id the current play request belongs to. Guards loadAndPlay against
+      re-issuing a load for the video already on the player. */
   const requestedIdRef = useRef<string | null>(null);
-  const readyRef = useRef(false);
-  const playStartedAtRef = useRef<number | null>(null);
 
   const send = useCallback((cmd: Record<string, unknown>) => {
     const id = `c${++seqRef.current}`;
@@ -275,16 +263,6 @@ export function PlayerHost({ children }: { children: ReactNode }) {
       `window.__cmd(${JSON.stringify({ ...cmd, id })}); true;`
     );
   }, []);
-
-  /** The RN-side model read, on the JS thread (the karaoke loop has its own
-      copy of this arithmetic in a worklet). */
-  const extrapolate = useCallback((): number => {
-    if (!isPlaying.value) return anchorTime.value;
-    // Scaled by the rate — see PlayerClock.rate. Without it the drift readout
-    // would report the rate error rather than clock quality, and MEASUREMENT 2
-    // would stop meaning anything at any speed but 1x.
-    return anchorTime.value + ((Date.now() - anchorAt.value) / 1000) * rate.value;
-  }, [anchorTime, anchorAt, isPlaying, rate]);
 
   const onMessage = useCallback(
     (event: WebViewMessageEvent) => {
@@ -310,7 +288,6 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           break;
         }
         case 'ready': {
-          readyRef.current = true;
           setStatus((s) => ({ ...s, ready: true }));
           // Hand the page the standing preference ONCE, as intent. From here on
           // the page owns re-assertion — it re-applies on every PLAYING, beside
@@ -336,58 +313,6 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           setStatus((s) => ({ ...s, availableRates: list && list.length ? list : null }));
           break;
         }
-        case 'playResult': {
-          const ok = msg.ok as boolean;
-          const elapsed = msg.elapsedMs as number;
-          // Measure from OUR request, not the page's, so the number includes
-          // the bridge round trip the user actually waits through.
-          const wall = playStartedAtRef.current
-            ? Date.now() - playStartedAtRef.current
-            : elapsed;
-          setStatus((s) => ({
-            ...s,
-            started: ok ? true : s.started,
-            lastPlayMs: ok ? wall : s.lastPlayMs,
-            lastPlayError: ok ? null : ((msg.error as string) ?? 'unknown'),
-          }));
-          break;
-        }
-        case 'sample': {
-          const raw = msg.raw as number | null;
-          if (raw !== null) {
-            /**
-             * THE CLOCK IS READ HERE, NOT INSIDE THE UPDATER — and that is the
-             * whole of the "Reading from value during component render" fix.
-             *
-             * A setState UPDATER IS NOT EVENT-HANDLER CODE. React only
-             * evaluates it eagerly when the fiber has no pending work;
-             * otherwise it is stashed and invoked during the RENDER phase
-             * (updateReducer). This handler fires several setStatus calls in a
-             * row, so the queue is routinely non-empty and the updater
-             * routinely ran under render — which is why the warning was
-             * intermittent rather than constant. Every `.value` read inside
-             * extrapolate() was therefore a read during render.
-             *
-             * Hoisting the call out makes the read happen in the message
-             * handler, where it belongs, and hands the updater a plain number.
-             * The value read is identical: extrapolate() has no dependency on
-             * React state, so evaluating it a tick earlier changes nothing but
-             * the phase it runs in.
-             */
-            const driftMs = (extrapolate() - raw) * 1000;
-            setStatus((s) => ({ ...s, driftMs }));
-          }
-          if (typeof msg.nonFinite === 'number') {
-            setStatus((s) =>
-              s.nonFinite === msg.nonFinite ? s : { ...s, nonFinite: msg.nonFinite as number }
-            );
-          }
-          break;
-        }
-        case 'nonFinite': {
-          setStatus((s) => ({ ...s, nonFinite: msg.count as number }));
-          break;
-        }
         case 'muted': {
           const next = msg.muted as boolean;
           setStatus((s) => (s.muted === next ? s : { ...s, muted: next }));
@@ -404,15 +329,15 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           console.log(`[loro:player] ${String(msg.msg ?? '')}`);
           break;
         }
-        case 'spuriousPause': {
-          setStatus((s) => ({ ...s, spuriousPause: msg.count as number }));
-          break;
-        }
         default:
           break;
       }
     },
-    [anchorTime, anchorAt, isPlaying, extrapolate]
+    // All five are stable identities (four shared values, one useCallback with
+    // no deps), so this list never re-subscribes. `rate` and `send` are named
+    // explicitly now that extrapolate() is gone: it used to close over `rate`
+    // and carry it into these deps by proxy.
+    [anchorTime, anchorAt, isPlaying, rate, send]
   );
 
   const api = useMemo<PlayerApi>(
@@ -420,7 +345,6 @@ export function PlayerHost({ children }: { children: ReactNode }) {
       loadAndPlay(youtubeId: string) {
         if (requestedIdRef.current === youtubeId) return;
         requestedIdRef.current = youtubeId;
-        playStartedAtRef.current = Date.now();
         // Reset the RN model too: the outgoing video's anchor must not drive
         // the incoming slide's karaoke for the moments before the first new
         // anchor arrives.
@@ -430,10 +354,7 @@ export function PlayerHost({ children }: { children: ReactNode }) {
         setStatus((s) => ({
           ...s,
           loadedVideoId: youtubeId,
-          started: false,
           playing: false,
-          lastPlayMs: null,
-          lastPlayError: null,
           // THE RATE LIST IS PER-VIDEO AND THE OUTGOING VIDEO'S IS NOT
           // EVIDENCE ABOUT THIS ONE. Leaving it in place let the speed chip
           // offer rates the new video does not support, and setPlaybackRate
@@ -447,7 +368,6 @@ export function PlayerHost({ children }: { children: ReactNode }) {
         send({ cmd: 'load', videoId: youtubeId, andPlay: true });
       },
       play() {
-        playStartedAtRef.current = Date.now();
         send({ cmd: 'play' });
       },
       pause() {
@@ -480,17 +400,6 @@ export function PlayerHost({ children }: { children: ReactNode }) {
     () => ({ anchorTime, anchorAt, isPlaying, rate }),
     [anchorTime, anchorAt, isPlaying, rate]
   );
-
-  // MEASUREMENT 2. Ground truth every few seconds while playing — the raw
-  // player clock, compared against this side's extrapolation. The spike's
-  // equivalent stayed within ~±30ms over 60s; a growing number here would mean
-  // SDK 57 extrapolates differently and the karaoke would slide out of sync.
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (readyRef.current && isPlaying.value) send({ cmd: 'sample' });
-    }, DRIFT_SAMPLE_MS);
-    return () => clearInterval(timer);
-  }, [send, isPlaying]);
 
   /**
    * ASYMMETRIC, AND THE ASYMMETRY IS THE POINT.

@@ -32,6 +32,7 @@ import { setStoredRate } from '../player/rate';
 import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
 import { Karaoke } from './Karaoke';
+import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
 import { RecallHost } from './RecallHost';
 import { WordSheet, type WordSheetData } from './WordSheet';
@@ -45,8 +46,12 @@ import { WordSheet, type WordSheetData } from './WordSheet';
  *
  * CHECKPOINT E adds the two things that turn watching into learning: sound
  * (tap-to-unmute) and tap-a-word → save. Everything D proved is kept intact —
- * muted autoplay, the drift/PLAYING readouts, the pointerEvents player layer,
- * attribution, karaoke, swipe.
+ * muted autoplay, the pointerEvents player layer, attribution, karaoke, swipe.
+ *
+ * The on-screen drift/PLAYING readouts D shipped are GONE, along with the
+ * 52pt of top chrome they sat in and the PlayerHost plumbing that fed them.
+ * They were a lab instrument on a production screen. What they proved is
+ * proved; the player area now uses the space.
  *
  * CHECKPOINT F adds in-cue fill-in-the-blank recall — BEHIND RECALL_ENABLED
  * (recall.ts), which is false by default. With the flag off, RecallHost plans
@@ -59,10 +64,6 @@ import { WordSheet, type WordSheetData } from './WordSheet';
 
 /** Matches the web's VISIBILITY_THRESHOLD = 0.6 exactly. */
 const VISIBLE_PERCENT = 60;
-
-/** Height reserved for the top chrome, over the safe-area inset. The web
-    reserves `env(safe-area-inset-top) + 3.25rem` for the same row. */
-const HEADER_HEIGHT = 52;
 
 /** Every embed is 9:16. */
 const PLAYER_ASPECT = 9 / 16;
@@ -325,6 +326,14 @@ function FeedBody({
   const [playerObscured, setPlayerObscured] = useState(false);
 
   /**
+   * The same yield, for the notification explainer. HELD SEPARATELY from
+   * playerObscured on purpose: that one is RecallHost's to write, and two
+   * writers on one flag would race, with whichever lowered it last winning
+   * while the other overlay was still up.
+   */
+  const [promptObscured, setPromptObscured] = useState(false);
+
+  /**
    * The tapped word, or null. Held HERE rather than in the slide because the
    * sheet must render outside the FlashList — a recycled cell would take the
    * sheet down with it mid-swipe.
@@ -370,9 +379,10 @@ function FeedBody({
       left: box?.left ?? 0,
       width: box?.width ?? 0,
       height: box?.height ?? 0,
-      visible: Boolean(box) && active && !dragging && !playerObscured,
+      visible:
+        Boolean(box) && active && !dragging && !playerObscured && !promptObscured,
     });
-  }, [box, active, dragging, playerObscured, setPlayerBox]);
+  }, [box, active, dragging, playerObscured, promptObscured, setPlayerBox]);
 
   /**
    * PAUSE ON BLUR, AND STAY PAUSED ON RETURN.
@@ -449,7 +459,6 @@ function FeedBody({
           )}
 
           <PlayerDriver video={activeVideo} />
-          <Readouts total={videos.length} index={activeIndex} />
           <WordSheet
             data={sheet}
             language={language}
@@ -459,6 +468,10 @@ function FeedBody({
           {/* Hoisted out of the list for the same reason WordSheet is, plus
               two of its own — see the header note in RecallBar.tsx. */}
           <RecallBar />
+          {/* Raised by RecallHost after the first correct answer's celebration,
+              and silent every other time. Last child so it covers the band and
+              the answer bar as well as the slide. */}
+          <NotificationPrompt onObscurePlayer={setPromptObscured} />
         </View>
       </RecallHost>
     </>
@@ -622,7 +635,13 @@ function Slide({
 
   return (
     <View style={[styles.slide, { height }]}>
-      <View style={{ height: insets.top + HEADER_HEIGHT }} />
+      {/* THE NOTCH, AND NOTHING ELSE. This used to reserve a further 52pt for
+          a row of player diagnostics that no longer exists; the player area
+          below is flex:1, so removing that reservation hands every one of
+          those points to the video rather than leaving a gap. The safe-area
+          inset stays: it is what keeps the frame out from under the status
+          bar and the notch. */}
+      <View style={{ height: insets.top }} />
 
       {/* THE PLAYER AREA. Holds no player — the persistent WebView positions
           itself over this box. flex:1 means the band below takes what it needs
@@ -633,7 +652,11 @@ function Slide({
           <View
             style={[
               styles.playerBox,
-              { left: box.left, top: box.top - (insets.top + HEADER_HEIGHT), width: box.width, height: box.height },
+              // box.top is window-space; this subtracts the spacer above to
+              // land in playerArea-local coordinates. It MUST match the
+              // spacer's height exactly or the poster and the tap surface
+              // drift away from the WebView.
+              { left: box.left, top: box.top - insets.top, width: box.width, height: box.height },
             ]}
           >
             <Image source={{ uri: video.poster }} style={styles.poster} resizeMode="cover" />
@@ -1006,39 +1029,6 @@ function formatRate(rate: number): string {
   return String(Math.round(rate * 100) / 100);
 }
 
-/**
- * The two measurements that re-confirm the SDK 54 spike on SDK 57, as a side
- * effect of the real feed rather than a separate lab.
- */
-function Readouts({ total, index }: { total: number; index: number }) {
-  const status = usePlayerStatus();
-  const insets = useSafeAreaInsets();
-
-  const play =
-    status.lastPlayMs !== null
-      ? `PLAYING ${status.lastPlayMs}ms (no gesture)`
-      : status.lastPlayError
-        ? `NOT PLAYING — ${status.lastPlayError}`
-        : status.ready
-          ? 'waiting…'
-          : 'booting…';
-
-  const drift =
-    status.driftMs === null ? 'drift —' : `drift ${status.driftMs >= 0 ? '+' : ''}${Math.round(status.driftMs)}ms`;
-
-  return (
-    <View pointerEvents="none" style={[styles.readouts, { top: insets.top + 6 }]}>
-      <Text style={styles.readoutText}>
-        {index + 1}/{total} · {play}
-      </Text>
-      <Text style={styles.readoutText}>
-        {drift} · rate {formatRate(status.rate)}× · nonFinite {status.nonFinite} · swapPause{' '}
-        {status.spuriousPause}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0d0b' },
   slide: { width: '100%', backgroundColor: '#0a0d0b' },
@@ -1182,14 +1172,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   speedSegmentTextOn: { color: '#06130d', fontWeight: '800' },
-  readouts: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  readoutText: { color: '#9fe89a', fontSize: 11, fontVariant: ['tabular-nums'] },
 });
