@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <article>
-      <PageTitle title="Privacy Policy" updated="3 August 2026" />
+      <PageTitle title="Privacy Policy" updated="12 August 2026" />
 
       <Section title="The short version">
         <p>
@@ -34,14 +34,16 @@ export default function PrivacyPage() {
       <Section title="Who is responsible">
         <p>
           The data controller is <strong className="text-text">Radek Tomas</strong>,
-          a private individual (not a registered company), reachable at{' '}
+          a sole trader (OSVČ) registered in the Czech Republic, business
+          registration number (IČO) 22052372, registered address Holečkova
+          711/42, Smíchov, 150 00 Praha 5, Czechia. Contact:{' '}
           <a
-            href="mailto:radektygrtomas@gmail.com"
+            href="mailto:support@getloro.app"
             className="text-text underline decoration-white/25 underline-offset-2"
           >
-            radektygrtomas@gmail.com
+            support@getloro.app
           </a>
-          . Contact is by email only; no postal address is published.
+          .
         </p>
       </Section>
 
@@ -258,10 +260,10 @@ export default function PrivacyPage() {
         <p>
           Write to{' '}
           <a
-            href="mailto:radektygrtomas@gmail.com"
+            href="mailto:support@getloro.app"
             className="text-text underline decoration-white/25 underline-offset-2"
           >
-            radektygrtomas@gmail.com
+            support@getloro.app
           </a>
           . You also have the right to complain to the Czech data protection
           authority: Úřad pro ochranu osobních údajů (
