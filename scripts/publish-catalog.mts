@@ -379,8 +379,15 @@ async function main(): Promise<void> {
   if (!options.dryRun) {
     console.log('='.repeat(56));
     console.log(`${rows.length} video(s) published: ${seeds.length} seed, ${embeds.length} embed`);
-    console.log('\nNothing reads the table or the snapshot yet — the app still uses');
-    console.log('the bundled catalog.\n');
+    // Was "nothing reads this yet" — true when the snapshot was first built,
+    // wrong since the RN loader landed. apps/mobile/src/platform/catalog.ts
+    // fetches the pointer and installs the blob, so this IS the mobile app's
+    // content path now. The table still has no reader.
+    console.log('\nThe mobile app installs this snapshot via refreshCatalog(),');
+    console.log('throttled to one check per 24h — a device that checked today');
+    console.log('picks it up tomorrow. Reinstalling clears the throttle.');
+    console.log('The web app bundles data/*.json at build time instead, so it');
+    console.log('needs a deploy, not this.\n');
   }
 }
 
