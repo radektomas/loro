@@ -38,6 +38,7 @@ import {
 import { json3ToCues, type CueOut } from './lib/json3ToCues.mts';
 import { estimateLevel } from './lib/estimateLevel.mts';
 import { curationScore } from './config/curation.mts';
+import { FILTER } from './config/harvest-queries.mts';
 import { glossWords, translateCues, type GlossOut } from './lib/glossCues.mts';
 import { sleep } from './lib/youtube.mts';
 import { judgeOnCamera, NoFramesError } from './lib/onCameraGate.mts';
@@ -64,8 +65,24 @@ const EMBEDS_PATH = path.join(REPO_ROOT, 'data', 'embedVideos.json');
 const BATCH_MAX_PER_CHANNEL = 2;
 /** Candidate quality floor for auto-selection (explicit --ids bypasses). */
 const MIN_VIEWS = 5_000;
-const MIN_SECONDS = 20;
-const MAX_SECONDS = 75;
+/**
+ * Duration window, widened 20-75s -> 15-90s (2026-08-14).
+ *
+ * These were tighter than the feed itself for no recorded reason. 90s is
+ * MAX_UPLOAD_SECONDS in lib/creators.ts — the clip ceiling the app is built
+ * around and the same bound FILTER.MAX_DURATION_SECONDS admits at harvest, so
+ * the old 75 was rejecting content the pipeline had already accepted and the
+ * player handles fine. Measured on the drained pool of 2026-08-14, that gap
+ * alone was withholding the difference between 13 publishable candidates from
+ * 6 channels and 87 from 55 — it, not the view floor, was the binding
+ * constraint.
+ *
+ * Everything in range is still short-form: 90s is a minute and a half. The
+ * 15s floor is the harvest filter's, and thin clips remain caught downstream
+ * by MIN_WORDS rather than guessed at from duration.
+ */
+const MIN_SECONDS = FILTER.MIN_DURATION_SECONDS;
+const MAX_SECONDS = FILTER.MAX_DURATION_SECONDS;
 /** A transcript with fewer words than this is a slideshow, not speech. */
 const MIN_WORDS = 15;
 
