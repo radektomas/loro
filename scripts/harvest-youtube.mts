@@ -643,7 +643,11 @@ async function main(): Promise<void> {
   if (options.plan) {
     const supabase = getAdminClient();
     const lastRun = await fetchLastRun(supabase);
-    const resume = resolveResumeIndex(lastRun?.cursor ?? null, matrix);
+    // Mirrors the real run: an exploratory selection starts at the top of the
+    // matrix and walks the whole thing, filtering as it goes.
+    const resume = exploratory
+      ? { index: 0, pageToken: null, note: null }
+      : resolveResumeIndex(lastRun?.cursor ?? null, matrix);
     const spentToday = await quotaSpentToday(supabase);
     console.log(`\nMatrix: ${matrix.length} combinations`);
     console.log(
@@ -651,6 +655,9 @@ async function main(): Promise<void> {
         ` — regions per topic, ${SWEPT_LICENSE_BRANCHES.length} license branch (CC only)`
     );
     console.log(`Selected by flags: ${selectedCount}`);
+    if (exploratory) {
+      console.log('Cursor: ignored (exploratory) — all selected combos will run');
+    }
     if (resume.note) console.log(`Cursor: ${resume.note}`);
     console.log(
       `Resume at #${resume.index}: ${matrix[resume.index] ? describeCombo(matrix[resume.index]) : '(end of sweep — next run restarts)'}`
@@ -690,11 +697,23 @@ async function main(): Promise<void> {
   }
 
   const lastRun = await fetchLastRun(supabase);
-  const resume = resolveResumeIndex(lastRun?.cursor ?? null, matrix);
+  // An exploratory run ignores the sweep cursor in BOTH directions.
+  //
+  // It already refused to move it; reading it was the other half of the same
+  // bug, and the expensive half. buildMatrix interleaves topics round-robin by
+  // query index, so a topic's combos are scattered the length of the matrix,
+  // not blocked together. Starting a filtered selection at the full sweep's
+  // resume point therefore silently drops every selected combo that happens to
+  // sit before it — measured 2026-08-14, a probe of the new 'talking-head'
+  // topic reported "completed" having run 8 of its 24 combinations, with the
+  // skipped 16 appearing nowhere in the report.
+  const resume = exploratory
+    ? { index: 0, pageToken: null, note: null }
+    : resolveResumeIndex(lastRun?.cursor ?? null, matrix);
   if (resume.note) console.log(`  ${resume.note}`);
   if (exploratory) {
     console.log(
-      '  exploratory run (selection flags set) — the sweep cursor will NOT be moved'
+      '  exploratory run (selection flags set) — the sweep cursor is neither read nor moved'
     );
   }
 

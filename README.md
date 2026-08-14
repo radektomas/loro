@@ -240,7 +240,8 @@ the caption track replaces it as the timing source.
 
 ```bash
 npm run publish-embeds -- --dry-run    # see what would be picked
-npm run publish-embeds -- --limit 12   # fetch captions, gloss, publish
+npm run publish-embeds -- --limit 12   # gate, fetch captions, gloss, publish
+npm run publish-embeds -- --limit 200 --budget-usd 5 --max-per-channel 3
 ```
 
 Run it on your own machine (the caption fetch behaves like a browser loading
@@ -252,8 +253,11 @@ Two YouTube hardenings the fetcher handles, both observed live:
 * **EU consent wall** — cookie-less requests bounce to consent.youtube.com, so
   the watch-page strategy sends the standard pre-granted consent cookies.
 * **PO-token gating** — caption URLs issued to the *web* client return an empty
-  200 body. The primary strategy therefore asks the InnerTube **ANDROID**
-  client, whose caption URLs are not gated; the watch page is the fallback. Output lands in
+  200 body. The primary strategy therefore asks the InnerTube **ANDROID_VR**
+  client, falling back to **IOS** (plain `ANDROID` is attestation-gated and now
+  returns 400); the watch page is the last resort. Both InnerTube clients need
+  an anonymous `visitorData` session id or they answer `LOGIN_REQUIRED`.
+  Output lands in
 `data/embedVideos.json`, which ships with the app: the feed shows the new
 slides on the next reload or deploy. Candidates move to `published`;
 caption-less ones are rejected as `no_captions` and never retried.
@@ -261,6 +265,59 @@ caption-less ones are rejected as `no_captions` and never retried.
 Nightly-ish upkeep: `npm run sweep-embeds` (official API, ~1 quota unit per
 50 videos) reports embeds that died — deleted, privated, embed-disabled —
 and `-- --apply` prunes them.
+
+#### The on-camera gate — the pixels, at last
+
+Every other filter in this pipeline guesses at "is a real person speaking on
+camera?" from metadata, and `scripts/config/curation.mts` opens by admitting
+it: no metadata field answers that question, so the stack is proxies. The
+proxies leak badly in both directions. Two published entries make the point —
+`Irdlrwr5NPU` is a pair of hands arranging cardboard tubes in a bowl over a
+voiceover, and a candidate titled "Los NIVELES de los procesadores Intel"
+turned out to be Minecraft footage. Both cleared every text rule.
+
+`scripts/lib/onCameraGate.mts` looks instead. YouTube auto-generates three
+frames per video at roughly 25/50/75% of its duration
+(`i.ytimg.com/vi/<id>/hq{1,2,3}.jpg`) — free, no API key, no quota, and a far
+better witness than the cover thumbnail, which is often a designed graphic.
+A small vision model judges the three together and returns a format label
+(`talking-head`, `interview`, `hands-only`, `voiceover-broll`, `gameplay`, …).
+
+It runs **first**, ahead of the caption fetch and the gloss, because it is both
+the cheapest test and the one most likely to fail: ~$0.0006 a candidate against
+a gloss ~40× that. Rejections persist as `not_on_camera:<format>`, which is
+safe to store — unlike a caption-fetch failure it is a fact about the video's
+pixels, not about our session, so it cannot mass-reject a batch on a bot check.
+
+Measured 2026-08-14: on the old subject-matter pool only **a third** of
+text-curated candidates showed a person speaking; after the `talking-head`
+topic landed, **48%** did (43 of 90). The first production run published 39
+videos for $2.45.
+
+**A frame with a person is not enough — require two.** That run's own errors
+set the threshold. All 8 videos accepted on a single frame were audited by eye
+and 3 were wrong: an animated skull cartoon, an illustrated art tutorial, and a
+dog in a sombrero over narration. Narrated content routinely opens or closes on
+a shot of the narrator, so one face-bearing frame is precisely what a voiceover
+video looks like. `MIN_FRAMES_WITH_SPEAKER` is now 2. It costs recall — 5 of
+those 8 were fine — and that trade is deliberate: a wrong video is a learner
+watching a cartoon with no mouth to read, a missed one is a row left `eligible`.
+
+The gate remains a *sampling* test, not a guarantee — a clip that cuts to B-roll
+for exactly those three moments is dropped, and an on-camera intro over 60s of
+stock footage can still slip through. Disable with `--no-on-camera`; `--ids`
+bypasses it for a known-good straggler.
+
+Because the gate now measures what `VOICEOVER_FORMAT_PATTERNS` was guessing,
+`curationScore(row, {visionGate: true})` skips those title regexes — otherwise
+the weaker classifier keeps a veto over the stronger one, which cost 18 of 105
+publishable candidates unseen. The category, politics and kid-gaming rules stay
+in force: those are product decisions about what belongs in the feed, not
+speech detection, and pixels have no opinion on them.
+
+`--budget-usd N` puts a hard dollar ceiling on a run (`scripts/lib/openaiCost.mts`
+meters every call). It stops *between* videos, never part-way through one, and
+everything unprocessed stays `eligible` for the next run.
 
 ### The embed slide's layout — compliance by construction
 

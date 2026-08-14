@@ -37,7 +37,8 @@ export type TopicSlug =
   | 'street-interviews'
   | 'nature'
   | 'sports'
-  | 'technology';
+  | 'technology'
+  | 'talking-head';
 
 export type Topic = {
   slug: TopicSlug;
@@ -149,7 +150,12 @@ export const TOPICS: readonly Topic[] = [
     ],
     tags: ['street-interviews', 'conversation'],
     regions: GEOGRAPHIC_REGIONS,
-    pages: 1,
+    // Raised 1 -> 3 (2026-08-14). This is the ONLY topic where depth is a safe
+    // bet rather than a hope: it is the best-yielding topic measured (45.9%),
+    // its best query is the best of all 35 ('le pregunte a la gente', 54.9%),
+    // and every one of its page-0 rows still carries an unused nextPageToken.
+    // Depth costs 100 units a page and needs no new query to be invented.
+    pages: 3,
   },
   {
     slug: 'nature',
@@ -190,6 +196,41 @@ export const TOPICS: readonly Topic[] = [
     ],
     tags: ['technology'],
     regions: ['ES'],
+    pages: 1,
+  },
+  {
+    slug: 'talking-head',
+    label: 'Talking head',
+    /**
+     * Added 2026-08-14, and the only topic in this list selected by FORMAT
+     * rather than subject matter. Every other topic asks "what is this about?"
+     * and hopes a person is on camera; measured on the live pool, that hope
+     * pays off 33% of the time — two thirds of everything that survives text
+     * curation turns out to be hands-only demos, B-roll with a voiceover, or
+     * (in one case that passed every text filter) Minecraft footage under a
+     * title about Intel processors.
+     *
+     * So these queries name the format itself. A person recounting an
+     * experience, giving an opinion, or answering a stranger's question is
+     * almost necessarily filmed facing a camera — there is nothing else to
+     * show. Subject matter is deliberately unconstrained: the feed wants
+     * natural connected speech, and it does not care what it is about.
+     *
+     * All six terminate on a noun or adjective, per rule 1 at the top of this
+     * file. 'encuesta en la calle' is a deliberate near-duplicate of the
+     * street-interviews set — same format, different word, and query-level
+     * yield history shows near-synonyms surface substantially different rows.
+     */
+    queries: [
+      'mi experiencia personal',
+      'les cuento mi historia',
+      'consejos para principiantes',
+      'encuesta en la calle',
+      'mi opinion sincera',
+      'preguntas incomodas',
+    ],
+    tags: ['talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
 ];

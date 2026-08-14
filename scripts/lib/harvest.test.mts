@@ -8,7 +8,13 @@ import {
   QuotaMeter,
   type YouTubeVideo,
 } from './youtube.mts';
-import { mapVideoToCandidate, sanitizeText, toStoredLicense } from './candidates.mts';
+import {
+  dedupeCandidates,
+  mapVideoToCandidate,
+  sanitizeText,
+  toStoredLicense,
+  type CandidateInsert,
+} from './candidates.mts';
 import {
   buildMatrix,
   comboKey,
@@ -434,5 +440,81 @@ describe('sanitizeText — the surrogate bug that killed a sweep', () => {
   it('truncates by code point, not code unit', () => {
     // 5 emoji = 10 UTF-16 code units but 5 code points.
     assert.equal(sanitizeText('\u{1F600}\u{1F600}\u{1F600}\u{1F600}\u{1F600}', 3), '\u{1F600}\u{1F600}\u{1F600}');
+  });
+});
+
+describe('dedupeCandidates — the duplicate that killed a paged harvest', () => {
+  const make = (
+    youtube_id: string,
+    overrides: Partial<CandidateInsert> = {}
+  ): CandidateInsert =>
+    ({
+      youtube_id,
+      title: 't',
+      description: null,
+      channel_id: 'UC1',
+      channel_title: 'c',
+      duration_seconds: 40,
+      published_at: null,
+      view_count: 1_000,
+      like_count: 10,
+      license: 'creativeCommon',
+      is_embeddable: true,
+      default_audio_language: 'es',
+      category_id: '22',
+      region_hint: 'MX',
+      topic_tags: ['street-interviews'],
+      source_queries: ['entrevistas en la calle'],
+      discovery_sources: ['query'],
+      thumbnail_url: null,
+      status: 'discovered',
+      reject_reason: null,
+      ...overrides,
+    }) as CandidateInsert;
+
+  it('collapses an id repeated across pages of one search', () => {
+    // YouTube pagination is not a stable snapshot: page 0 and page 2 of the
+    // same query really do return the same video. Postgres fails the ENTIRE
+    // statement on a repeated conflict key, so one duplicate lost a whole run.
+    const out = dedupeCandidates([make('abc'), make('abc'), make('xyz')]);
+    assert.equal(out.length, 2);
+    assert.deepEqual(
+      out.map((c) => c.youtube_id).sort(),
+      ['abc', 'xyz']
+    );
+  });
+
+  it('unions source_queries rather than dropping the later copy', () => {
+    const out = dedupeCandidates([
+      make('abc', { source_queries: ['preguntas en la calle'] }),
+      make('abc', { source_queries: ['la gente responde'] }),
+    ]);
+    assert.deepEqual(out[0].source_queries.sort(), [
+      'la gente responde',
+      'preguntas en la calle',
+    ]);
+  });
+
+  it('unions topic_tags across topics that both found it', () => {
+    const out = dedupeCandidates([
+      make('abc', { topic_tags: ['travel'] }),
+      make('abc', { topic_tags: ['food', 'cooking'] }),
+    ]);
+    assert.deepEqual(out[0].topic_tags.sort(), ['cooking', 'food', 'travel']);
+  });
+
+  it('does not mutate its input', () => {
+    const first = make('abc', { topic_tags: ['travel'] });
+    dedupeCandidates([first, make('abc', { topic_tags: ['food'] })]);
+    assert.deepEqual(first.topic_tags, ['travel']);
+  });
+
+  it('passes an already-unique batch through unchanged', () => {
+    const input = [make('a'), make('b'), make('c')];
+    assert.equal(dedupeCandidates(input).length, 3);
+  });
+
+  it('handles the empty batch', () => {
+    assert.deepEqual(dedupeCandidates([]), []);
   });
 });

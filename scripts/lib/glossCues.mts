@@ -1,5 +1,6 @@
 import { normalizeSurface } from '../../packages/core/src/dictionary.ts';
 import { requireEnv } from './env.mts';
+import { charge } from './openaiCost.mts';
 import type { CueOut } from './json3ToCues.mts';
 
 /**
@@ -43,7 +44,12 @@ async function chatJson(prompt: string): Promise<Record<string, unknown>> {
   }
   const data = (await res.json()) as {
     choices?: { message?: { content?: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
+  // Metered so a run can be given a hard dollar ceiling. This is the expensive
+  // half of the pipeline by a wide margin — the gloss emits one four-language
+  // dictionary entry per unique word.
+  charge(OPENAI_MODEL, data.usage);
   let text = (data.choices?.[0]?.message?.content ?? '').trim();
   // Belt-and-braces fence stripping, same as transcribe.py.
   text = text.replace(/^```(?:json)?|```$/gm, '').trim();

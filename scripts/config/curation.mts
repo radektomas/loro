@@ -163,16 +163,42 @@ export type CurationVerdict = {
   reason: string;
 };
 
+export type CurationOptions = {
+  /**
+   * True when a vision gate (scripts/lib/onCameraGate.mts) will judge this
+   * candidate's actual frames later in the run.
+   *
+   * When it will, VOICEOVER_FORMAT_PATTERNS is skipped. Those patterns are not
+   * an editorial rule — they are a GUESS at the single question the gate now
+   * answers from pixels, and the file header above says so outright ("a stack
+   * of proxies... a ranking aid, not a classifier"). Running both means the
+   * weaker classifier gets a veto over the stronger one, which costs real
+   * content: a presenter talking to camera about "5 curiosidades de México" is
+   * exactly the connected native speech this feed wants, and the title regex
+   * drops it unseen. Measured on the pool of 2026-08-14, these patterns veto
+   * 18 of 105 otherwise-publishable candidates sight-unseen.
+   *
+   * Everything else here stays in force, because nothing else here is a proxy
+   * for on-camera speech: excluded categories, politics and kid-gaming are
+   * product decisions about what belongs in the feed at all, and the view
+   * floor is an abandoned-upload test. Pixels have no opinion on any of them.
+   */
+  visionGate?: boolean;
+};
+
 /**
  * Rank one candidate for publication. Returns a negative score for anything
  * that must not be published, so callers can filter and explain in one pass.
  */
-export function curationScore(candidate: {
-  category_id?: string | null;
-  title?: string | null;
-  description?: string | null;
-  view_count?: number | null;
-}): CurationVerdict {
+export function curationScore(
+  candidate: {
+    category_id?: string | null;
+    title?: string | null;
+    description?: string | null;
+    view_count?: number | null;
+  },
+  options: CurationOptions = {}
+): CurationVerdict {
   const category = candidate.category_id ?? '';
   if (EXCLUDED_CATEGORIES.includes(category)) {
     return { score: -1, reason: `excluded category ${category}` };
@@ -196,9 +222,11 @@ export function curationScore(candidate: {
     return { score: -1, reason: `political pattern ${political.source}` };
   }
 
-  const voiceover = VOICEOVER_FORMAT_PATTERNS.find((p) => p.test(haystack));
-  if (voiceover) {
-    return { score: -1, reason: `voiceover-listicle pattern ${voiceover.source}` };
+  if (!options.visionGate) {
+    const voiceover = VOICEOVER_FORMAT_PATTERNS.find((p) => p.test(haystack));
+    if (voiceover) {
+      return { score: -1, reason: `voiceover-listicle pattern ${voiceover.source}` };
+    }
   }
 
   const tier = CATEGORY_TIERS[category] ?? DEFAULT_TIER;

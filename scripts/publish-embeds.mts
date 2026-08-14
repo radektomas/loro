@@ -40,12 +40,27 @@ import { estimateLevel } from './lib/estimateLevel.mts';
 import { curationScore } from './config/curation.mts';
 import { glossWords, translateCues, type GlossOut } from './lib/glossCues.mts';
 import { sleep } from './lib/youtube.mts';
+import { judgeOnCamera, NoFramesError } from './lib/onCameraGate.mts';
+import {
+  BudgetExceededError,
+  assertAffordable,
+  report as costReport,
+  setBudget,
+  spentUsd,
+} from './lib/openaiCost.mts';
 
 const EMBEDS_PATH = path.join(REPO_ROOT, 'data', 'embedVideos.json');
 
 // ------------------------------------------------------------ batch tuning
 
-/** Source diversity within one publish batch. */
+/**
+ * Source diversity within one publish batch.
+ *
+ * Tuned for the batch size it was written for (~8). A large catch-up run wants
+ * a higher ceiling or it simply cannot reach its limit — with 56 channels in
+ * the pool, 2 apiece caps any run at 112 attempts before the on-camera gate
+ * and the caption fetch each take their cut. Override with --max-per-channel.
+ */
 const BATCH_MAX_PER_CHANNEL = 2;
 /** Candidate quality floor for auto-selection (explicit --ids bypasses). */
 const MIN_VIEWS = 5_000;
@@ -78,6 +93,12 @@ type Options = {
   license: 'creativeCommon' | 'youtube' | 'both';
   /** Restrict to these difficulty_level values; null means any. */
   levels: string[] | null;
+  /** Require the vision gate to see a person speaking. Default ON. */
+  onCamera: boolean;
+  /** Hard OpenAI ceiling for this run in USD; null means no ceiling. */
+  budgetUsd: number | null;
+  /** Max videos from one channel in this batch. */
+  maxPerChannel: number;
 };
 
 function parseArgs(argv: readonly string[]): Options {
@@ -87,6 +108,12 @@ function parseArgs(argv: readonly string[]): Options {
     ids: null,
     license: 'both',
     levels: null,
+    // Default ON: the whole point of the feed is watching someone speak, and
+    // the gate costs ~1.2% of the gloss it stands in front of. Opting out is
+    // the deliberate act, not opting in.
+    onCamera: true,
+    budgetUsd: null,
+    maxPerChannel: BATCH_MAX_PER_CHANNEL,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -123,8 +150,29 @@ function parseArgs(argv: readonly string[]): Options {
           v === 'cc' ? 'creativeCommon' : v === 'any' ? 'both' : 'youtube';
         break;
       }
+      case '--no-on-camera':
+        options.onCamera = false;
+        break;
+      case '--max-per-channel': {
+        const v = Number(next());
+        if (!Number.isInteger(v) || v < 1) {
+          console.error('--max-per-channel needs a positive integer');
+          process.exit(1);
+        }
+        options.maxPerChannel = v;
+        break;
+      }
+      case '--budget-usd': {
+        const v = Number(next());
+        if (!Number.isFinite(v) || v <= 0) {
+          console.error('--budget-usd needs a positive number of dollars');
+          process.exit(1);
+        }
+        options.budgetUsd = v;
+        break;
+      }
       default:
-        console.error(`Unknown flag "${arg}". Flags: --dry-run --limit N --ids a,b --license cc|yt|any --level A1,A2`);
+        console.error(`Unknown flag "${arg}". Flags: --dry-run --limit N --ids a,b --license cc|yt|any --level A1,A2 --no-on-camera --budget-usd 5 --max-per-channel N`);
         process.exit(1);
     }
   }
@@ -231,7 +279,7 @@ async function selectCandidates(
   // the sort key — sorting by views selects for "viral short-form format",
   // which in Spanish means gaming and kid animation.
   const scored = rows
-    .map((row) => ({ row, verdict: curationScore(row) }))
+    .map((row) => ({ row, verdict: curationScore(row, { visionGate: options.onCamera }) }))
     .filter((s) => s.verdict.score >= 0);
 
   // CC first (the strategically valuable branch), then curation tier, then
@@ -251,7 +299,7 @@ async function selectCandidates(
   for (const row of rows) {
     const channel = row.channel_id ?? row.youtube_id;
     const n = perChannel.get(channel) ?? 0;
-    if (n >= BATCH_MAX_PER_CHANNEL) continue;
+    if (n >= options.maxPerChannel) continue;
     perChannel.set(channel, n + 1);
     picked.push(row);
     if (picked.length >= options.limit) break;
@@ -262,6 +310,7 @@ async function selectCandidates(
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   loadEnv();
+  setBudget(options.budgetUsd);
   const supabase = getAdminClient();
 
   const embeds = loadEmbeds();
@@ -269,13 +318,22 @@ async function main(): Promise<void> {
   const candidates = await selectCandidates(supabase, options, published);
 
   console.log(`\nLoro embed publisher${options.dryRun ? ' (DRY RUN)' : ''}`);
-  console.log(`  ${embeds.length} already published, ${candidates.length} candidate(s) selected\n`);
+  console.log(`  ${embeds.length} already published, ${candidates.length} candidate(s) selected`);
+  console.log(`  on-camera gate: ${options.onCamera ? 'ON' : 'off'}   budget: ${options.budgetUsd === null ? 'none' : '$' + options.budgetUsd.toFixed(2)}\n`);
   if (candidates.length === 0) {
     console.log('Nothing to do.\n');
     return;
   }
 
-  const stats = { published: 0, noCaptions: 0, thin: 0, skipped: 0, failed: 0 };
+  const stats = {
+    published: 0,
+    noCaptions: 0,
+    thin: 0,
+    offCamera: 0,
+    skipped: 0,
+    failed: 0,
+  };
+  let budgetStopped = false;
 
   for (const candidate of candidates) {
     const id = candidate.youtube_id;
@@ -284,11 +342,52 @@ async function main(): Promise<void> {
     console.log(`   license=${candidate.license}  ${candidate.duration_seconds}s  ${candidate.view_count} views`);
 
     if (options.dryRun) {
-      console.log('   (dry run — would fetch captions, gloss, publish)\n');
+      console.log('   (dry run — would gate, fetch captions, gloss, publish)\n');
       continue;
     }
 
+    // Stop BETWEEN videos, never part-way through one: a video abandoned after
+    // its captions were fetched but before its gloss would leave nothing
+    // behind, and re-running would pay for the caption fetch again.
     try {
+      assertAffordable();
+    } catch (error) {
+      if (error instanceof BudgetExceededError) {
+        console.log(`   ⛔ ${error.message} — stopping the run.\n`);
+        budgetStopped = true;
+        break;
+      }
+      throw error;
+    }
+
+    try {
+      // The gate goes FIRST because it is the cheap test: ~$0.0006 against a
+      // gloss around 40x that, and it is also the test most likely to fail.
+      // Every rejection here is a caption fetch and a gloss not paid for.
+      if (options.onCamera) {
+        const verdict = await judgeOnCamera(id, candidate.title ?? '');
+        console.log(
+          `   on-camera: ${verdict.onCamera ? '✓' : '✗'} [${verdict.format}] ` +
+            `${verdict.framesWithSpeaker}/3 frames — ${verdict.reason}`
+        );
+        if (!verdict.onCamera) {
+          stats.offCamera += 1;
+          // Safe to persist: this is a fact about the VIDEO's pixels, not
+          // about our session — unlike the caption-fetch failures below, it
+          // cannot be a bot check misfiring across the whole batch.
+          const { error: ocErr } = await supabase
+            .from(CANDIDATES_TABLE)
+            .update({
+              status: 'rejected',
+              reject_reason: `not_on_camera:${verdict.format}`,
+            })
+            .eq('youtube_id', id);
+          if (ocErr) console.warn(`   ! status write failed: ${ocErr.message}`);
+          console.log('   ✗ no person speaking on camera — rejected\n');
+          continue;
+        }
+      }
+
       const { json3, track } = await fetchCaptions(id);
       const cues = json3ToCues(json3);
       const wordCount = cues.reduce((n, c) => n + c.words.length, 0);
@@ -340,8 +439,20 @@ async function main(): Promise<void> {
       if (pubErr) console.warn(`   ! status write failed (row stays eligible): ${pubErr.message}`);
 
       stats.published += 1;
-      console.log('   ✓ published\n');
+      console.log(`   ✓ published   (run spend $${spentUsd().toFixed(4)})\n`);
     } catch (error) {
+      if (error instanceof BudgetExceededError) {
+        console.log(`   ⛔ ${error.message} — stopping the run.\n`);
+        budgetStopped = true;
+        break;
+      }
+      if (error instanceof NoFramesError) {
+        // YouTube served no storyboard frame. Unknowable, not a verdict.
+        stats.failed += 1;
+        console.log(`   ! skipped (transient): ${error.message}\n`);
+        await sleep(CAPTION_FETCH_DELAY_MS);
+        continue;
+      }
       if (error instanceof NoCaptionsError && isDefinitiveNoCaptions(error)) {
         stats.noCaptions += 1;
         const { error: ncErr } = await supabase
@@ -372,8 +483,17 @@ async function main(): Promise<void> {
   }
 
   console.log('='.repeat(56));
-  console.log(`published ${stats.published}   no_captions ${stats.noCaptions}   too_thin ${stats.thin}   transient-skips ${stats.failed}`);
+  console.log(`published ${stats.published}   off_camera ${stats.offCamera}   no_captions ${stats.noCaptions}   too_thin ${stats.thin}   transient-skips ${stats.failed}`);
   console.log(`data/embedVideos.json now holds ${embeds.length} video(s).`);
+  console.log('\nOpenAI spend this run:');
+  console.log(costReport());
+  if (stats.published > 0) {
+    console.log(`  per published video: $${(spentUsd() / stats.published).toFixed(4)}`);
+  }
+  if (budgetStopped) {
+    console.log('\nStopped on budget. Every unprocessed candidate is still');
+    console.log('`eligible` — re-run with a new --budget-usd to continue.');
+  }
   if (stats.published > 0) {
     console.log('\nThe feed picks these up on the next `npm run dev` reload or deploy.');
   }

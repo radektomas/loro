@@ -175,6 +175,47 @@ export type UpsertResult = {
 };
 
 /**
+ * Collapse repeats of the same youtube_id within ONE batch, unioning the
+ * multi-valued columns.
+ *
+ * Postgres refuses an INSERT ... ON CONFLICT DO UPDATE whose input names the
+ * same conflict key twice — "ON CONFLICT DO UPDATE command cannot affect row a
+ * second time" — and it fails the WHOLE statement, not the duplicate row. That
+ * was invisible while every combo fetched a single page: a video can only
+ * appear once in 50 results. It surfaced the moment street-interviews went to
+ * pages: 3, because YouTube's pagination is not a stable snapshot and happily
+ * returns the same video on page 0 and page 2 of one search.
+ *
+ * Dropping the later copy would be the wrong fix. The duplicates are not
+ * identical rows — a video found under two regions of the same query carries
+ * two different region hints and, across queries, different source_queries. So
+ * this merges on the same union rule the existing-row UPDATE path uses; first
+ * writer wins for the scalar facts, which are the same API snapshot anyway.
+ */
+export function dedupeCandidates(
+  candidates: readonly CandidateInsert[]
+): CandidateInsert[] {
+  const byId = new Map<string, CandidateInsert>();
+  for (const candidate of candidates) {
+    const seen = byId.get(candidate.youtube_id);
+    if (!seen) {
+      byId.set(candidate.youtube_id, { ...candidate });
+      continue;
+    }
+    seen.topic_tags = Array.from(
+      new Set([...seen.topic_tags, ...candidate.topic_tags])
+    );
+    seen.source_queries = Array.from(
+      new Set([...seen.source_queries, ...candidate.source_queries])
+    );
+    seen.discovery_sources = Array.from(
+      new Set([...seen.discovery_sources, ...candidate.discovery_sources])
+    );
+  }
+  return [...byId.values()];
+}
+
+/**
  * Upsert a batch on conflict (youtube_id).
  *
  * The invariant that makes re-harvesting safe: an EXISTING row keeps its
@@ -189,14 +230,18 @@ export type UpsertResult = {
  */
 export async function upsertCandidates(
   supabase: SupabaseClient,
-  candidates: readonly CandidateInsert[]
+  input: readonly CandidateInsert[]
 ): Promise<UpsertResult> {
   const result: UpsertResult = {
     inserted: 0,
     updated: 0,
     rows: new Map<string, CandidateRow>(),
   };
-  if (candidates.length === 0) return result;
+  if (input.length === 0) return result;
+
+  // Must happen before ANY of the work below: a duplicate id fails the whole
+  // insert statement, not just its own row.
+  const candidates = dedupeCandidates(input);
 
   const ids = candidates.map((c) => c.youtube_id);
   const { data: existingData, error: selectError } = await supabase
