@@ -153,8 +153,25 @@ export const VOICEOVER_FORMAT_PATTERNS: readonly RegExp[] = [
  * was costing source diversity — its own stated purpose is to exclude
  * abandoned uploads, and 10k still does that — while concentrating the feed on
  * a handful of large channels, which BATCH_MAX_PER_CHANNEL then throttles.
+ *
+ * Lowered 10k -> 5k (2026-08-14, owner's call). Same argument one notch
+ * further, plus a new one. Measured that day, 10k left 19 publishable
+ * candidates across only 8 channels while withholding 58 more purely on view
+ * count — the floor had stopped selecting for quality and started selecting
+ * for a handful of big channels again. A video with 5,000 views is not an
+ * abandoned upload, which is the whole job this constant was given.
+ *
+ * The new argument: views were always a weak proxy for "is this worth
+ * watching", and part of what they were proxying for is now measured directly
+ * by the on-camera vision gate. Two proxies for one question is how the feed
+ * ended up with hands-and-a-bowl videos in it. Note 5k is also where
+ * publish-embeds' own MIN_VIEWS sits, so below this the two disagreed and this
+ * one silently won — they now say the same thing.
+ *
+ * NOT lowered further. Below ~5k the pool stops being audience-vetted at all,
+ * and nothing else in the stack tests whether a human ever found it watchable.
  */
-export const MIN_VIEWS_TO_PUBLISH = 10_000;
+export const MIN_VIEWS_TO_PUBLISH = 5_000;
 
 export type CurationVerdict = {
   /** Higher is better. Negative means never publish. */
