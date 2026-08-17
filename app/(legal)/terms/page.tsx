@@ -5,38 +5,78 @@ import { PageTitle, Section, UL } from '../ui';
 export const metadata: Metadata = {
   title: 'Loro — Terms of Service',
   description:
-    'The terms for using Loro: accounts, embedded YouTube content, the creator programme, and your rights.',
+    'The terms for using Loro: accounts, subscriptions, embedded YouTube content, the creator programme, and your rights.',
 };
 
 export default function TermsPage() {
   return (
     <article>
-      <PageTitle title="Terms of Service" updated="28 July 2026" />
+      <PageTitle title="Terms of Service" updated="17 August 2026" />
 
       <Section title="What Loro is">
         <p>
           Loro is an app for learning Spanish from real videos: you watch,
           tap words you don&apos;t know, and Loro schedules them so you
-          remember. It is currently in open beta and{' '}
-          <strong className="text-text">free to use</strong>. There is no
-          guarantee it stays free — paid features may be introduced later. If
-          that happens, nothing you already use will silently start charging
-          you; any paid option will be a choice you actively make.
+          remember. On the web, Loro is currently in beta and{' '}
+          <strong className="text-text">free to use</strong>. The iOS app is
+          paid: beyond the introduction it requires an auto-renewing
+          subscription, described in{' '}
+          <strong className="text-text">Subscriptions</strong> below.
         </p>
         <p>
-          Because it is a beta, features may change, break, or be removed as
-          the product develops.
+          Because Loro is still young, features may change, break, or be
+          removed as the product develops.
         </p>
       </Section>
 
       <Section title="Accounts">
         <p>
-          You don&apos;t need an account — the whole app works anonymously on
-          your device. An account (email magic-link or Google) exists to back
-          up and sync your progress. You are responsible for keeping access to
-          the email address you sign in with. You must be at least 16 to use
-          Loro. One person, one account, used honestly.
+          You don&apos;t need an account — the app works anonymously on your
+          device. An account (email magic-link, Google, or Apple) exists to
+          back up and sync your progress. You are responsible for keeping
+          access to the email address you sign in with. You must be at least
+          16 to use Loro. One person, one account, used honestly.
         </p>
+      </Section>
+
+      <Section title="Subscriptions (iOS app)">
+        <p>
+          Using the iOS app beyond the introduction requires a subscription.
+          Every plan&apos;s price and billing period is shown in the app, in
+          your local currency, before you are asked to pay; some plans begin
+          with a free trial whose exact length is shown on the purchase
+          screen.
+        </p>
+        <UL>
+          <li>
+            Payment is charged to your Apple ID and handled entirely by
+            Apple — we never see your payment details.
+          </li>
+          <li>
+            Subscriptions renew automatically until cancelled at least 24
+            hours before the end of the current period. Manage or cancel any
+            time in your device&apos;s Settings → Subscriptions. Cancelling
+            stops future renewals; it does not end the period you already
+            paid for.
+          </li>
+          <li>
+            A free trial converts to a paid subscription unless cancelled at
+            least 24 hours before the trial ends.
+          </li>
+          <li>
+            Refunds for App Store purchases are handled by Apple — you can
+            request one at reportaproblem.apple.com. Nothing in these terms
+            limits your statutory consumer rights.
+          </li>
+          <li>
+            The subscription is tied to your Apple ID, not your Loro
+            account. Use <strong className="text-text">Restore purchases</strong>{' '}
+            in the app to bring it back on a new device — and note that
+            deleting your Loro account does{' '}
+            <strong className="text-text">not</strong> cancel the
+            subscription; cancel it in Settings → Subscriptions.
+          </li>
+        </UL>
       </Section>
 
       <Section title="Acceptable use">
@@ -122,18 +162,22 @@ export default function TermsPage() {
       <Section title="Limitation of liability">
         <p>
           To the extent Czech law allows, Loro&apos;s liability for damages
-          arising from use of a free beta service is limited to what is
-          unavoidable under mandatory law. Nothing in these terms limits
-          liability that cannot be limited under Czech law, and nothing takes
-          away rights you have as a consumer under mandatory consumer
-          protection rules.
+          arising from use of the service is limited to what is unavoidable
+          under mandatory law. Nothing in these terms limits liability that
+          cannot be limited under Czech law, and nothing takes away rights you
+          have as a consumer under mandatory consumer protection rules —
+          including your rights around purchases made through Apple&apos;s App
+          Store.
         </p>
       </Section>
 
       <Section title="Termination">
         <p>
           You can stop using Loro at any time, and can delete your account in
-          the app (Profile → Account). We may suspend or terminate accounts
+          the app (on the web: Profile → Account; in the iOS app: the Progress
+          tab). Deleting your account does not cancel an active App Store
+          subscription — cancel that in your device&apos;s Settings →
+          Subscriptions. We may suspend or terminate accounts
           that violate these terms, and may discontinue the service — with
           reasonable notice in the app where possible. The{' '}
           <Link

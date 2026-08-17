@@ -10,24 +10,31 @@ export const metadata: Metadata = {
 
 /**
  * Written from a code-level data inventory (2026-07-28; re-verified and
- * extended 2026-08-03), not from a template.
+ * extended 2026-08-03; iOS app — subscriptions, Apple sign-in, local
+ * notifications — added 2026-08-17), not from a template.
  * Every claim below maps to something the app verifiably does. If the app
  * changes, this page must change with it.
  */
 export default function PrivacyPage() {
   return (
     <article>
-      <PageTitle title="Privacy Policy" updated="12 August 2026" />
+      <PageTitle title="Privacy Policy" updated="17 August 2026" />
 
       <Section title="The short version">
         <p>
           Loro is built anonymous-first. You can use the whole app without an
-          account, and in that mode your learning data lives only in your
-          browser — we never see it. Data reaches our servers only when you
+          account, and in that mode your learning data lives only on your
+          device — we never see it. Data reaches our servers only when you
           choose something that needs them: signing in to sync, joining the
           launch waitlist, or applying as a creator. There are no ads, no
           third-party analytics and no trackers; the only usage measurement is
           our own product telemetry, described below.
+        </p>
+        <p>
+          The iOS app adds exactly one category: subscriptions. Payment
+          happens inside Apple&apos;s systems, and a subscription-management
+          service (RevenueCat) processes your subscription state so the app
+          knows what you bought. We never see your payment details.
         </p>
       </Section>
 
@@ -51,8 +58,9 @@ export default function PrivacyPage() {
         <p>
           Without an account, your saved words, review schedule, practice days,
           watched videos, level and calibration answers are stored in your
-          browser&apos;s localStorage. They are not sent to us. Clearing your
-          browser data deletes them.
+          browser&apos;s localStorage — or, in the iOS app, in the app&apos;s
+          own on-device storage. They are not sent to us. Clearing your browser
+          data (or deleting the app) deletes them.
         </p>
         <p>
           If you later sign in, this local data is merged upward into your
@@ -66,7 +74,11 @@ export default function PrivacyPage() {
           rows={[
             {
               term: 'Account data — GDPR Art. 6(1)(b), contract',
-              def: 'If you sign in: your email address (magic-link sign-in) or your Google account basics (email, name, profile picture — Google sign-in), plus sign-in timestamps and a profile row (level, onboarding date, statistics about whether our "save your progress" prompt was shown and what you chose, and your plan tier — free or plus, when it began, and whether you keep unlimited saves from before a saved-word limit existed). Used to operate your account and sync.',
+              def: 'If you sign in: your email address (magic-link sign-in), your Google account basics (email, name, profile picture — Google sign-in), or your Apple ID basics (your email — which may be Apple’s private relay address if you chose Hide My Email — and your name, if you shared it; Apple sign-in), plus sign-in timestamps and a profile row (level, onboarding date, statistics about whether our "save your progress" prompt was shown and what you chose, and your plan tier — free or plus, when it began, and whether you keep unlimited saves from before a saved-word limit existed). Used to operate your account and sync.',
+            },
+            {
+              term: 'Subscription state (iOS app) — GDPR Art. 6(1)(b), contract',
+              def: 'If you use the iOS app: a random purchase identifier, your subscription and trial state, and — once you sign in — your account user ID, so your subscription can follow your account. If you installed Loro through a campaign link, that campaign’s name is attached to the purchase identifier so we can see which campaigns work. Payment itself is processed by Apple; we never receive your payment details.',
             },
             {
               term: 'Learning data — GDPR Art. 6(1)(b), contract',
@@ -108,6 +120,14 @@ export default function PrivacyPage() {
               def: 'Hosting and serverless functions. Sees the traffic needed to serve the app, including request logs with IP addresses.',
             },
             {
+              term: 'RevenueCat — US',
+              def: 'Subscription management for the iOS app. Receives the purchase identifier, subscription and trial state, the campaign name where one applies, and — once you sign in — your account user ID. Never your payment details.',
+            },
+            {
+              term: 'Apple — App Store',
+              def: 'Processes iOS app payments, billing and refunds entirely inside Apple’s own systems, under Apple’s own privacy policy.',
+            },
+            {
               term: 'n8n cloud — EU',
               def: 'Runs the creator-video import workflow. Receives references to an uploaded video (its ID, storage paths, duration, and the creator’s user ID).',
             },
@@ -130,12 +150,16 @@ export default function PrivacyPage() {
       <Section title="Does data leave the EU?">
         <p>
           Your stored data — account, learning data, waitlist, uploaded files —
-          stays in the EU (Supabase, Paris). Two specific things reach US
+          stays in the EU (Supabase, Paris). Three specific things reach US
           providers:
         </p>
         <UL>
           <li>
-            server request logs, processed by Vercel in the United States, and
+            server request logs, processed by Vercel in the United States,
+          </li>
+          <li>
+            for iOS app users, subscription state, processed by RevenueCat in
+            the United States, and
           </li>
           <li>
             for approved creators only, the extracted audio track of an
@@ -201,6 +225,29 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      <Section title="The iOS app">
+        <p>
+          Everything above applies to the iOS app too. The mechanical
+          differences:
+        </p>
+        <UL>
+          <li>
+            Local data lives in the app&apos;s own on-device storage rather
+            than browser localStorage — same keys, same content. Deleting the
+            app deletes it.
+          </li>
+          <li>
+            Practice reminders are local notifications, scheduled and
+            delivered on your device. Turning them on sends nothing to us —
+            there is no push server involved.
+          </li>
+          <li>
+            Subscriptions, as described above: Apple processes payment,
+            RevenueCat processes subscription state.
+          </li>
+        </UL>
+      </Section>
+
       <Section title="How long we keep things">
         <UL>
           <li>
@@ -225,20 +272,31 @@ export default function PrivacyPage() {
             cycles complete. Hosting request logs are short-lived operational
             records.
           </li>
+          <li>
+            Subscription records: Apple and RevenueCat keep purchase records
+            under their own retention rules — deleting your Loro account does
+            not delete Apple&apos;s record of your purchases.
+          </li>
         </UL>
       </Section>
 
       <Section title="Deleting your account">
         <p>
-          In the app: <strong className="text-text">Profile → Account → Delete
+          On the web: <strong className="text-text">Profile → Account → Delete
           account</strong> (<Link href="/profile" className="text-text underline decoration-white/25 underline-offset-2">open your profile</Link>).
+          In the iOS app: <strong className="text-text">Progress → Danger zone
+          → Delete account</strong>, reachable even without an active
+          subscription via <strong className="text-text">Sign in &amp;
+          account</strong> on the subscription screen.
           This permanently deletes your saved words, progress, follows,
           profile — including the onboarding and paywall telemetry and the
           plan tier stored on it — creator application, uploaded videos and
           files, and the sign-in itself. One honest caveat: if your sign-in is also used by
           another service run by the same developer on the same
           infrastructure, all Loro data is deleted but the shared sign-in
-          identity is kept — the app tells you when that is the case.
+          identity is kept — the app tells you when that is the case. And
+          deleting your account does not cancel an App Store subscription:
+          cancel that in your device&apos;s Settings → Subscriptions.
         </p>
         <p>
           The waitlist is deliberately not linked to accounts, so deleting an
