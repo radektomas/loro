@@ -7,12 +7,20 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_ORIGIN": "https://www.getloro.app",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_oKWdJsEXZfPJmLvRnYTOvbegFaG"
+      },
       "ios": {
         "simulator": false
       }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_ORIGIN": "https://www.getloro.app",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_oKWdJsEXZfPJmLvRnYTOvbegFaG"
+      },
       "ios": {
         "simulator": false
       }

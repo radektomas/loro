@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,8 @@ import Purchases, {
   type PurchasesPackage,
   type PurchasesStoreProduct,
 } from 'react-native-purchases';
+import { DeleteAccountCard } from '../auth/DeleteAccountCard';
+import { SignInCard } from '../auth/SignInCard';
 import { BRAND } from '../onboarding/brand';
 import {
   ACCENT,
@@ -25,6 +28,7 @@ import {
   TEXT,
   TextButton,
 } from '../onboarding/chrome';
+import { authEnabled } from '../platform/supabaseInit';
 import { LegalLinks } from '../progress/LegalLinks';
 
 /**
@@ -46,6 +50,15 @@ import { LegalLinks } from '../progress/LegalLinks';
  * priceString (or the SDK's pricePerMonthString derivation). The one fallback
  * computation (perMonthLabel) divides the store's numeric price and formats it
  * in the product's own currency.
+ *
+ * THE WALL MUST NOT ORPHAN AN ACCOUNT. A subscriber who created an account
+ * and later lapsed lands HERE, with Progress — the only other account surface
+ * — out of reach. So the footer opens an account sheet mounting the same
+ * SignInCard and DeleteAccountCard Progress uses: sign-in, sign-out and
+ * guideline 5.1.1(v) account deletion all stay reachable without paying
+ * again. Signing in also runs Purchases.logIn via the auth listener
+ * (purchases.ts), so a subscription tied to the account can open the gate by
+ * itself.
  */
 
 type Offer =
@@ -121,6 +134,7 @@ export function PaywallScreen() {
   const [offer, setOffer] = useState<Offer>({ status: 'loading' });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<'purchase' | 'restore' | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const loadOfferings = useCallback(() => {
     setOffer({ status: 'loading' });
@@ -314,8 +328,57 @@ export function PaywallScreen() {
           label={busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
           onPress={() => void restore()}
         />
+        {authEnabled && (
+          <TextButton
+            label="Sign in & account"
+            onPress={() => setAccountOpen(true)}
+          />
+        )}
         <LegalLinks />
       </View>
+
+      {/* The account sheet — see the header note on not orphaning accounts.
+          A pageSheet rather than a screen: the wall stays the surface, this
+          is a drawer on it. DeleteAccountCard renders nothing while signed
+          out, and its completed deletion path remounts the whole app. */}
+      <Modal
+        visible={accountOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setAccountOpen(false)}
+      >
+        <View style={styles.accountSheet}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.accountScroll,
+              { paddingBottom: insets.bottom + 24 },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.accountHead}>
+              <Text style={styles.accountTitle}>Your account</Text>
+              <Pressable
+                onPress={() => setAccountOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                hitSlop={10}
+                style={({ pressed }) => pressed && styles.accountClosePressed}
+              >
+                <Text style={styles.accountClose}>✕</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.accountBody}>
+              Signing in brings back the words and progress synced to your
+              account, and lets you manage or delete the account itself. A
+              past subscription comes back with “Restore purchases”, through
+              your Apple ID.
+            </Text>
+            <SignInCard />
+            <DeleteAccountCard />
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -384,4 +447,17 @@ const styles = StyleSheet.create({
   },
   ctaDim: { opacity: 0.7 },
   ctaText: { color: ON_ACCENT, fontSize: 17, fontWeight: '800' },
+
+  // ---- account sheet ----
+  accountSheet: { backgroundColor: GROUND, flex: 1 },
+  accountScroll: { gap: 12, padding: 24 },
+  accountHead: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  accountTitle: { color: TEXT, fontSize: 20, fontWeight: '800' },
+  accountClose: { color: MUTED, fontSize: 17, padding: 4 },
+  accountClosePressed: { opacity: 0.6 },
+  accountBody: { color: MUTED, fontSize: 13, lineHeight: 19, marginBottom: 6 },
 });

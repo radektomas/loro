@@ -20,9 +20,10 @@ import { useSession } from './useSession';
  * kept deliberately close to it: same enumeration, same type-your-email
  * confirmation, same handling of the shared sign-in.
  *
- * Renders only for a signed-in user, directly under SignInCard on Progress —
- * the one place the app already keeps account UI, so deletion is where a
- * reviewer (and a user) will look for it.
+ * Renders only for a signed-in user, directly under SignInCard in both places
+ * that card mounts: Progress, where the app keeps its account UI, and the
+ * hard paywall's account sheet — a lapsed subscriber must still be able to
+ * delete their account, and the wall is the only screen they can reach.
  *
  * IDENTITY IS THE BEARER TOKEN, NEVER A BODY. The route reads the user id from
  * the verified JWT and never parses a body (app/api/account/delete/route.ts),

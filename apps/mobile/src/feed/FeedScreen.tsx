@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
+  ActivityIndicator,
   Image,
   LayoutChangeEvent,
   Pressable,
@@ -22,6 +23,7 @@ import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { orderVideosForLevel } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
+import { refreshCatalog } from '../platform/catalog';
 import {
   usePlayerApi,
   usePlayerBox,
@@ -67,6 +69,10 @@ const VISIBLE_PERCENT = 60;
 
 /** Every embed is 9:16. */
 const PLAYER_ASPECT = 9 / 16;
+
+/** How often an EMPTY feed re-asks for the catalog — see the retry effect in
+    FeedScreen. */
+const EMPTY_RETRY_MS = 10_000;
 
 type EmbedVideo = Video & { youtubeId: string };
 
@@ -157,6 +163,26 @@ export function FeedScreen({ active }: { active: boolean }) {
   );
 
   /**
+   * WHILE THE LIST IS EMPTY, KEEP ASKING FOR THE CATALOG.
+   *
+   * An empty list here means the first snapshot download has never landed —
+   * the bundled seed carries nothing embeddable (see embedsFrom). finishBoot's
+   * refresh runs once per launch, so if THAT attempt failed offline, nothing
+   * else would ever fill this screen until the next cold start. The interval
+   * is cheap (the pointer probe is ~100 bytes, refreshCatalog never throws,
+   * and a repeatedly-broken blob backs off on its hash inside refreshCatalog,
+   * not here) and it removes itself: a successful refresh lands through
+   * onCatalogChanged above, the list fills, and the cleanup runs on the next
+   * render.
+   */
+  const emptyFeed = videos.length === 0;
+  useEffect(() => {
+    if (!emptyFeed) return;
+    const id = setInterval(() => void refreshCatalog(), EMPTY_RETRY_MS);
+    return () => clearInterval(id);
+  }, [emptyFeed]);
+
+  /**
    * The player area's rect inside a slide, reported by the active slide's
    * onLayout. NOT a constant: the band below it sizes itself to its content and
    * the player takes the remainder, so the only honest way to know this box is
@@ -210,6 +236,10 @@ export function FeedScreen({ active }: { active: boolean }) {
    */
   const bandTop = area ? area.y + area.height : null;
 
+  // Nothing to render a feed FROM — show the honest waiting state instead of
+  // a black screen. Everything inside FeedBody assumes at least one slide.
+  if (emptyFeed) return <EmptyFeed />;
+
   return (
     <FeedBody
       videos={videos}
@@ -218,6 +248,54 @@ export function FeedScreen({ active }: { active: boolean }) {
       active={active}
       onAreaLayout={onAreaLayout}
     />
+  );
+}
+
+/** How long the quick case gets before EmptyFeed admits something is wrong. */
+const SLOW_HINT_MS = 6000;
+
+/**
+ * The first-ever launch, before the catalog snapshot has ever downloaded.
+ *
+ * A returning device never sees this (the cached snapshot installs
+ * synchronously at boot), and a first launch on a working connection sees it
+ * for around a second — the refresh was kicked at finishBoot, while the user
+ * was still walking through onboarding. What this screen really exists for is
+ * the failure tail: no network on a first run. It starts as a plain loading
+ * state, and only once the quick case has had its chance does it name the
+ * likely cause and offer a manual retry on top of the automatic one
+ * FeedScreen already runs.
+ */
+function EmptyFeed() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSlow(true), SLOW_HINT_MS);
+    return () => clearTimeout(id);
+  }, []);
+
+  return (
+    <View style={styles.emptyRoot}>
+      <ActivityIndicator color="#5ee6a8" />
+      <Text style={styles.emptyTitle}>Getting your videos…</Text>
+      {slow && (
+        <>
+          <Text style={styles.emptyBody}>
+            The first load needs an internet connection. It keeps retrying on
+            its own — or give it a nudge.
+          </Text>
+          <Pressable
+            onPress={() => void refreshCatalog()}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.emptyCta,
+              pressed && styles.emptyCtaPressed,
+            ]}
+          >
+            <Text style={styles.emptyCtaText}>Try again</Text>
+          </Pressable>
+        </>
+      )}
+    </View>
   );
 }
 
@@ -1031,6 +1109,31 @@ function formatRate(rate: number): string {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0d0b' },
+  emptyRoot: {
+    alignItems: 'center',
+    backgroundColor: '#0a0d0b',
+    flex: 1,
+    gap: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 44,
+  },
+  emptyTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
+  emptyBody: {
+    color: 'rgba(242,245,243,0.6)',
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  emptyCta: {
+    borderColor: 'rgba(242,245,243,0.25)',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+  },
+  emptyCtaPressed: { opacity: 0.7 },
+  emptyCtaText: { color: '#f2f5f3', fontSize: 13, fontWeight: '700' },
   slide: { width: '100%', backgroundColor: '#0a0d0b' },
   playerArea: { flex: 1 },
   playerBox: {

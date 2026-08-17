@@ -17,18 +17,19 @@ import {
 import { useSession } from './useSession';
 
 /**
- * The one place mobile invites sign-in — the port of components/SignInCard.tsx.
+ * Where mobile invites sign-in — the port of components/SignInCard.tsx.
  *
  * IT IS NEVER A GATE, and that framing is the product decision the web's card
  * documents: anonymous users get a soft "back up & sync" offer, signed-in users
  * get a quiet status row, and everything in the app works either way. Renders
  * nothing at all when Supabase is unconfigured.
  *
- * WHY IT LIVES ON PROGRESS. Signing in is pitched as protecting progress, so
- * the progress screen is where the promise pays off — the same reasoning core's
- * DEFAULT_AUTH_DESTINATION ('/progress') encodes for the web. Mobile has no
- * Profile screen and inventing one to mirror the web's second mount point would
- * be adding a tab to hold a single card.
+ * TWO MOUNTS. Progress, because signing in is pitched as protecting progress,
+ * so the progress screen is where the promise pays off — the same reasoning
+ * core's DEFAULT_AUTH_DESTINATION ('/progress') encodes for the web. And the
+ * hard paywall's account sheet (PaywallScreen), because a lapsed subscriber
+ * cannot reach Progress at all — without that mount, the wall would cut a
+ * signed-out user off from their own account entirely.
  */
 
 const GOOGLE_LABEL = 'Continue with Google';

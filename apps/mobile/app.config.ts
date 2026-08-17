@@ -46,8 +46,35 @@ function assertProductionHasRevenueCatKey(): void {
   );
 }
 
+/**
+ * Same shape as the RevenueCat guard, same reasoning: platform/config.ts falls
+ * back to 'https://example.com' as the player embed origin when this var is
+ * missing — quiet in dev, but a production binary would ship every YouTube
+ * embed pointed at a placeholder origin, and LegalLinks would silently paper
+ * over it with its own hardcoded fallback.
+ */
+function assertProductionHasApiOrigin(): void {
+  if (process.env.EAS_BUILD_PROFILE !== 'production') return;
+  const origin = process.env.EXPO_PUBLIC_API_ORIGIN ?? '';
+  if (origin.startsWith('https://')) return;
+  throw new Error(
+    [
+      origin === ''
+        ? 'Production build blocked: EXPO_PUBLIC_API_ORIGIN is missing or empty.'
+        : `Production build blocked: EXPO_PUBLIC_API_ORIGIN ("${origin}") is not an https URL.`,
+      'Without it the player boots against the example.com placeholder origin.',
+      '',
+      'Set it in the EAS production environment:',
+      '  eas env:create --environment production \\',
+      '    --name EXPO_PUBLIC_API_ORIGIN --value https://www.getloro.app --visibility plaintext',
+      'or on expo.dev: project → Environment variables → production.',
+    ].join('\n')
+  );
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   assertProductionHasRevenueCatKey();
+  assertProductionHasApiOrigin();
   return {
     ...config,
     // app.json always defines both; the fallbacks only satisfy ExpoConfig's

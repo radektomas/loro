@@ -215,8 +215,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 // Anything animated or timed keys off this rather than off
                 // mount — see StepProps.isCurrent. Every screen is mounted
                 // from the start, so a screen that ran a clock on mount would
-                // run it, and finish it, from off-stage. No step needs this
-                // today; it stays as the contract for the next one that does.
+                // run it, and finish it, from off-stage.
                 isCurrent={i === index}
               />
             </View>

@@ -99,11 +99,9 @@ export type StepProps = {
    * an intro animation would play to an empty room and be over before the user
    * arrived, and a timed screen would run its clock from five screens away.
    *
-   * NO STEP CONSUMES THIS TODAY. The two that did are gone: the bar chart that
-   * grew in on arrival, and the "Building your plan" loader whose timer
-   * advanced the flow on its own. The prop stays because it is the host's
-   * contract rather than any one screen's, and it is the thing a future timed
-   * or animated step must key off instead of mount.
+   * NO STEP CONSUMES THIS TODAY. It is the host's contract rather than any
+   * one screen's; anything timed or animated added later must key off it
+   * rather than off mount.
    */
   isCurrent: boolean;
 };
@@ -638,10 +636,11 @@ function PaywallStep({ next }: StepProps) {
   );
 }
 
-// ------------------------------------------------------------- 14. handoff
+// ------------------------------------------------------------- 13. handoff
 
 function HandoffStep({ finish }: StepProps) {
   return (
+    // `finish`, not `next`: this is the last slide, so it owns the exit.
     <Screen footer={<PrimaryButton label={HANDOFF.cta} onPress={finish} />}>
       {/* Waving, on the screen that hands over to the feed. It is the last
           time the mascot appears, so it may as well be saying something. */}
