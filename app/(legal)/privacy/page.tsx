@@ -45,10 +45,10 @@ export default function PrivacyPage() {
           registration number (IČO) 22052372, registered address Holečkova
           711/42, Smíchov, 150 00 Praha 5, Czechia. Contact:{' '}
           <a
-            href="mailto:support@getloro.app"
+            href="mailto:radektygrtomas@gmail.com"
             className="text-text underline decoration-white/25 underline-offset-2"
           >
-            support@getloro.app
+            radektygrtomas@gmail.com
           </a>
           .
         </p>
@@ -318,10 +318,10 @@ export default function PrivacyPage() {
         <p>
           Write to{' '}
           <a
-            href="mailto:support@getloro.app"
+            href="mailto:radektygrtomas@gmail.com"
             className="text-text underline decoration-white/25 underline-offset-2"
           >
-            support@getloro.app
+            radektygrtomas@gmail.com
           </a>
           . You also have the right to complain to the Czech data protection
           authority: Úřad pro ochranu osobních údajů (

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     'Get help with Loro — contact, frequently asked questions, and legal information.',
 };
 
-const CONTACT_EMAIL = 'support@getloro.app';
+const CONTACT_EMAIL = 'radektygrtomas@gmail.com';
 
 /**
  * Public support page (App Store requirement, among others). Static and
