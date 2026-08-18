@@ -38,7 +38,8 @@ export type TopicSlug =
   | 'nature'
   | 'sports'
   | 'technology'
-  | 'talking-head';
+  | 'talking-head'
+  | 'travel-vlog';
 
 export type Topic = {
   slug: TopicSlug;
@@ -230,6 +231,35 @@ export const TOPICS: readonly Topic[] = [
       'preguntas incomodas',
     ],
     tags: ['talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'travel-vlog',
+    label: 'Travel vlog (selfie)',
+    /**
+     * Added 2026-08-18 — the second format-first topic, after talking-head
+     * proved the approach (gate pass 33% -> 48%). Where 'travel' asks about
+     * the PLACE and hopes for a person, these queries name the selfie-vlog
+     * format in a travel setting: someone holding the camera at arm's length
+     * and telling you about their trip, their move abroad, their city. That
+     * framing is almost necessarily a face talking to the lens.
+     *
+     * All six terminate on a noun, adjective, or content gerund per rule 1.
+     * Accent-free like the rest of the file ('mude', 'pais', 'aprendi');
+     * query strings are yield-history keys, so spelling is frozen once run.
+     */
+    queries: [
+      'vlog de viaje',
+      'viajando sola',
+      'les muestro mi ciudad',
+      'me mude a otro pais',
+      'mi primer viaje',
+      'que aprendi viajando',
+    ],
+    tags: ['travel', 'talking-head'],
+    // Geographic on its face (trips, cities, countries), so it sweeps the
+    // full region set like 'travel' does.
     regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
