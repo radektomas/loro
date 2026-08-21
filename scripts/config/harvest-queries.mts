@@ -499,12 +499,379 @@ export const BLOCKED_CHANNELS: readonly BlockedChannel[] = [
       'textual dubbing signal at all. Blocked at the channel level because the ' +
       'per-video text signal provably cannot cover it.',
   },
+  {
+    channelId: 'UCSLcn4bxyfryukB5I824fIw',
+    title: 'OIKOS BEE',
+    reason:
+      'rabbit-farming channel whose clips are how-to-slaughter-a-rabbit ' +
+      'content ("como sacrificar un conejo..."). Two of them reached the live ' +
+      'feed (2026-08-21) — animal-slaughter footage has no place in a language ' +
+      'learning app regardless of the Spanish being genuine. Also the incident ' +
+      'that motivated CONTENT_KEYWORDS below, which would have caught all ' +
+      'three of its rows on "sacrificar" alone.',
+  },
+  // Approved 2026-08-21, owner review of the retroactive on-camera audit
+  // (audit-on-camera.mts over all 300 published embeds). Every channel here
+  // had ALL of its published videos marked for removal — no survivors —
+  // which is the bar for a channel block versus a BLOCKED_VIDEOS entry.
+  {
+    channelId: 'UCCBYEz_L1MyxEO0VEFsgn0g',
+    title: 'PERO, ¿QUÉ DIRÍA MARCO AURELIO?',
+    reason:
+      'no person speaking on camera — other/voiceover-broll/animation format across all ' +
+      '3 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
+  {
+    channelId: 'UCuTKQx84XfjD1KuOPbG4i6Q',
+    title: 'JuanFe Castro',
+    reason:
+      'no person speaking on camera — hands-only format across all ' +
+      '2 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
+  {
+    channelId: 'UCkBbtbivQK6-GuQTP5Y8iOg',
+    title: 'Tenorshare Spanish',
+    reason:
+      'no person speaking on camera — hands-only/voiceover-broll format across all ' +
+      '5 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
+  {
+    channelId: 'UCzGc46rimrMvbNsWUamwqHg',
+    title: 'ACENTO Escuela de Animadores',
+    reason:
+      'no person speaking on camera — other format across all ' +
+      '2 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
+  {
+    channelId: 'UCWKsHoNH4__DbLA3j35_FbQ',
+    title: 'Anima Dogs and Cats',
+    reason:
+      'no person speaking on camera — voiceover-broll/hands-only format across all ' +
+      '2 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
+  {
+    channelId: 'UCkGAI5dpY7fHktujxNByHxg',
+    title: 'Darry Tech',
+    reason:
+      'no person speaking on camera — hands-only format across all ' +
+      '6 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
+  {
+    channelId: 'UCRv_lHETqjDvy840Rw48smw',
+    title: 'Cómo',
+    reason:
+      'no person speaking on camera — voiceover-broll format across all ' +
+      '2 published videos; every one failed the retroactive vision audit and ' +
+      'was marked for removal in the owner review of 2026-08-21.',
+  },
 ];
 
 /** Lookup set derived from the list above — the filter uses this. */
 export const BLOCKED_CHANNEL_IDS: ReadonlySet<string> = new Set(
   BLOCKED_CHANNELS.map((channel) => channel.channelId)
 );
+
+// -------------------------------------------------------------- video block
+/**
+ * Individual videos that must never be in the feed, from channels that are
+ * otherwise fine. Same contract as BLOCKED_CHANNELS: an editorial override, a
+ * human names the video and says why, and blocking is never deletion — the
+ * candidate row stays as status='rejected', reject_reason='video_blocked', so
+ * the verdict survives every future harvest and refilter.
+ *
+ * Prefer BLOCKED_CHANNELS when the whole channel is the problem: a channel
+ * that produced one bad video usually produces more, and a channel block is
+ * one entry instead of a growing list. This list is for the genuine one-off.
+ *
+ * After editing, `npm run refilter -- --apply` makes it retroactive over the
+ * candidate pool, and `npm run prune-embeds -- --apply` removes any entry
+ * that already reached data/embedVideos.json.
+ */
+export type BlockedVideo = {
+  /** The YouTube video id — the same value as loro_video_candidates.youtube_id. */
+  youtubeId: string;
+  /** Human label, so this list is readable in review. */
+  title: string;
+  /** Why it was blocked. Required: an unexplained blocklist rots. */
+  reason: string;
+};
+
+export const BLOCKED_VIDEOS: readonly BlockedVideo[] = [
+  // Owner review 2026-08-21: retroactive vision audit + keyword report.
+  // Video-level (not channel) because their channels keep other videos in
+  // the feed, or the single bad video is not evidence about the channel.
+  {
+    youtubeId: 'nbtLM-OOh5s',
+    title: 'Edher Vela — Joven ayuda a un gato en plena inundación en Veracruz',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'Cg3l3xwW0QY',
+    title: 'Poemas Historias y Aventuraspk mc — Poema corto a papá 🥰🤵👷‍♂️👮‍♂️👨‍🏫👨‍⚖️',
+    reason: 'vision audit: slideshow, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '3FosEuFdIjk',
+    title: 'IMachupicchu — Todo lo que necesitas saber antes de visitar Machu Picchu  #',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'duB6TwxqZ2A',
+    title: 'Isabel Love — Bolonia|Italia|Que ver en Bolonia|Que hacer en Bolonia| Che ',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'sbI4ll8YTek',
+    title: 'W Chris — JBL Tune Flex (Un bajo poderoso) @jbl',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'Hi3P8mwtVxs',
+    title: 'Arquitecto Calderon — Saber la orientación del sol respecto al terreno #construcci',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'fptinLvBnkc',
+    title: 'Radio Tiempo Colombia — La canción que Ricardo Arjona prometió no volver a cantar',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '1p8sIYDW8TA',
+    title: 'Hoft — BORUTO LE DICE TÍA A SAKURA👆🏻 #short #viral #fyp #boruto #',
+    reason: 'vision audit: animation, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'm2qNgdFavaM',
+    title: 'Girasol Vegan — 😋 HUMMUS FÁCIL Y CREMOSO !!',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '-Kd8zU_pqeg',
+    title: 'BretonEuro — Gasta 8,500 dólares todos los días solo para tocar como en s',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'LN0DibBU18g',
+    title: 'Draxler  — JUGADORES que TOCARON LA COPA y aun así FUERON CAMPEONES #sh',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'QS6gSKFi0Zk',
+    title: 'Neuro Todo — ¿Como ser frio y muy serio? Te lo explico #shorts',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'tdd2wSwh7V8',
+    title: 'Esdras Gomez (esdras ab60) — Señalamientos de mano para el examen de manejo',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'DAvL3INNn78',
+    title: 'Hospital Clínic de Barcelona — Calambres en las Piernas: 5 consejos útiles',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'XfGyI9ehrqE',
+    title: 'Luis Felipe Camilo Mercedes — COMO Mirar tus Suscriptores desde tu Celular usando la aplic',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '332amYO5Ptk',
+    title: 'FEE en Español — Rebelión en la granja',
+    reason: 'vision audit: slideshow, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '9lg_YN_tpcY',
+    title: 'Dario Coach — ⚡ Rompe a tu defensa en el primer bote 🏀',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'TnysbOf_Al0',
+    title: 'Chenel Saul — Lugares Del Mundo Que Están Prohibidos Visitar Parte 1🤯#sho',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'luyrTcVpV94',
+    title: 'Ramona Tech — Celular para gamer precio calidad Moto G60',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'FM_gkiDG7MM',
+    title: 'Linux en Casa — Termux - Una Terminal de Comandos Linux en tu movil Android ',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'acgMiYTZdTE',
+    title: 'El Diario De Jazmín — El Rescate MÁS BONITO A Un Gato',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'fGkdNo8qs-k',
+    title: 'Artefisual — ¿Cómo funciona DNS?',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'cIcyaQlfS40',
+    title: 'CurioCuy — 5 animales más raros del mundo🌎 #datoscurisos',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'TNpmhLKdImg',
+    title: 'Edher Vela — ESTE LÁPIZ INTELIGENTE TE RESPONDE A CUALQUIER PREGUNTA EN S',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'y40c_f69_NI',
+    title: 'NOLIMITE — Este perro atrapado hizo lo IMPOSIBLE para salvarse #dog #re',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'iYJNayqs61I',
+    title: 'Tecnicia — El kernel de un sistema operativo explicado',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'BZwubIFILSg',
+    title: 'Kivyru — ¿Twilight dejó MORIR a sus AMIGAS?',
+    reason: 'vision audit: animation, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '1p3ptlrAqBo',
+    title: 'Zampar Con Arte — 🌸🥒 Sunomono. Ensalada de Pepino Japonesa 🥒🌸 #receta #hea',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'Pdm22ovvvOk',
+    title: 'IntenzStudio — Emilio Azcarraga y su Problema con el Chavo del 8',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'DWnyso8qOiU',
+    title: 'Iris and Petro — Desayuno chino',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'rpwI1AIVTiw',
+    title: 'Edher Vela — Realizan desafío para ver quien dormía más! #dormir #sueño',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: '2oHNBJFUrQk',
+    title: 'El Maestro Yona  — 🔋 ¿Qué significan los números de las pilas de botón? | CR20',
+    reason: 'vision audit: voiceover-broll, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'ocryUtqk0NU',
+    title: 'SharkSPA🦈 — ¡La reacción de estos niños al ver a la selección española f',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'x8w5Qwk7fDY',
+    title: 'Parque de la Vida — Cuidado de la naturaleza',
+    reason: 'vision audit: hands-only, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'UxD2TYKh7Zk',
+    title: 'Tiitanes Futbol - Tips - Regates - Jugadas — CUANDO EL DEFENSA TE DICE QUE NO SABES JUGAR 😏🔥⚽️',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'IaArR3wOJrg',
+    title: 'Tiitanes Futbol - Tips - Regates - Jugadas — RETANDO A MINI CRACKS 👦🏻⚽️🥅',
+    reason: 'vision audit: other, 0/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'pGedB1dvKJs',
+    title: 'Martín Cipoletta — 👉 Cómo Poner Cotas Automáticas en AutoCAD',
+    reason: 'vision audit: reaction-overlay, 1/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'qPqscWDrKHg',
+    title: 'Erik MV — Huawei Pura 80 Pro: La mejor cámara para foto y video noctur',
+    reason: 'vision audit: talking-head, 1/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'Pt5BaWTvlRE',
+    title: 'Jorge Fince Tips — Como activar el Modo IA en el buscador de Google',
+    reason: 'vision audit: talking-head, 1/3 frames with a speaker; removed in the owner review of 2026-08-21.',
+  },
+  {
+    youtubeId: 'Er9byZXOs7o',
+    title: 'Roberto Avaria — Pacto de sangre o decretos de sangre #pactos #sangreroja #co',
+    reason: 'content_keyword match (sangre) — subject matter, not format; removed in the owner review of 2026-08-21.',
+  },
+];
+
+/** Lookup set derived from the list above — the filter uses this. */
+export const BLOCKED_VIDEO_IDS: ReadonlySet<string> = new Set(
+  BLOCKED_VIDEOS.map((video) => video.youtubeId)
+);
+
+// ---------------------------------------------------------- content keywords
+/**
+ * Topics that do not belong in a language-learning feed, matched against a
+ * NORMALISED title+description (lowercased, accents stripped — same
+ * normalizeText as DUBBING_PATTERNS), so patterns are written accent-free and
+ * "Sacrifício" / "DEGÜELLO" match all the same.
+ *
+ * Born 2026-08-21, when two "como sacrificar un conejo (sin dolor)" rabbit-
+ * slaughter videos were found LIVE in the feed. Nothing in the stack reads
+ * the title for subject matter: the harvest filter checks rights and
+ * structure, curation checks format. This is the missing content dimension.
+ *
+ * Each entry carries a term label that goes into the reject_reason as
+ * `content_keyword:<term>`, so `select reject_reason, count(*)` shows which
+ * term is doing the rejecting — the same tunability rule as every other
+ * threshold in this file.
+ *
+ * DELIBERATELY EXCLUDED stems, learned from the false-positive smell test:
+ *   - bare 'mata/mate/mato'  — plant, the drink, ordinary surname
+ *   - bare 'muerto/a'        — "muerto de risa" and kin are everyday idiom
+ *   - bare 'faena'           — ordinary word for chore/task
+ *   - bare 'carne'           — every cooking video, which the feed wants
+ * 'cuchillo' IS included despite guaranteed hits on knife-skills cooking
+ * content — owner's call (2026-08-21); watch its histogram line and narrow
+ * it here if it starts eating good recetas.
+ *
+ * INGEST-SIDE ONLY. A published video matching one of these is surfaced by
+ * scripts/report-keyword-matches.mts for HUMAN review, never auto-removed:
+ * "matar el tiempo" is a perfectly good clip title.
+ */
+export type ContentKeyword = {
+  /** Short label written into reject_reason — one per word family. */
+  term: string;
+  /** Tested against normalizeText(title + description). Accent-free. */
+  pattern: RegExp;
+};
+
+export const CONTENT_KEYWORDS: readonly ContentKeyword[] = [
+  // Slaughter / butchering vocabulary, Spanish.
+  { term: 'sacrificar', pattern: /\bsacrifi(c|qu)\w*/ }, // sacrificar, sacrificio, sacrifiquen
+  { term: 'matar', pattern: /\bmatar\w*\b/ }, // matar, matarlo, mataron, matarife
+  { term: 'matar', pattern: /\bmatando\b/ },
+  { term: 'matar', pattern: /\bmatado\w*\b/ }, // matado, matadero
+  { term: 'matanza', pattern: /\bmatanzas?\b/ },
+  { term: 'degollar', pattern: /\bdegoll\w*/ }, // degollar, degollado
+  { term: 'degollar', pattern: /\bdeguell\w*/ }, // degüello, degüella (accent-stripped)
+  { term: 'faenar', pattern: /\bfaena(r|d|miento)\w*/ }, // faenar, faenado — NOT bare 'faena'
+  { term: 'carnear', pattern: /\bcarnea(r|d)\w*/ }, // carnear, carneado — NOT bare 'carne'
+  { term: 'destazar', pattern: /\bdestaz\w*/ }, // destazar, destazando
+  { term: 'destazar', pattern: /\bdestace\w*/ },
+  { term: 'muerte', pattern: /\bmuertes?\b/ },
+  { term: 'sangre', pattern: /\bsangre\b/ },
+  { term: 'sangre', pattern: /\bsangrient\w*/ }, // sangriento/a
+  { term: 'cuchillo', pattern: /\bcuchill\w*/ }, // cuchillo, cuchilla, cuchillada
+  // English equivalents — English titles on Spanish audio are common enough.
+  { term: 'slaughter', pattern: /\bslaughter\w*/ },
+  { term: 'butcher', pattern: /\bbutcher\w*/ },
+  { term: 'kill', pattern: /\bkill(s|ed|ing|er|ers)?\b/ },
+];
 
 /**
  * Channels a human has reviewed and APPROVED. Purely a record for now — the

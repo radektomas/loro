@@ -20,10 +20,24 @@
  * SCOPE: only rows in 'discovered' | 'eligible' | 'rejected' are touched.
  * Rows at 'processing', 'ready' or 'published' are downstream of a
  * transcription or a human decision and are never reset by a config edit.
+ *
+ * Within 'rejected', rows whose reject_reason was recorded by a judge
+ * DOWNSTREAM of this filter — the vision gate (not_on_camera:*), the caption
+ * fetch (no_captions, captions_too_thin), the liveness sweep (embed_dead),
+ * or a curation prune (unpublished:*) — are frozen too. Those verdicts are
+ * facts about pixels, captions or a human decision; the pure filter can
+ * neither reproduce nor refute them, and before this guard existed a refilter
+ * would cheerfully flip 79 gate-rejected voiceover/hands-only videos back to
+ * 'eligible' (observed live, 2026-08-21) for publish-embeds to pay to
+ * re-judge.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { BLOCKED_CHANNELS } from './config/harvest-queries.mts';
+import {
+  BLOCKED_CHANNELS,
+  BLOCKED_VIDEOS,
+  CONTENT_KEYWORDS,
+} from './config/harvest-queries.mts';
 import { loadEnv } from './lib/env.mts';
 import { getAdminClient } from './lib/supabaseAdmin.mts';
 import { CANDIDATES_TABLE, type CandidateRow } from './lib/candidates.mts';
@@ -31,6 +45,19 @@ import { filterCandidate } from './lib/candidateFilter.mts';
 
 /** Statuses a config change is allowed to revise. */
 const REVISABLE = new Set(['discovered', 'eligible', 'rejected']);
+
+/** Reject reasons this filter did not produce and must not overturn. */
+const DOWNSTREAM_REASON =
+  /^(not_on_camera\b|no_captions$|captions_too_thin$|embed_dead$|unpublished:)/;
+
+/** Is this row's verdict one the pure filter is allowed to revise? */
+function revisable(row: CandidateRow): boolean {
+  if (!REVISABLE.has(row.status)) return false;
+  if (row.status === 'rejected' && row.reject_reason && DOWNSTREAM_REASON.test(row.reject_reason)) {
+    return false;
+  }
+  return true;
+}
 
 type Transition = {
   youtubeId: string;
@@ -77,14 +104,19 @@ async function main(): Promise<void> {
   const supabase = getAdminClient();
 
   const rows = await fetchAll(supabase);
-  const revisable = rows.filter((row) => REVISABLE.has(row.status));
-  const frozen = rows.length - revisable.length;
+  const revisableRows = rows.filter(revisable);
+  const frozenStatus = rows.filter((row) => !REVISABLE.has(row.status)).length;
+  const frozenDownstream = rows.length - revisableRows.length - frozenStatus;
 
-  console.log(`\nRe-filtering ${revisable.length} of ${rows.length} rows` +
-    (frozen ? ` (${frozen} at processing/ready/published left untouched)` : ''));
-  console.log(`Blocklist: ${BLOCKED_CHANNELS.length} channel(s)`);
+  console.log(`\nRe-filtering ${revisableRows.length} of ${rows.length} rows` +
+    (frozenStatus ? ` (${frozenStatus} at processing/ready/published left untouched` : '(') +
+    (frozenDownstream ? `${frozenStatus ? ', ' : ''}${frozenDownstream} rejected by downstream judges left untouched)` : ')'));
+  console.log(`Blocklist: ${BLOCKED_CHANNELS.length} channel(s), ${BLOCKED_VIDEOS.length} video(s); ${CONTENT_KEYWORDS.length} content-keyword pattern(s)`);
   for (const channel of BLOCKED_CHANNELS) {
     console.log(`  - ${channel.title} (${channel.channelId}) — ${channel.reason}`);
+  }
+  for (const video of BLOCKED_VIDEOS) {
+    console.log(`  - video ${video.youtubeId} (${video.title}) — ${video.reason}`);
   }
   if (!apply) console.log('\nPREVIEW ONLY — no writes. Re-run with --apply to commit.');
 
@@ -95,7 +127,7 @@ async function main(): Promise<void> {
   const transitions: Transition[] = [];
   const toReasons = new Map<string, number>();
 
-  for (const row of revisable) {
+  for (const row of revisableRows) {
     const verdict = filterCandidate(row, { eligibleCountsByChannel: channelCounts });
     const nextStatus = verdict.eligible ? 'eligible' : 'rejected';
     const nextReason = verdict.eligible ? null : (verdict.reason ?? null);

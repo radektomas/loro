@@ -48,3 +48,5 @@ raw/
 __pycache__/
 *.pyc
 data/videos.backup.json
+data/on-camera-audit.report.json
+

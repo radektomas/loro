@@ -19,6 +19,8 @@
     "check-schema": "node scripts/check-schema.mts",
     "rate-candidates": "node scripts/rate-candidates.mts",
     "prune-embeds": "node scripts/prune-embeds.mts",
+    "report-keywords": "node scripts/report-keyword-matches.mts",
+    "audit-on-camera": "node scripts/audit-on-camera.mts",
     "publish-embeds": "node scripts/publish-embeds.mts",
     "publish-catalog": "node scripts/publish-catalog.mts",
     "catalog-audit": "node scripts/catalog-blob-audit.mts",

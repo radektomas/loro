@@ -1,5 +1,7 @@
 import {
   BLOCKED_CHANNEL_IDS,
+  BLOCKED_VIDEO_IDS,
+  CONTENT_KEYWORDS,
   DUBBING_PATTERNS,
   FILTER,
 } from '../config/harvest-queries.mts';
@@ -24,6 +26,9 @@ import type { CandidateRow } from './candidates.mts';
  */
 export const REJECT_REASONS = {
   CHANNEL_BLOCKED: 'channel_blocked',
+  VIDEO_BLOCKED: 'video_blocked',
+  /** Always written with the matched term: `content_keyword:<term>`. */
+  CONTENT_KEYWORD: 'content_keyword',
   DURATION_UNKNOWN: 'duration_unknown',
   DURATION_TOO_SHORT: 'duration_too_short',
   DURATION_TOO_LONG: 'duration_too_long',
@@ -38,7 +43,8 @@ export const REJECT_REASONS = {
 } as const;
 
 export type RejectReason =
-  (typeof REJECT_REASONS)[keyof typeof REJECT_REASONS];
+  | (typeof REJECT_REASONS)[keyof typeof REJECT_REASONS]
+  | `${typeof REJECT_REASONS.CONTENT_KEYWORD}:${string}`;
 
 /** Matches the spec'd shape: reason is present exactly when eligible is false. */
 export type FilterVerdict = {
@@ -49,6 +55,7 @@ export type FilterVerdict = {
 /** The columns the filter reads. A full CandidateRow satisfies this. */
 export type CandidateFilterInput = Pick<
   CandidateRow,
+  | 'youtube_id'
   | 'title'
   | 'description'
   | 'channel_id'
@@ -98,6 +105,21 @@ export function looksDubbed(
   return DUBBING_PATTERNS.some((pattern) => pattern.test(haystack));
 }
 
+/**
+ * The first CONTENT_KEYWORDS term matching the normalised title+description,
+ * or null. Exported because it is the shared definition of "content-flagged":
+ * the ingest filter below, publish-embeds' last-line guard, and the
+ * report-keyword-matches review script must all agree on it.
+ */
+export function matchContentKeyword(
+  title: string | null,
+  description: string | null
+): string | null {
+  const haystack = normalizeText(`${title ?? ''}\n${description ?? ''}`);
+  if (!haystack.trim()) return null;
+  return CONTENT_KEYWORDS.find((k) => k.pattern.test(haystack))?.term ?? null;
+}
+
 const reject = (reason: RejectReason): FilterVerdict => ({
   eligible: false,
   reason,
@@ -115,13 +137,24 @@ export function filterCandidate(
   row: CandidateFilterInput,
   context: FilterContext = EMPTY_CONTEXT
 ): FilterVerdict {
-  // --- editorial override ------------------------------------------------
+  // --- editorial overrides -----------------------------------------------
   // First, ahead of everything: a blocked channel is the most decisive fact
   // we have about a row, and it is free to check. Running it first also means
   // the 'channel_blocked' count reflects EVERY video from that channel rather
   // than only the ones that happened to pass the other checks.
   if (row.channel_id && BLOCKED_CHANNEL_IDS.has(row.channel_id)) {
     return reject(REJECT_REASONS.CHANNEL_BLOCKED);
+  }
+  if (BLOCKED_VIDEO_IDS.has(row.youtube_id)) {
+    return reject(REJECT_REASONS.VIDEO_BLOCKED);
+  }
+  // Content exclusion is editorial too, and it belongs ahead of the
+  // structural checks for the same histogram reason: a 5-second slaughter
+  // clip should count as content_keyword, not duration_too_short — the
+  // content verdict is the one that must survive any threshold tuning.
+  const keyword = matchContentKeyword(row.title, row.description);
+  if (keyword) {
+    return reject(`${REJECT_REASONS.CONTENT_KEYWORD}:${keyword}`);
   }
 
   // --- hard structural facts -------------------------------------------

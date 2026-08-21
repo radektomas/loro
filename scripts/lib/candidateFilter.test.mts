@@ -4,11 +4,18 @@ import {
   EMPTY_CONTEXT,
   filterCandidate,
   looksDubbed,
+  matchContentKeyword,
   normalizeText,
   REJECT_REASONS,
   type CandidateFilterInput,
 } from './candidateFilter.mts';
-import { BLOCKED_CHANNELS, BLOCKED_CHANNEL_IDS, FILTER } from '../config/harvest-queries.mts';
+import {
+  BLOCKED_CHANNELS,
+  BLOCKED_CHANNEL_IDS,
+  BLOCKED_VIDEOS,
+  BLOCKED_VIDEO_IDS,
+  FILTER,
+} from '../config/harvest-queries.mts';
 
 /**
  * Filter tests — run with `npm test`.
@@ -24,6 +31,7 @@ function eligibleRow(
   overrides: Partial<CandidateFilterInput> = {}
 ): CandidateFilterInput {
   return {
+    youtube_id: 'vid_example',
     title: 'Mi rutina diaria en la Ciudad de México',
     description: 'Les comparto cómo es un día normal en mi vida.',
     channel_id: 'UC_example',
@@ -314,5 +322,78 @@ describe('channel blocklist', () => {
 
   it('exposes channel_blocked as a specific reason', () => {
     assert.equal(REJECT_REASONS.CHANNEL_BLOCKED, 'channel_blocked');
+  });
+});
+
+describe('video blocklist', () => {
+  it('rejects a blocked video id regardless of everything else', () => {
+    // The list is empty in config until a one-off is actually blocked, so the
+    // check is exercised through the same derived-set contract the channel
+    // blocklist uses rather than through a live entry.
+    for (const video of BLOCKED_VIDEOS) {
+      const verdict = filterCandidate(eligibleRow({ youtube_id: video.youtubeId }));
+      assert.equal(verdict.reason, REJECT_REASONS.VIDEO_BLOCKED);
+    }
+  });
+
+  it('derives its lookup set from the list', () => {
+    assert.equal(BLOCKED_VIDEO_IDS.size, BLOCKED_VIDEOS.length);
+    for (const video of BLOCKED_VIDEOS) {
+      assert.ok(BLOCKED_VIDEO_IDS.has(video.youtubeId));
+      assert.ok(video.reason.trim().length > 0, `${video.title} has no reason`);
+    }
+  });
+
+  it('leaves unblocked ids alone', () => {
+    assert.equal(filterCandidate(eligibleRow()).eligible, true);
+  });
+});
+
+describe('content keywords', () => {
+  it('rejects slaughter vocabulary in the title, naming the term', () => {
+    const verdict = filterCandidate(
+      eligibleRow({ title: 'Como sacrificar un conejo, sin dolor' })
+    );
+    assert.equal(verdict.reason, 'content_keyword:sacrificar');
+  });
+
+  it('matches case- and diacritics-insensitively', () => {
+    // "Sacrifício", "DEGÜELLO" — accents and case must not hide a match.
+    assert.equal(matchContentKeyword('SACRIFÍCIO de animales', null), 'sacrificar');
+    assert.equal(matchContentKeyword(null, 'el DEGÜELLO tradicional'), 'degollar');
+  });
+
+  it('matches in the description as well as the title', () => {
+    const verdict = filterCandidate(
+      eligibleRow({ description: 'hoy vamos a matarlo para la cena' })
+    );
+    assert.equal(verdict.reason, 'content_keyword:matar');
+  });
+
+  it('covers the English equivalents', () => {
+    assert.equal(matchContentKeyword('How to slaughter a chicken', null), 'slaughter');
+    assert.equal(matchContentKeyword('The village butcher', null), 'butcher');
+    assert.equal(matchContentKeyword('Killing time in Madrid', null), 'kill');
+  });
+
+  it('does not fire on the excluded everyday stems', () => {
+    // Each of these is the false-positive case its comment in config names.
+    assert.equal(matchContentKeyword('Tomando mate en Buenos Aires', null), null);
+    assert.equal(matchContentKeyword('La mata de tomates de mi abuela', null), null);
+    assert.equal(matchContentKeyword('Muerto de risa con mi perro', null), null);
+    assert.equal(matchContentKeyword('Faenas del hogar: mi rutina', null), null);
+    assert.equal(matchContentKeyword('Receta con carne asada', null), null);
+    assert.equal(matchContentKeyword('Clase de matemáticas', null), null);
+  });
+
+  it('DOES fire on "matar el tiempo" — published-catalog review is manual for exactly this reason', () => {
+    assert.equal(matchContentKeyword('Cómo matar el tiempo en el aeropuerto', null), 'matar');
+  });
+
+  it('runs ahead of the structural checks so the histogram records content', () => {
+    const verdict = filterCandidate(
+      eligibleRow({ title: 'matanza tradicional', duration_seconds: 3 })
+    );
+    assert.equal(verdict.reason, 'content_keyword:matanza');
   });
 });

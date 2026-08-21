@@ -38,7 +38,12 @@ import {
 import { json3ToCues, type CueOut } from './lib/json3ToCues.mts';
 import { estimateLevel } from './lib/estimateLevel.mts';
 import { curationScore } from './config/curation.mts';
-import { FILTER } from './config/harvest-queries.mts';
+import {
+  BLOCKED_CHANNEL_IDS,
+  BLOCKED_VIDEO_IDS,
+  FILTER,
+} from './config/harvest-queries.mts';
+import { matchContentKeyword } from './lib/candidateFilter.mts';
 import { glossWords, translateCues, type GlossOut } from './lib/glossCues.mts';
 import { sleep } from './lib/youtube.mts';
 import { judgeOnCamera, NoFramesError } from './lib/onCameraGate.mts';
@@ -357,6 +362,33 @@ async function main(): Promise<void> {
     const label = `${candidate.channel_title ?? '?'} — "${(candidate.title ?? '').slice(0, 48)}"`;
     console.log(`▶ ${id}  ${label}`);
     console.log(`   license=${candidate.license}  ${candidate.duration_seconds}s  ${candidate.view_count} views`);
+
+    // Content guard, ahead of everything INCLUDING --ids: the explicit-ids
+    // path exists to bypass curation and the vision gate for known-good
+    // stragglers, but a blocklist or content-keyword entry is an editorial
+    // "never", and no publish path may override it. Checked here rather than
+    // only in selectCandidates so a row left 'eligible' by a config edit that
+    // has not been refiltered yet still cannot slip through.
+    const contentBlock =
+      candidate.channel_id && BLOCKED_CHANNEL_IDS.has(candidate.channel_id)
+        ? 'channel_blocked'
+        : BLOCKED_VIDEO_IDS.has(id)
+          ? 'video_blocked'
+          : ((term) => (term ? `content_keyword:${term}` : null))(
+              matchContentKeyword(candidate.title, candidate.description)
+            );
+    if (contentBlock) {
+      stats.skipped += 1;
+      console.log(`   ⛔ ${contentBlock} — will not publish\n`);
+      if (!options.dryRun) {
+        const { error: blockErr } = await supabase
+          .from(CANDIDATES_TABLE)
+          .update({ status: 'rejected', reject_reason: contentBlock })
+          .eq('youtube_id', id);
+        if (blockErr) console.warn(`   ! status write failed: ${blockErr.message}`);
+      }
+      continue;
+    }
 
     if (options.dryRun) {
       console.log('   (dry run — would gate, fetch captions, gloss, publish)\n');
