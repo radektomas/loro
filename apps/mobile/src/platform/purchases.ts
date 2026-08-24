@@ -1,4 +1,4 @@
-import { Linking } from 'react-native';
+import { Linking, NativeModules } from 'react-native';
 import { useEffect, useState } from 'react';
 import type { CustomerInfo, LOG_LEVEL, PACKAGE_TYPE } from 'react-native-purchases';
 import { createEmitter } from '@loro/core/emitter';
@@ -52,6 +52,14 @@ const SAFETY_TIMEOUT_MS = 6000;
  * simulator with no network), so they stay a quiet warning and the runtime
  * behaviour — the gate opens — is identical everywhere.
  */
+function logFailOpen(detail: string): void {
+  if (EAS_BUILD_PROFILE === 'production') {
+    console.error(`PAYWALL_FAIL_OPEN ${detail} — entitlement gate opened without a verdict; this install is free`);
+  } else {
+    console.warn(`[loro] paywall failing open: ${detail}`);
+  }
+}
+
 /**
  * THE NATIVE MODULE IS LOADED LAZILY, AND THAT IS NOT STYLE — IT IS THE
  * DIFFERENCE BETWEEN A DEGRADED APP AND NO APP.
@@ -98,6 +106,20 @@ export function getPackageTypes(): typeof PACKAGE_TYPE | null {
 function getSeam(): PurchasesApi | null {
   if (seamResolved) return seam;
   seamResolved = true;
+  /**
+   * ⚠️ require() SUCCEEDING IS NOT ENOUGH, which is how the first version of
+   * this guard still crashed. react-native-purchases' JS wrapper imports
+   * fine in a binary without the native side; every method then dereferences
+   * a null NativeModules.RNPurchases, so the throw simply moves from import
+   * time to the first call ("Cannot read property 'setLogLevel' of null") and
+   * lands as an unhandled promise rejection. The native module itself is the
+   * thing to test for.
+   */
+  if (!NativeModules.RNPurchases) {
+    seam = null;
+    logFailOpen('the RevenueCat native module is not linked in this binary');
+    return seam;
+  }
   try {
     const mod = require('react-native-purchases') as {
       default: PurchasesApi;
@@ -112,14 +134,6 @@ function getSeam(): PurchasesApi | null {
     logFailOpen(`react-native-purchases is unavailable in this binary: ${String(error)}`);
   }
   return seam;
-}
-
-function logFailOpen(detail: string): void {
-  if (EAS_BUILD_PROFILE === 'production') {
-    console.error(`PAYWALL_FAIL_OPEN ${detail} — entitlement gate opened without a verdict; this install is free`);
-  } else {
-    console.warn(`[loro] paywall failing open: ${detail}`);
-  }
 }
 
 export type PurchaseGate = {
@@ -236,16 +250,33 @@ export function initPurchases(): void {
   }
   configured = true;
 
-  if (__DEV__ && api.LOG_LEVEL) {
-    void api.setLogLevel(api.LOG_LEVEL.DEBUG);
-  }
-  api.configure({ apiKey: REVENUECAT_IOS_KEY });
-  setGate({ configured: true });
+  /**
+   * BELT AND BRACES over the probe above. The probe answers "is the module
+   * linked"; this catches every other way a native call can fail on a binary
+   * that is subtly out of step with the JS (a partially linked module, an SDK
+   * major mismatch). Failing open here is the same verdict the missing key and
+   * missing module already produce, and it must never be a crash: refusing to
+   * boot is a far worse outcome than one free session.
+   */
+  try {
+    if (__DEV__ && api.LOG_LEVEL) {
+      // .catch, not void: a rejected promise from a native bridge with no
+      // handler is an unhandled rejection, which RN surfaces as a red screen.
+      api.setLogLevel(api.LOG_LEVEL.DEBUG).catch(() => {});
+    }
+    api.configure({ apiKey: REVENUECAT_IOS_KEY });
+    setGate({ configured: true });
 
-  // Fires on every entitlement change for the life of the process: purchase,
-  // restore, renewal, refund, logIn/logOut. The paywall never has to push its
-  // result anywhere — the gate hears it from here.
-  api.addCustomerInfoUpdateListener(applyCustomerInfo);
+    // Fires on every entitlement change for the life of the process: purchase,
+    // restore, renewal, refund, logIn/logOut. The paywall never has to push its
+    // result anywhere — the gate hears it from here.
+    api.addCustomerInfoUpdateListener(applyCustomerInfo);
+  } catch (error) {
+    configured = false;
+    logFailOpen(`RevenueCat configure failed: ${String(error)}`);
+    setGate({ ready: true, entitled: true, configured: false });
+    return;
+  }
 
   // First verdict. Served from the SDK's on-device cache when offline, so a
   // subscriber in airplane mode still opens; genuinely unknown (first launch
