@@ -23,6 +23,8 @@
     "audit-on-camera": "node scripts/audit-on-camera.mts",
     "publish-embeds": "node scripts/publish-embeds.mts",
     "publish-catalog": "node scripts/publish-catalog.mts",
+    "publish-explanations": "node scripts/publish-explanations.mts",
+    "explanations-context": "node scripts/explanations-context.mts",
     "catalog-audit": "node scripts/catalog-blob-audit.mts",
     "sweep-embeds": "node scripts/sweep-embeds.mts",
     "probe-captions": "node scripts/probe-captions.mts"
