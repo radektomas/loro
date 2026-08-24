@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { orderVideosForLevel } from '@loro/core/feedOrder';
@@ -397,7 +397,20 @@ function FeedBody({
   onAreaLayout: (event: LayoutChangeEvent) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const listRef = useRef<FlashListRef<EmbedVideo>>(null);
+  /**
+   * WHERE A FRESH LIST STARTS. FlashList reads `initialScrollIndex` once, at
+   * mount, so this has to hold the truth at every moment a mount could happen
+   * — which is why it is written during render rather than from an effect.
+   *
+   * It earns its keep twice: it is how the review jump lands (see below), and
+   * it also means that if this list is ever torn down and rebuilt, it comes
+   * back where the user left it instead of at the top.
+   */
+  const mountIndexRef = useRef(0);
+  /** Bumped to force a remount — the review jump's whole mechanism. */
+  const [listGeneration, setListGeneration] = useState(0);
+  /** The index a jump is waiting on — see applyViewableIndex. */
+  const jumpTargetRef = useRef<number | null>(null);
   /**
    * A SWIPE IS IN FLIGHT — finger down OR still settling. Both halves matter,
    * and the second one is what this used to get wrong.
@@ -439,20 +452,27 @@ function FeedBody({
   /**
    * JUMP TO THE VIDEO THE WORDS TAB ASKED FOR.
    *
-   * ⚠️ THE SCROLL MUST WAIT UNTIL THIS TAB IS VISIBLE, and getting that wrong
-   * is why the first version silently did nothing. Shell keeps every tab
-   * mounted and hides the inactive ones with `display:'none'`, which takes
-   * them OUT OF LAYOUT — so at the moment Words makes the request this list
-   * has no geometry and scrollToIndex is a no-op. setActiveIndex still
-   * applied, so the player dutifully loaded the target video while the list
-   * stayed parked on a different slide: the user landed on "a random word"
-   * with the wrong slide under them.
+   * ⚠️ THIS MUST NOT DEPEND ON SCROLL TIMING, and two attempts at it did.
+   * Shell keeps every tab mounted and hides the inactive ones with
+   * `display:'none'`, which takes them OUT OF LAYOUT — so at the moment Words
+   * makes the request this list has no geometry and `scrollToIndex` is a
+   * no-op, while `setActiveIndex` applies regardless. The player dutifully
+   * loaded the target video under a list still parked on another slide, which
+   * from the sofa is exactly "it dropped me on a random word". Waiting for
+   * `active` and a measured height fixed the ordering but not the fragility:
+   * the scroll still had to land on a list that had just been re-added to
+   * layout that same frame, and a scroll that silently misses looks identical
+   * to no jump at all.
    *
-   * So the request is PARKED here and acted on only once `active` and a
-   * measured `pageHeight` say the list can actually move. The rAF is the last
-   * hop: `active` flips in the same commit that un-hides the view, and the
-   * native list needs that frame to have laid out before it will honour an
-   * offset.
+   * SO THE LIST IS REMOUNTED AT THE TARGET instead of asked to travel to it.
+   * `initialScrollIndex` is read during mount, before anything is on screen,
+   * so there is no frame in which the wrong slide is showing and nothing to
+   * race: the list simply comes into existence already there. The remount
+   * costs the recycled cells of a feed the user is leaving anyway, and is
+   * invisible because it happens in the same breath as the tab appearing.
+   *
+   * The request is still PARKED until `active` and a measured `pageHeight`
+   * say the list can exist at all — below that, there is nothing to mount.
    */
   const [pendingTarget, setPendingTarget] = useState<ReviewTarget | null>(() =>
     consumeReviewTarget()
@@ -477,19 +497,39 @@ function FeedBody({
       feedLog(`review target "${pendingTarget.word}": ${pendingTarget.videoId} not in feed`);
       return;
     }
+    if (index === activeIndex) return; // already there — no remount needed
     feedLog(`review target "${pendingTarget.word}" -> index ${index}`);
+    jumpTargetRef.current = index;
     setActiveIndex(index);
-    const frame = requestAnimationFrame(() => {
-      listRef.current?.scrollToIndex({ index, animated: false });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [pendingTarget, active, pageHeight, videos]);
+    setListGeneration((generation) => generation + 1);
+  }, [pendingTarget, active, pageHeight, videos, activeIndex]);
 
-  const onViewableItemsChanged = useStableViewability(setActiveIndex);
+  /**
+   * THE JUMP'S GUARD RAIL. A mounting list reports viewability as it settles,
+   * and one stray "item 0 is visible" arriving after the jump would put the
+   * active index straight back where it came from — the jump undone by the
+   * list's own housekeeping, which looks exactly like the jump never happening.
+   *
+   * So while a jump is outstanding, only a report that AGREES with it counts.
+   * The latch clears on that agreement, and on the first drag either way: a
+   * feed whose active slide had stopped tracking the user's swipes would be a
+   * far worse failure than landing on the wrong video.
+   */
+  const applyViewableIndex = (index: number) => {
+    if (jumpTargetRef.current !== null) {
+      if (index !== jumpTargetRef.current) return;
+      jumpTargetRef.current = null;
+    }
+    setActiveIndex(index);
+  };
+  const onViewableItemsChanged = useStableViewability(applyViewableIndex);
 
   const swipe = useSwipeLifecycle(setDragging);
 
   const activeVideo = videos[activeIndex] ?? null;
+  // Written during render on purpose — see mountIndexRef. Any mount from here
+  // on, jump or otherwise, starts on the slide the user is actually on.
+  mountIndexRef.current = activeIndex;
 
   /**
    * Publish the player's geometry and visibility upward. PlayerHost now wraps
@@ -554,7 +594,16 @@ function FeedBody({
         >
           {pageHeight > 0 && (
             <FlashList
-              ref={listRef}
+              // The review jump's mechanism: a new key means a new list, and a
+              // new list starts at initialScrollIndex. Nothing else changes it.
+              key={listGeneration}
+              // Clamped: a catalog refresh can drop videos out from under a
+              // remembered index, and an out-of-range start is not worth a
+              // crash on the one screen the app opens on.
+              initialScrollIndex={Math.min(
+                mountIndexRef.current,
+                Math.max(0, videos.length - 1)
+              )}
               data={videos}
               keyExtractor={(video) => video.id}
               extraData={activeIndex}
@@ -589,7 +638,10 @@ function FeedBody({
               // FOUR HANDLERS, NOT THREE — see useSwipeLifecycle. The old
               // trio cleared `dragging` on onScrollEndDrag, which is the
               // moment the FINGER lifts, not the moment the swipe ends.
-              onScrollBeginDrag={swipe.onBeginDrag}
+              onScrollBeginDrag={() => {
+                jumpTargetRef.current = null;
+                swipe.onBeginDrag();
+              }}
               onScrollEndDrag={swipe.onEndDrag}
               onMomentumScrollBegin={swipe.onMomentumBegin}
               onMomentumScrollEnd={swipe.onSettled}

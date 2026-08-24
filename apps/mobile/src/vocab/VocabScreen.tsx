@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,11 +13,11 @@ import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { getCatalog } from '@loro/core/catalog';
-import { findWordOccurrences, type WordOccurrence } from '@loro/core/occurrences';
+import { pickReviewTarget, type WordOccurrence } from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
 import { requestReviewTarget } from '../feed/reviewTarget';
 import { SavePromptCard } from '../auth/SavePromptCard';
-import { HearItModal } from './HearItModal';
+import { HearItPanel } from './HearItPanel';
 import { WordDetailSheet } from './WordDetailSheet';
 
 /**
@@ -66,6 +67,13 @@ const SECTION_META: Record<SectionKey, { label: string; dot: string }> = {
 
 /** Section order = urgency order. Empty sections are dropped before render. */
 const SECTION_ORDER: SectionKey[] = ['lapsed', 'ready', 'new', 'learning', 'known'];
+
+/**
+ * How long to wait for the window's own dismissal callback before assuming it
+ * is not coming. onDismiss is iOS-only and fires well inside this; the timer
+ * exists so a review can never be swallowed by a callback that never arrives.
+ */
+const DISMISS_FALLBACK_MS = 600;
 
 /**
  * Accent-and-case-insensitive haystack, so "cancion" finds "canción".
@@ -191,19 +199,55 @@ export function VocabScreen({
   const [words, setWords] = useState<SavedWord[]>(() => storage.getSavedWords());
   const [query, setQuery] = useState('');
   const [now, setNow] = useState(() => Date.now());
-  const [detail, setDetail] = useState<SavedWord | null>(null);
   /**
-   * The hear-it player, owned HERE rather than inside the sheet. Two RN
-   * <Modal>s must not nest: the inner one stayed presented after the outer was
-   * dismissed, and an orphaned native modal window swallows every touch — the
-   * Words list came back frozen. As siblings, closing one cannot strand the
-   * other. Carries the word it was opened for, since the sheet is gone by then.
+   * THE ONE WINDOW, AND WHAT IS INSIDE IT.
+   *
+   * `detail` decides whether this screen presents a native window at all;
+   * `hearing` decides which face it shows — the word sheet or the hear-it
+   * player. That is the whole fix for the frozen Words list, and it is worth
+   * spelling out because two gentler versions of it were not enough.
+   *
+   * An RN <Modal> is a separate native window that does not care what the
+   * React tree behind it is doing. Give the sheet one and the player another
+   * and they can be dismissed together, or dismissed while their screen is
+   * being hidden, and iOS quietly leaves one of them in the window hierarchy:
+   * invisible, and swallowing every touch that lands on Words. Nesting them
+   * did it. Making them siblings did it too.
+   *
+   * So there is ONE window here and there will only ever be one. Moving
+   * between the sheet and the player is a React re-render inside a window that
+   * is already up — no dismissal, no presentation, nothing to strand.
    */
+  const [detail, setDetail] = useState<SavedWord | null>(null);
   const [hearing, setHearing] = useState<{
     occurrence: WordOccurrence;
     video: Video;
-    word: SavedWord;
   } | null>(null);
+  /**
+   * Dismissal in flight. `visible` goes false while the contents stay mounted,
+   * so the slide-out has something to draw and whatever comes next waits for
+   * onDismiss instead of racing it.
+   */
+  const [closing, setClosing] = useState(false);
+
+  /**
+   * ⚠️ NOTHING NAVIGATES WHILE THE WINDOW IS STILL ON SCREEN.
+   *
+   * "Review in the feed" used to dismiss the modal and switch tabs in the same
+   * commit — so the window was being torn down at the exact moment its screen
+   * went `display:'none'` underneath it. That is the second half of the freeze:
+   * a dismissal that never completes leaves the window up forever.
+   *
+   * The intent is parked here instead and runs from onDismiss, when the window
+   * is provably gone. The timer is the belt to that braces: onDismiss is an
+   * iOS-only callback, and a review that silently never happened would be a
+   * worse bug than the one being fixed.
+   */
+  const pendingReviewRef = useRef<{
+    word: SavedWord;
+    preferVideoId?: string;
+  } | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Live in both directions: onWordsChanged catches saves and grades from the
@@ -230,15 +274,26 @@ export function VocabScreen({
    * An RN <Modal> is its own native window and does not care that the React
    * view behind it went `display:'none'`. Leaving one up while the user walks
    * to the feed is how the Words tab came back "frozen": an invisible window
-   * still on top, swallowing every touch. Reviewing a word navigates away by
-   * design, so this is the one guard that covers every path out — including
-   * ones added later that forget to tidy up.
+   * still on top, swallowing every touch.
+   *
+   * With the review path now waiting for onDismiss, the window is always gone
+   * before a tab change starts — so this should never have anything to do. It
+   * stays as the backstop for paths added later that forget to tidy up.
    */
   useEffect(() => {
     if (active) return;
     setDetail(null);
     setHearing(null);
+    setClosing(false);
   }, [active]);
+
+  // A pending review must not fire into an unmounted screen.
+  useEffect(
+    () => () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    },
+    []
+  );
 
   const filtered = useMemo(() => {
     const needle = fold(query.trim());
@@ -279,23 +334,51 @@ export function VocabScreen({
   );
 
   /**
-   * THE REVIEW ENTRY POINT — it has to ARM recall, not merely change tab.
+   * ARM RECALL, THEN CHANGE TAB — in that order, always.
    *
    * The web needs no equivalent because it never gates recall at all: a due
    * word blanks in any video that speaks it, always. This port added a
    * dark-ship flag, and left alone that flag also disabled the one path a user
    * has into reviewing — the CTA switched tabs into a feed that would never
    * plan a blank. See isRecallActive.
-   *
-   * NO JUMP TO A SPECIFIC VIDEO, and that is deliberate rather than missing.
-   * The web's reviewHref deep-links to the video with the most due words
-   * (vocab/page.tsx:34-37); deep links are checkpoint G. Faking a jump we
-   * cannot make would be worse than the honest behaviour, which the card's own
-   * copy already promises: blanks appear in context, as you watch.
    */
-  const startReview = () => {
+  const goToFeedForReview = () => {
     enableRecallForSession();
     onGoToFeed();
+  };
+
+  /**
+   * THE "N WORDS READY" CARD. It promises a review, so it points the feed at
+   * one rather than dropping the user wherever the feed happened to be parked
+   * — which is what it did before, and which reads as "it threw me at a random
+   * video".
+   *
+   * Most urgent first, in the list's own order (slipped, then earliest due),
+   * and the first word the feed would ACTUALLY ask wins. The scan is capped
+   * because each candidate costs a catalog fold: a handful is plenty to find a
+   * good landing, and past that the honest fallback — the feed as it stands,
+   * blanks armed — is no worse than it ever was.
+   */
+  const CANDIDATES_SCANNED = 5;
+  const startReview = () => {
+    const all = storage.getSavedWords();
+    const at = Date.now();
+    const due = all
+      .filter((w) => w.dueAt <= at)
+      .sort(
+        (a, b) =>
+          Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
+          a.dueAt - b.dueAt
+      )
+      .slice(0, CANDIDATES_SCANNED);
+    for (const word of due) {
+      const target = pickReviewTarget(getCatalog(), word, all, { now: at });
+      if (target?.willBlank) {
+        requestReviewTarget({ videoId: target.videoId, word: word.text });
+        break;
+      }
+    }
+    goToFeedForReview();
   };
 
   const handleRemove = (word: SavedWord) => {
@@ -310,24 +393,49 @@ export function VocabScreen({
    *
    * Two things have to be true or the button lies. The word must be DUE, or
    * computeBlankPlan will not blank it and the feed is just a video
-   * (storage.reviewNow, which explains why bringing it forward is honest); and
-   * the feed must land on a video that actually SPEAKS it, which is what the
-   * occurrence scan answers. Preference goes to the video the word was saved
-   * from — it is the sentence the user already has a memory of — falling back
-   * to any other clip that says it.
+   * (storage.reviewNow, which is why bringing it forward is honest); and the
+   * feed must land somewhere the word is genuinely ASKED. "Speaks the word"
+   * turned out not to be enough — the plan caps blanks per video, so a word
+   * can be spoken on screen and never asked, which lands the user in the feed
+   * with no visible reason for being there. pickReviewTarget runs the real
+   * plan against each candidate and picks one that will blank it.
    *
    * If nothing in the catalog speaks it (a starter-deck word with no clip),
    * this degrades to the old behaviour: arm recall, switch tabs.
    */
   const reviewWord = (word: SavedWord, preferVideoId?: string) => {
     storage.reviewNow(word.text, word.videoId);
-    const occurrences = findWordOccurrences(getCatalog(), word.text);
-    const target =
-      occurrences.find((o) => o.videoId === preferVideoId && o.youtubeId) ??
-      occurrences.find((o) => o.videoId === word.videoId && o.youtubeId) ??
-      occurrences.find((o) => o.youtubeId);
+    // AFTER reviewNow: the plan check has to see the word as due.
+    const target = pickReviewTarget(getCatalog(), word, storage.getSavedWords(), {
+      preferVideoId,
+    });
     if (target) requestReviewTarget({ videoId: target.videoId, word: word.text });
-    startReview();
+    goToFeedForReview();
+  };
+
+  /** The window is provably gone. Safe to reset, and safe to navigate. */
+  const afterDismiss = () => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    setClosing(false);
+    setDetail(null);
+    setHearing(null);
+    const pending = pendingReviewRef.current;
+    pendingReviewRef.current = null;
+    if (pending) reviewWord(pending.word, pending.preferVideoId);
+  };
+
+  /**
+   * Take the window down. Anything that should happen afterwards is parked
+   * first and runs from afterDismiss — never from here.
+   */
+  const closeWindow = (pending?: { word: SavedWord; preferVideoId?: string }) => {
+    pendingReviewRef.current = pending ?? null;
+    setClosing(true);
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(afterDismiss, DISMISS_FALLBACK_MS);
   };
 
   return (
@@ -425,32 +533,39 @@ export function VocabScreen({
         )}
       </ScrollView>
 
-      <WordDetailSheet
-        word={detail}
-        onClose={() => setDetail(null)}
-        onRemove={handleRemove}
-        onReview={reviewWord}
-        onHear={(occurrence, video) => {
-          if (detail) setHearing({ occurrence, video, word: detail });
-        }}
-      />
-
-      <HearItModal
-        occurrence={hearing?.occurrence ?? null}
-        word={hearing?.word.text ?? ''}
-        video={hearing?.video ?? null}
-        onClose={() => setHearing(null)}
-        onReview={() => {
-          const current = hearing;
-          // Both surfaces come down: the player, and the sheet still open
-          // underneath it. The tab-change guard above would catch a miss here,
-          // but a modal should be dismissed by the path that knows about it.
-          setHearing(null);
-          setDetail(null);
-          // Land on the clip they just listened to, not a different one.
-          if (current) reviewWord(current.word, current.occurrence.videoId);
-        }}
-      />
+      {/* ONE WINDOW. Its contents swap; it never gains a sibling. `visible`
+          drops before the contents do, so the slide-out has something to draw
+          and afterDismiss can be the only thing that resets state. */}
+      <Modal
+        visible={detail !== null && !closing}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => closeWindow()}
+        onDismiss={afterDismiss}
+      >
+        {detail !== null &&
+          (hearing ? (
+            <HearItPanel
+              occurrence={hearing.occurrence}
+              word={detail.text}
+              video={hearing.video}
+              onClose={() => setHearing(null)}
+              // Land on the clip they just listened to, not a different one.
+              onReview={() =>
+                closeWindow({ word: detail, preferVideoId: hearing.occurrence.videoId })
+              }
+            />
+          ) : (
+            <WordDetailSheet
+              word={detail}
+              onClose={() => closeWindow()}
+              onRemove={handleRemove}
+              onReview={(word) => closeWindow({ word })}
+              onHear={(occurrence, video) => setHearing({ occurrence, video })}
+            />
+          ))}
+      </Modal>
     </View>
   );
 }

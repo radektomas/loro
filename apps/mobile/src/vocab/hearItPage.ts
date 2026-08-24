@@ -23,7 +23,7 @@
  * button whose only purpose is to hear a word, so muted playback would be a
  * broken feature rather than a polite default. WKWebView allows unmuted
  * autoplay when the host sets mediaPlaybackRequiresUserAction={false}, which
- * HearItModal does. `controls: 1` is the safety net: if a device ever refuses
+ * HearItPanel does. `controls: 1` is the safety net: if a device ever refuses
  * the autoplay, the user still has a play button rather than a dead frame.
  */
 

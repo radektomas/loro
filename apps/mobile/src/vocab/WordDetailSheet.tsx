@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,11 +32,17 @@ import { getExplanations } from '../platform/explanations';
  * (usage note, grammar, register — see core/explanations.ts), real example
  * sentences from the catalog, and the "hear it in a video" jump.
  *
- * THE SHELL IS feed/WordSheet.tsx's ModalShell, deliberately: RN's own
- * <Modal>, driven by `visible`, panel hugging its content with a max-height
- * cap and only the text scrolling. That shell shipped because it cannot
- * silently fail on device (the gorhom path did, twice) — this inherits the
- * verdict rather than re-litigating it.
+ * THE LOOK IS feed/WordSheet.tsx's ModalShell — a panel hugging its content
+ * with a max-height cap, only the text scrolling, over a tappable dimmed
+ * backdrop. That shell shipped because it cannot silently fail on device (the
+ * gorhom path did, twice) and this inherits the verdict rather than
+ * re-litigating it.
+ *
+ * ⚠️ THE <Modal> ITSELF LIVES IN VocabScreen, not here, and must stay there.
+ * The Words screen presents exactly one native window and swaps its contents
+ * between this sheet and the hear-it player; when each owned its own <Modal>,
+ * one could outlive the other and an orphaned window swallows every touch —
+ * the Words list came back frozen. This renders panel content, nothing more.
  *
  * EXPLANATIONS ARE A NICETY, STRUCTURALLY. getExplanations() resolves null on
  * anything short of a validated blob (offline, not yet published, broken
@@ -81,24 +86,18 @@ export function WordDetailSheet({
   onReview,
   onHear,
 }: {
-  word: SavedWord | null;
+  word: SavedWord;
   onClose: () => void;
   /** Called after the user confirms removal; the caller owns the storage call. */
   onRemove: (word: SavedWord) => void;
   /**
-   * Arm a review session and switch to the feed. The word is passed
-   * explicitly rather than read from state: onClose() runs first and clears
-   * it, so depending on the closure would work only by batching luck.
+   * Ask for a review of this word. The caller closes the window and navigates
+   * once it is off screen — this must NOT also call onClose, or the dismissal
+   * and the tab change land in one commit, which is the shape that stranded a
+   * native window before.
    */
   onReview: (word: SavedWord) => void;
-  /**
-   * Open the hear-it player. THE MODAL IS NOT RENDERED HERE — it is a sibling
-   * of this sheet on the Words screen. Nesting one RN <Modal> inside another
-   * left the inner one presented after the outer was dismissed, and an
-   * orphaned native modal window swallows every touch: the Words list came
-   * back looking frozen. The screen owns both, so neither can outlive the
-   * other.
-   */
+  /** Swap this window's contents to the hear-it player. */
   onHear: (occurrence: WordOccurrence, video: Video) => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -110,7 +109,7 @@ export function WordDetailSheet({
   // Lazy-load on first open of ANY word — one fetch/parse per process, then
   // every later open is a map lookup.
   useEffect(() => {
-    if (!word || explanations !== null) return;
+    if (explanations !== null) return;
     let live = true;
     setLoadingExplanations(true);
     void getExplanations().then((map) => {
@@ -124,33 +123,26 @@ export function WordDetailSheet({
   }, [word, explanations]);
 
   /**
-   * Held-over content for the slide-out animation, exactly ModalShell's trick
-   * (feed/WordSheet.tsx): `word` goes null and `visible` false in the same
-   * commit, but the platform still plays the exit animation — drawing from
-   * the live prop would collapse the panel mid-flight.
-   */
-  const lastShown = useRef<SavedWord | null>(null);
-  if (word) lastShown.current = word;
-  const shown = word ?? lastShown.current;
-
-  /**
    * The word's catalog record + its explanation + the replay occurrence, all
-   * derived from `shown` in one place. The catalog scan (findWordOccurrences)
-   * is a per-open fold over ~39k word tokens — single-digit milliseconds, and
-   * memoised for the sheet's lifetime, so no index to build or invalidate.
+   * derived in one place. The catalog scan (findWordOccurrences) is a per-open
+   * fold over ~39k word tokens — single-digit milliseconds, and memoised for
+   * the sheet's lifetime, so no index to build or invalidate.
+   *
+   * There is no held-over copy of `word` for the exit animation any more: the
+   * screen keeps this sheet mounted with its word intact until the window has
+   * finished dismissing, so there is nothing to hold over.
    */
   const derived = useMemo(() => {
-    if (!shown) return null;
     const catalog = getCatalog();
-    const sourceVideo = catalog.find((v) => v.id === shown.videoId) ?? null;
-    const occurrences = findWordOccurrences(catalog, shown.text);
+    const sourceVideo = catalog.find((v) => v.id === word.videoId) ?? null;
+    const occurrences = findWordOccurrences(catalog, word.text);
     const hearOccurrence = pickReplayOccurrence(
       occurrences,
-      { videoId: shown.videoId, cueIndex: shown.cueIndex },
+      { videoId: word.videoId, cueIndex: word.cueIndex },
       { requireYoutube: true }
     );
     return { catalog, sourceVideo, hearOccurrence };
-  }, [shown]);
+  }, [word]);
 
   /**
    * Surface -> lemma, walked through the dictionaries the same way WordSheet
@@ -159,8 +151,8 @@ export function WordDetailSheet({
    * the same lemma by construction of the gloss pipeline.
    */
   const explanation = useMemo(() => {
-    if (!shown || !explanations || !derived) return null;
-    const key = normalizeSurface(shown.text);
+    if (!explanations) return null;
+    const key = normalizeSurface(word.text);
     if (!key) return null;
     const videos = derived.sourceVideo
       ? [derived.sourceVideo, ...derived.catalog]
@@ -170,16 +162,10 @@ export function WordDetailSheet({
       if (gloss) return explanations.get(gloss.lemma) ?? null;
     }
     return null;
-  }, [shown, explanations, derived]);
+  }, [word, explanations, derived]);
 
   const lang = explanationLang();
   const now = Date.now();
-
-  if (!shown) {
-    // Nothing was ever shown — render the (closed) Modal so the first open
-    // animates from a mounted component.
-    return null;
-  }
 
   const stateLabel: Record<SavedWord['state'], string> = {
     lapsed: 'Slipped — review soon',
@@ -189,13 +175,7 @@ export function WordDetailSheet({
   };
 
   return (
-    <Modal
-      visible={word !== null}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
+    <>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.panel, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.handleRow}>
@@ -206,26 +186,26 @@ export function WordDetailSheet({
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
         >
-          <Text style={styles.word}>{shown.text}</Text>
-          <Text style={styles.translation}>{shown.translation}</Text>
+          <Text style={styles.word}>{word.text}</Text>
+          <Text style={styles.translation}>{word.translation}</Text>
 
           {/* The schedule, in the vocab list's own vocabulary. */}
           <View style={styles.srsRow}>
-            <Text style={styles.srsState}>{stateLabel[shown.state]}</Text>
+            <Text style={styles.srsState}>{stateLabel[word.state]}</Text>
             <View style={styles.meter} accessibilityRole="image"
-              accessibilityLabel={`${shown.box} of ${MAX_BOX} toward learned`}>
+              accessibilityLabel={`${word.box} of ${MAX_BOX} toward learned`}>
               {Array.from({ length: MAX_BOX }, (_, i) => (
                 <View
                   key={i}
                   style={[
                     styles.meterDot,
-                    i < shown.box ? styles.meterOn : styles.meterOff,
+                    i < word.box ? styles.meterOn : styles.meterOff,
                   ]}
                 />
               ))}
             </View>
             <Text style={styles.srsDue}>
-              {shown.dueAt <= now ? 'Ready now' : `Review ${formatDue(shown.dueAt, now)}`}
+              {word.dueAt <= now ? 'Ready now' : `Review ${formatDue(word.dueAt, now)}`}
             </Text>
           </View>
 
@@ -248,7 +228,7 @@ export function WordDetailSheet({
 
               {/* Real spoken sentences, never invented ones. */}
               {explanation.examples.map((example, i) => {
-                const video = derived?.catalog.find((v) => v.id === example.videoId);
+                const video = derived.catalog.find((v) => v.id === example.videoId);
                 if (!video) return null;
                 const sentence = cueSentence(video, example.cueIndex);
                 if (!sentence) return null;
@@ -279,10 +259,7 @@ export function WordDetailSheet({
           {/* The primary action: practise it. Recall is what the app is FOR,
               so it leads — hearing the word is the warm-up, not the goal. */}
           <Pressable
-            onPress={() => {
-              onClose();
-              onReview(shown);
-            }}
+            onPress={() => onReview(word)}
             accessibilityRole="button"
             accessibilityHint="Opens the feed with your due words as blanks"
             style={({ pressed }) => [styles.reviewButton, pressed && styles.pressed]}
@@ -294,7 +271,7 @@ export function WordDetailSheet({
               there is nowhere to jump: 67% of words occur in exactly one
               video, and a dead button teaches people to stop pressing live
               ones. */}
-          {derived?.hearOccurrence && (
+          {derived.hearOccurrence && (
             <Pressable
               onPress={() => {
                 const occ = derived.hearOccurrence;
@@ -302,10 +279,8 @@ export function WordDetailSheet({
                   ? (derived.catalog.find((v) => v.id === occ.videoId) ?? null)
                   : null;
                 if (!occ || !clip) return;
-                // Deliberately does NOT close this sheet. Dismissing one modal
-                // while presenting another in the same commit is the racy
-                // pattern; the player presents ABOVE the sheet, and closing it
-                // returns here — which is also where the user wants to be.
+                // A content swap inside the window that is already up —
+                // no dismissal, no second presentation, nothing to race.
                 onHear(occ, clip);
               }}
               accessibilityRole="button"
@@ -317,11 +292,11 @@ export function WordDetailSheet({
           )}
           <Pressable
             onPress={() => {
-              if (word) onRemove(word);
+              onRemove(word);
               onClose();
             }}
             accessibilityRole="button"
-            accessibilityLabel={`Remove ${shown.text}`}
+            accessibilityLabel={`Remove ${word.text}`}
             style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
           >
             <Text style={styles.removeLabel}>Remove from my words</Text>
@@ -329,7 +304,7 @@ export function WordDetailSheet({
         </View>
 
       </View>
-    </Modal>
+    </>
   );
 }
 

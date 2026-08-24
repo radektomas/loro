@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -20,11 +19,20 @@ import { buildHearItPage } from './hearItPage';
  * "Hear it in a video" — play the stretch of a real video where a saved word
  * is spoken, stop just after it, and offer the obvious next step: review it.
  *
+ * ⚠️ THIS IS A PANEL, NOT A MODAL, and the distinction is the whole reason the
+ * Words screen stopped freezing. It shipped as its own RN <Modal>, which is a
+ * separate native window; two windows on one screen meant one could outlive
+ * the other, and an orphaned window is invisible while still swallowing every
+ * touch — the Words list came back dead. The Words screen now presents exactly
+ * ONE window and swaps its CONTENTS between the word sheet and this player, so
+ * there is no second window to strand. Never wrap this in a <Modal> again.
+ *
  * THE SHAPE IS THE FEED'S. Loro's catalog is vertical video, which is why the
  * feed sizes its player 9:16 (FeedScreen PLAYER_ASPECT). This screen shipped
  * at 16:9 and the result was exactly what it sounds like — a letterboxed strip
  * in the top corner with the actual speaker cropped out of it. The frame is
- * sized from the window here for the same reason the feed measures rather than
+ * sized from the window (the host window is full-screen, so window geometry is
+ * this panel's geometry) for the same reason the feed measures rather than
  * hardcodes: the split between player and controls moves with the device.
  *
  * IT ENDS ON THE WORD, WHICH IS THE POINT. A plain embed can start at a
@@ -46,20 +54,21 @@ const TAIL_S = 0.5;
 
 type Phase = 'loading' | 'playing' | 'heard' | 'error';
 
-export function HearItModal({
+export function HearItPanel({
   occurrence,
   word,
   video,
   onClose,
   onReview,
 }: {
-  occurrence: WordOccurrence | null;
+  occurrence: WordOccurrence;
   /** The word being listened for — named under the player. */
   word: string;
   /** The occurrence's catalog record, for attribution. */
-  video: Video | null;
+  video: Video;
+  /** Back to the word sheet — this panel and that sheet share one window. */
   onClose: () => void;
-  /** Start a review session in the feed. The modal closes itself first. */
+  /** Start a review session in the feed. The caller owns the teardown. */
   onReview: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -67,16 +76,11 @@ export function HearItModal({
   const webRef = useRef<WebView>(null);
   const [phase, setPhase] = useState<Phase>('loading');
 
-  // requireYoutube filtered these at pick time; a null here only means a video
-  // pruned between picking and opening.
-  const youtubeId = occurrence?.youtubeId ?? null;
-  const open = youtubeId !== null && video !== null;
-
   // Every open is a fresh listen — the WebView is remounted by `key` below,
   // so the phase must start over with it.
   useEffect(() => {
-    if (open) setPhase('loading');
-  }, [open, occurrence?.videoId, occurrence?.cueIndex]);
+    setPhase('loading');
+  }, [occurrence.videoId, occurrence.cueIndex]);
 
   const onMessage = useCallback((event: WebViewMessageEvent) => {
     let parsed: { type?: string } = {};
@@ -95,9 +99,10 @@ export function HearItModal({
     webRef.current?.injectJavaScript('window.__hearItAgain && window.__hearItAgain(); true;');
   }, []);
 
-  if (!open || !occurrence || !youtubeId) {
-    return <Modal visible={false} transparent onRequestClose={onClose} />;
-  }
+  // requireYoutube filtered these at pick time; a null here only means a video
+  // pruned between picking and opening.
+  const youtubeId = occurrence.youtubeId;
+  if (!youtubeId) return null;
 
   /**
    * The frame: 9:16, as tall as the controls below it allow. BOTTOM_BAND is
@@ -111,108 +116,107 @@ export function HearItModal({
   const frameWidth = Math.min(width, (frameHeight * 9) / 16);
 
   return (
-    <Modal
-      visible
-      transparent={false}
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <View style={[styles.playerBox, { height: frameHeight, width: frameWidth }]}>
-          <WebView
-            ref={webRef}
-            key={`${occurrence.videoId}-${occurrence.cueIndex}`}
-            source={{
-              html: buildHearItPage({
-                videoId: youtubeId,
-                startSeconds: Math.max(0, occurrence.start - LEAD_IN_S),
-                stopSeconds: occurrence.end + TAIL_S,
-                embedOrigin: PLAYER_EMBED_ORIGIN,
-              }),
-              // Must match the page's `origin` playerVar — the IFrame API
-              // handshake compares them.
-              baseUrl: PLAYER_EMBED_ORIGIN,
-            }}
-            originWhitelist={['*']}
-            style={styles.webview}
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-            domStorageEnabled={false}
-            allowsBackForwardNavigationGestures={false}
-            onMessage={onMessage}
-          />
-          {phase === 'loading' && (
-            <View style={styles.loading} pointerEvents="none">
-              <ActivityIndicator color="rgba(242,245,243,0.6)" />
-            </View>
-          )}
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <View style={[styles.playerBox, { height: frameHeight, width: frameWidth }]}>
+        <WebView
+          ref={webRef}
+          key={`${occurrence.videoId}-${occurrence.cueIndex}`}
+          source={{
+            html: buildHearItPage({
+              videoId: youtubeId,
+              startSeconds: Math.max(0, occurrence.start - LEAD_IN_S),
+              stopSeconds: occurrence.end + TAIL_S,
+              embedOrigin: PLAYER_EMBED_ORIGIN,
+            }),
+            // Must match the page's `origin` playerVar — the IFrame API
+            // handshake compares them.
+            baseUrl: PLAYER_EMBED_ORIGIN,
+          }}
+          originWhitelist={['*']}
+          style={styles.webview}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled
+          domStorageEnabled={false}
+          allowsBackForwardNavigationGestures={false}
+          onMessage={onMessage}
+        />
+        {phase === 'loading' && (
+          <View style={styles.loading} pointerEvents="none">
+            <ActivityIndicator color="rgba(242,245,243,0.6)" />
+          </View>
+        )}
+      </View>
+
+      {/* Everything of Loro's lives BELOW the frame, never over it. */}
+      <View style={[styles.below, { paddingBottom: insets.bottom + 12 }]}>
+        {phase === 'heard' ? (
+          <>
+            <Text style={styles.headline}>
+              That's <Text style={styles.headlineWord}>«{word}»</Text> in real speech.
+            </Text>
+            <Text style={styles.subline}>
+              Best moment to lock it in — try recalling it now.
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.headline}>
+            Listen for <Text style={styles.headlineWord}>«{word}»</Text>
+          </Text>
+        )}
+
+        <View style={styles.attribution}>
+          <AuthorLine video={video} />
         </View>
 
-        {/* Everything of Loro's lives BELOW the frame, never over it. */}
-        <View style={[styles.below, { paddingBottom: insets.bottom + 12 }]}>
-          {phase === 'heard' ? (
-            <>
-              <Text style={styles.headline}>
-                That's <Text style={styles.headlineWord}>«{word}»</Text> in real speech.
-              </Text>
-              <Text style={styles.subline}>
-                Best moment to lock it in — try recalling it now.
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.headline}>
-              Listen for <Text style={styles.headlineWord}>«{word}»</Text>
-            </Text>
+        <View style={styles.actions}>
+          {phase === 'heard' && (
+            <Pressable
+              onPress={onReview}
+              accessibilityRole="button"
+              accessibilityHint="Opens the feed with this word as a blank"
+              style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+            >
+              <Text style={styles.primaryLabel}>Review in the feed</Text>
+            </Pressable>
           )}
-
-          <View style={styles.attribution}>
-            <AuthorLine video={video} />
-          </View>
-
-          <View style={styles.actions}>
-            {phase === 'heard' && (
+          <View style={styles.secondaryRow}>
+            {(phase === 'heard' || phase === 'error') && (
               <Pressable
-                onPress={() => {
-                  onClose();
-                  onReview();
-                }}
+                onPress={playAgain}
                 accessibilityRole="button"
-                accessibilityHint="Opens the feed with your due words as blanks"
-                style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
-              >
-                <Text style={styles.primaryLabel}>Review in the feed</Text>
-              </Pressable>
-            )}
-            <View style={styles.secondaryRow}>
-              {(phase === 'heard' || phase === 'error') && (
-                <Pressable
-                  onPress={playAgain}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
-                >
-                  <Text style={styles.secondaryLabel}>Play again</Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel="Close and go back to your words"
                 style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
               >
-                <Text style={styles.secondaryLabel}>Back to Words</Text>
+                <Text style={styles.secondaryLabel}>Play again</Text>
               </Pressable>
-            </View>
+            )}
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={`Back to ${word}`}
+              style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+            >
+              <Text style={styles.secondaryLabel}>Back to the word</Text>
+            </Pressable>
           </View>
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { alignItems: 'center', backgroundColor: '#0a0d0b', flex: 1 },
+  /** Opaque and full-bleed: the host window is transparent (it also carries
+      the dimmed word sheet), so this panel paints its own ground. */
+  root: {
+    alignItems: 'center',
+    backgroundColor: '#0a0d0b',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   playerBox: { backgroundColor: '#000' },
   webview: { backgroundColor: '#000', flex: 1 },
   loading: {

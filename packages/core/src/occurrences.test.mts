@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { findWordOccurrences, pickReplayOccurrence } from './occurrences.ts';
-import type { Video } from './types.ts';
+import {
+  findWordOccurrences,
+  pickReplayOccurrence,
+  pickReviewTarget,
+} from './occurrences.ts';
+import type { SavedWord, Video } from './types.ts';
 
 /** Word spans default to 0.4s — comfortably over the 0.2s audibility floor. */
 function video(
@@ -98,5 +102,77 @@ describe('pickReplayOccurrence', () => {
       ),
       null
     );
+  });
+});
+
+describe('pickReviewTarget', () => {
+  const NOW = 10_000_000;
+  /** Due an hour ago and saved long enough ago to clear the plan's grace. */
+  const saved = (text: string, videoId: string, over: Partial<SavedWord> = {}) =>
+    ({
+      text,
+      translation: text,
+      videoId,
+      cueIndex: 0,
+      source: 'user',
+      savedAt: NOW - 60 * 60 * 1000,
+      state: 'learning',
+      box: 1,
+      dueAt: NOW - 60 * 1000,
+      correct: 0,
+      incorrect: 0,
+      lastReviewedAt: null,
+      ...over,
+    }) as SavedWord;
+
+  const target = saved('perro', 'full');
+
+  /** Six cues of more urgent words, then the target — past every plan cap. */
+  const full = video('full', [
+    ['uno'],
+    ['dos'],
+    ['tres'],
+    ['cuatro'],
+    ['cinco'],
+    ['seis'],
+    ['perro'],
+  ]);
+  const clear = video('clear', [['hola', 'perro']]);
+  /** box 0 beats the target's box 1 — these fill the plan first. */
+  const crowd = ['uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis'].map((w) =>
+    saved(w, 'full', { box: 0 })
+  );
+
+  it('skips a video whose blank plan is already full', () => {
+    assert.deepEqual(
+      pickReviewTarget([full, clear], target, [...crowd, target], { now: NOW }),
+      { videoId: 'clear', willBlank: true }
+    );
+  });
+
+  it('prefers the caller’s clip when the word blanks there', () => {
+    assert.deepEqual(
+      pickReviewTarget([full, clear], target, [target], {
+        now: NOW,
+        preferVideoId: 'clear',
+      }),
+      { videoId: 'clear', willBlank: true }
+    );
+  });
+
+  it('names a video anyway when nothing would blank the word', () => {
+    // Saved ten seconds ago: inside the plan's one-minute grace, so no video
+    // can blank it yet. The jump is still better than landing nowhere.
+    const fresh = saved('perro', 'full', { savedAt: NOW - 10_000 });
+    assert.deepEqual(pickReviewTarget([full, clear], fresh, [fresh], { now: NOW }), {
+      videoId: 'full',
+      willBlank: false,
+    });
+  });
+
+  it('returns null when no embeddable video speaks the word', () => {
+    const hosted = video('hosted', [['perro']], { youtubeId: null });
+    assert.equal(pickReviewTarget([hosted], target, [target], { now: NOW }), null);
+    assert.equal(pickReviewTarget([clear], saved('gato', 'x'), [], { now: NOW }), null);
   });
 });
