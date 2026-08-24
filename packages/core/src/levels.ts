@@ -102,6 +102,40 @@ export function applyLevelAnswer(
   };
 }
 
+/**
+ * A correct RECALL — one of the user's own saved words, typed from memory in
+ * a video — also feeds the level meter. Half a level blank's credit, and it
+ * can never demote.
+ *
+ * WHY IT COUNTS AT ALL: recalling a saved word in a video you have not seen
+ * before is the same evidence a level blank asks for — you understood the
+ * sentence well enough to produce the missing word. Ignoring it meant a user
+ * who reviews diligently and rarely meets a blue blank stayed pinned at their
+ * starting level while plainly outgrowing it.
+ *
+ * WHY HALF: a recall word is one the user CHOSE and has already studied, so
+ * it is weaker evidence of general comprehension than an unseen word from the
+ * next frequency band. Ten recalls to a level, against five level blanks.
+ *
+ * WHY NO DEMOTION: missing a word you are actively learning is the normal
+ * middle of the SRS, not evidence your comprehension dropped — the box
+ * schedule already handles it by bringing the word back sooner. Demoting here
+ * would punish the exact behaviour the app is asking for. Level blanks stay
+ * symmetric (they are the deliberate probe), so the meter can still fall.
+ */
+const METER_UP_RECALL = 10;
+
+export function applyRecallLevelCredit(state: LevelState): LevelAnswerResult {
+  const meter = state.meter + METER_UP_RECALL;
+  if (meter < 100) {
+    return { level: state.level, meter, leveledUp: false, leveledDown: false };
+  }
+  if (state.level >= MAX_USER_LEVEL) {
+    return { level: state.level, meter: 100, leveledUp: false, leveledDown: false };
+  }
+  return { level: state.level + 1, meter: 0, leveledUp: true, leveledDown: false };
+}
+
 // ---------------------------------------------------------------------------
 // Frequency bands. Keys are normalizeSurface() forms (lowercase, accents
 // kept). Membership is approximate by design — the meter self-corrects.

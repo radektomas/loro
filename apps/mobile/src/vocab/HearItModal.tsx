@@ -4,6 +4,48 @@ import { WebView } from 'react-native-webview';
 import type { Video } from '@loro/core/types';
 import type { WordOccurrence } from '@loro/core/occurrences';
 import { AuthorLine } from '../feed/AuthorLine';
+import { PLAYER_EMBED_ORIGIN } from '../platform/config';
+
+/**
+ * The embed must be an IFRAME INSIDE A DOCUMENT, not the WebView's top-level
+ * page — and that distinction is a shipped bug, not a style preference.
+ *
+ * Pointing `source={{uri}}` straight at youtube-nocookie.com/embed/… loads the
+ * embed as the top-level document with no embedding origin, and YouTube
+ * refuses it: the player renders "Player configuration error" (localised — it
+ * reached us as "chyba konfigurace přehrávače videí"). The production player
+ * never hit this because it does the right thing already: an inline HTML
+ * document served under a real https baseUrl, with the player in an iframe and
+ * the SAME origin handed to YouTube (PlayerHost.tsx source={{html, baseUrl}},
+ * player/page.ts's `origin` playerVar, and the note on PLAYER_EMBED_ORIGIN
+ * explaining that the two must match).
+ *
+ * So this builds the same shape, minus the IFrame API and its command bridge:
+ * the modal only needs "play from T with YouTube's own controls", which a
+ * plain iframe src does, so there is nothing here to keep in sync with the
+ * feed's clock model.
+ */
+function buildEmbedPage(youtubeId: string, startSeconds: number): string {
+  const params = [
+    `start=${startSeconds}`,
+    'autoplay=1',
+    'playsinline=1',
+    'rel=0',
+    'modestbranding=1',
+    'fs=0',
+    'iv_load_policy=3',
+    `origin=${encodeURIComponent(PLAYER_EMBED_ORIGIN)}`,
+  ].join('&amp;');
+  return `<!doctype html>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden}
+iframe{border:0;width:100%;height:100%;display:block}</style>
+</head><body>
+<iframe src="https://www.youtube-nocookie.com/embed/${youtubeId}?${params}"
+  allow="autoplay; encrypted-media; picture-in-picture"
+  allowfullscreen></iframe>
+</body></html>`;
+}
 
 /**
  * "Hear it in a video" — a modal player seeked to just before a word is
@@ -46,7 +88,11 @@ export function HearItModal({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const open = occurrence !== null && occurrence.youtubeId !== null && video !== null;
+  // Narrowed to a local so the JSX below can depend on it being a string —
+  // requireYoutube already filtered these out at pick time, so a null here
+  // only means a video pruned between picking and opening.
+  const youtubeId = occurrence?.youtubeId ?? null;
+  const open = youtubeId !== null && video !== null;
 
   return (
     <Modal
@@ -56,7 +102,7 @@ export function HearItModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      {open && (
+      {open && occurrence && youtubeId && (
         <View style={[styles.root, { paddingTop: insets.top }]}>
           {/* 16:9 frame, sized by width — the standard embed shape. */}
           <View style={styles.playerBox}>
@@ -64,15 +110,18 @@ export function HearItModal({
               // A new occurrence = a new source; RN reloads the WebView.
               key={`${occurrence.videoId}-${occurrence.cueIndex}`}
               source={{
-                uri:
-                  `https://www.youtube-nocookie.com/embed/${occurrence.youtubeId}` +
-                  `?start=${Math.max(0, Math.floor(occurrence.start - 3))}` +
-                  '&autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&iv_load_policy=3',
+                html: buildEmbedPage(
+                  youtubeId,
+                  Math.max(0, Math.floor(occurrence.start - 3))
+                ),
+                // The real https origin the document is served under. Must
+                // match the `origin` param above — see buildEmbedPage.
+                baseUrl: PLAYER_EMBED_ORIGIN,
               }}
+              originWhitelist={['*']}
               style={styles.webview}
               allowsInlineMediaPlayback
               mediaPlaybackRequiresUserAction={false}
-              // The page is YouTube's own; nothing of ours runs inside it.
               javaScriptEnabled
               domStorageEnabled={false}
               allowsBackForwardNavigationGestures={false}

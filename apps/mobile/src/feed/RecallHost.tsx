@@ -236,6 +236,18 @@ export function RecallHost({
   const lastActionAt = useSharedValue(0);
   /** 1 once this hold's landing position has been reported. Per-blank. */
   const measuredSv = useSharedValue(0);
+  /**
+   * 1 while a segment replay is in flight — the clock has been deliberately
+   * moved BEFORE the hold point and playback restarted.
+   *
+   * The clamp exists to drag a displaced paused clock back onto the word, and
+   * during a replay that displacement is intentional, so without this flag the
+   * clamp fires the moment the debounce lapses and yanks playback back to the
+   * word before the line has been heard. That is not hypothetical: play() takes
+   * 316-825ms to reach PLAYING over the bridge (rn-port-map §5e) and the
+   * debounce is 350ms, so the clamp usually won the race.
+   */
+  const replayingSv = useSharedValue(0);
 
   // Read by the JS callbacks the worklet schedules.
   const entriesRef = useRef<BlankEntry[]>([]);
@@ -312,10 +324,11 @@ export function RecallHost({
     resolvedMask.value = 0;
     lastActionAt.value = 0;
     measuredSv.value = 0;
+    replayingSv.value = 0;
     reseatsRef.current = 0;
     if (resumeTimer.current) clearTimeout(resumeTimer.current);
     Keyboard.dismiss();
-  }, [plan, heldSv, resolvedMask, lastActionAt, measuredSv]);
+  }, [plan, heldSv, resolvedMask, lastActionAt, measuredSv, replayingSv]);
 
   /**
    * Holds the gap between a correct answer and the notification explainer, so
@@ -456,6 +469,16 @@ export function RecallHost({
 
       if (heldSv.value === i) {
         const nowMs = Date.now();
+        // A replay is running: let it play THROUGH to the word, then re-assert
+        // the hold there. The clamp below must not touch the clock meanwhile.
+        if (replayingSv.value === 1) {
+          if (isPlaying.value && t >= pauseAt) {
+            replayingSv.value = 0;
+            lastActionAt.value = nowMs;
+            runOnJS(onHoldSlipped)(i, t);
+          }
+          return;
+        }
         if (!isPlaying.value) {
           // The pause has landed, and where it landed IS the measurement.
           // Reported once per blank, and deliberately NOT behind the debounce
@@ -523,6 +546,7 @@ export function RecallHost({
       });
       resolvedMask.value |= 1 << index;
       heldSv.value = -1;
+      replayingSv.value = 0;
       setHeldIndex(-1);
       Keyboard.dismiss();
 
@@ -543,6 +567,23 @@ export function RecallHost({
               ? `box=${word.box} state=${word.state} due=${new Date(word.dueAt).toISOString()}`
               : 'NOT FOUND (word missing from storage)')
         );
+
+        /**
+         * A correct recall also moves the LEVEL meter — half a level blank's
+         * credit, never a demotion (core's applyRecallLevelCredit carries the
+         * reasoning). Recalling your own saved word in a video is the same
+         * evidence a blue blank asks for, so a diligent reviewer should not
+         * stay pinned at their starting level.
+         */
+        if (wasCorrect) {
+          const before = storage.getLevelState();
+          const level = storage.applyRecallLevelCredit();
+          llog(
+            `recall credit "${entry.word.text}" -> meter ${before.level}/${before.meter} ` +
+              `→ ${level.level}/${level.meter} tier=${tierFor(level.level).name}` +
+              (level.leveledUp ? ' LEVELLED UP' : '')
+          );
+        }
       } else {
         /**
          * A LEVEL BLANK TAKES **TWO** CORE CALLS, NOT ONE, and both matter.
@@ -641,7 +682,7 @@ export function RecallHost({
         match === 'correct' ? RESUME_MS_CORRECT : RESUME_MS_WRONG
       );
     },
-    [api, heldSv, resolvedMask]
+    [api, heldSv, resolvedMask, replayingSv]
   );
 
   /**
@@ -663,8 +704,26 @@ export function RecallHost({
     const entry = entriesRef.current[index];
     const cue = entry ? video?.cues[entry.cueIndex] : undefined;
     if (!entry || !cue) return;
+    /**
+     * THE KEYBOARD GOES DOWN FIRST, AND THAT IS THE WHOLE POINT OF REPLAY.
+     *
+     * While a blank is held with the keyboard up, the player is deliberately
+     * faded out — the answer bar sits over the player area and Loro may never
+     * draw there (HIDE_PLAYER_WHILE_TYPING). So replaying without dropping the
+     * keyboard seeks a player nobody can see: the line plays back invisibly and
+     * the user is left watching a blank frame, which is exactly how this
+     * shipped and exactly what it looked like.
+     *
+     * Dismissing takes keyboardHeight to 0, which clears `obscuresPlayer` and
+     * brings the video back for the replay. The answer bar does NOT go away —
+     * it re-seats itself in the band (RecallBar renders on `entry`, not on the
+     * keyboard) — so the typed text survives and tapping the input raises the
+     * keyboard again once the hold re-engages at the word.
+     */
+    Keyboard.dismiss();
     reseatsRef.current = 0;
     measuredSv.value = 1; // the landing was already measured for this hold
+    replayingSv.value = 1;
     lastActionAt.value = Date.now();
     const target = Math.max(0, cue.start - SEEK_BACK_PAD_S);
     api.seek(target);
@@ -673,7 +732,7 @@ export function RecallHost({
       `replay cue=${entry.cueIndex} "${entry.surface}" -> ${target.toFixed(2)}s ` +
         `(cue.start=${cue.start.toFixed(2)}s, hold re-engages at ${entry.pauseAt.toFixed(2)}s)`
     );
-  }, [api, video, heldSv, lastActionAt, measuredSv]);
+  }, [api, video, heldSv, lastActionAt, measuredSv, replayingSv]);
 
   const view = useMemo<RecallView | null>(() => {
     if (!armed || !video || plan.entries.length === 0) return null;

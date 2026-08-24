@@ -14,6 +14,7 @@ import {
 } from './srs.ts';
 import {
   applyLevelAnswer,
+  applyRecallLevelCredit,
   INITIAL_LEVEL_STATE,
   MAX_USER_LEVEL,
   type LevelAnswerResult,
@@ -1111,6 +1112,17 @@ export const storage = {
   /** Apply one level-blank answer to the meter/level and persist it. */
   applyLevelAnswer(wasCorrect: boolean): LevelAnswerResult {
     const result = applyLevelAnswer(storage.getLevelState(), wasCorrect);
+    if (writeJSON(KEYS.levelState, { level: result.level, meter: result.meter })) {
+      emitWordsChanged();
+      scheduleProgressPush();
+    }
+    return result;
+  },
+
+  /** Credit a correct recall to the level meter — half a level blank's move,
+      and it never demotes (see applyRecallLevelCredit). */
+  applyRecallLevelCredit(): LevelAnswerResult {
+    const result = applyRecallLevelCredit(storage.getLevelState());
     if (writeJSON(KEYS.levelState, { level: result.level, meter: result.meter })) {
       emitWordsChanged();
       scheduleProgressPush();

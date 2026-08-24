@@ -92,6 +92,22 @@ const ACCENT = '#5ee6a8';
 const ACCENT_PALE = '#a8e89f';
 
 /**
+ * The near-miss palette. A spelling near-miss GRADES as correct (see core's
+ * matchAnswer), so it earns the same hop rather than a consolation animation —
+ * only the colour and the word change, which is what keeps "almost" readable
+ * as a success you can still learn from.
+ */
+const ALMOST = '#f2c14e';
+const ALMOST_PALE = '#f7d98c';
+
+export type CelebrationVariant = 'correct' | 'almost';
+
+const VARIANT = {
+  correct: { color: ACCENT, pale: ACCENT_PALE, label: '¡Correcto!' },
+  almost: { color: ALMOST, pale: ALMOST_PALE, label: 'Almost!' },
+} as const;
+
+/**
  * The last known Reduce Motion answer, resolved once at import.
  *
  * ⚠️ WITHOUT THIS THE FIRST CELEBRATION NEVER PLAYS, and it fails in the
@@ -157,7 +173,11 @@ export function useReduceMotion(): boolean {
  * state="happy", which raises the wing and opens the beak. Of the two bundled
  * bitmaps, the wave is the one that reads as celebrating.
  */
-export function LoroCelebration() {
+export function LoroCelebration({
+  variant = 'correct',
+}: {
+  variant?: CelebrationVariant;
+}) {
   const reduceMotion = useReduceMotion();
   const lift = useSharedValue(10);
   const scale = useSharedValue(0.4);
@@ -201,7 +221,9 @@ export function LoroCelebration() {
     <Animated.View pointerEvents="none" style={[styles.hopLayer, style]}>
       <Image source={BRAND.parrotWaving} style={styles.parrot} resizeMode="contain" />
       <View style={styles.pill}>
-        <Text style={styles.pillText}>¡Correcto!</Text>
+        <Text style={[styles.pillText, { color: VARIANT[variant].color }]}>
+          {VARIANT[variant].label}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -216,13 +238,17 @@ export function LoroCelebration() {
  * has to, so the glow stays inside the rounded corners — which is why the
  * caller nests this as a sibling of that box rather than inside it.
  */
-export function FeatherBurst() {
+export function FeatherBurst({
+  variant = 'correct',
+}: {
+  variant?: CelebrationVariant;
+}) {
   const reduceMotion = useReduceMotion();
   if (reduceMotion) return null;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       {FEATHERS.map((feather, index) => (
-        <Feather key={index} index={index} {...feather} />
+        <Feather key={index} index={index} variant={variant} {...feather} />
       ))}
     </View>
   );
@@ -233,11 +259,13 @@ function Feather({
   dx,
   dy,
   rot,
+  variant,
 }: {
   index: number;
   dx: number;
   dy: number;
   rot: number;
+  variant: CelebrationVariant;
 }) {
   const progress = useSharedValue(0);
 
@@ -271,7 +299,7 @@ function Feather({
       style={[
         styles.feather,
         {
-          backgroundColor: pale ? ACCENT_PALE : ACCENT,
+          backgroundColor: pale ? VARIANT[variant].pale : VARIANT[variant].color,
           height,
           width,
           // The CSS centres with translate(-50%,-50%); RN has no percentage
@@ -305,7 +333,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  pillText: { color: ACCENT, fontSize: 12, fontWeight: '700' },
+  pillText: { fontSize: 12, fontWeight: '700' },
   /** Anchored at the parent's centre; the margins above do the -50% part. */
   feather: {
     borderBottomLeftRadius: 3,

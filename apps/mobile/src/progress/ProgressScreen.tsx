@@ -15,7 +15,7 @@ import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
 import { formatDue } from '@loro/core/srs';
-import { computeStreaks, dueCount, nextDueAt } from '@loro/core/progress';
+import { computeStreaks, dueCount, nextDueAt, weekStrip } from '@loro/core/progress';
 import { enableRecallForSession } from '../feed/recall';
 import {
   formatTime,
@@ -62,6 +62,98 @@ const STATE_SEGMENTS: { state: WordState; label: string; color: string }[] = [
 
 /** How many answered words show before "See all". */
 const CORRECT_PREVIEW = 3;
+
+/**
+ * THE STREAK, MADE VISIBLE.
+ *
+ * It used to be a number and a footnote, which is the one thing a streak must
+ * not be: the whole mechanic is "don't break the chain", and a chain you
+ * cannot see is not a chain. So the week is drawn — Mon..Sun, filled for days
+ * with a correct recall, ringed for today, dimmed ahead — next to the count.
+ *
+ * weekStrip comes from core and has since the web port; nothing had rendered
+ * it until now, so the calendar arithmetic (local days, DST-safe, Monday-based)
+ * is the tested version rather than a second one invented here.
+ *
+ * TODAY IS THE CALL TO ACTION. When today is not yet filled the card says so
+ * and names the one action that fills it, because that is the moment the user
+ * can still act on. Once it is filled the card congratulates and goes quiet.
+ *
+ * No animation: this screen is a summary the user scrolls, not a moment.
+ * Motion here would be decoration, and it would fight the celebration that
+ * already fires on the answer itself.
+ */
+function StreakCard({
+  streaks,
+  week,
+}: {
+  streaks: { current: number; longest: number };
+  week: { key: string; label: string; active: boolean; isToday: boolean; isFuture: boolean }[];
+}) {
+  const todayDone = week.some((d) => d.isToday && d.active);
+  const alive = streaks.current > 0;
+
+  return (
+    <View style={[styles.card, alive && styles.streakCardAlive]}>
+      <View style={styles.streakHead}>
+        <Text style={styles.streakFlame}>{alive ? '🔥' : '·'}</Text>
+        <View style={styles.streakHeadText}>
+          <Text style={styles.bigNumber}>
+            {streaks.current}{' '}
+            <Text style={styles.bigNumberUnit}>
+              {streaks.current === 1 ? 'day' : 'days'}
+            </Text>
+          </Text>
+          <Text style={styles.cardBody}>
+            {alive ? 'of correct recalls in a row' : 'One correct recall starts a streak.'}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={styles.weekRow}
+        accessibilityRole="image"
+        accessibilityLabel={`This week: practised on ${week
+          .filter((d) => d.active)
+          .map((d) => d.label)
+          .join(', ') || 'no days yet'}`}
+      >
+        {week.map((day) => (
+          <View key={day.key} style={styles.weekDay}>
+            <View
+              style={[
+                styles.weekDot,
+                day.active && styles.weekDotOn,
+                day.isToday && styles.weekDotToday,
+                day.isFuture && styles.weekDotFuture,
+              ]}
+            >
+              {day.active && <Text style={styles.weekTick}>✓</Text>}
+            </View>
+            <Text
+              style={[
+                styles.weekLabel,
+                day.isToday && styles.weekLabelToday,
+                day.isFuture && styles.weekLabelFuture,
+              ]}
+            >
+              {day.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.streakFootRow}>
+        <Text style={[styles.cardFoot, styles.streakFootReset]}>
+          Longest: {streaks.longest}
+        </Text>
+        <Text style={[styles.streakToday, todayDone && styles.streakTodayDone]}>
+          {todayDone ? "Today's done ✓" : 'Today is open'}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 function SectionTitle({ children }: { children: string }) {
   return <Text style={styles.sectionTitle}>{children}</Text>;
@@ -402,6 +494,9 @@ export function ProgressScreen({
   const due = useMemo(() => dueCount(words, now), [words, now]);
   const nextDue = useMemo(() => nextDueAt(words, now), [words, now]);
   const streaks = useMemo(() => computeStreaks(recallDays, now), [recallDays, now]);
+  /** Mon..Sun for the current week, with today and future days marked —
+      core has carried this helper since the web port and nothing rendered it. */
+  const week = useMemo(() => weekStrip(recallDays, now), [recallDays, now]);
 
   /**
    * Per video: how many words saved, how many learned, most-engaged first.
@@ -595,26 +690,7 @@ export function ProgressScreen({
             {/* 3 — streak: consecutive days with a correct recall */}
             <View style={styles.section}>
               <SectionTitle>Streak</SectionTitle>
-              <View style={styles.card}>
-                {streaks.current > 0 ? (
-                  <>
-                    <Text style={styles.bigNumber}>
-                      {streaks.current}{' '}
-                      <Text style={styles.bigNumberUnit}>
-                        {streaks.current === 1 ? 'day' : 'days'}
-                      </Text>
-                    </Text>
-                    <Text style={styles.cardBody}>
-                      of correct recalls in a row
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={styles.cardBody}>
-                    No streak right now. One correct recall starts one.
-                  </Text>
-                )}
-                <Text style={styles.cardFoot}>Longest: {streaks.longest}</Text>
-              </View>
+              <StreakCard streaks={streaks} week={week} />
             </View>
 
             {/* 4 — reviews */}
@@ -871,6 +947,53 @@ const styles = StyleSheet.create({
   },
   bigNumber: { color: '#f2f5f3', fontSize: 24, fontWeight: '800' },
   bigNumberUnit: { fontSize: 15, fontWeight: '700' },
+  streakCardAlive: {
+    borderColor: 'rgba(242,193,78,0.35)',
+    borderWidth: 1,
+  },
+  streakHead: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  streakFlame: { fontSize: 30 },
+  streakHeadText: { flex: 1 },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  weekDay: { alignItems: 'center', gap: 6 },
+  weekDot: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.07)',
+    borderRadius: 999,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  weekDotOn: { backgroundColor: '#f2c14e' },
+  weekDotToday: { borderColor: '#f2f5f3', borderWidth: 2 },
+  weekDotFuture: { opacity: 0.35 },
+  weekTick: { color: '#2a1f06', fontSize: 14, fontWeight: '900' },
+  weekLabel: {
+    color: 'rgba(242,245,243,0.45)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  weekLabelToday: { color: '#f2f5f3' },
+  weekLabelFuture: { opacity: 0.5 },
+  streakFootRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  /** cardFoot carries its own marginTop for the stacked cards; in this row the
+      two labels must sit on one baseline. */
+  streakFootReset: { marginTop: 0 },
+  streakToday: {
+    color: 'rgba(242,245,243,0.5)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  streakTodayDone: { color: '#f2c14e' },
   tier: {
     backgroundColor: '#141a17',
     borderRadius: 16,

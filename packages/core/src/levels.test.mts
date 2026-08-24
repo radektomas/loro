@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   computeLevelBlankPlan,
   MAX_USER_LEVEL,
+  applyRecallLevelCredit,
   wordLevel,
 } from './levels.ts';
 import type { Cue, Gloss, SavedWord, Video } from './types.ts';
@@ -173,5 +174,31 @@ describe('computeLevelBlankPlan — placement rules survive the fallback', () =>
     const v = video([filler, filler, [BAND_1], filler]);
     v.cues[2].words[0] = { text: BAND_1, start: 2, end: 2 };
     assert.equal(computeLevelBlankPlan(v, 1, [], 'en').size, 0);
+  });
+});
+
+describe('applyRecallLevelCredit', () => {
+  it('is half a level blank and never demotes', () => {
+    const r = applyRecallLevelCredit({ level: 2, meter: 0 });
+    assert.deepEqual([r.level, r.meter, r.leveledUp, r.leveledDown], [2, 10, false, false]);
+  });
+
+  it('ten correct recalls climb a level', () => {
+    let state = { level: 1, meter: 0 };
+    let ups = 0;
+    for (let i = 0; i < 10; i++) {
+      const r = applyRecallLevelCredit(state);
+      state = { level: r.level, meter: r.meter };
+      if (r.leveledUp) ups++;
+    }
+    assert.equal(ups, 1);
+    assert.equal(state.level, 2);
+  });
+
+  it('stops at the top of the ladder with a full meter', () => {
+    const r = applyRecallLevelCredit({ level: MAX_USER_LEVEL, meter: 95 });
+    assert.equal(r.level, MAX_USER_LEVEL);
+    assert.equal(r.meter, 100);
+    assert.equal(r.leveledUp, false);
   });
 });

@@ -198,7 +198,13 @@ export const MAX_FUNCTION_WORDS_PER_ROUND = 1;
  * clip that both reads well AND sits at B1 or lower.
  */
 export const STARTER_CLIP_ALLOWLIST: readonly string[] = [
-  '3FosEuFdIjk',
+  // Round 1's curated pick (3FosEuFdIjk, the Machu Picchu practical guide)
+  // was REMOVED from the catalog in the 2026-08-21 moderation review — its
+  // channel's other clips failed the on-camera vision audit and the owner
+  // marked this one for removal with them. No replacement is curated yet:
+  // picking the app's first impression is an editorial call, not a fallback
+  // one, so round 1 runs on the ranking until the list is re-derived with
+  // /dev/starter-clips.
   'a3sudA_IXgY',
   'lmyYWJvq4wQ',
 ];

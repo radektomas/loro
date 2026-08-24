@@ -187,7 +187,10 @@ export function Karaoke({
     const previous = previousResult.current;
     previousResult.current = blankResult;
     if (previous === undefined) return;
-    if (blankResult !== 'correct' || previous === 'correct') return;
+    // 'almost' celebrates too — it grades as correct, so it gets the same hop
+    // in the near-miss yellow. Only 'wrong' stays uncelebrated.
+    if (blankResult === null || blankResult === 'wrong') return;
+    if (previous !== null && previous !== 'wrong') return;
     setCelebrating(true);
     if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
     celebrationTimer.current = setTimeout(() => setCelebrating(false), CELEBRATE_MS);
@@ -217,7 +220,9 @@ export function Karaoke({
       {/* Loro, absolute at the top of THIS box — which is the band, below the
           player. Mounted only while celebrating so the hop restarts cleanly on
           the next correct answer rather than needing a reset. */}
-      {celebrating && <LoroCelebration />}
+      {celebrating && blankResult && blankResult !== 'wrong' && (
+        <LoroCelebration variant={blankResult} />
+      )}
       {cue ? (
         <>
           <View style={styles.line}>
@@ -557,7 +562,7 @@ function RevealedWord({
         />
         <Text style={[styles.wordText, tint]}>{text}</Text>
       </Animated.View>
-      {result === 'correct' && celebrating && <FeatherBurst />}
+      {result !== 'wrong' && celebrating && <FeatherBurst variant={result} />}
     </View>
   );
 }
