@@ -96,6 +96,58 @@ export function normalizeAnswer(text: string): string {
     .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
 }
 
+/** Three-way grade for a typed answer. 'almost' is a spelling near-miss. */
+export type AnswerMatch = 'correct' | 'almost' | 'wrong';
+
+/**
+ * Classic two-row Levenshtein distance. Inputs are short, already-normalised
+ * words, so the quadratic DP is nowhere near a cost concern.
+ */
+export function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  let curr = new Array<number>(b.length + 1);
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const sub = prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, sub);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[b.length];
+}
+
+/**
+ * Grade a typed answer with a near-miss tier. Both sides pass through
+ * normalizeAnswer first, so accents, case and edge punctuation are already
+ * forgiven — 'almost' is spelling-only, on top of that forgiveness.
+ *
+ * The rule, on the normalised expected length L:
+ *  - L < 4: never 'almost'. One edit on "el"/"es"/"tu" is a different word,
+ *    and the dangerous accent pairs (el/él, esta/está) are already folded to
+ *    'correct' by normalizeAnswer.
+ *  - 4 <= L <= 7: 'almost' iff distance <= 1.
+ *  - L >= 8: 'almost' iff distance <= 2. Plain Levenshtein prices a
+ *    transposition at 2, so "nesecito" -> "necesito" lands here — that is the
+ *    reason for the 2-at-8 tier.
+ *
+ * Downstream grading treats 'almost' as correct (the caller maps it); the
+ * three-way value exists for the UI, which shows yellow plus the exact
+ * spelling instead of the green celebration.
+ */
+export function matchAnswer(answer: string, expected: string): AnswerMatch {
+  const a = normalizeAnswer(answer);
+  const e = normalizeAnswer(expected);
+  if (!a || !e) return 'wrong';
+  if (a === e) return 'correct';
+  const limit = e.length >= 8 ? 2 : e.length >= 4 ? 1 : 0;
+  if (limit === 0 || Math.abs(a.length - e.length) > limit) return 'wrong';
+  return levenshtein(a, e) <= limit ? 'almost' : 'wrong';
+}
+
 /** A word with no audible span was never heard, so it can't be recalled. */
 const MIN_AUDIBLE_S = 0.05;
 

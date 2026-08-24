@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { computeBlankPlan, grade, normalizeAnswer } from './srs.ts';
+import { computeBlankPlan, grade, matchAnswer, normalizeAnswer } from './srs.ts';
 
 const NOW = 1_700_000_000_000;
 const MIN = 60_000;
@@ -177,5 +177,36 @@ describe('normalizeAnswer / grade', () => {
     const wrong = grade(saved('x', 'a', { box: 4 }), false, NOW);
     assert.equal(wrong.box, 0);
     assert.equal(wrong.state, 'lapsed');
+  });
+});
+
+describe('matchAnswer — near-miss tier', () => {
+  it('exact after normalisation is correct, including accent folds', () => {
+    assert.equal(matchAnswer('estan', '¡Están!'), 'correct');
+    assert.equal(matchAnswer('se', 'sé'), 'correct');
+  });
+
+  it('one edit on a 4-7 letter word is almost', () => {
+    assert.equal(matchAnswer('pero', 'perro'), 'almost');
+    assert.equal(matchAnswer('casa', 'cosa'), 'almost');
+    assert.equal(matchAnswer('estas', 'estan'), 'almost');
+  });
+
+  it('short words never get the almost tier', () => {
+    assert.equal(matchAnswer('el', 'es'), 'wrong');
+    assert.equal(matchAnswer('tu', 'te'), 'wrong');
+  });
+
+  it('two edits need a word of 8+ letters', () => {
+    assert.equal(matchAnswer('nesecito', 'necesito'), 'almost'); // transposition = 2 edits
+    assert.equal(matchAnswer('entocnes', 'entonces'), 'almost');
+    assert.equal(matchAnswer('trabajo', 'trabaja'), 'almost'); // L=7, distance 1
+    assert.equal(matchAnswer('trabajo', 'trabesa'), 'wrong'); // L=7, distance 2
+  });
+
+  it('empty or unrecognisable input is wrong', () => {
+    assert.equal(matchAnswer('', 'perro'), 'wrong');
+    assert.equal(matchAnswer('¡¡!!', 'perro'), 'wrong');
+    assert.equal(matchAnswer('zzzzz', 'perro'), 'wrong');
   });
 });

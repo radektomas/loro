@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 import {
   EMPTY_SAVE_PROMPT_STATE,
   SAVE_PROMPT,
+  SESSION_PROMPT_SNOOZE_MS,
   savePromptVariant,
+  sessionPromptVariant,
   type SavePromptState,
 } from './savePrompt.ts';
 
@@ -100,5 +102,62 @@ describe('savePromptVariant', () => {
   it('a converted prompt 1 ends the sequence (they have an account)', () => {
     const s = state({ p1: { shownAt: 1, words: 12, outcome: 'converted' } });
     assert.equal(savePromptVariant(s, { ...onVocab, savedCount: 500 }), null);
+  });
+});
+
+describe('sessionPromptVariant', () => {
+  const NOW = 1_700_000_000_000;
+  const ctx = (over: Partial<Parameters<typeof sessionPromptVariant>[1]> = {}) => ({
+    signedIn: false,
+    snoozedAt: null,
+    shownThisSession: false,
+    now: NOW,
+    ...over,
+  });
+
+  it('offers variant 1 while prompt 1 is unresolved', () => {
+    assert.equal(sessionPromptVariant(EMPTY_SAVE_PROMPT_STATE, ctx()), 1);
+    assert.equal(sessionPromptVariant(state({ p1: shown(5) }), ctx()), 1);
+  });
+
+  it('offers variant 2 after prompt 1 was dismissed', () => {
+    assert.equal(sessionPromptVariant(state({ p1: dismissed(10) }), ctx()), 2);
+    assert.equal(
+      sessionPromptVariant(state({ p1: dismissed(10), p2: shown(20) }), ctx()),
+      2
+    );
+  });
+
+  it('never fires once both vocab prompts are resolved', () => {
+    const s = state({ p1: dismissed(10), p2: dismissed(30) });
+    assert.equal(sessionPromptVariant(s, ctx()), null);
+  });
+
+  it('never fires for signed-in users or a converted record', () => {
+    assert.equal(sessionPromptVariant(EMPTY_SAVE_PROMPT_STATE, ctx({ signedIn: true })), null);
+    const converted = { shownAt: 1, words: 12, outcome: 'converted' as const };
+    assert.equal(sessionPromptVariant(state({ p1: converted }), ctx()), null);
+    assert.equal(
+      sessionPromptVariant(state({ p1: dismissed(10), p2: converted }), ctx()),
+      null
+    );
+  });
+
+  it('honours the process latch and the 7-day snooze, which expires', () => {
+    assert.equal(
+      sessionPromptVariant(EMPTY_SAVE_PROMPT_STATE, ctx({ shownThisSession: true })),
+      null
+    );
+    assert.equal(
+      sessionPromptVariant(EMPTY_SAVE_PROMPT_STATE, ctx({ snoozedAt: NOW - 1000 })),
+      null
+    );
+    assert.equal(
+      sessionPromptVariant(
+        EMPTY_SAVE_PROMPT_STATE,
+        ctx({ snoozedAt: NOW - SESSION_PROMPT_SNOOZE_MS - 1 })
+      ),
+      1
+    );
   });
 });

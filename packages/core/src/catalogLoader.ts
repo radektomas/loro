@@ -140,13 +140,16 @@ export function snapshotPath(hash: string): string {
 }
 
 // ------------------------------------------------------------------ helpers
+// Exported (not just used here) because the explanations loader
+// (explanations.ts) reads sibling objects from the same bucket and must share
+// this module's transport behaviour and error taxonomy exactly.
 
-function joinUrl(baseUrl: string, objectPath: string): string {
+export function joinUrl(baseUrl: string, objectPath: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/${objectPath}`;
 }
 
 /** GET a URL and return its body, or throw a typed fetch error. */
-async function getText(fetchFn: CatalogFetch, url: string): Promise<string> {
+export async function getText(fetchFn: CatalogFetch, url: string): Promise<string> {
   let response: CatalogResponse;
   try {
     response = await fetchFn(url);
@@ -169,7 +172,7 @@ async function getText(fetchFn: CatalogFetch, url: string): Promise<string> {
   }
 }
 
-function parseJson(url: string, body: string): unknown {
+export function parseJson(url: string, body: string): unknown {
   try {
     return JSON.parse(body);
   } catch (error) {
@@ -202,13 +205,26 @@ function assertPointer(url: string, value: unknown): CatalogPointer {
   };
 }
 
+/**
+ * Fetch and validate a {hash, count, generatedAt} pointer at any object path.
+ * The catalog and the explanations blob share this pointer shape and
+ * publishing discipline (blob first, pointer last), so they share the fetch.
+ */
+export async function fetchPointerAt(
+  fetchFn: CatalogFetch,
+  baseUrl: string,
+  pointerPath: string
+): Promise<CatalogPointer> {
+  const url = joinUrl(baseUrl, pointerPath);
+  return assertPointer(url, parseJson(url, await getText(fetchFn, url)));
+}
+
 /** Fetch and validate catalog/latest.json. */
 export async function fetchPointer(
   fetchFn: CatalogFetch,
   baseUrl: string
 ): Promise<CatalogPointer> {
-  const url = joinUrl(baseUrl, POINTER_PATH);
-  return assertPointer(url, parseJson(url, await getText(fetchFn, url)));
+  return fetchPointerAt(fetchFn, baseUrl, POINTER_PATH);
 }
 
 // -------------------------------------------------------------------- blob
