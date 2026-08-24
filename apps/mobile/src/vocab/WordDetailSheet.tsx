@@ -85,8 +85,14 @@ export function WordDetailSheet({
   onClose: () => void;
   /** Called after the user confirms removal; the caller owns the storage call. */
   onRemove: (word: SavedWord) => void;
-  /** Arm a review session and switch to the feed. The sheet closes first. */
-  onReview: () => void;
+  /**
+   * Arm a review session and switch to the feed. The word is passed
+   * explicitly rather than read from state: onClose() runs first and clears
+   * it, so depending on the closure would work only by batching luck.
+   * `preferVideoId` names the clip to land on when the caller has one — the
+   * hear-it modal passes the video the user just listened to.
+   */
+  onReview: (word: SavedWord, preferVideoId?: string) => void;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -269,7 +275,7 @@ export function WordDetailSheet({
           <Pressable
             onPress={() => {
               onClose();
-              onReview();
+              onReview(shown);
             }}
             accessibilityRole="button"
             accessibilityHint="Opens the feed with your due words as blanks"
@@ -317,7 +323,7 @@ export function WordDetailSheet({
           onClose={() => setHearing(null)}
           onReview={() => {
             onClose();
-            onReview();
+            onReview(shown, hearing?.videoId);
           }}
         />
       </View>

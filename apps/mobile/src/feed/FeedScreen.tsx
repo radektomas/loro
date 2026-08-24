@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { orderVideosForLevel } from '@loro/core/feedOrder';
@@ -38,6 +38,11 @@ import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
 import { RecallHost, useRecallReplay } from './RecallHost';
+import {
+  consumeReviewTarget,
+  subscribeToReviewTarget,
+  type ReviewTarget,
+} from './reviewTarget';
 import { SEEK_BACK_PAD_S } from './recall';
 import { SessionSavePrompt } from './SessionSavePrompt';
 import { currentCueStart } from './subtitles';
@@ -392,6 +397,7 @@ function FeedBody({
   onAreaLayout: (event: LayoutChangeEvent) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const listRef = useRef<FlashListRef<EmbedVideo>>(null);
   /**
    * A SWIPE IS IN FLIGHT — finger down OR still settling. Both halves matter,
    * and the second one is what this used to get wrong.
@@ -430,6 +436,49 @@ function FeedBody({
   // conditionally on pageHeight, and a hook called inside that branch would run
   // on some renders and not others — "rendered more hooks than during the
   // previous render", thrown the moment the layout lands.
+  /**
+   * JUMP TO THE VIDEO THE WORDS TAB ASKED FOR.
+   *
+   * Tapping "Review in the feed" on a word used to switch tabs and nothing
+   * more, landing the user on whatever slide the feed happened to be showing —
+   * which reads as the button having done nothing. The request names a video
+   * that speaks the word; this finds it and scrolls there.
+   *
+   * Guarded on `videos` because a request can arrive before the catalog does
+   * (a cold start straight into Words). It is re-run when the list changes, so
+   * a target parked against an empty feed is honoured the moment the feed
+   * fills; consumeReviewTarget then clears it so it cannot fire twice.
+   */
+  const jumpTo = useCallback(
+    (target: ReviewTarget) => {
+      const index = videos.findIndex((v) => v.id === target.videoId);
+      if (index < 0) {
+        // The video is not in this feed (denied, pruned, or a starter word
+        // with no clip). Switching tabs is all that was promised.
+        feedLog(`review target "${target.word}" -> video ${target.videoId} not in feed`);
+        return false;
+      }
+      feedLog(`review target "${target.word}" -> index ${index}`);
+      setActiveIndex(index);
+      // viewOffset 0 with viewPosition 0 puts the slide flush at the top, the
+      // same resting place a swipe leaves it in.
+      listRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0 });
+      return true;
+    },
+    [videos]
+  );
+
+  useEffect(() => {
+    const parked = consumeReviewTarget();
+    if (parked && !jumpTo(parked)) {
+      // Nothing to jump to; drop it rather than leaving it to fire later.
+    }
+    return subscribeToReviewTarget((target) => {
+      consumeReviewTarget();
+      jumpTo(target);
+    });
+  }, [jumpTo]);
+
   const onViewableItemsChanged = useStableViewability(setActiveIndex);
 
   const swipe = useSwipeLifecycle(setDragging);
@@ -499,6 +548,7 @@ function FeedBody({
         >
           {pageHeight > 0 && (
             <FlashList
+              ref={listRef}
               data={videos}
               keyExtractor={(video) => video.id}
               extraData={activeIndex}

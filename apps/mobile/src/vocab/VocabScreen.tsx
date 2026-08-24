@@ -11,7 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, MAX_BOX } from '@loro/core/srs';
+import { getCatalog } from '@loro/core/catalog';
+import { findWordOccurrences } from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
+import { requestReviewTarget } from '../feed/reviewTarget';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordDetailSheet } from './WordDetailSheet';
 
@@ -272,6 +275,32 @@ export function VocabScreen({
 
   const openDetail = (word: SavedWord) => setDetail(word);
 
+  /**
+   * REVIEW ONE SPECIFIC WORD — the Words tab pointing the feed at something,
+   * which it could not do before.
+   *
+   * Two things have to be true or the button lies. The word must be DUE, or
+   * computeBlankPlan will not blank it and the feed is just a video
+   * (storage.reviewNow, which explains why bringing it forward is honest); and
+   * the feed must land on a video that actually SPEAKS it, which is what the
+   * occurrence scan answers. Preference goes to the video the word was saved
+   * from — it is the sentence the user already has a memory of — falling back
+   * to any other clip that says it.
+   *
+   * If nothing in the catalog speaks it (a starter-deck word with no clip),
+   * this degrades to the old behaviour: arm recall, switch tabs.
+   */
+  const reviewWord = (word: SavedWord, preferVideoId?: string) => {
+    storage.reviewNow(word.text, word.videoId);
+    const occurrences = findWordOccurrences(getCatalog(), word.text);
+    const target =
+      occurrences.find((o) => o.videoId === preferVideoId && o.youtubeId) ??
+      occurrences.find((o) => o.videoId === word.videoId && o.youtubeId) ??
+      occurrences.find((o) => o.youtubeId);
+    if (target) requestReviewTarget({ videoId: target.videoId, word: word.text });
+    startReview();
+  };
+
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -371,7 +400,7 @@ export function VocabScreen({
         word={detail}
         onClose={() => setDetail(null)}
         onRemove={handleRemove}
-        onReview={startReview}
+        onReview={reviewWord}
       />
     </View>
   );

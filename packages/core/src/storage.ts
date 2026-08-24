@@ -1056,6 +1056,44 @@ export const storage = {
   },
 
   /** Apply a review result (typed recall) to a word and persist it. */
+  /**
+   * "Practise this one now" — bring a saved word forward so it is due.
+   *
+   * WHY THIS IS NOT CHEATING THE SCHEDULE: the SRS decides when a word is
+   * WORTH reviewing on its own; this is the user overriding that with an
+   * explicit request, which is a different input. The grade that follows
+   * reschedules from the word's real box as usual, so one early review costs
+   * nothing — the ladder is unchanged, it just gets climbed a little sooner.
+   *
+   * It exists because "Review this word" has to actually produce a blank.
+   * Without it the feed jumps to the right video and then plans nothing,
+   * because computeBlankPlan only ever blanks DUE words — the user would tap
+   * Review and watch a video, which is the same "nothing happened" bug in a
+   * different costume.
+   *
+   * The one gate it does NOT lift is MIN_AGE_MS: a word saved in the last
+   * minute still will not blank. Left deliberately — that gate stops a word
+   * being blanked in the very clip it was just saved from, and a user who
+   * saves a word and immediately asks to review it gets it a minute later
+   * rather than an echo of the sentence still on screen.
+   */
+  reviewNow(text: string, videoId: string): { ok: boolean } {
+    const words = storage.getSavedWords();
+    const target = words.find((w) => w.text === text && w.videoId === videoId);
+    if (!target) return { ok: false };
+    const now = Date.now();
+    if (target.dueAt <= now) return { ok: true }; // already due
+    const next = words.map((w) =>
+      w === target ? { ...w, dueAt: now } : w
+    );
+    const ok = writeJSON(KEYS.savedWords, next);
+    if (ok) {
+      emitWordsChanged();
+      enqueue('upsert', target.text, target.videoId);
+    }
+    return { ok };
+  },
+
   gradeWord(
     text: string,
     videoId: string,
