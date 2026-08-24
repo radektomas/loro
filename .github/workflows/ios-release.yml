@@ -1,0 +1,88 @@
+# Build the iOS app on GitHub's Mac, not on EAS's.
+#
+# WHY THIS EXISTS. EAS's free plan allows 15 iOS builds a month and they were
+# spent; the alternative was paying, waiting for the reset, or installing 15GB
+# of Xcode locally. None of those were necessary: this repository is public, so
+# GitHub's macOS runners are free and unmetered, and they ship with Xcode,
+# CocoaPods and fastlane already on them.
+#
+# ⚠️ `eas build --local` IS THE WHOLE TRICK. It compiles on THIS runner rather
+# than on EAS's build servers, so it does not consume the account's build quota.
+# EAS is still contacted, but only for the two things that are free: the signing
+# certificate and provisioning profile, and the remote build number.
+#
+# RUN IT BY HAND, from the Actions tab — a release is a decision, not something
+# that should happen because someone pushed.
+
+name: iOS release build
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: 'Upload to App Store Connect when the build succeeds'
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    # A cold React Native compile is 25-40 minutes; the default 360 is plenty,
+    # but a hung build should not sit there burning an hour.
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@v4
+
+      - name: Node 24, matching the local toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install workspace dependencies
+        # The mobile app resolves @loro/core through the workspace, so the
+        # install has to happen at the repository root.
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build the .ipa on this runner
+        working-directory: apps/mobile
+        env:
+          # A personal access token from expo.dev/settings/access-tokens,
+          # stored as a repository secret. It is what lets a machine with no
+          # browser fetch the signing credentials.
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build \
+            --platform ios \
+            --profile production \
+            --local \
+            --non-interactive \
+            --output "$RUNNER_TEMP/loro.ipa"
+
+      - name: Keep the .ipa whatever happens next
+        # Uploaded BEFORE the submit step so that a failed upload to Apple
+        # still leaves a downloadable artifact rather than a wasted build.
+        uses: actions/upload-artifact@v4
+        with:
+          name: loro-ios-ipa
+          path: ${{ runner.temp }}/loro.ipa
+          retention-days: 14
+
+      - name: Upload to App Store Connect
+        if: ${{ inputs.submit }}
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        # The App Store Connect API key already lives on EAS's servers — the
+        # same one that submitted build 5 — so this needs no Apple secrets here.
+        run: |
+          eas submit \
+            --platform ios \
+            --profile production \
+            --path "$RUNNER_TEMP/loro.ipa" \
+            --non-interactive
