@@ -26,7 +26,6 @@ import {
 import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { storage } from '@loro/core/storage';
 import { getExplanations } from '../platform/explanations';
-import { HearItModal } from './HearItModal';
 
 /**
  * The word-detail sheet on the Words tab — tap a row, get everything the app
@@ -80,6 +79,7 @@ export function WordDetailSheet({
   onClose,
   onRemove,
   onReview,
+  onHear,
 }: {
   word: SavedWord | null;
   onClose: () => void;
@@ -89,17 +89,23 @@ export function WordDetailSheet({
    * Arm a review session and switch to the feed. The word is passed
    * explicitly rather than read from state: onClose() runs first and clears
    * it, so depending on the closure would work only by batching luck.
-   * `preferVideoId` names the clip to land on when the caller has one — the
-   * hear-it modal passes the video the user just listened to.
    */
-  onReview: (word: SavedWord, preferVideoId?: string) => void;
+  onReview: (word: SavedWord) => void;
+  /**
+   * Open the hear-it player. THE MODAL IS NOT RENDERED HERE — it is a sibling
+   * of this sheet on the Words screen. Nesting one RN <Modal> inside another
+   * left the inner one presented after the outer was dismissed, and an
+   * orphaned native modal window swallows every touch: the Words list came
+   * back looking frozen. The screen owns both, so neither can outlive the
+   * other.
+   */
+  onHear: (occurrence: WordOccurrence, video: Video) => void;
 }) {
   const insets = useSafeAreaInsets();
 
   const [explanations, setExplanations] =
     useState<ReadonlyMap<string, WordExplanation> | null>(null);
   const [loadingExplanations, setLoadingExplanations] = useState(false);
-  const [hearing, setHearing] = useState<WordOccurrence | null>(null);
 
   // Lazy-load on first open of ANY word — one fetch/parse per process, then
   // every later open is a map lookup.
@@ -290,7 +296,18 @@ export function WordDetailSheet({
               ones. */}
           {derived?.hearOccurrence && (
             <Pressable
-              onPress={() => setHearing(derived.hearOccurrence)}
+              onPress={() => {
+                const occ = derived.hearOccurrence;
+                const clip = occ
+                  ? (derived.catalog.find((v) => v.id === occ.videoId) ?? null)
+                  : null;
+                if (!occ || !clip) return;
+                // Deliberately does NOT close this sheet. Dismissing one modal
+                // while presenting another in the same commit is the racy
+                // pattern; the player presents ABOVE the sheet, and closing it
+                // returns here — which is also where the user wants to be.
+                onHear(occ, clip);
+              }}
               accessibilityRole="button"
               accessibilityHint="Opens a video where this word is spoken"
               style={({ pressed }) => [styles.hearButton, pressed && styles.pressed]}
@@ -311,21 +328,6 @@ export function WordDetailSheet({
           </Pressable>
         </View>
 
-        {/* Nested inside this Modal's hierarchy so iOS stacks them cleanly. */}
-        <HearItModal
-          occurrence={hearing}
-          word={shown.text}
-          video={
-            hearing
-              ? (derived?.catalog.find((v) => v.id === hearing.videoId) ?? null)
-              : null
-          }
-          onClose={() => setHearing(null)}
-          onReview={() => {
-            onClose();
-            onReview(shown, hearing?.videoId);
-          }}
-        />
       </View>
     </Modal>
   );

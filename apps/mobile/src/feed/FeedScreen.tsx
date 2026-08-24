@@ -439,45 +439,51 @@ function FeedBody({
   /**
    * JUMP TO THE VIDEO THE WORDS TAB ASKED FOR.
    *
-   * Tapping "Review in the feed" on a word used to switch tabs and nothing
-   * more, landing the user on whatever slide the feed happened to be showing —
-   * which reads as the button having done nothing. The request names a video
-   * that speaks the word; this finds it and scrolls there.
+   * ⚠️ THE SCROLL MUST WAIT UNTIL THIS TAB IS VISIBLE, and getting that wrong
+   * is why the first version silently did nothing. Shell keeps every tab
+   * mounted and hides the inactive ones with `display:'none'`, which takes
+   * them OUT OF LAYOUT — so at the moment Words makes the request this list
+   * has no geometry and scrollToIndex is a no-op. setActiveIndex still
+   * applied, so the player dutifully loaded the target video while the list
+   * stayed parked on a different slide: the user landed on "a random word"
+   * with the wrong slide under them.
    *
-   * Guarded on `videos` because a request can arrive before the catalog does
-   * (a cold start straight into Words). It is re-run when the list changes, so
-   * a target parked against an empty feed is honoured the moment the feed
-   * fills; consumeReviewTarget then clears it so it cannot fire twice.
+   * So the request is PARKED here and acted on only once `active` and a
+   * measured `pageHeight` say the list can actually move. The rAF is the last
+   * hop: `active` flips in the same commit that un-hides the view, and the
+   * native list needs that frame to have laid out before it will honour an
+   * offset.
    */
-  const jumpTo = useCallback(
-    (target: ReviewTarget) => {
-      const index = videos.findIndex((v) => v.id === target.videoId);
-      if (index < 0) {
-        // The video is not in this feed (denied, pruned, or a starter word
-        // with no clip). Switching tabs is all that was promised.
-        feedLog(`review target "${target.word}" -> video ${target.videoId} not in feed`);
-        return false;
-      }
-      feedLog(`review target "${target.word}" -> index ${index}`);
-      setActiveIndex(index);
-      // viewOffset 0 with viewPosition 0 puts the slide flush at the top, the
-      // same resting place a swipe leaves it in.
-      listRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0 });
-      return true;
-    },
-    [videos]
+  const [pendingTarget, setPendingTarget] = useState<ReviewTarget | null>(() =>
+    consumeReviewTarget()
+  );
+
+  useEffect(
+    () =>
+      subscribeToReviewTarget((target) => {
+        consumeReviewTarget(); // taken; it must not fire again on remount
+        setPendingTarget(target);
+      }),
+    []
   );
 
   useEffect(() => {
-    const parked = consumeReviewTarget();
-    if (parked && !jumpTo(parked)) {
-      // Nothing to jump to; drop it rather than leaving it to fire later.
+    if (!pendingTarget || !active || pageHeight <= 0 || videos.length === 0) return;
+    const index = videos.findIndex((v) => v.id === pendingTarget.videoId);
+    setPendingTarget(null);
+    if (index < 0) {
+      // Not in this feed (denied, pruned, or a starter word with no clip).
+      // Switching tabs is all that was promised.
+      feedLog(`review target "${pendingTarget.word}": ${pendingTarget.videoId} not in feed`);
+      return;
     }
-    return subscribeToReviewTarget((target) => {
-      consumeReviewTarget();
-      jumpTo(target);
+    feedLog(`review target "${pendingTarget.word}" -> index ${index}`);
+    setActiveIndex(index);
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index, animated: false });
     });
-  }, [jumpTo]);
+    return () => cancelAnimationFrame(frame);
+  }, [pendingTarget, active, pageHeight, videos]);
 
   const onViewableItemsChanged = useStableViewability(setActiveIndex);
 

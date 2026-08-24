@@ -8,14 +8,15 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SavedWord, WordState } from '@loro/core/types';
+import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { getCatalog } from '@loro/core/catalog';
-import { findWordOccurrences } from '@loro/core/occurrences';
+import { findWordOccurrences, type WordOccurrence } from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
 import { requestReviewTarget } from '../feed/reviewTarget';
 import { SavePromptCard } from '../auth/SavePromptCard';
+import { HearItModal } from './HearItModal';
 import { WordDetailSheet } from './WordDetailSheet';
 
 /**
@@ -191,6 +192,18 @@ export function VocabScreen({
   const [query, setQuery] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [detail, setDetail] = useState<SavedWord | null>(null);
+  /**
+   * The hear-it player, owned HERE rather than inside the sheet. Two RN
+   * <Modal>s must not nest: the inner one stayed presented after the outer was
+   * dismissed, and an orphaned native modal window swallows every touch — the
+   * Words list came back frozen. As siblings, closing one cannot strand the
+   * other. Carries the word it was opened for, since the sheet is gone by then.
+   */
+  const [hearing, setHearing] = useState<{
+    occurrence: WordOccurrence;
+    video: Video;
+    word: SavedWord;
+  } | null>(null);
 
   /**
    * Live in both directions: onWordsChanged catches saves and grades from the
@@ -209,6 +222,22 @@ export function VocabScreen({
       clearInterval(tick);
       unsub();
     };
+  }, [active]);
+
+  /**
+   * NOTHING THIS SCREEN PRESENTS MAY OUTLIVE A TAB SWITCH.
+   *
+   * An RN <Modal> is its own native window and does not care that the React
+   * view behind it went `display:'none'`. Leaving one up while the user walks
+   * to the feed is how the Words tab came back "frozen": an invisible window
+   * still on top, swallowing every touch. Reviewing a word navigates away by
+   * design, so this is the one guard that covers every path out — including
+   * ones added later that forget to tidy up.
+   */
+  useEffect(() => {
+    if (active) return;
+    setDetail(null);
+    setHearing(null);
   }, [active]);
 
   const filtered = useMemo(() => {
@@ -401,6 +430,26 @@ export function VocabScreen({
         onClose={() => setDetail(null)}
         onRemove={handleRemove}
         onReview={reviewWord}
+        onHear={(occurrence, video) => {
+          if (detail) setHearing({ occurrence, video, word: detail });
+        }}
+      />
+
+      <HearItModal
+        occurrence={hearing?.occurrence ?? null}
+        word={hearing?.word.text ?? ''}
+        video={hearing?.video ?? null}
+        onClose={() => setHearing(null)}
+        onReview={() => {
+          const current = hearing;
+          // Both surfaces come down: the player, and the sheet still open
+          // underneath it. The tab-change guard above would catch a miss here,
+          // but a modal should be dismissed by the path that knows about it.
+          setHearing(null);
+          setDetail(null);
+          // Land on the clip they just listened to, not a different one.
+          if (current) reviewWord(current.word, current.occurrence.videoId);
+        }}
       />
     </View>
   );
