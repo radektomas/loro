@@ -98,6 +98,19 @@ function feedLog(message: string): void {
   console.log(`[loro:feed] ${message}`);
 }
 
+/**
+ * Said once per launch, the first time a hidden tab reports a zero layout.
+ * Kept because it is the evidence for the guards below rather than a hunch —
+ * if this never prints, the platform stopped doing it and the guards are
+ * merely harmless.
+ */
+let hiddenLayoutNoted = false;
+function noteHiddenLayout(): void {
+  if (hiddenLayoutNoted) return;
+  hiddenLayoutNoted = true;
+  feedLog('ignoring 0x0 layout from a hidden tab (keeping the last real one)');
+}
+
 export function FeedScreen({ active }: { active: boolean }) {
   /**
    * The order settled on for THIS mount, or null before anything has settled.
@@ -215,6 +228,23 @@ export function FeedScreen({ active }: { active: boolean }) {
 
   const onAreaLayout = useCallback((event: LayoutChangeEvent) => {
     const { y, width, height } = event.nativeEvent.layout;
+    /**
+     * ⚠️ A HIDDEN TAB MEASURES ZERO, AND ZERO IS NOT A MEASUREMENT.
+     *
+     * Shell hides the inactive tabs with `display:'none'`, which takes them
+     * out of Yoga's layout entirely — so leaving this tab reports 0x0 here.
+     * Accepting it collapsed the player box to nothing and made the WebView
+     * resize to 0x0 and back on every single tab switch, which is most of why
+     * moving between Feed, Words and Progress felt slow.
+     *
+     * The last real measurement is still true: the player area has not
+     * changed size, the tab is simply not on screen. Ignoring the zero keeps
+     * it, and the geometry is ready the instant the tab comes back.
+     */
+    if (width <= 0 || height <= 0) {
+      noteHiddenLayout();
+      return;
+    }
     setArea((prev) =>
       prev && prev.y === y && prev.width === width && prev.height === height
         ? prev
@@ -600,7 +630,15 @@ function FeedBody({
       >
         <View
           style={styles.root}
-          onLayout={(event) => setPageHeight(event.nativeEvent.layout.height)}
+          // Zero means "this tab is hidden", not "the page has no height" —
+          // see onAreaLayout. Accepting it unmounted the whole FlashList
+          // (`pageHeight > 0` below) on every switch away from the feed, and
+          // rebuilt it, cells and all, on every switch back.
+          onLayout={(event) => {
+            const { height } = event.nativeEvent.layout;
+            if (height > 0) setPageHeight(height);
+            else noteHiddenLayout();
+          }}
         >
           {pageHeight > 0 && (
             <FlashList

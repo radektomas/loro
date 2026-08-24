@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { memo, useCallback, useEffect, useState, type ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { subscribeToNotificationRoute } from '../platform/notifications';
@@ -52,12 +52,30 @@ const TABS: {
 const ACTIVE = '#5ee6a8';
 const INACTIVE = 'rgba(242,245,243,0.42)';
 
+/**
+ * ALL THREE TABS RE-RENDER ON EVERY SWITCH, and one of them never needed to.
+ *
+ * Switching sets state HERE, so React re-renders all three children — including
+ * the one whose `active` did not change. Going Feed → Words re-rendered the
+ * whole Progress tree (its stats, its week strip, its per-video rows) for no
+ * reason at all. Memoised, that tab is skipped entirely; the two whose `active`
+ * genuinely flipped still render, as they must.
+ *
+ * This only works because onGoToFeed below is stable — a fresh closure per
+ * render would fail every comparison and quietly undo it.
+ */
+const Feed = memo(FeedScreen);
+const Vocab = memo(VocabScreen);
+const Progress = memo(ProgressScreen);
+
 export function Shell() {
   const [tab, setTab] = useState<TabKey>('feed');
   const insets = useSafeAreaInsets();
   /** Published so the recall answer bar can sit flush on the keyboard — see
       tabBar.tsx for why it cannot just use the raw keyboard height. */
   const [tabBarHeight, setTabBarHeight] = useState(0);
+  /** Stable, so the memoised screens above can actually skip a render. */
+  const goToFeed = useCallback(() => setTab('feed'), []);
 
   /**
    * A TAPPED NOTIFICATION LANDS IN REVIEW, NOT THE FEED.
@@ -94,16 +112,13 @@ export function Shell() {
           would drop that state instead. */}
       <View style={styles.screens}>
         <View style={[styles.screen, tab !== 'feed' && styles.hidden]}>
-          <FeedScreen active={tab === 'feed'} />
+          <Feed active={tab === 'feed'} />
         </View>
         <View style={[styles.screen, tab !== 'vocab' && styles.hidden]}>
-          <VocabScreen active={tab === 'vocab'} onGoToFeed={() => setTab('feed')} />
+          <Vocab active={tab === 'vocab'} onGoToFeed={goToFeed} />
         </View>
         <View style={[styles.screen, tab !== 'progress' && styles.hidden]}>
-          <ProgressScreen
-            active={tab === 'progress'}
-            onGoToFeed={() => setTab('feed')}
-          />
+          <Progress active={tab === 'progress'} onGoToFeed={goToFeed} />
         </View>
       </View>
 

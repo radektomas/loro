@@ -434,12 +434,15 @@ export function ProgressScreen({
       setRecallDays(storage.getCorrectRecallDays());
       setLevelState(storage.getLevelState());
     };
-    refresh();
-    setNow(Date.now());
     // onWordsChanged covers saved words, the watch log, recall days and the
     // level meter — core lists all four as its watched keys (storage.ts).
     const unsub = storage.onWordsChanged(refresh);
     if (!active) return unsub;
+    // Re-read on the way IN only. Leaving the tab used to re-read and
+    // re-render a screen that was about to be hidden; the subscription
+    // above keeps it current while it is.
+    refresh();
+    setNow(Date.now());
     const tick = setInterval(() => setNow(Date.now()), 60_000);
     return () => {
       clearInterval(tick);
