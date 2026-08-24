@@ -82,8 +82,16 @@ export type PlayerClock = {
 };
 
 export type PlayerApi = {
-  /** Swap the video on the persistent instance and start it. */
-  loadAndPlay(youtubeId: string): void;
+  /**
+   * Swap the video on the persistent instance and start it.
+   *
+   * `startSeconds` opens the video AT a moment rather than at its beginning —
+   * loadVideoById takes a start time, so a targeted review lands on its word
+   * instead of playing the first minute and then jumping. Passing it also
+   * defeats the same-id early return, because "the same video, from a
+   * different second" is a real request.
+   */
+  loadAndPlay(youtubeId: string, startSeconds?: number): void;
   play(): void;
   pause(): void;
   togglePlay(): void;
@@ -342,13 +350,15 @@ export function PlayerHost({ children }: { children: ReactNode }) {
 
   const api = useMemo<PlayerApi>(
     () => ({
-      loadAndPlay(youtubeId: string) {
-        if (requestedIdRef.current === youtubeId) return;
+      loadAndPlay(youtubeId: string, startSeconds?: number) {
+        if (requestedIdRef.current === youtubeId && startSeconds === undefined) return;
         requestedIdRef.current = youtubeId;
+        const start = startSeconds !== undefined && startSeconds > 0 ? startSeconds : 0;
         // Reset the RN model too: the outgoing video's anchor must not drive
         // the incoming slide's karaoke for the moments before the first new
-        // anchor arrives.
-        anchorTime.value = 0;
+        // anchor arrives. Seeded with the start time rather than 0, so the
+        // karaoke opens on the right line instead of the video's first.
+        anchorTime.value = start;
         anchorAt.value = Date.now();
         isPlaying.value = false;
         setStatus((s) => ({
@@ -365,7 +375,7 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           // the moment it takes the page to report the new list from PLAYING.
           availableRates: null,
         }));
-        send({ cmd: 'load', videoId: youtubeId, andPlay: true });
+        send({ cmd: 'load', videoId: youtubeId, andPlay: true, start });
       },
       play() {
         send({ cmd: 'play' });

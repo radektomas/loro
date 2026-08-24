@@ -143,31 +143,49 @@ describe('pickReviewTarget', () => {
     saved(w, 'full', { box: 0 })
   );
 
-  it('skips a video whose blank plan is already full', () => {
+  it('lands on the saved-from video even when its plan is full', () => {
+    // The asked-for word is exempt from the caps, so a crowded video is no
+    // longer a reason to send the user somewhere else.
     assert.deepEqual(
       pickReviewTarget([full, clear], target, [...crowd, target], { now: NOW }),
-      { videoId: 'clear', willBlank: true }
+      { videoId: 'full', cueIndex: 6, startsAt: 6, willBlank: true }
     );
   });
 
-  it('prefers the caller’s clip when the word blanks there', () => {
-    assert.deepEqual(
-      pickReviewTarget([full, clear], target, [target], {
-        now: NOW,
-        preferVideoId: 'clear',
-      }),
-      { videoId: 'clear', willBlank: true }
-    );
+  it('reports the cue and second the plan settled on', () => {
+    const landing = pickReviewTarget([full, clear], target, [target], {
+      now: NOW,
+      preferVideoId: 'clear',
+    });
+    // 'perro' is the second word of clear's only cue: start 0 + 1 * 0.5.
+    assert.deepEqual(landing, {
+      videoId: 'clear',
+      cueIndex: 0,
+      startsAt: 0.5,
+      willBlank: true,
+    });
   });
 
   it('names a video anyway when nothing would blank the word', () => {
-    // Saved ten seconds ago: inside the plan's one-minute grace, so no video
-    // can blank it yet. The jump is still better than landing nowhere.
-    const fresh = saved('perro', 'full', { savedAt: NOW - 10_000 });
-    assert.deepEqual(pickReviewTarget([full, clear], fresh, [fresh], { now: NOW }), {
+    // Not due for another hour: no video can blank it, and the caller still
+    // gets somewhere honest to land.
+    const later = saved('perro', 'full', { dueAt: NOW + 60 * 60 * 1000 });
+    assert.deepEqual(pickReviewTarget([full, clear], later, [later], { now: NOW }), {
       videoId: 'full',
+      cueIndex: 6,
+      startsAt: 6,
       willBlank: false,
     });
+  });
+
+  it('a word saved seconds ago is still asked for by name', () => {
+    // computeBlankPlan's one-minute grace does not apply to the word the user
+    // explicitly asked to review.
+    const fresh = saved('perro', 'clear', { savedAt: NOW - 10_000 });
+    assert.equal(
+      pickReviewTarget([clear], fresh, [fresh], { now: NOW })?.willBlank,
+      true
+    );
   });
 
   it('returns null when no embeddable video speaks the word', () => {

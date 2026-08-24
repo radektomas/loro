@@ -79,26 +79,41 @@ export function pickReplayOccurrence(
   return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
 }
 
+/** Where a "review this word" tap should drop the user. */
+export type ReviewLanding = {
+  videoId: string;
+  /** The cue that will carry the blank. */
+  cueIndex: number;
+  /** Seconds — where the blanked word starts, so the feed can lead into it. */
+  startsAt: number;
+  /** False when nothing in the catalog would blank the word right now. */
+  willBlank: boolean;
+};
+
 /**
  * WHERE TO SEND THE FEED so that "review this word" is not a lie.
  *
  * Landing on a video that merely SPEAKS the word is not enough, and that gap
  * is what made a targeted review still feel random. The feed only asks what
  * computeBlankPlan chooses, and the plan has caps: five blanks per video, one
- * per cue, at most one inside the first two cues, and nothing saved in the
- * last minute. A word whose cue sits behind five more urgent ones is spoken on
- * screen and never asked — which from the sofa is indistinguishable from being
- * dropped on a random clip.
+ * per cue, at most one inside the first two cues. A word whose cue sits behind
+ * five more urgent ones is spoken on screen and never asked — and even when it
+ * is asked, a plan built from the top of the video walks the user through
+ * everyone else's blanks on the way to theirs.
  *
- * So every candidate is checked by running the REAL plan against it, and the
- * first video that would actually blank this word wins. Preference order is
- * the caller's clip (the one just heard) → the video the word was saved from →
- * catalog order.
+ * Both are the plan's own business to fix, which is what computeBlankPlan's
+ * `first` option does: the asked-for word is placed at its earliest audible
+ * cue, exempt from the caps, with nothing blanked before it. This function's
+ * job is narrower — pick the video, and report the exact cue and second the
+ * plan settled on so the caller can open the video AT the word rather than at
+ * its beginning.
  *
- * `willBlank: false` is an honest outcome, not a failure: nothing in the
- * catalog would blank the word right now (its minute-old grace period, or five
- * more urgent words everywhere it appears), and the caller is landing on the
- * best clip available anyway. Worth logging; not worth hiding.
+ * Preference order: the caller's clip (the one just heard) → the video the
+ * word was saved from → catalog order.
+ *
+ * `willBlank: false` is an honest outcome, not a failure: the word is not due,
+ * or nothing embeddable says it audibly, and the caller is landing on the best
+ * clip available anyway. Worth logging; not worth hiding.
  *
  * Only embeddable videos are candidates — the feed is embeds-only.
  */
@@ -107,7 +122,7 @@ export function pickReviewTarget(
   word: SavedWord,
   allWords: SavedWord[],
   opts: { preferVideoId?: string; now?: number } = {}
-): { videoId: string; willBlank: boolean } | null {
+): ReviewLanding | null {
   const now = opts.now ?? Date.now();
   // The plan matches cue words through normalizeAnswer, so the check has to
   // ask the same question the feed will ask.
@@ -128,16 +143,39 @@ export function pickReviewTarget(
   for (const occurrence of occurrences) order.push(occurrence.videoId);
 
   const seen = new Set<string>();
-  let fallback: string | null = null;
+  let fallback: ReviewLanding | null = null;
   for (const videoId of order) {
     if (seen.has(videoId)) continue;
     seen.add(videoId);
     const video = videos.find((v) => v.id === videoId);
     if (!video) continue;
-    if (fallback === null) fallback = videoId;
-    for (const planned of computeBlankPlan(video, allWords, now).values()) {
-      if (normalizeAnswer(planned.text) === wanted) return { videoId, willBlank: true };
+    if (fallback === null) {
+      const occurrence = occurrences.find((o) => o.videoId === videoId);
+      if (occurrence) {
+        fallback = {
+          videoId,
+          cueIndex: occurrence.cueIndex,
+          startsAt: occurrence.start,
+          willBlank: false,
+        };
+      }
+    }
+    const plan = computeBlankPlan(video, allWords, now, { first: word.text });
+    for (const [cueIndex, planned] of plan) {
+      if (normalizeAnswer(planned.text) !== wanted) continue;
+      // The plan matches accent-INSENSITIVELY, so read the second back off the
+      // cue the same way: this is where the blank will be, which is the only
+      // place worth opening the video at.
+      const spoken = video.cues[cueIndex].words.find(
+        (w) => normalizeAnswer(w.text) === wanted
+      );
+      return {
+        videoId,
+        cueIndex,
+        startsAt: spoken ? spoken.start : video.cues[cueIndex].start,
+        willBlank: true,
+      };
     }
   }
-  return fallback === null ? null : { videoId: fallback, willBlank: false };
+  return fallback;
 }

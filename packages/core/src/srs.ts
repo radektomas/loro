@@ -157,6 +157,36 @@ function moreUrgent(a: SavedWord, b: SavedWord | undefined): boolean {
 }
 
 /**
+ * The asked-for word's saved record and its earliest audible cue in this
+ * video — null if the video never says it, or if the word is not due.
+ */
+function locateAsked(
+  video: Video,
+  allWords: SavedWord[],
+  text: string,
+  now: number
+): { cueIndex: number; word: SavedWord; key: string } | null {
+  const key = normalizeAnswer(text);
+  if (!key) return null;
+  let word: SavedWord | undefined;
+  for (const w of allWords) {
+    // Due-ness still applies; MIN_AGE_MS deliberately does not — see the note
+    // on opts.first below.
+    if (w.dueAt > now) continue;
+    if (normalizeAnswer(w.text) !== key) continue;
+    if (moreUrgent(w, word)) word = w;
+  }
+  if (!word) return null;
+  for (let ci = 0; ci < video.cues.length; ci++) {
+    for (const spoken of video.cues[ci].words) {
+      if (spoken.end - spoken.start <= MIN_AUDIBLE_S) continue;
+      if (normalizeAnswer(spoken.text) === key) return { cueIndex: ci, word, key };
+    }
+  }
+  return null;
+}
+
+/**
  * Decide which cue positions of `video` become blanks right now.
  * Returns cueIndex -> the word to blank. Rules:
  *  - only due words (dueAt <= now) saved at least 1 minute ago
@@ -167,6 +197,17 @@ function moreUrgent(a: SavedWord, b: SavedWord | undefined): boolean {
  *  - at most one blank within the first two cues
  *  - at most five blanks per video
  * Words not chosen simply stay due for a later video.
+ *
+ * `opts.first` NAMES THE WORD THE USER ASKED TO REVIEW, and it changes the
+ * shape of the plan rather than just its contents: that word is placed at its
+ * earliest audible cue, exempt from every cap, and NOTHING BEFORE IT IS
+ * BLANKED. Both halves are the point. Without the exemption a word can be
+ * spoken on screen and never asked, because five more urgent words got there
+ * first; without the truncation the user tapped "review THIS word" and then
+ * had to answer three other people's words before reaching it. It must still
+ * be DUE — a graded word does not come back because the feed once jumped here
+ * — but the one-minute grace after saving is waived, since asking for a word
+ * by name is a louder signal than the clock.
  *
  * WHY REVIEW IS CROSS-VIDEO. This used to require `w.videoId === video.id`,
  * which quietly disabled spaced repetition: the feed is a finite list that
@@ -187,7 +228,8 @@ function moreUrgent(a: SavedWord, b: SavedWord | undefined): boolean {
 export function computeBlankPlan(
   video: Video,
   allWords: SavedWord[],
-  now: number = Date.now()
+  now: number = Date.now(),
+  opts: { first?: string } = {}
 ): Map<number, SavedWord> {
   // The most urgent due review per distinct word. Saving the same word from
   // two videos creates two entries (storage keys on text+videoId); they are
@@ -199,13 +241,24 @@ export function computeBlankPlan(
     if (!key) continue;
     if (moreUrgent(w, dueByText.get(key))) dueByText.set(key, w);
   }
-  if (dueByText.size === 0) return new Map();
+  const asked = opts.first ? locateAsked(video, allWords, opts.first, now) : null;
+  if (dueByText.size === 0 && !asked) return new Map();
 
   const plan = new Map<number, SavedWord>();
   const used = new Set<string>();
   let inFirstTwo = 0;
 
-  for (let ci = 0; ci < video.cues.length; ci++) {
+  // The asked-for word goes in first and decides where the rest of the plan
+  // starts, so it is the first blank the user meets.
+  let from = 0;
+  if (asked) {
+    plan.set(asked.cueIndex, asked.word);
+    used.add(asked.key);
+    if (asked.cueIndex < 2) inFirstTwo++;
+    from = asked.cueIndex + 1;
+  }
+
+  for (let ci = from; ci < video.cues.length; ci++) {
     if (plan.size >= MAX_BLANKS_PER_VIDEO) break;
     if (ci < 2 && inFirstTwo >= MAX_BLANKS_IN_FIRST_TWO_CUES) continue;
 

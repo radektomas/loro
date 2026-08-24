@@ -79,6 +79,14 @@ const VISIBLE_PERCENT = 60;
 /** Every embed is 9:16. */
 const PLAYER_ASPECT = 9 / 16;
 
+/**
+ * How much speech to hear before the word a review jumped to. The same three
+ * seconds the Words screen's hear-it player uses, and for the same reason:
+ * a word arriving cold is a quiz question, a word arriving in a sentence is a
+ * memory.
+ */
+const REVIEW_LEAD_IN_S = 3;
+
 /** How often an EMPTY feed re-asks for the catalog — see the retry effect in
     FeedScreen. */
 const EMPTY_RETRY_MS = 10_000;
@@ -487,6 +495,16 @@ function FeedBody({
     []
   );
 
+  /**
+   * THE LANDING, once it has been acted on — the word this feed was pointed
+   * at and where it is spoken. It outlives the jump because two things need it
+   * afterwards: the player opens the video a beat before that second, and the
+   * blank plan is told to put that word first (RecallHost focusWord). Both
+   * stop applying the moment the user swipes to another video, which is what
+   * comparing against the active slide's id does for free.
+   */
+  const [landing, setLanding] = useState<ReviewTarget | null>(null);
+
   useEffect(() => {
     if (!pendingTarget || !active || pageHeight <= 0 || videos.length === 0) return;
     const index = videos.findIndex((v) => v.id === pendingTarget.videoId);
@@ -497,8 +515,14 @@ function FeedBody({
       feedLog(`review target "${pendingTarget.word}": ${pendingTarget.videoId} not in feed`);
       return;
     }
-    if (index === activeIndex) return; // already there — no remount needed
-    feedLog(`review target "${pendingTarget.word}" -> index ${index}`);
+    feedLog(
+      `review target "${pendingTarget.word}" -> index ${index} ` +
+        `@${pendingTarget.startsAt.toFixed(1)}s`
+    );
+    // Recorded even when the slide is already the right one: the seek and the
+    // blank plan still have work to do.
+    setLanding(pendingTarget);
+    if (index === activeIndex) return; // already here — no remount needed
     jumpTargetRef.current = index;
     setActiveIndex(index);
     setListGeneration((generation) => generation + 1);
@@ -586,6 +610,11 @@ function FeedBody({
       <RecallHost
         video={active ? activeVideo : null}
         language={language}
+        focusWord={
+          landing && activeVideo && landing.videoId === activeVideo.id
+            ? landing.word
+            : null
+        }
         onObscurePlayer={setPlayerObscured}
       >
         <View
@@ -648,7 +677,7 @@ function FeedBody({
             />
           )}
 
-          <PlayerDriver video={activeVideo} />
+          <PlayerDriver video={activeVideo} landing={landing} />
           <WordSheet
             data={sheet}
             language={language}
@@ -772,15 +801,38 @@ function useStableViewability(setActiveIndex: (index: number) => void) {
  * Points the persistent player at the active slide's video. Renders nothing —
  * it is the analogue of the web slide's "drive the one shared player" effect,
  * lifted out of the slide because on RN the player is not inside the list.
+ *
+ * A LANDING ALSO SAYS *WHEN*. "Review this word" used to drop the user at the
+ * top of a video and leave them to sit through it — the word they asked for
+ * arriving a minute later, behind everybody else's. The lead-in belongs to the
+ * LOAD rather than to a seek after it: loadVideoById takes a start time, so
+ * the video opens on the word instead of playing its first seconds and then
+ * jumping. Applied ONCE per landing (appliedRef): returning to this slide
+ * later is an ordinary watch, and should start where an ordinary watch starts.
  */
-function PlayerDriver({ video }: { video: EmbedVideo | null }) {
+function PlayerDriver({
+  video,
+  landing,
+}: {
+  video: EmbedVideo | null;
+  landing: ReviewTarget | null;
+}) {
   const api = usePlayerApi();
   const status = usePlayerStatus();
+  const appliedRef = useRef<ReviewTarget | null>(null);
 
   useEffect(() => {
     if (!video || !status.ready) return;
-    api.loadAndPlay(video.youtubeId);
-  }, [video, status.ready, api]);
+    const opening =
+      landing && landing.videoId === video.id && appliedRef.current !== landing
+        ? landing
+        : null;
+    if (opening) appliedRef.current = opening;
+    api.loadAndPlay(
+      video.youtubeId,
+      opening ? Math.max(0, opening.startsAt - REVIEW_LEAD_IN_S) : undefined
+    );
+  }, [video, status.ready, api, landing]);
 
   return null;
 }

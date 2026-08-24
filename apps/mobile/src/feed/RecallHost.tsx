@@ -153,6 +153,7 @@ export function useRecallReplay(): { replay: () => void; held: boolean } {
 export function RecallHost({
   video,
   language,
+  focusWord,
   onObscurePlayer,
   children,
 }: {
@@ -162,6 +163,15 @@ export function RecallHost({
       needs it to resolve one (levels.ts glossText). Recall blanks carry a
       translation already saved with the word and do not need it. */
   language: string;
+  /**
+   * The word this feed was pointed at from the Words tab, when the active
+   * slide is the one it was pointed at. Handed straight to core as the plan's
+   * `first`: that word is blanked at its earliest cue, exempt from the caps,
+   * and nothing before it is blanked at all. Without it, "review THIS word"
+   * lands the user in a video that asks four other words first — or, if the
+   * caps were already spent, never asks theirs at all.
+   */
+  focusWord: string | null;
   /**
    * Raised while the answer bar would otherwise sit over the player area — see
    * HIDE_PLAYER_WHILE_TYPING for the geometry that forces this. The feed
@@ -282,7 +292,7 @@ export function RecallHost({
     // the ordering is load-bearing, not incidental (Feed.tsx:563-565: "recall
     // of the user's own saved words always wins a collision").
     const recallEntries = recallActive
-      ? buildRecallPlan(video, saved, Date.now())
+      ? buildRecallPlan(video, saved, Date.now(), focusWord)
       : [];
     if (recallEntries.length > 0) {
       flog(
@@ -307,8 +317,10 @@ export function RecallHost({
     // recallActive is listed even though `armed` already folds it in: with
     // LEVELS_ENABLED on, `armed` is true either way, so arming recall
     // mid-session would not otherwise replan the slide already on screen and
-    // the user would see nothing until the next swipe.
-  }, [armed, recallActive, video, language]);
+    // the user would see nothing until the next swipe. focusWord for the same
+    // class of reason: the jump can land on the slide already on screen, and
+    // that plan has to be rebuilt around the word that was asked for.
+  }, [armed, recallActive, video, language, focusWord]);
 
   /**
    * A new plan resets every scrap of local recall state — the web does the

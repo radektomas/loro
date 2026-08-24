@@ -374,7 +374,11 @@ export function VocabScreen({
     for (const word of due) {
       const target = pickReviewTarget(getCatalog(), word, all, { now: at });
       if (target?.willBlank) {
-        requestReviewTarget({ videoId: target.videoId, word: word.text });
+        requestReviewTarget({
+          videoId: target.videoId,
+          word: word.text,
+          startsAt: target.startsAt,
+        });
         break;
       }
     }
@@ -409,7 +413,13 @@ export function VocabScreen({
     const target = pickReviewTarget(getCatalog(), word, storage.getSavedWords(), {
       preferVideoId,
     });
-    if (target) requestReviewTarget({ videoId: target.videoId, word: word.text });
+    if (target) {
+      requestReviewTarget({
+        videoId: target.videoId,
+        word: word.text,
+        startsAt: target.startsAt,
+      });
+    }
     goToFeedForReview();
   };
 

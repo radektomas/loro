@@ -424,7 +424,11 @@ const PAGE_TEMPLATE = `<!doctype html>
       // Reset the model exactly as the web adapter does: the old video's
       // samples say nothing about the new one, and leaving them would let the
       // outgoing clock drive the incoming slide's highlighting.
-      anchorTime = 0; anchorAt = now(); lastRaw = -1; pendingSeek = null;
+      // A load may name a START — a targeted review opens on its word rather
+      // than at the top of the video. The anchor is seeded with it so the
+      // karaoke does not spend the first frames highlighting line one.
+      var startAt = (typeof c.start === 'number' && isFinite(c.start) && c.start > 0) ? c.start : 0;
+      anchorTime = startAt; anchorAt = now(); lastRaw = -1; pendingSeek = null;
       // A new video gets a fresh re-assert budget: the standing rate has to be
       // put back once per load, and a refusal by the LAST video must not spend
       // this one's allowance.
@@ -433,11 +437,18 @@ const PAGE_TEMPLATE = `<!doctype html>
       if (c.andPlay) {
         desiredPlay = true;
         armPlay(c.id, playerReady ? PLAY_TIMEOUT_MS : BOOT_TIMEOUT_MS);
-        if (playerReady) player.loadVideoById(c.videoId);
-        else pendingLoad = c;
+        // Zero means "no start given" and is passed as an ABSENT argument, not
+        // as 0: every ordinary swipe comes through here, and the shape of that
+        // call stays exactly what it has always been.
+        if (playerReady) {
+          if (startAt > 0) player.loadVideoById(c.videoId, startAt);
+          else player.loadVideoById(c.videoId);
+        } else pendingLoad = c;
       } else {
-        if (playerReady) player.cueVideoById(c.videoId);
-        else pendingLoad = c;
+        if (playerReady) {
+          if (startAt > 0) player.cueVideoById(c.videoId, startAt);
+          else player.cueVideoById(c.videoId);
+        } else pendingLoad = c;
       }
     } else if (c.cmd === 'seek') {
       var sw = NaN;
@@ -566,8 +577,14 @@ const PAGE_TEMPLATE = `<!doctype html>
           postRates();
           if (pendingLoad) {
             var c = pendingLoad; pendingLoad = null;
-            if (c.andPlay) player.loadVideoById(c.videoId);
-            else player.cueVideoById(c.videoId);
+            var deferredStart = (typeof c.start === 'number' && isFinite(c.start) && c.start > 0) ? c.start : 0;
+            if (c.andPlay) {
+              if (deferredStart > 0) player.loadVideoById(c.videoId, deferredStart);
+              else player.loadVideoById(c.videoId);
+            } else {
+              if (deferredStart > 0) player.cueVideoById(c.videoId, deferredStart);
+              else player.cueVideoById(c.videoId);
+            }
             if (pendingPlay) { clearTimeout(pendingPlay.timer); armPlay(pendingPlay.id, PLAY_TIMEOUT_MS); }
           } else if (desiredPlay) {
             player.playVideo();

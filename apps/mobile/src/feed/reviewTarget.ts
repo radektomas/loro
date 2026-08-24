@@ -23,8 +23,18 @@ export type ReviewTarget = {
   /** The video to scroll to — one that SPEAKS the word, not necessarily the
       one the word was saved from (recall is cross-video). */
   videoId: string;
-  /** For logging, and so the feed can say what it jumped for. */
+  /**
+   * The word being reviewed. Not just for logging: the feed hands it to
+   * computeBlankPlan as `first`, which is what guarantees it is the blank the
+   * user meets rather than one of five somewhere in the middle.
+   */
   word: string;
+  /**
+   * Seconds — where that word is spoken. The feed opens the video a beat
+   * before this instead of at the top, because a review that starts with two
+   * minutes of unrelated video is not a review.
+   */
+  startsAt: number;
 };
 
 let parked: ReviewTarget | null = null;

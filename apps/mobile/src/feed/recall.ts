@@ -231,10 +231,14 @@ const MAX_TRACKABLE_BLANKS = 31;
 export function buildRecallPlan(
   video: Video,
   words: SavedWord[],
-  now: number
+  now: number,
+  /** The word a targeted review asked for — core places it first. */
+  first?: string | null
 ): BlankEntry[] {
   const entries: BlankEntry[] = [];
-  for (const [cueIndex, word] of computeBlankPlan(video, words, now)) {
+  for (const [cueIndex, word] of computeBlankPlan(video, words, now, {
+    first: first ?? undefined,
+  })) {
     const at = locateBlank(video.cues[cueIndex], word.text);
     if (!at) continue;
     entries.push({ kind: 'recall', cueIndex, word, ...at });

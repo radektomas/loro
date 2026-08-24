@@ -167,6 +167,64 @@ describe('computeBlankPlan — pacing', () => {
   });
 });
 
+describe('computeBlankPlan — the asked-for word', () => {
+  const crowd = ['uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis'];
+  /** Six due words ahead of the asked-for one, all more urgent (box 0). */
+  const busy = () => [
+    ...crowd.map((w) => saved(w, 'a', { box: 0 })),
+    saved('perro', 'a'),
+  ];
+  const clip = () =>
+    video('v', [...crowd.map((w) => [w]), ['perro'], ['siete']]);
+
+  it('places it first and blanks nothing before it', () => {
+    const plan = computeBlankPlan(clip(), busy(), NOW, { first: 'perro' });
+    assert.equal(Math.min(...plan.keys()), 6);
+    assert.equal(plan.get(6)!.text, 'perro');
+  });
+
+  it('is exempt from the five-blank cap that would have dropped it', () => {
+    // Without `first`, six more urgent words fill the plan and 'perro' — the
+    // word the user asked for — is spoken on screen and never asked.
+    const without = computeBlankPlan(clip(), busy(), NOW);
+    assert.equal([...without.values()].some((w) => w.text === 'perro'), false);
+  });
+
+  it('still blanks what comes AFTER it, so the feed carries on', () => {
+    const plan = computeBlankPlan(
+      clip(),
+      [...busy(), saved('siete', 'a')],
+      NOW,
+      { first: 'perro' }
+    );
+    assert.deepEqual([...plan.keys()], [6, 7]);
+  });
+
+  it('waives the one-minute grace but not due-ness', () => {
+    const fresh = saved('perro', 'a', { savedAt: NOW - 10_000 });
+    const clipB = video('v', [['perro']]);
+    assert.equal(
+      computeBlankPlan(clipB, [fresh], NOW, { first: 'perro' }).get(0)!.text,
+      'perro'
+    );
+    const later = saved('perro', 'a', { dueAt: NOW + 60 * MIN });
+    assert.equal(
+      computeBlankPlan(clipB, [later], NOW, { first: 'perro' }).size,
+      0
+    );
+  });
+
+  it('is ignored by a video that never says it', () => {
+    const plan = computeBlankPlan(
+      video('v', [['hola'], ['vamos']]),
+      [saved('vamos', 'a'), saved('perro', 'a')],
+      NOW,
+      { first: 'perro' }
+    );
+    assert.deepEqual([...plan.keys()], [1]);
+  });
+});
+
 describe('normalizeAnswer / grade', () => {
   it('compares accents and punctuation loosely', () => {
     assert.equal(normalizeAnswer('¡Están!'), normalizeAnswer('estan'));
