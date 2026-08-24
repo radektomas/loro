@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
-import { orderVideosForLevel } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import { refreshCatalog } from '../platform/catalog';
 import {
@@ -332,52 +331,34 @@ function shuffled(list: EmbedVideo[]): EmbedVideo[] {
 }
 
 /**
- * The feed's order for this session.
+ * The feed's order for this session: A STRAIGHT SHUFFLE, every launch.
  *
- * TWO PATHS, AND THE ONLY THING THAT PICKS BETWEEN THEM IS whether
- * getStartLevel() has an answer. It returns a Level or null (storage.ts:
- * 1411-1416), and null is not a degenerate case to paper over: it means this
- * device has never completed calibration. Two kinds of user land there — anyone
- * who skipped onboarding before the grid, and anyone grandfathered past the
- * gate by isOnboarded()'s "has saved words or watched videos" clause.
+ * WHAT THIS USED TO DO, and why it changed. The order was core's
+ * orderVideosForLevel — unwatched videos first, then sorted by distance from
+ * the calibrated CEFR band, shuffled only WITHIN those ties. It was random on
+ * paper and predictable in the hand: with most of the catalog at one level and
+ * unwatched, the buckets are lopsided, so the same pool kept surfacing at the
+ * top and the feed felt like it opened in the same place every time.
  *
- *   level known    orderVideosForLevel: unseen first, then closest to the
- *                  calibrated CEFR band, shuffled within ties. The web's exact
- *                  call and guard (Feed.tsx:98-103).
- *   level null     a plain shuffle. NOT source order, which is what this used
- *                  to be and is why the feed opened identically every launch.
- *                  Guessing a level instead would be worse than not knowing
- *                  one: it would quietly bury content for a user we have no
- *                  reading on.
+ * A flat shuffle is the most different-every-time this can be, which is what
+ * was asked for. Two things are knowingly given up:
+ *
+ *   LEVEL MATCHING. A beginner can now open on a B2 clip. The level meter and
+ *   the near-miss tier still adapt, but the FEED no longer leans toward the
+ *   calibrated band at all.
+ *   UNSEEN-FIRST. Already-watched videos can appear anywhere, including first.
+ *
+ * Both are one call away if the feed starts feeling wrong — the core function
+ * is untouched and still ordered the web's feed the old way. This is a mobile
+ * decision only.
  *
  * Nothing here is persisted, deliberately. A fresh order per session is the
  * point, and feedOrder.ts says so in its own header — a remembered shuffle
  * reproduces the "same videos every time" complaint one step later.
- *
- * WATCHED IDS ARE READ HERE, at order time, so they are a snapshot of the
- * session start. markWatched fires as slides activate, and re-reading it per
- * change is what makes the append below place new arrivals against current
- * watch state rather than against boot's.
  */
 function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
-  const level = storage.getStartLevel();
-  if (!level) {
-    if (list.length > 0) feedLog(`order: no startLevel, shuffling ${list.length}`);
-    return shuffled(list);
-  }
-  const watchedIds = new Set(storage.getWatchedVideoIds());
-  if (list.length > 0) {
-    feedLog(
-      `order: startLevel=${level}, ${list.length} videos, ${watchedIds.size} watched`
-    );
-  }
-  /**
-   * orderVideosForLevel is declared over Video and REORDERS ONLY — it never
-   * constructs an element — so every member of the result is one of the
-   * EmbedVideo values passed in. The assertion restores what the signature
-   * widens; it is not hiding a shape difference.
-   */
-  return orderVideosForLevel(list, level, { watchedIds }) as EmbedVideo[];
+  if (list.length > 0) feedLog(`order: shuffling ${list.length}`);
+  return shuffled(list);
 }
 
 function embedsFrom(catalog: Video[]): EmbedVideo[] {
