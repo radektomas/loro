@@ -79,11 +79,14 @@ export function WordDetailSheet({
   word,
   onClose,
   onRemove,
+  onReview,
 }: {
   word: SavedWord | null;
   onClose: () => void;
   /** Called after the user confirms removal; the caller owns the storage call. */
   onRemove: (word: SavedWord) => void;
+  /** Arm a review session and switch to the feed. The sheet closes first. */
+  onReview: () => void;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -261,10 +264,24 @@ export function WordDetailSheet({
         </ScrollView>
 
         <View style={styles.footer}>
-          {/* F5 — jump to a random video that speaks this word. Hidden, not
-              disabled, when there is nowhere to jump: 67% of words occur in
-              exactly one video, and a dead button teaches people to stop
-              pressing live ones. */}
+          {/* The primary action: practise it. Recall is what the app is FOR,
+              so it leads — hearing the word is the warm-up, not the goal. */}
+          <Pressable
+            onPress={() => {
+              onClose();
+              onReview();
+            }}
+            accessibilityRole="button"
+            accessibilityHint="Opens the feed with your due words as blanks"
+            style={({ pressed }) => [styles.reviewButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.reviewLabel}>Review in the feed</Text>
+          </Pressable>
+
+          {/* Jump to a video that speaks this word. Hidden, not disabled, when
+              there is nowhere to jump: 67% of words occur in exactly one
+              video, and a dead button teaches people to stop pressing live
+              ones. */}
           {derived?.hearOccurrence && (
             <Pressable
               onPress={() => setHearing(derived.hearOccurrence)}
@@ -298,6 +315,10 @@ export function WordDetailSheet({
               : null
           }
           onClose={() => setHearing(null)}
+          onReview={() => {
+            onClose();
+            onReview();
+          }}
         />
       </View>
     </Modal>
@@ -386,7 +407,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   explainLoading: { alignItems: 'flex-start', marginTop: 16 },
-  hearButton: {
+  reviewButton: {
     alignItems: 'center',
     backgroundColor: '#5ee6a8',
     borderRadius: 16,
@@ -394,7 +415,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 14,
   },
-  hearLabel: { color: '#06130d', fontSize: 16, fontWeight: '700' },
+  reviewLabel: { color: '#06130d', fontSize: 16, fontWeight: '800' },
+  hearButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.10)',
+    borderRadius: 16,
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingVertical: 13,
+  },
+  hearLabel: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
   removeButton: { alignItems: 'center', marginTop: 6, paddingVertical: 12 },
   removeLabel: { color: 'rgba(248,113,113,0.85)', fontSize: 13, fontWeight: '600' },
   pressed: { opacity: 0.7 },

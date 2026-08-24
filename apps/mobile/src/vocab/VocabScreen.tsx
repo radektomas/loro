@@ -371,6 +371,7 @@ export function VocabScreen({
         word={detail}
         onClose={() => setDetail(null)}
         onRemove={handleRemove}
+        onReview={startReview}
       />
     </View>
   );
