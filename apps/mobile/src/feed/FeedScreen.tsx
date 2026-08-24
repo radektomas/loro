@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -459,6 +459,17 @@ function FeedBody({
    * sheet down with it mid-swipe.
    */
   const [sheet, setSheet] = useState<WordSheetData | null>(null);
+  /**
+   * Stable, and that is the whole point of it taking the video as an argument.
+   * As an inline closure per slide it changed identity on every render of this
+   * component, which defeated Slide's memo and re-rendered every mounted cell
+   * on a tab switch — the cells were the last big cost in that switch.
+   */
+  const handleWordTap = useCallback(
+    (video: EmbedVideo, word: Word, cueIndex: number) =>
+      setSheet({ video, word, cueIndex }),
+    []
+  );
 
   // Read once per mount, exactly as the web's Feed does: /profile is a separate
   // screen, so returning here remounts with the new value.
@@ -615,11 +626,15 @@ function FeedBody({
     <>
       {/* CHECKPOINT F. Wraps the list because every slide's Karaoke reads the
           plan. It only ever sees the ACTIVE video — there is one session, not
-          one per slide. `active` disarms the hold entirely off-tab: without it
-          the frame callback would keep firing pause/seek at a hidden player and
-          could engage a hold on a screen the user cannot see. */}
+          one per slide. `active` disarms the HOLD off-tab: without it the frame
+          callback would keep firing pause/seek at a hidden player and could
+          engage a hold on a screen the user cannot see. It deliberately does
+          NOT hide the video from the host: nulling it used to throw the plan
+          away on every tab switch and rebuild it on the way back, which is
+          work nobody asked for — see RecallHost's `planned` vs `armed`. */}
       <RecallHost
-        video={active ? activeVideo : null}
+        video={activeVideo}
+        active={active}
         language={language}
         focusWord={
           landing && activeVideo && landing.videoId === activeVideo.id
@@ -666,9 +681,7 @@ function FeedBody({
                   isActive={active && index === activeIndex}
                   box={box}
                   language={language}
-                  onWordTap={(word, cueIndex) =>
-                    setSheet({ video: item, word, cueIndex })
-                  }
+                  onWordTap={handleWordTap}
                   onAreaLayout={index === 0 ? onAreaLayout : undefined}
                 />
               )}
@@ -856,7 +869,17 @@ function PlayerDriver({
   return null;
 }
 
-function Slide({
+/**
+ * MEMOISED, AND EVERY PROP IT TAKES IS STABLE SO THAT MEANS SOMETHING.
+ *
+ * FlashList rebuilds its renderItem closure on every render of the list's
+ * owner, so a tab switch re-rendered every mounted cell — each one a poster,
+ * an attribution line, a band and a full karaoke track. Only `isActive` truly
+ * changes on a switch, and only for one cell; with the callbacks hoisted
+ * (handleWordTap, onAreaLayout) and `box` memoised, that is now the only cell
+ * React touches.
+ */
+const Slide = memo(function Slide({
   video,
   height,
   isActive,
@@ -870,7 +893,8 @@ function Slide({
   isActive: boolean;
   box: Omit<PlayerBox, 'visible'> | null;
   language: string;
-  onWordTap: (word: Word, cueIndex: number) => void;
+  /** Takes the video so the feed can hold ONE handler for every slide. */
+  onWordTap: (video: EmbedVideo, word: Word, cueIndex: number) => void;
   onAreaLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -898,6 +922,12 @@ function Slide({
   useEffect(() => {
     if (isActive) storage.markWatched(video.id);
   }, [isActive, video.id]);
+
+  /** Stable for as long as this cell shows this video — see Karaoke's memo. */
+  const tapWord = useCallback(
+    (word: Word, cueIndex: number) => onWordTap(video, word, cueIndex),
+    [onWordTap, video]
+  );
 
   return (
     <View style={[styles.slide, { height }]}>
@@ -1028,12 +1058,12 @@ function Slide({
           language={language}
           active={isActive && ownsMedia}
           videoKey={video.id}
-          onWordTap={onWordTap}
+          onWordTap={tapWord}
         />
       </View>
     </View>
   );
-}
+});
 
 /**
  * The muted/unmuted indicator, and a deliberate toggle.

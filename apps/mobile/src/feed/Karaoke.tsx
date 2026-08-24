@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -50,7 +50,15 @@ import { buildCueSpans, cueIndexAt, wordIndexAt } from './subtitles';
  * the plan says the visible cue has one. The frame callback below is untouched,
  * and the blank slot re-renders on keystroke while the highlight never does.
  */
-export function Karaoke({
+/**
+ * MEMOISED because its parent re-renders for reasons that are none of its
+ * business. Slide subscribes to the player's status — playing, muted, rate,
+ * loaded id — and every one of those re-rendered this track and its per-word
+ * animated nodes. All five props below are stable while a cue is on screen,
+ * which is the promise this component already made; the memo is what finally
+ * keeps it.
+ */
+export const Karaoke = memo(function Karaoke({
   cues,
   language,
   active,
@@ -283,7 +291,7 @@ export function Karaoke({
       )}
     </View>
   );
-}
+});
 
 /**
  * One word. Its highlight is an animated style reading a shared value, so the

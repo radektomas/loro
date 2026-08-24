@@ -152,13 +152,16 @@ export function useRecallReplay(): { replay: () => void; held: boolean } {
 
 export function RecallHost({
   video,
+  active,
   language,
   focusWord,
   onObscurePlayer,
   children,
 }: {
-  /** The ACTIVE slide's video, or null. */
+  /** The ACTIVE slide's video, or null. Not gated on the tab — see `planned`. */
   video: (Video & { youtubeId: string }) | null;
+  /** Is the feed the visible tab? Gates the hold, never the plan. */
+  active: boolean;
   /** Gloss language for level blanks — their prompt IS the gloss, so core
       needs it to resolve one (levels.ts glossText). Recall blanks carry a
       translation already saved with the word and do not need it. */
@@ -200,19 +203,27 @@ export function RecallHost({
   /**
    * The analogue of the web's `active` (Feed.tsx:567-586), which there is
    * `isActive && ownsMedia`: this host only ever sees the active video, so
-   * "active" is just "the player is actually holding it". Planning against a
+   * "owns" is just "the player is actually holding it". Planning against a
    * video the player has not loaded would arm a hold against another video's
    * clock.
    *
-   * `video` is also null whenever the feed is not the visible tab (FeedScreen
-   * passes it through the tab-active gate), so this one check disarms the hold
-   * off-tab as well as between slides: no frame callback, no pause/seek fired
-   * at a hidden player, no hold engaged on a screen nobody is looking at.
+   * ⚠️ TWO GATES, NOT ONE, AND THE SPLIT IS A PERFORMANCE FIX. Leaving the
+   * feed tab used to null the video, which cleared the plan, which nulled the
+   * view context, which re-rendered every mounted karaoke track — twice per
+   * round trip, plus a full replan on the way back. None of that work was
+   * needed: the player still holds the same video and the plan is still true;
+   * the user just went to look at their words.
+   *
+   *   planned   there is a plan worth drawing. Survives a tab switch.
+   *   armed     the hold may act — pause, seek, grade. Tab-gated, so nothing
+   *             fires at a player nobody is looking at.
+   *
+   * Either feature plans; both can be on at once and the merged plan carries
+   * both kinds.
    */
   const owns = Boolean(video) && status.loadedVideoId === video?.youtubeId;
-  // Either feature arms the hold; both can be on at once and the merged plan
-  // carries both kinds.
-  const armed = (recallActive || LEVELS_ENABLED) && owns && video !== null;
+  const planned = (recallActive || LEVELS_ENABLED) && owns && video !== null;
+  const armed = planned && active;
 
   const [plan, setPlan] = useState(EMPTY_PLAN);
   const [results, setResults] = useState<Map<number, AnswerMatch>>(new Map());
@@ -270,6 +281,47 @@ export function RecallHost({
   entriesRef.current = plan.entries;
 
   /**
+   * A CHANGE MADE SOMEWHERE ELSE, brought in at the only safe moment.
+   *
+   * The plan deliberately does not track the saved words: replanning on every
+   * grade would wipe the results of the session in progress. But words DO
+   * change while this tab is hidden — the Words tab grades a flashcard, or a
+   * word is removed — and a plan that came back stale would ask for a word the
+   * user has just answered somewhere else.
+   *
+   * So a change made while hidden only sets a flag, and the flag is spent when
+   * the tab comes back. Nothing changed while away is the common case, and it
+   * costs nothing.
+   */
+  const [staleVersion, setStaleVersion] = useState(0);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const staleRef = useRef(false);
+  useEffect(
+    () =>
+      storage.onWordsChanged(() => {
+        if (!activeRef.current) staleRef.current = true;
+      }),
+    []
+  );
+  useEffect(() => {
+    if (!active || !staleRef.current) return;
+    staleRef.current = false;
+    flog('words changed while the feed was hidden — replanning');
+    setStaleVersion((version) => version + 1);
+  }, [active]);
+
+  /**
+   * THE KEYBOARD IS NOT PART OF THIS TAB, so it cannot be left behind on the
+   * way out. Everything else about a held blank survives the trip — the pause
+   * point, the typed text, the bar — and the user comes back to exactly the
+   * blank they left. Only the keyboard would have hung over the Words list.
+   */
+  useEffect(() => {
+    if (!active) Keyboard.dismiss();
+  }, [active]);
+
+  /**
    * Plan when the slide takes the screen — the analogue of Feed.tsx:567-586.
    * Graded words get a future dueAt, so a replan never repeats them.
    *
@@ -278,7 +330,7 @@ export function RecallHost({
    * synchronous (MMKV), which is the property platform.ts insists on.
    */
   useEffect(() => {
-    if (!armed || !video) {
+    if (!planned || !video) {
       setPlan(EMPTY_PLAN);
       return;
     }
@@ -314,13 +366,17 @@ export function RecallHost({
       : [];
 
     setPlan(mergeBlankPlans(levelEntries, recallEntries));
-    // recallActive is listed even though `armed` already folds it in: with
-    // LEVELS_ENABLED on, `armed` is true either way, so arming recall
+    // recallActive is listed even though `planned` already folds it in: with
+    // LEVELS_ENABLED on, `planned` is true either way, so arming recall
     // mid-session would not otherwise replan the slide already on screen and
     // the user would see nothing until the next swipe. focusWord for the same
     // class of reason: the jump can land on the slide already on screen, and
     // that plan has to be rebuilt around the word that was asked for.
-  }, [armed, recallActive, video, language, focusWord]);
+    //
+    // The saved words are deliberately NOT a dependency — replanning on every
+    // grade would wipe the results of the session in progress. staleVersion is
+    // how a change made on ANOTHER tab gets in; see below.
+  }, [planned, recallActive, video, language, focusWord, staleVersion]);
 
   /**
    * A new plan resets every scrap of local recall state — the web does the
@@ -747,11 +803,11 @@ export function RecallHost({
   }, [api, video, heldSv, lastActionAt, measuredSv, replayingSv]);
 
   const view = useMemo<RecallView | null>(() => {
-    if (!armed || !video || plan.entries.length === 0) return null;
+    if (!planned || !video || plan.entries.length === 0) return null;
     const byCue = new Map<number, BlankEntry>();
     for (const entry of plan.entries) byCue.set(entry.cueIndex, entry);
     return { videoKey: video.id, byCue, results };
-  }, [armed, video, plan, results]);
+  }, [planned, video, plan, results]);
 
   const entry = heldIndex >= 0 ? (plan.entries[heldIndex] ?? null) : null;
 
