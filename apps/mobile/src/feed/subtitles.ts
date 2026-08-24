@@ -86,6 +86,21 @@ export function cueIndexAt(spans: CueSpans, t: number, hint: number): number {
   return -1;
 }
 
+/**
+ * The start of the line the clock is "in" at time `t`: the active cue, or —
+ * between cues — the one that just finished. Null before the first cue, when
+ * there is nothing behind the playhead to replay. Plain JS (not a worklet):
+ * its caller is a press handler, a once-per-tap read, not a per-frame one.
+ */
+export function currentCueStart(cues: Cue[], t: number): number | null {
+  let start: number | null = null;
+  for (const cue of cues) {
+    if (cue.start > t) break;
+    start = cue.start;
+  }
+  return start;
+}
+
 /** Which word within `cueIndex` is being spoken at `t`, or -1. Worklet. */
 export function wordIndexAt(spans: CueSpans, cueIndex: number, t: number): number {
   'worklet';

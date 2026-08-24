@@ -66,9 +66,10 @@ export function Shell() {
    * three sibling tabs behind a useState, so "route to review" is the same pair
    * of calls the Review buttons in Progress and Words already make.
    *
-   * enableRecallForSession IS NOT OPTIONAL. RECALL_ENABLED is false, so without
-   * arming, the tap lands on a feed that will never blank a due word and the
-   * notification would be a lie (see the note in recall.ts).
+   * enableRecallForSession is kept as the declared entry point into a review
+   * session. With RECALL_ENABLED now true the arm is a no-op behaviourally
+   * (see the note in recall.ts), but the call stays so this route reads the
+   * same as the Review buttons in Progress and Words.
    *
    * COLD START IS HANDLED BY SUBSCRIBING, not by a second code path.
    * subscribeToNotificationRoute drains a route parked before anything mounted,

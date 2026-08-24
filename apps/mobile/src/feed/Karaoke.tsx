@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { Cue, Word } from '@loro/core/types';
 import { tierFor } from '@loro/core/levels';
-import { normalizeAnswer } from '@loro/core/srs';
+import { normalizeAnswer, type AnswerMatch } from '@loro/core/srs';
 import { usePlayerClock } from '../player/PlayerHost';
 import { useRecallAnswer, useRecallView } from './RecallHost';
 import {
@@ -161,7 +161,7 @@ export function Karaoke({
    * mounts already showing a graded cue must not read as a new answer. So the
    * first observation only records, never celebrates.
    */
-  const previousResult = useRef<'correct' | 'wrong' | null | undefined>(undefined);
+  const previousResult = useRef<AnswerMatch | null | undefined>(undefined);
   const [celebrating, setCelebrating] = useState(false);
   /**
    * THE TIMER IS A REF, NOT AN EFFECT CLEANUP, and that is a bug fix rather
@@ -476,7 +476,7 @@ function RevealedWord({
   celebrating,
 }: {
   text: string;
-  result: 'correct' | 'wrong';
+  result: AnswerMatch;
   kind: 'recall' | 'level';
   /** Whether the burst should be thrown — owned by Karaoke, see `celebrating`. */
   celebrating: boolean;
@@ -490,13 +490,17 @@ function RevealedWord({
     // globals.css drops .animate-correct/.animate-wrong to `animation: none`
     // under prefers-reduced-motion — the tint alone carries the result.
     if (reduceMotion) return;
-    if (result === 'correct') {
+    if (result !== 'wrong') {
       /**
        * loro-snap, transcribed. The web starts the word at 1.25 and lets it
        * settle THROUGH 1 rather than easing up to it: 1.25 -> 0.96 at 60% ->
        * 1.04 at 80% -> 1. The undershoot is what makes it read as a snap
        * rather than a zoom, and dropping it (this used to be a plain
        * 1.14 -> 1) is most of why the old version felt flat.
+       *
+       * 'almost' — a spelling near-miss that graded as correct — gets the
+       * same snap with a yellow fill: a success beat, not a shake. Only the
+       * feather burst is reserved for the exact answer.
        */
       scale.value = 1.25;
       scale.value = withSequence(
@@ -525,10 +529,13 @@ function RevealedWord({
   const tint =
     result === 'wrong'
       ? styles.revealBad
-      : kind === 'level'
-        ? styles.revealOkLevel
-        : styles.revealOk;
-  const glowColor = kind === 'level' ? LEVEL : ACCENT;
+      : result === 'almost'
+        ? styles.revealAlmost
+        : kind === 'level'
+          ? styles.revealOkLevel
+          : styles.revealOk;
+  const glowColor =
+    result === 'almost' ? ALMOST : kind === 'level' ? LEVEL : ACCENT;
 
   /**
    * TWO BOXES, AND THE OUTER ONE EXISTS ONLY SO THE FEATHERS CAN LEAVE.
@@ -560,6 +567,8 @@ const APPROX_CHAR_PT = 14;
 
 /** Green = your own saved word coming back (SRS recall). */
 const ACCENT = '#5ee6a8';
+/** The near-miss yellow — 'almost right', warmer than the wrong-answer red. */
+const ALMOST = '#f2c14e';
 /** Blue = level practice. `--level` from the web's globals.css:15, unchanged. */
 const LEVEL = '#57b3f2';
 /** The web's placeholder:text-accent/50 and placeholder:text-level/50. */
@@ -655,6 +664,7 @@ const styles = StyleSheet.create({
   },
   revealOk: { color: '#5ee6a8' },
   revealOkLevel: { color: '#57b3f2' },
+  revealAlmost: { color: '#f2c14e' },
   revealBad: { color: '#ff8b7a' },
   translation: {
     marginTop: 8,

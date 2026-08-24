@@ -1,7 +1,12 @@
 import { Vibration } from 'react-native';
 import type { Cue, SavedWord, Video } from '@loro/core/types';
 import type { LevelBlankWord } from '@loro/core/levels';
-import { computeBlankPlan, normalizeAnswer } from '@loro/core/srs';
+import {
+  computeBlankPlan,
+  matchAnswer,
+  normalizeAnswer,
+  type AnswerMatch,
+} from '@loro/core/srs';
 
 /**
  * CHECKPOINT F — in-cue fill-in-the-blank recall. Flags, constants and the
@@ -19,40 +24,24 @@ import { computeBlankPlan, normalizeAnswer } from '@loro/core/srs';
  */
 
 /**
- * THE MASTER SWITCH. False ships checkpoint F dark: no plan is computed, no
- * frame callback runs, no context value is non-null, and the feed behaves
- * exactly as it did at checkpoint E.
- *
- * Flip to true to test on device. It is a plain constant rather than an env
- * var deliberately — a bundle-time EXPO_PUBLIC_* would make "is recall on?"
- * depend on the shell that started Metro, and this needs to be answerable by
- * reading the file.
+ * THE MASTER SWITCH — now TRUE: recall ships. Due-word blanks appear in the
+ * ordinary feed, exactly as on web (computeBlankPlan runs on every slide
+ * activation there, unconditionally). The dark-ship era of this flag is over;
+ * it stays a plain constant rather than an env var for the original reason —
+ * "is recall on?" must be answerable by reading the file.
  */
-export const RECALL_ENABLED = false;
+export const RECALL_ENABLED = true;
 
 /**
- * THE RUNTIME ENABLE, and why it exists at all.
+ * THE RUNTIME ENABLE — now redundant, kept as the explicit entry point.
  *
- * THE WEB HAS NO RECALL GATE. computeBlankPlan runs unconditionally on every
- * slide activation (Feed.tsx:567-586); a due word blanks in any video that
- * speaks it, always. RECALL_ENABLED is this port's own addition for
- * dark-shipping, and left as the only switch it was a bug: it gated the
- * USER-FACING path too, so /vocab's "Review" call to action switched tabs into
- * a feed that would never plan a blank no matter how many words were due.
- *
- * So the effective state is RECALL_ENABLED **or** this session flag. Tapping
- * Review sets it, which makes the CTA a real entry point at production flag
- * values while the compile-time flag keeps its dark-ship job.
- *
- * SESSION-SCOPED, NOT PERSISTED, and deliberately so: tapping Review once
- * should not permanently switch on an unfinished feature, and a fresh launch
- * is a fresh dark ship. It also never turns OFF again — the web has no concept
- * of a review session ending, so an ending condition would be a rule invented
- * here rather than ported.
- *
- * THIS IS TEMPORARY. When recall ships for real, RECALL_ENABLED becomes true,
- * this flag is redundant, and both should be deleted in favour of the web's
- * actual behaviour: always on.
+ * With RECALL_ENABLED true, isRecallActive() is always true and this session
+ * flag decides nothing. It survives because /vocab's "Review" CTA and the
+ * notification tap route still call enableRecallForSession() as their
+ * declared way into a review session; deleting the arm means touching both
+ * call sites for zero behaviour change. Per the original note here, the full
+ * cleanup (delete flag + arm, always-on like the web) is fine to do whenever
+ * those call sites are next edited.
  */
 let recallSessionEnabled = false;
 const recallListeners = new Set<() => void>();
@@ -310,18 +299,27 @@ export function mergeBlankPlans(
 }
 
 /**
- * Grade one typed answer. EXACTLY the web's comparison (SubtitleTrack.tsx:291)
- * — normalizeAnswer on both sides, nothing else. Accent- and case-insensitive,
- * punctuation trimmed at the ends, NO lemma tolerance: "están" answers "estan",
- * but "estar" does not answer "están".
+ * Grade one typed answer — core's matchAnswer: normalizeAnswer on both sides
+ * (accent- and case-insensitive, punctuation trimmed) plus the spelling
+ * near-miss tier ('almost', Levenshtein <=1 at 4-7 letters, <=2 at 8+). NO
+ * lemma tolerance: "están" answers "estan", but "estar" does not.
  *
- * Compared against the SAVED word's text rather than the cue's surface form,
- * which is what the web compares against too. The two are equal after
- * normalisation by construction — computeBlankPlan matched them that way.
+ * Compared against the SAVED word's text rather than the cue's surface form —
+ * the two are equal after normalisation by construction (computeBlankPlan
+ * matched them that way). Downstream grading maps 'almost' to correct; the
+ * three-way value exists for the UI (yellow reveal instead of celebration).
  */
-export function isAnswerCorrect(answer: string, word: { text: string }): boolean {
-  return normalizeAnswer(answer) === normalizeAnswer(word.text);
+export function gradeAnswer(answer: string, word: { text: string }): AnswerMatch {
+  return matchAnswer(answer, word.text);
 }
+
+/**
+ * How far before the cue's start a segment replay seeks. Embed seeks land
+ * within ±0.5s (measured, docs/rn-port-map.md §5e), so aiming exactly at
+ * cue.start risks landing after the first word; a 0.4s pad makes "replay the
+ * line" reliably include the line's first word.
+ */
+export const SEEK_BACK_PAD_S = 0.4;
 
 /**
  * Temporary checkpoint-F instrumentation. Prefixed so it greps out in one pass

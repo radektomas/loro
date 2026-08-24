@@ -51,7 +51,8 @@ import { useTabBarHeight } from '../shell/tabBar';
 export function RecallBar() {
   // keyboardHeight is tracked by the host, not here — the same number decides
   // whether the player has to yield, and one source avoids the two disagreeing.
-  const { entry, keyboardHeight, setAnswer, submit, skip } = useRecallSession();
+  const { entry, keyboardHeight, setAnswer, submit, skip, replay } =
+    useRecallSession();
   const answer = useRecallAnswer();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -109,6 +110,21 @@ export function RecallBar() {
       </Text>
 
       <View style={styles.row}>
+        {/* F3 — hear the line again. Seeks back to the cue's start and plays;
+            the hold re-engages at the word's end on its own, with the typed
+            text intact. Lives HERE because the moment you need to re-hear the
+            sentence is while you are answering it. */}
+        {replay && (
+          <Pressable
+            onPress={replay}
+            accessibilityRole="button"
+            accessibilityLabel="Replay the sentence"
+            hitSlop={6}
+            style={({ pressed }) => [styles.replay, pressed && styles.pressed]}
+          >
+            <Text style={styles.replayText}>↺</Text>
+          </Pressable>
+        )}
         <TextInput
           ref={inputRef}
           value={answer}
@@ -212,6 +228,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 38,
   },
+  replay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.10)',
+    borderRadius: 999,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  replayText: { color: 'rgba(242,245,243,0.75)', fontSize: 18, fontWeight: '700' },
   skipText: { color: 'rgba(242,245,243,0.6)', fontSize: 15, fontWeight: '700' },
   pressed: { opacity: 0.6 },
 });

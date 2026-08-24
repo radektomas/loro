@@ -27,6 +27,7 @@ import { refreshCatalog } from '../platform/catalog';
 import {
   usePlayerApi,
   usePlayerBox,
+  usePlayerClock,
   usePlayerStatus,
   type PlayerBox,
 } from '../player/PlayerHost';
@@ -36,7 +37,10 @@ import { AuthorLine } from './AuthorLine';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
-import { RecallHost } from './RecallHost';
+import { RecallHost, useRecallSession } from './RecallHost';
+import { SEEK_BACK_PAD_S } from './recall';
+import { SessionSavePrompt } from './SessionSavePrompt';
+import { currentCueStart } from './subtitles';
 import { WordSheet, type WordSheetData } from './WordSheet';
 
 /**
@@ -550,6 +554,11 @@ function FeedBody({
               and silent every other time. Last child so it covers the band and
               the answer bar as well as the slide. */}
           <NotificationPrompt onObscurePlayer={setPromptObscured} />
+          {/* Raised by RecallHost after the celebration for the grade that
+              emptied the due queue — and it wins that moment over the
+              notification explainer (see RecallHost's priority note). Same
+              obscure contract, same layering reason. */}
+          <SessionSavePrompt onObscurePlayer={setPromptObscured} />
         </View>
       </RecallHost>
     </>
@@ -828,6 +837,7 @@ function Slide({
           <View style={styles.bandTopLeft}>
             <Text style={styles.level}>{video.level}</Text>
             {isActive && <SpeedControl />}
+            {isActive && <ReplayCueButton cues={video.cues} />}
           </View>
           {isActive && <SoundControl />}
         </View>
@@ -1107,6 +1117,62 @@ function formatRate(rate: number): string {
   return String(Math.round(rate * 100) / 100);
 }
 
+/**
+ * F3 — replay the current line. IT LIVES IN THE BAND, next to the speed
+ * control, never over the player — the same embed-terms rule as its
+ * neighbours.
+ *
+ * Two modes, one button:
+ *
+ *   blank held    defers to the session's replay — the SAME action the button
+ *                 in the answer bar performs, so the hold's own guards (reseat
+ *                 reset, slip-debounce stamp) run. Going around them with a
+ *                 raw seek here would race the hold's re-assert pause and
+ *                 kill the replay dead — measured behaviour, not caution.
+ *   playing       reads the bridge clock once (a per-tap JS-thread read of
+ *                 the shared values, not a per-frame subscription), finds the
+ *                 line the playhead is in — or the one that just finished —
+ *                 and seeks to its start, padded because embed seeks land
+ *                 within ±0.5s.
+ *
+ * Before the first cue there is nothing behind the playhead to replay; the
+ * button still seeks to 0, which restarts the intro — the least surprising
+ * reading of "hear that again".
+ */
+function ReplayCueButton({ cues }: { cues: Video['cues'] }) {
+  const api = usePlayerApi();
+  const { anchorTime, anchorAt, isPlaying, rate } = usePlayerClock();
+  const { replay } = useRecallSession();
+
+  const onPress = useCallback(() => {
+    if (replay) {
+      replay();
+      return;
+    }
+    const t = isPlaying.value
+      ? anchorTime.value + ((Date.now() - anchorAt.value) / 1000) * rate.value
+      : anchorTime.value;
+    const start = currentCueStart(cues, t) ?? 0;
+    api.seek(Math.max(0, start - SEEK_BACK_PAD_S));
+    api.play();
+  }, [replay, cues, api, anchorTime, anchorAt, isPlaying, rate]);
+
+  if (cues.length === 0) return null;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="Replay this line"
+      accessibilityHint="Plays the current sentence again"
+      style={({ pressed }) => [styles.replayCue, pressed && styles.soundPressed]}
+    >
+      <Text style={styles.replayCueText}>↺</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0d0b' },
   emptyRoot: {
@@ -1210,6 +1276,17 @@ const styles = StyleSheet.create({
   },
   soundToggleText: { fontSize: 13 },
   soundPressed: { opacity: 0.7 },
+  /** Quiet, like soundToggle — replay is a convenience, not a call to action. */
+  replayCue: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.10)',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 34,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  replayCueText: { color: 'rgba(242,245,243,0.75)', fontSize: 14, fontWeight: '700' },
   /**
    * THE SPEED CONTROL DOES NOT SHARE THE LEVEL CHIP'S SHAPE, ON PURPOSE.
    *

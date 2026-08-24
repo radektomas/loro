@@ -14,14 +14,17 @@ import { runOnJS, useFrameCallback, useSharedValue } from 'react-native-reanimat
 import type { Video } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { tierFor } from '@loro/core/levels';
+import { dueCount } from '@loro/core/progress';
+import type { AnswerMatch } from '@loro/core/srs';
 import { usePlayerApi, usePlayerClock, usePlayerStatus } from '../player/PlayerHost';
 import { maybeAskForPermission, noteCorrectRecall } from '../platform/notifications';
 import { CELEBRATE_MS } from './Celebration';
 import { LEVELS_ENABLED, buildLevelPlan } from './levelBlanks';
+import { maybeAskToSaveProgress } from './saveProgressAsk';
 import {
   buildRecallPlan,
   mergeBlankPlans,
-  isAnswerCorrect,
+  gradeAnswer,
   flog,
   llog,
   ms,
@@ -35,6 +38,7 @@ import {
   RESEAT_EPSILON_S,
   RESUME_MS_CORRECT,
   RESUME_MS_WRONG,
+  SEEK_BACK_PAD_S,
   type BlankEntry,
 } from './recall';
 
@@ -74,8 +78,10 @@ export type RecallView = {
   videoKey: string;
   /** cueIndex -> the blank planned there. */
   byCue: ReadonlyMap<number, BlankEntry>;
-  /** cueIndex -> outcome, once answered. Drives the reveal styling. */
-  results: ReadonlyMap<number, 'correct' | 'wrong'>;
+  /** cueIndex -> outcome, once answered. Drives the reveal styling —
+      three-way: 'almost' is a spelling near-miss that grades as correct but
+      reveals yellow instead of celebrating. */
+  results: ReadonlyMap<number, AnswerMatch>;
 };
 
 /** What the answer bar needs. */
@@ -87,13 +93,17 @@ export type RecallSession = {
   setAnswer: (text: string) => void;
   submit: () => void;
   skip: () => void;
+  /** Seek back to the held blank's cue start and play — the hold re-engages
+      at the word's end by itself. Null when nothing is held. */
+  replay: (() => void) | null;
 };
 
 /** What the answer layer needs from the host. Deliberately narrow. */
 type RecallGrading = {
   entry: BlankEntry | null;
   keyboardHeight: number;
-  grade: (wasCorrect: boolean) => void;
+  grade: (match: AnswerMatch) => void;
+  replay: () => void;
 };
 
 const ViewContext = createContext<RecallView | null>(null);
@@ -102,6 +112,7 @@ const GradingContext = createContext<RecallGrading>({
   entry: null,
   keyboardHeight: 0,
   grade: () => {},
+  replay: () => {},
 });
 const SessionContext = createContext<RecallSession>({
   entry: null,
@@ -109,6 +120,7 @@ const SessionContext = createContext<RecallSession>({
   setAnswer: () => {},
   submit: () => {},
   skip: () => {},
+  replay: null,
 });
 
 /** The plan for the active video, or null. Consumed by every mounted slide. */
@@ -178,7 +190,7 @@ export function RecallHost({
   const armed = (recallActive || LEVELS_ENABLED) && owns && video !== null;
 
   const [plan, setPlan] = useState(EMPTY_PLAN);
-  const [results, setResults] = useState<Map<number, 'correct' | 'wrong'>>(new Map());
+  const [results, setResults] = useState<Map<number, AnswerMatch>>(new Map());
   const [heldIndex, setHeldIndex] = useState(-1);
 
   /**
@@ -479,14 +491,19 @@ export function RecallHost({
    * Nothing about the schedule is reimplemented here.
    */
   const grade = useCallback(
-    (wasCorrect: boolean) => {
+    (match: AnswerMatch) => {
       const index = heldSv.value;
       const entry = entriesRef.current[index];
       if (!entry) return;
 
+      // 'almost' — a spelling near-miss — GRADES as correct everywhere below
+      // (SRS box, level meter, streak day). The three-way value is the UI's:
+      // the reveal goes yellow and the celebration is reserved for exact.
+      const wasCorrect = match !== 'wrong';
+
       setResults((prev) => {
         const next = new Map(prev);
-        next.set(entry.cueIndex, wasCorrect ? 'correct' : 'wrong');
+        next.set(entry.cueIndex, match);
         return next;
       });
       resolvedMask.value |= 1 << index;
@@ -495,7 +512,8 @@ export function RecallHost({
       Keyboard.dismiss();
 
       // The celebration fires for BOTH kinds on the web — SubtitleTrack's
-      // gradeBlank celebrates on wasCorrect without looking at `kind`.
+      // gradeBlank celebrates on wasCorrect without looking at `kind`. The
+      // haptic rides the SRS outcome (a near-miss is still a success).
       if (wasCorrect) recallHaptic();
 
       if (entry.kind === 'recall') {
@@ -505,7 +523,7 @@ export function RecallHost({
           wasCorrect
         );
         flog(
-          `grade "${entry.word.text}" ${wasCorrect ? 'CORRECT' : 'WRONG'} -> ` +
+          `grade "${entry.word.text}" ${match.toUpperCase()} -> ` +
             (word
               ? `box=${word.box} state=${word.state} due=${new Date(word.dueAt).toISOString()}`
               : 'NOT FOUND (word missing from storage)')
@@ -568,28 +586,79 @@ export function RecallHost({
        *
        * The explainer waits for the celebration to finish, and raises nothing
        * unless this is a moment worth asking in (see maybeAskForPermission).
+       *
+       * SESSION COMPLETION IS DETECTED HERE TOO, and only on a recall grade:
+       * this word was due (it was planned), gradeWord just rescheduled it into
+       * the future, so a due queue at 0 right now means THIS answer emptied it
+       * — the same >0->0 transition storage.gradeWord's own sessions counter
+       * keys on. Level blanks save NEW words with future dueAts and can never
+       * empty the queue. The moment fires whether or not the last answer was
+       * correct — a wrong answer still finishes the session.
+       *
+       * PRIORITY AT THE SHARED CELEBRATION MOMENT: the save-progress card
+       * wins over the notification explainer. It is the rarer ask (anonymous
+       * only, 7-day snooze, gone forever once the vocab prompts resolve) and
+       * it protects data; the explainer's promptedThisSession is not consumed
+       * when it yields, so its next chance survives.
        */
-      if (wasCorrect) {
-        noteCorrectRecall();
+      if (wasCorrect) noteCorrectRecall();
+      const sessionComplete =
+        entry.kind === 'recall' &&
+        dueCount(storage.getSavedWords(), Date.now()) === 0;
+      if (sessionComplete || wasCorrect) {
         if (askTimer.current) clearTimeout(askTimer.current);
         askTimer.current = setTimeout(() => {
           askTimer.current = null;
-          void maybeAskForPermission();
+          void (async () => {
+            const raised = sessionComplete && (await maybeAskToSaveProgress());
+            if (!raised && wasCorrect) await maybeAskForPermission();
+          })();
         }, CELEBRATE_MS);
       }
 
-      // The web's rhythm verbatim: resume quickly on success, leave time to
-      // read the reveal on a miss.
+      // The web's rhythm, with one addition: an exact answer resumes quickly,
+      // while a miss AND a near-miss leave time to read the revealed spelling.
       if (resumeTimer.current) clearTimeout(resumeTimer.current);
       resumeTimer.current = setTimeout(
         () => {
           if (armedRef.current) api.play();
         },
-        wasCorrect ? RESUME_MS_CORRECT : RESUME_MS_WRONG
+        match === 'correct' ? RESUME_MS_CORRECT : RESUME_MS_WRONG
       );
     },
     [api, heldSv, resolvedMask]
   );
+
+  /**
+   * F3 — replay the held blank's line: seek back to the cue's start (padded,
+   * because embed seeks land within ±0.5s) and play. Nothing else to manage:
+   * the hold's own frame callback re-engages when the clock crosses pauseAt
+   * again, exactly as the web documents ("Replay deliberately gets to play
+   * back UP TO the word", SubtitleTrack.tsx:170). Typed text survives because
+   * grading never ran.
+   *
+   * lastActionAt is stamped so the hold's slip branch cannot fire a re-assert
+   * pause during the seek's bridge round trip — the anchor still reads the old
+   * paused position (>= pauseAt) until the seek anchor lands, and without the
+   * stamp that stale read would pause the replay dead. The reseat budget is
+   * reset because this is a fresh approach to the hold point.
+   */
+  const replayHeldBlank = useCallback(() => {
+    const index = heldSv.value;
+    const entry = entriesRef.current[index];
+    const cue = entry ? video?.cues[entry.cueIndex] : undefined;
+    if (!entry || !cue) return;
+    reseatsRef.current = 0;
+    measuredSv.value = 1; // the landing was already measured for this hold
+    lastActionAt.value = Date.now();
+    const target = Math.max(0, cue.start - SEEK_BACK_PAD_S);
+    api.seek(target);
+    api.play();
+    flog(
+      `replay cue=${entry.cueIndex} "${entry.surface}" -> ${target.toFixed(2)}s ` +
+        `(cue.start=${cue.start.toFixed(2)}s, hold re-engages at ${entry.pauseAt.toFixed(2)}s)`
+    );
+  }, [api, video, heldSv, lastActionAt, measuredSv]);
 
   const view = useMemo<RecallView | null>(() => {
     if (!armed || !video || plan.entries.length === 0) return null;
@@ -616,8 +685,8 @@ export function RecallHost({
   useEffect(() => () => onObscurePlayer(false), [onObscurePlayer]);
 
   const grading = useMemo<RecallGrading>(
-    () => ({ entry, keyboardHeight, grade }),
-    [entry, keyboardHeight, grade]
+    () => ({ entry, keyboardHeight, grade, replay: replayHeldBlank }),
+    [entry, keyboardHeight, grade, replayHeldBlank]
   );
 
   return (
@@ -645,7 +714,7 @@ export function RecallHost({
  * identity so no Karaoke re-renders either.
  */
 function AnswerLayer({ children }: { children: ReactNode }) {
-  const { entry, keyboardHeight, grade } = useContext(GradingContext);
+  const { entry, keyboardHeight, grade, replay } = useContext(GradingContext);
   const [answer, setAnswer] = useState('');
 
   // A new blank (or none) starts empty. The web clears for the same reason
@@ -662,16 +731,17 @@ function AnswerLayer({ children }: { children: ReactNode }) {
       setAnswer,
       submit: () => {
         if (!entry || !answer.trim()) return;
-        grade(isAnswerCorrect(answer, entry.word));
+        grade(gradeAnswer(answer, entry.word));
       },
       /** Skip and reveal. Grades WRONG — the web has no neutral outcome
           (SubtitleTrack.tsx:384). */
       skip: () => {
         if (!entry) return;
-        grade(false);
+        grade('wrong');
       },
+      replay: entry ? replay : null,
     }),
-    [entry, keyboardHeight, answer, grade]
+    [entry, keyboardHeight, answer, grade, replay]
   );
 
   return (
