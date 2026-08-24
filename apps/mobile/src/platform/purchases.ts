@@ -1,6 +1,6 @@
 import { Linking } from 'react-native';
 import { useEffect, useState } from 'react';
-import Purchases, { LOG_LEVEL, type CustomerInfo } from 'react-native-purchases';
+import type { CustomerInfo, LOG_LEVEL, PACKAGE_TYPE } from 'react-native-purchases';
 import { createEmitter } from '@loro/core/emitter';
 import { getSession, onAuthChange } from '@loro/core/auth';
 import { EAS_BUILD_PROFILE, REVENUECAT_IOS_KEY } from './config';
@@ -52,6 +52,68 @@ const SAFETY_TIMEOUT_MS = 6000;
  * simulator with no network), so they stay a quiet warning and the runtime
  * behaviour — the gate opens — is identical everywhere.
  */
+/**
+ * THE NATIVE MODULE IS LOADED LAZILY, AND THAT IS NOT STYLE — IT IS THE
+ * DIFFERENCE BETWEEN A DEGRADED APP AND NO APP.
+ *
+ * `import Purchases from 'react-native-purchases'` at module scope throws
+ * during module EVALUATION in any binary without the native module, which is
+ * a red screen at boot ("Runtime not ready · RevenueCat native module not
+ * found") — no try/catch inside a function can catch that, because none of
+ * them have run yet. It bites exactly where it hurts most: an older
+ * development client that predates the paywall can no longer open the app at
+ * all, so a JS-only change cannot be tested without spending a build.
+ *
+ * A require() behind a guard turns that into the same fail-open the missing
+ * key already takes, which is this file's established policy: the gate opens,
+ * one line is logged, and the app runs free rather than not at all. Production
+ * binaries always carry the module (it is a dependency) and app.config.ts
+ * already refuses to build production without the key, so nothing about the
+ * shipped paywall changes. Copied in shape from platform/notifications.ts,
+ * whose seam exists for this same failure.
+ */
+type PurchasesApi = typeof import('react-native-purchases').default & {
+  LOG_LEVEL?: typeof LOG_LEVEL;
+};
+
+let seam: PurchasesApi | null = null;
+let seamResolved = false;
+let packageTypes: typeof PACKAGE_TYPE | null = null;
+
+/**
+ * The SDK's runtime surface, or null when the native module is absent.
+ * Exported so the paywall screen goes through the same guard rather than
+ * re-importing the module statically and re-introducing the boot throw.
+ */
+export function getPurchasesApi(): PurchasesApi | null {
+  return getSeam();
+}
+
+/** The PACKAGE_TYPE enum off the same module, or null when it is absent. */
+export function getPackageTypes(): typeof PACKAGE_TYPE | null {
+  getSeam(); // resolves the module (and packageTypes with it) exactly once
+  return packageTypes;
+}
+
+function getSeam(): PurchasesApi | null {
+  if (seamResolved) return seam;
+  seamResolved = true;
+  try {
+    const mod = require('react-native-purchases') as {
+      default: PurchasesApi;
+      LOG_LEVEL: typeof LOG_LEVEL;
+      PACKAGE_TYPE: typeof PACKAGE_TYPE;
+    };
+    seam = mod.default;
+    if (seam) seam.LOG_LEVEL = mod.LOG_LEVEL;
+    packageTypes = mod.PACKAGE_TYPE;
+  } catch (error) {
+    seam = null;
+    logFailOpen(`react-native-purchases is unavailable in this binary: ${String(error)}`);
+  }
+  return seam;
+}
+
 function logFailOpen(detail: string): void {
   if (EAS_BUILD_PROFILE === 'production') {
     console.error(`PAYWALL_FAIL_OPEN ${detail} — entitlement gate opened without a verdict; this install is free`);
@@ -126,18 +188,20 @@ function applyIdentity(userId: string | null): void {
     if (userId === appliedUserId) return;
     const previous = appliedUserId;
     appliedUserId = userId;
+    const api = getSeam();
+    if (!api) return;
     try {
       if (userId) {
         // Anonymous purchases transfer to this app user id by RevenueCat's
         // default transfer behaviour — this is the "purchases follow the
         // account" half of the anonymous → signed-in merge.
-        const { customerInfo } = await Purchases.logIn(userId);
+        const { customerInfo } = await api.logIn(userId);
         applyCustomerInfo(customerInfo);
       } else if (previous) {
         // Signed out: back to a fresh anonymous id. Entitlements bought under
         // the account drop with it; Restore purchases can re-attach what this
         // device's Apple ID actually owns.
-        const customerInfo = await Purchases.logOut();
+        const customerInfo = await api.logOut();
         applyCustomerInfo(customerInfo);
       }
     } catch (err) {
@@ -164,23 +228,29 @@ export function initPurchases(): void {
     setGate({ ready: true, entitled: true, configured: false });
     return;
   }
+  const api = getSeam();
+  if (!api) {
+    // getSeam already logged why. Same shape as the missing-key branch above.
+    setGate({ ready: true, entitled: true, configured: false });
+    return;
+  }
   configured = true;
 
-  if (__DEV__) {
-    void Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+  if (__DEV__ && api.LOG_LEVEL) {
+    void api.setLogLevel(api.LOG_LEVEL.DEBUG);
   }
-  Purchases.configure({ apiKey: REVENUECAT_IOS_KEY });
+  api.configure({ apiKey: REVENUECAT_IOS_KEY });
   setGate({ configured: true });
 
   // Fires on every entitlement change for the life of the process: purchase,
   // restore, renewal, refund, logIn/logOut. The paywall never has to push its
   // result anywhere — the gate hears it from here.
-  Purchases.addCustomerInfoUpdateListener(applyCustomerInfo);
+  api.addCustomerInfoUpdateListener(applyCustomerInfo);
 
   // First verdict. Served from the SDK's on-device cache when offline, so a
   // subscriber in airplane mode still opens; genuinely unknown (first launch
   // offline) resolves to the paywall, which has its own retry.
-  void Purchases.getCustomerInfo()
+  void api.getCustomerInfo()
     .then(applyCustomerInfo)
     .catch((err) => {
       console.warn('[loro] initial CustomerInfo fetch failed', err);
@@ -241,7 +311,9 @@ export async function captureCampaignAttribution(): Promise<void> {
     const token = local.getItem(CAMPAIGN_KEY);
     if (!token || !configured) return;
     if (local.getItem(CAMPAIGN_SENT_KEY) === '1') return;
-    await Purchases.setCampaign(token);
+    const api = getSeam();
+    if (!api) return;
+    await api.setCampaign(token);
     local.setItem(CAMPAIGN_SENT_KEY, '1');
   } catch (err) {
     console.warn('[loro] campaign attribution failed', err);

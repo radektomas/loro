@@ -11,14 +11,14 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Purchases, {
-  PACKAGE_TYPE,
-  type PurchasesPackage,
-  type PurchasesStoreProduct,
+import type {
+  PurchasesPackage,
+  PurchasesStoreProduct,
 } from 'react-native-purchases';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { SignInCard } from '../auth/SignInCard';
 import { BRAND } from '../onboarding/brand';
+import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import {
   ACCENT,
   CARD,
@@ -79,20 +79,24 @@ function periodLabel(iso: string | null): string | null {
 }
 
 function planName(pkg: PurchasesPackage): string {
+  // The enum is read through the seam rather than imported — see
+  // platform/purchases.ts on why nothing may import this module statically.
+  const types = getPackageTypes();
+  if (!types) return pkg.product.title;
   switch (pkg.packageType) {
-    case PACKAGE_TYPE.ANNUAL:
+    case types.ANNUAL:
       return 'Annual';
-    case PACKAGE_TYPE.SIX_MONTH:
+    case types.SIX_MONTH:
       return '6 months';
-    case PACKAGE_TYPE.THREE_MONTH:
+    case types.THREE_MONTH:
       return '3 months';
-    case PACKAGE_TYPE.TWO_MONTH:
+    case types.TWO_MONTH:
       return '2 months';
-    case PACKAGE_TYPE.MONTHLY:
+    case types.MONTHLY:
       return 'Monthly';
-    case PACKAGE_TYPE.WEEKLY:
+    case types.WEEKLY:
       return 'Weekly';
-    case PACKAGE_TYPE.LIFETIME:
+    case types.LIFETIME:
       return 'Lifetime';
     default:
       return pkg.product.title;
@@ -138,7 +142,15 @@ export function PaywallScreen() {
 
   const loadOfferings = useCallback(() => {
     setOffer({ status: 'loading' });
-    void Purchases.getOfferings()
+    const api = getPurchasesApi();
+    if (!api) {
+      // No native module: the gate is already open (purchases.ts fails open),
+      // so this screen should not be mounted at all. Fail visibly rather than
+      // throwing.
+      setOffer({ status: 'error' });
+      return;
+    }
+    void api.getOfferings()
       .then((offerings) => {
         const packages = offerings.current?.availablePackages ?? [];
         if (packages.length === 0) {
@@ -149,9 +161,8 @@ export function PaywallScreen() {
         setOffer({ status: 'ready', packages });
         // Default to the annual plan when there is one — it is the one whose
         // disclosure (per-month price) benefits most from being read.
-        const annual = packages.find(
-          (p) => p.packageType === PACKAGE_TYPE.ANNUAL
-        );
+        const annualType = getPackageTypes()?.ANNUAL;
+        const annual = packages.find((p) => p.packageType === annualType);
         setSelectedId((annual ?? packages[0]).identifier);
       })
       .catch((err) => {
@@ -176,7 +187,9 @@ export function PaywallScreen() {
     try {
       // Success needs no handling here: the CustomerInfo listener in
       // purchases.ts flips the gate and App.tsx unmounts this screen.
-      await Purchases.purchasePackage(selected);
+      const api = getPurchasesApi();
+      if (!api) return;
+      await api.purchasePackage(selected);
     } catch (err) {
       // A cancelled sheet is the user changing their mind, not an event.
       if ((err as { userCancelled?: boolean | null }).userCancelled) return;
@@ -194,7 +207,9 @@ export function PaywallScreen() {
     if (busy) return;
     setBusy('restore');
     try {
-      const info = await Purchases.restorePurchases();
+      const api = getPurchasesApi();
+      if (!api) return;
+      const info = await api.restorePurchases();
       // If a subscription came back, the gate has already opened via the
       // listener; this alert is only for the other outcome.
       if (Object.keys(info.entitlements.active).length === 0) {
