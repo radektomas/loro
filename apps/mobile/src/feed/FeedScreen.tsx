@@ -37,7 +37,7 @@ import { AuthorLine } from './AuthorLine';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
-import { RecallHost, useRecallSession } from './RecallHost';
+import { RecallHost, useRecallReplay } from './RecallHost';
 import { SEEK_BACK_PAD_S } from './recall';
 import { SessionSavePrompt } from './SessionSavePrompt';
 import { currentCueStart } from './subtitles';
@@ -1142,10 +1142,10 @@ function formatRate(rate: number): string {
 function ReplayCueButton({ cues }: { cues: Video['cues'] }) {
   const api = usePlayerApi();
   const { anchorTime, anchorAt, isPlaying, rate } = usePlayerClock();
-  const { replay } = useRecallSession();
+  const { replay, held } = useRecallReplay();
 
   const onPress = useCallback(() => {
-    if (replay) {
+    if (held) {
       replay();
       return;
     }
@@ -1155,7 +1155,7 @@ function ReplayCueButton({ cues }: { cues: Video['cues'] }) {
     const start = currentCueStart(cues, t) ?? 0;
     api.seek(Math.max(0, start - SEEK_BACK_PAD_S));
     api.play();
-  }, [replay, cues, api, anchorTime, anchorAt, isPlaying, rate]);
+  }, [held, replay, cues, api, anchorTime, anchorAt, isPlaying, rate]);
 
   if (cues.length === 0) return null;
 

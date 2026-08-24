@@ -135,6 +135,21 @@ export const useRecallView = () => useContext(ViewContext);
 export const useRecallAnswer = () => useContext(AnswerContext);
 export const useRecallSession = () => useContext(SessionContext);
 
+/**
+ * The replay action, and whether a blank is currently held.
+ *
+ * READS GradingContext, NOT THE SESSION, and that is the same separation
+ * useRecallAnswer exists for: the session value is rebuilt on every keystroke
+ * (it closes over the typed answer), and the band's replay button is mounted
+ * in the active slide. Subscribing it to the session would re-render a slide
+ * component per character typed — exactly the cost the context split above is
+ * designed to avoid. GradingContext changes only when the held blank does.
+ */
+export function useRecallReplay(): { replay: () => void; held: boolean } {
+  const { entry, replay } = useContext(GradingContext);
+  return useMemo(() => ({ replay, held: entry !== null }), [replay, entry]);
+}
+
 export function RecallHost({
   video,
   language,
