@@ -1,0 +1,1307 @@
+{
+  "schemaVersion": 1,
+  "batch": 1,
+  "lemmas": ["444", "45", "48", "4g", "5", "5,000", "50", "500", "54", "55", "5:20", "6", "60", "600", "600,000", "650", "7", "70", "700", "75", "750", "76", "8", "80", "800", "880,000", "9", "90", "900", "95", "96", "AMLO", "Abelardo", "Achiras", "Adventure", "Albacete", "Alicante", "Alpujarra", "Altea", "Altosano", "Amadeo", "Andalus", "Andorra", "Andrea", "Andrew", "Antonio", "Arabia", "Aragón", "Argentina", "Aristóteles", "Asia", "Ati", "B", "Balazote", "Barcelona", "Battery", "Bel", "Benidorm", "Bilbao", "Bisbal", "Bolivia", "Boris", "Brasil", "Bridge", "Brooklyn", "Bruin", "Cabalango", "Calamuchita", "Calatayud", "Cali", "Cantabria", "Car", "Carabanchel", "Carmen", "Castilla", "Castro", "Cata", "Cataluña", "Charlie", "Chelo", "China", "Chinchero", "City", "Claus", "Colombia", "Colya", "Colón", "Comillas", "Concepción", "Concho", "Corea", "Costa", "Cristian", "Cristiano", "Cristo", "Cristóbal", "Cusco", "Cuzco", "César", "Córdoba"],
+  "entries": {
+    "444": {
+      "lemma": "444",
+      "pos": "other",
+      "usage": {
+        "en": "Read as 'cuatrocientos cuarenta y cuatro'. Hundreds go right before the noun ('los 444 escalones' — the 444 steps), and the article comes first, as in the climbing clip.",
+        "cs": "Čte se 'cuatrocientos cuarenta y cuatro'. Stovky stojí přímo před podstatným jménem ('los 444 escalones' — 444 schodů), člen je před číslovkou.",
+        "de": "Gesprochen 'cuatrocientos cuarenta y cuatro'. Hunderter stehen direkt vor dem Substantiv ('los 444 escalones' — die 444 Stufen), der Artikel davor.",
+        "fr": "Se lit 'cuatrocientos cuarenta y cuatro'. Les centaines se placent juste devant le nom ('los 444 escalones' — les 444 marches), l'article en tête."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "ruDD1b72B-c", "cueIndex": 5}]
+    },
+    "45": {
+      "lemma": "45",
+      "pos": "other",
+      "usage": {
+        "en": "'Cuarenta y cinco'. The unit follows directly: '45 minutos', '45 grados'; in casual talk a bare '45' can mean 45%, as in the burger-margin clip.",
+        "cs": "'Cuarenta y cinco'. Jednotka následuje hned za číslem: '45 minutos', '45 grados'; v běžné řeči může samotné '45' znamenat 45 %, jako v klipu o maržích.",
+        "de": "'Cuarenta y cinco'. Die Einheit folgt direkt: '45 minutos', '45 grados'; umgangssprachlich kann ein bloßes '45' auch 45 % heißen, wie im Burger-Clip.",
+        "fr": "'Cuarenta y cinco'. L'unité suit directement : '45 minutos', '45 grados' ; à l'oral, un simple '45' peut signifier 45 %, comme dans la vidéo sur les marges."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "coayJTP03s4", "cueIndex": 8}, {"videoId": "-NSeE7KmIzw", "cueIndex": 2}, {"videoId": "8yY0zXMjBd0", "cueIndex": 2}]
+    },
+    "48": {
+      "lemma": "48",
+      "pos": "other",
+      "usage": {
+        "en": "'Cuarenta y ocho'. Very common in time spans: '48 horas' means two days — medical and travel instructions love it, as in the colonoscopy-prep clip.",
+        "cs": "'Cuarenta y ocho'. Časté v časových lhůtách: '48 horas' znamená dva dny — typické pro lékařské a cestovní pokyny, jako v klipu o přípravě na vyšetření.",
+        "de": "'Cuarenta y ocho'. Häufig bei Zeitspannen: '48 horas' heißt zwei Tage — typisch für medizinische und Reise-Anweisungen, wie im Clip zur Untersuchungsvorbereitung.",
+        "fr": "'Cuarenta y ocho'. Fréquent pour les délais : '48 horas' signifie deux jours — typique des consignes médicales ou de voyage, comme dans la vidéo de préparation."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "arJGxBsd2YE", "cueIndex": 1}]
+    },
+    "4g": {
+      "lemma": "4g",
+      "pos": "other",
+      "usage": {
+        "en": "Mobile-network label, said 'cuatro ge'. It stays after the device name, English-style: 'el Poco M7 4G'. Tech model names keep their original form in Spanish.",
+        "cs": "Označení mobilní sítě, čte se 'cuatro ge'. Stojí za názvem zařízení jako v angličtině: 'el Poco M7 4G'. Názvy modelů zůstávají ve španělštině beze změny.",
+        "de": "Mobilfunk-Kürzel, gesprochen 'cuatro ge'. Es steht wie im Englischen hinter dem Gerätenamen: 'el Poco M7 4G'. Modellnamen bleiben im Spanischen unverändert.",
+        "fr": "Étiquette de réseau mobile, dite 'cuatro ge'. Elle suit le nom de l'appareil, à l'anglaise : 'el Poco M7 4G'. Les noms de modèles restent tels quels en espagnol."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "ZwKe6LdQymY", "cueIndex": 4}]
+    },
+    "5": {
+      "lemma": "5",
+      "pos": "other",
+      "usage": {
+        "en": "'Cinco'. Clock times take the feminine article: 'las 5 de la mañana' (5 a.m.); durations use 'durante': 'durante 5 minutos' (for 5 minutes).",
+        "cs": "'Cinco'. U hodin se používá člen ženského rodu: 'las 5 de la mañana' (5 ráno); u trvání předložka 'durante': 'durante 5 minutos' (po dobu 5 minut).",
+        "de": "'Cinco'. Uhrzeiten nehmen den femininen Artikel: 'las 5 de la mañana' (5 Uhr früh); Zeitdauern stehen mit 'durante': 'durante 5 minutos' (5 Minuten lang).",
+        "fr": "'Cinco'. L'heure prend l'article féminin : 'las 5 de la mañana' (5 h du matin) ; la durée s'exprime avec 'durante' : 'durante 5 minutos' (pendant 5 minutes)."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "oqtii0n2anU", "cueIndex": 3}, {"videoId": "coayJTP03s4", "cueIndex": 18}, {"videoId": "uGWYk6M_pHQ", "cueIndex": 3}]
+    },
+    "5,000": {
+      "lemma": "5,000",
+      "pos": "num",
+      "usage": {
+        "en": "'Cinco mil' — 'mil' never adds an -s in plain counting (not 'cinco miles'). In Spanish writing the thousands separator is usually a dot: 5.000.",
+        "cs": "'Cinco mil' — 'mil' při počítání nikdy nepřibírá -s (ne 'cinco miles'). Ve španělském zápisu se tisíce zpravidla oddělují tečkou: 5.000.",
+        "de": "'Cinco mil' — 'mil' bekommt beim Zählen nie ein -s (nicht 'cinco miles'). In spanischer Schreibung trennt meist ein Punkt die Tausender: 5.000.",
+        "fr": "'Cinco mil' — 'mil' ne prend jamais de -s dans un nombre (pas 'cinco miles'). À l'écrit, l'espagnol sépare les milliers par un point : 5.000."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "WNrl4GBqrBw", "cueIndex": 2}]
+    },
+    "50": {
+      "lemma": "50",
+      "pos": "other",
+      "usage": {
+        "en": "'Cincuenta'. Percentages take the article 'el': 'el 50%' ('ya ganó el 50%' — it's already at 50%); bare '50' in speech is often money or an estimate.",
+        "cs": "'Cincuenta'. Procenta mají člen 'el': 'el 50%' ('ya ganó el 50%' — už je to na 50 %); samotné '50' v řeči bývá částka nebo odhad.",
+        "de": "'Cincuenta'. Prozentzahlen nehmen den Artikel 'el': 'el 50%' ('ya ganó el 50%' — schon bei 50 %); ein bloßes '50' meint im Gespräch oft Geld oder eine Schätzung.",
+        "fr": "'Cincuenta'. Les pourcentages prennent l'article 'el' : 'el 50%' ('ya ganó el 50%' — déjà 50 %) ; un simple '50' à l'oral désigne souvent une somme ou une estimation."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "BaCX4IV0T9g", "cueIndex": 6}, {"videoId": "oIPvhmn_p1o", "cueIndex": 3}, {"videoId": "1oWBajgV9zE", "cueIndex": 11}]
+    },
+    "500": {
+      "lemma": "500",
+      "pos": "other",
+      "usage": {
+        "en": "'Quinientos' — an irregular hundred (not 'cincocientos'). Money reads number + currency: '$500' is spoken 'quinientos dólares', as in the credit-line story.",
+        "cs": "'Quinientos' — nepravidelná stovka (nikoli 'cincocientos'). Částky se čtou číslo + měna: '$500' se vysloví 'quinientos dólares', jako v příběhu o kreditní kartě.",
+        "de": "'Quinientos' — ein unregelmäßiger Hunderter (nicht 'cincocientos'). Geldbeträge liest man Zahl + Währung: '$500' wird 'quinientos dólares' gesprochen.",
+        "fr": "'Quinientos' — centaine irrégulière (et non 'cincocientos'). L'argent se lit nombre + devise : '$500' se dit 'quinientos dólares', comme dans l'histoire de la carte de crédit."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "guIID3CEwuM", "cueIndex": 11}, {"videoId": "guIID3CEwuM", "cueIndex": 13}, {"videoId": "guIID3CEwuM", "cueIndex": 16}]
+    },
+    "54": {
+      "lemma": "54",
+      "pos": "other",
+      "usage": {
+        "en": "'Cincuenta y cuatro' — tens and units join with 'y'. In the clip it's clock time: '4 y 54' (4:54), minutes added to the hour with 'y'.",
+        "cs": "'Cincuenta y cuatro' — desítky a jednotky se spojují pomocí 'y'. V klipu jde o čas: '4 y 54' (4:54), minuty se k hodině přidávají spojkou 'y'.",
+        "de": "'Cincuenta y cuatro' — Zehner und Einer werden mit 'y' verbunden. Im Clip ist es eine Uhrzeit: '4 y 54' (4:54), die Minuten hängt man mit 'y' an die Stunde.",
+        "fr": "'Cincuenta y cuatro' — dizaines et unités se relient par 'y'. Dans la vidéo, c'est une heure : '4 y 54' (4 h 54), les minutes s'ajoutent à l'heure avec 'y'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "wJfuya2kNrc", "cueIndex": 0}]
+    },
+    "55": {
+      "lemma": "55",
+      "pos": "other",
+      "usage": {
+        "en": "'Cincuenta y cinco'. Prices go number + currency with no article: '55 pesos' ('cuesta 55 pesos' — it costs 55 pesos), as in the street-food clip.",
+        "cs": "'Cincuenta y cinco'. Ceny se říkají číslo + měna bez členu: '55 pesos' ('cuesta 55 pesos' — stojí to 55 pesos), jako v klipu o pouličním jídle.",
+        "de": "'Cincuenta y cinco'. Preise sagt man Zahl + Währung ohne Artikel: '55 pesos' ('cuesta 55 pesos' — es kostet 55 Pesos), wie im Streetfood-Clip.",
+        "fr": "'Cincuenta y cinco'. Les prix se disent nombre + devise, sans article : '55 pesos' ('cuesta 55 pesos' — ça coûte 55 pesos), comme dans la vidéo de street food."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "HessGp3Tgp0", "cueIndex": 8}]
+    },
+    "5:20": {
+      "lemma": "5:20",
+      "pos": "other",
+      "usage": {
+        "en": "Clock time, read 'las cinco y veinte' (five twenty). Minutes past the hour are added with 'y'; past half, Spanish often switches to 'menos' ('seis menos veinte').",
+        "cs": "Čas na hodinách, čte se 'las cinco y veinte' (pět dvacet). Minuty po celé se přidávají spojkou 'y'; po půl se často říká 'menos' ('seis menos veinte').",
+        "de": "Uhrzeit, gelesen 'las cinco y veinte' (fünf Uhr zwanzig). Minuten nach der vollen Stunde kommen mit 'y'; nach halb sagt man oft 'menos' ('seis menos veinte').",
+        "fr": "Heure, lue 'las cinco y veinte' (cinq heures vingt). Les minutes s'ajoutent avec 'y' ; après la demie, on passe souvent à 'menos' ('seis menos veinte')."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "wJfuya2kNrc", "cueIndex": 1}]
+    },
+    "6": {
+      "lemma": "6",
+      "pos": "other",
+      "usage": {
+        "en": "'Seis'. Times of day take 'las': 'las 6 de la mañana' (6 a.m.); with months there's no article: '6 meses' ('seis meses que casi no llueve').",
+        "cs": "'Seis'. Denní časy mají člen 'las': 'las 6 de la mañana' (6 ráno); u měsíců člen není: '6 meses' ('seis meses que casi no llueve').",
+        "de": "'Seis'. Uhrzeiten stehen mit 'las': 'las 6 de la mañana' (6 Uhr früh); bei Monaten fällt der Artikel weg: '6 meses' ('seis meses que casi no llueve').",
+        "fr": "'Seis'. L'heure prend 'las' : 'las 6 de la mañana' (6 h du matin) ; avec les mois, pas d'article : '6 meses' ('seis meses que casi no llueve')."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "M-0zUwp16GM", "cueIndex": 13}, {"videoId": "XKZNMTBolps", "cueIndex": 4}, {"videoId": "XKZNMTBolps", "cueIndex": 5}]
+    },
+    "60": {
+      "lemma": "60",
+      "pos": "other",
+      "usage": {
+        "en": "'Sesenta'. As a percentage it takes 'el': 'el 60%', read 'el sesenta por ciento' — the pattern in the burns and payday cues.",
+        "cs": "'Sesenta'. Jako procento má člen 'el': 'el 60%', čte se 'el sesenta por ciento' — vzorec z ukázek o popáleninách a výplatě.",
+        "de": "'Sesenta'. Als Prozentzahl mit 'el': 'el 60%', gelesen 'el sesenta por ciento' — das Muster aus den Clips über Verbrennungen und den Zahltag.",
+        "fr": "'Sesenta'. En pourcentage, il prend 'el' : 'el 60%', lu 'el sesenta por ciento' — le schéma des extraits sur les brûlures et la paie."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "BaCX4IV0T9g", "cueIndex": 6}, {"videoId": "GCD8FZ2Hv_I", "cueIndex": 1}, {"videoId": "FGwV6_k7nfs", "cueIndex": 8}]
+    },
+    "600": {
+      "lemma": "600",
+      "pos": "other",
+      "usage": {
+        "en": "'Seiscientos'. Money often drops the currency in context: '600 al mes' (600 a month); distances read number + unit: '600 km', 'seiscientos kilómetros'.",
+        "cs": "'Seiscientos'. U peněz se měna v kontextu často vynechává: '600 al mes' (600 měsíčně); vzdálenosti se čtou číslo + jednotka: '600 km', 'seiscientos kilómetros'.",
+        "de": "'Seiscientos'. Bei Geld fällt die Währung im Kontext oft weg: '600 al mes' (600 im Monat); Entfernungen liest man Zahl + Einheit: '600 km', 'seiscientos kilómetros'.",
+        "fr": "'Seiscientos'. Pour l'argent, la devise s'omet souvent en contexte : '600 al mes' (600 par mois) ; les distances se lisent nombre + unité : '600 km', 'seiscientos kilómetros'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "G6ogFdFu9i4", "cueIndex": 2}, {"videoId": "7lFr5cduZKw", "cueIndex": 7}, {"videoId": "TMmFThcatII", "cueIndex": 1}]
+    },
+    "600,000": {
+      "lemma": "600,000",
+      "pos": "other",
+      "usage": {
+        "en": "'Seiscientos mil'. Populations pair with 'de': 'una población de 600.000 habitantes' — and note the Spanish dot as thousands separator.",
+        "cs": "'Seiscientos mil'. Počet obyvatel se uvádí s 'de': 'una población de 600.000 habitantes' — všimněte si tečky jako oddělovače tisíců.",
+        "de": "'Seiscientos mil'. Einwohnerzahlen stehen mit 'de': 'una población de 600.000 habitantes' — man beachte den Punkt als Tausendertrennzeichen.",
+        "fr": "'Seiscientos mil'. La population s'exprime avec 'de' : 'una población de 600.000 habitantes' — notez le point espagnol pour séparer les milliers."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "M-0zUwp16GM", "cueIndex": 4}]
+    },
+    "650": {
+      "lemma": "650",
+      "pos": "other",
+      "usage": {
+        "en": "'Seiscientos cincuenta'. In recipes the quantity precedes the unit: '650 gramos'. As a decimal price, 6,50 is read 'seis con cincuenta' in much of Latin America.",
+        "cs": "'Seiscientos cincuenta'. V receptech stojí množství před jednotkou: '650 gramos'. Jako cena s desetinami se 6,50 ve velké části Latinské Ameriky čte 'seis con cincuenta'.",
+        "de": "'Seiscientos cincuenta'. In Rezepten steht die Menge vor der Einheit: '650 gramos'. Als Dezimalpreis liest man 6,50 in weiten Teilen Lateinamerikas 'seis con cincuenta'.",
+        "fr": "'Seiscientos cincuenta'. Dans les recettes, la quantité précède l'unité : '650 gramos'. En prix décimal, 6,50 se lit 'seis con cincuenta' dans une grande partie de l'Amérique latine."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "uGWYk6M_pHQ", "cueIndex": 9}, {"videoId": "l2C4BpbTTjk", "cueIndex": 8}]
+    },
+    "7": {
+      "lemma": "7",
+      "pos": "other",
+      "usage": {
+        "en": "'Siete'. Durations use 'durante': 'durante 7 días' (for 7 days); ratings read 'de': '7 de 10' is 7 out of 10, as in the taste-test clip.",
+        "cs": "'Siete'. Trvání se vyjadřuje pomocí 'durante': 'durante 7 días' (po dobu 7 dní); hodnocení se čte s 'de': '7 de 10' je 7 z 10, jako v ochutnávkovém klipu.",
+        "de": "'Siete'. Zeitdauern stehen mit 'durante': 'durante 7 días' (7 Tage lang); Bewertungen liest man mit 'de': '7 de 10' heißt 7 von 10, wie im Verkostungs-Clip.",
+        "fr": "'Siete'. La durée s'exprime avec 'durante' : 'durante 7 días' (pendant 7 jours) ; les notes se lisent avec 'de' : '7 de 10', c'est 7 sur 10, comme dans la dégustation."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "q6Kkk-KDwks", "cueIndex": 0}, {"videoId": "q6Kkk-KDwks", "cueIndex": 2}, {"videoId": "OKkgSY9g-ZI", "cueIndex": 5}]
+    },
+    "70": {
+      "lemma": "70",
+      "pos": "other",
+      "usage": {
+        "en": "'Setenta'. '$70' is spoken 'setenta dólares'; approximations use 'en torno a' or 'unos': 'en torno a 70 al mes' — around 70 a month.",
+        "cs": "'Setenta'. '$70' se vysloví 'setenta dólares'; přibližnost vyjadřuje 'en torno a' nebo 'unos': 'en torno a 70 al mes' — kolem 70 měsíčně.",
+        "de": "'Setenta'. '$70' spricht man 'setenta dólares'; Näherungen bildet man mit 'en torno a' oder 'unos': 'en torno a 70 al mes' — rund 70 im Monat.",
+        "fr": "'Setenta'. '$70' se dit 'setenta dólares' ; l'approximation passe par 'en torno a' ou 'unos' : 'en torno a 70 al mes' — environ 70 par mois."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "a3sudA_IXgY", "cueIndex": 15}, {"videoId": "FGwV6_k7nfs", "cueIndex": 8}]
+    },
+    "700": {
+      "lemma": "700",
+      "pos": "other",
+      "usage": {
+        "en": "'Setecientos' — irregular, like 'quinientos' and 'novecientos' (not 'sietecientos'). '700 años antes' = 700 years earlier, the history-clip pattern.",
+        "cs": "'Setecientos' — nepravidelné jako 'quinientos' a 'novecientos' (nikoli 'sietecientos'). '700 años antes' = o 700 let dříve, vzorec z historického klipu.",
+        "de": "'Setecientos' — unregelmäßig wie 'quinientos' und 'novecientos' (nicht 'sietecientos'). '700 años antes' = 700 Jahre früher, das Muster aus dem Geschichts-Clip.",
+        "fr": "'Setecientos' — irrégulier, comme 'quinientos' et 'novecientos' (et non 'sietecientos'). '700 años antes' = 700 ans plus tôt, le schéma de la vidéo d'histoire."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Xz0cRtym_N4", "cueIndex": 6}]
+    },
+    "75": {
+      "lemma": "75",
+      "pos": "other",
+      "usage": {
+        "en": "'Setenta y cinco'. Small prices in Spain use 'céntimos': '75 céntimos' (75 cents); in Latin America you'll hear 'centavos' instead.",
+        "cs": "'Setenta y cinco'. Drobné ceny se ve Španělsku uvádějí v 'céntimos': '75 céntimos' (75 centů); v Latinské Americe uslyšíte spíš 'centavos'.",
+        "de": "'Setenta y cinco'. Kleine Preise heißen in Spanien 'céntimos': '75 céntimos' (75 Cent); in Lateinamerika sagt man stattdessen 'centavos'.",
+        "fr": "'Setenta y cinco'. Les petits prix se disent 'céntimos' en Espagne : '75 céntimos' (75 centimes) ; en Amérique latine, on entend plutôt 'centavos'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "coayJTP03s4", "cueIndex": 16}]
+    },
+    "750": {
+      "lemma": "750",
+      "pos": "other",
+      "usage": {
+        "en": "'Setecientos cincuenta'. As a decimal price, 7,50 is read 'siete con cincuenta'; 'el kilo' after a price means per kilo: '7,50 el kilo'.",
+        "cs": "'Setecientos cincuenta'. Jako cena s desetinami se 7,50 čte 'siete con cincuenta'; 'el kilo' za cenou znamená za kilo: '7,50 el kilo'.",
+        "de": "'Setecientos cincuenta'. Als Dezimalpreis liest man 7,50 'siete con cincuenta'; 'el kilo' nach dem Preis heißt pro Kilo: '7,50 el kilo'.",
+        "fr": "'Setecientos cincuenta'. En prix décimal, 7,50 se lit 'siete con cincuenta' ; 'el kilo' après le prix signifie le kilo : '7,50 el kilo'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "coayJTP03s4", "cueIndex": 15}]
+    },
+    "76": {
+      "lemma": "76",
+      "pos": "other",
+      "usage": {
+        "en": "'Setenta y seis'. For years, Spanish shortens with 'del': 'un Volkswagen del 76' — a '76 VW, literally 'of the 76' (del = de + el).",
+        "cs": "'Setenta y seis'. U letopočtů španělština zkracuje pomocí 'del': 'un Volkswagen del 76' — VW z roku '76, doslova 'z toho 76' (del = de + el).",
+        "de": "'Setenta y seis'. Jahreszahlen verkürzt das Spanische mit 'del': 'un Volkswagen del 76' — ein 76er VW, wörtlich 'von der 76' (del = de + el).",
+        "fr": "'Setenta y seis'. Pour les années, l'espagnol abrège avec 'del' : 'un Volkswagen del 76' — une VW de 76, littéralement 'du 76' (del = de + el)."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "88_ryfbVd1Y", "cueIndex": 9}]
+    },
+    "8": {
+      "lemma": "8",
+      "pos": "other",
+      "usage": {
+        "en": "'Ocho'. Ranges read 'de … a …': 'de 8 a 10 minutos' (8 to 10 minutes) — the standard pattern for spans of time, reps or prices.",
+        "cs": "'Ocho'. Rozmezí se čte 'de … a …': 'de 8 a 10 minutos' (8 až 10 minut) — standardní vzorec pro časové úseky, opakování i ceny.",
+        "de": "'Ocho'. Spannen liest man 'de … a …': 'de 8 a 10 minutos' (8 bis 10 Minuten) — das Standardmuster für Zeiträume, Wiederholungen oder Preise.",
+        "fr": "'Ocho'. Les fourchettes se lisent 'de … a …' : 'de 8 a 10 minutos' (de 8 à 10 minutes) — le schéma standard pour durées, répétitions ou prix."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "a3sudA_IXgY", "cueIndex": 6}, {"videoId": "ii5eMZGgqks", "cueIndex": 11}, {"videoId": "8cYubfBHrsY", "cueIndex": 20}]
+    },
+    "80": {
+      "lemma": "80",
+      "pos": "other",
+      "usage": {
+        "en": "'Ochenta'. Percentages take 'el': 'el 80% de su territorio'; measurements read number + unit: '80 cm', 'a unos 80' means at about 80 (km).",
+        "cs": "'Ochenta'. Procenta mají člen 'el': 'el 80% de su territorio'; míry se čtou číslo + jednotka: '80 cm', 'a unos 80' znamená zhruba 80 (km) daleko.",
+        "de": "'Ochenta'. Prozentzahlen nehmen 'el': 'el 80% de su territorio'; Maße liest man Zahl + Einheit: '80 cm', 'a unos 80' heißt etwa 80 (km) entfernt.",
+        "fr": "'Ochenta'. Les pourcentages prennent 'el' : 'el 80% de su territorio' ; les mesures se lisent nombre + unité : '80 cm', 'a unos 80' = à environ 80 (km)."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Xz0cRtym_N4", "cueIndex": 14}, {"videoId": "-NSeE7KmIzw", "cueIndex": 12}, {"videoId": "rMpo8oXJrH4", "cueIndex": 6}]
+    },
+    "800": {
+      "lemma": "800",
+      "pos": "other",
+      "usage": {
+        "en": "'Ochocientos' — a regular hundred (ocho + cientos). Ranges use 'entre … y …': 'entre 800 y 900' (between 800 and 900), as in the rent and oil cues.",
+        "cs": "'Ochocientos' — pravidelná stovka (ocho + cientos). Rozmezí se tvoří 'entre … y …': 'entre 800 y 900' (mezi 800 a 900), jako v ukázkách o nájmu a oleji.",
+        "de": "'Ochocientos' — ein regelmäßiger Hunderter (ocho + cientos). Bereiche bildet man mit 'entre … y …': 'entre 800 y 900' (zwischen 800 und 900), wie in den Clips.",
+        "fr": "'Ochocientos' — centaine régulière (ocho + cientos). Les fourchettes se disent 'entre … y …' : 'entre 800 y 900' (entre 800 et 900), comme dans les extraits."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "a3sudA_IXgY", "cueIndex": 12}, {"videoId": "gkpeUdv9sVs", "cueIndex": 6}, {"videoId": "STBetSACj50", "cueIndex": 1}]
+    },
+    "880,000": {
+      "lemma": "880,000",
+      "pos": "other",
+      "usage": {
+        "en": "'Ochocientos ochenta mil'. Big round figures pair with 'más de' (more than): 'más de 880.000 habitantes' — over 880,000 inhabitants.",
+        "cs": "'Ochocientos ochenta mil'. Velká kulatá čísla se pojí s 'más de' (více než): 'más de 880.000 habitantes' — přes 880 000 obyvatel.",
+        "de": "'Ochocientos ochenta mil'. Große runde Zahlen stehen mit 'más de' (mehr als): 'más de 880.000 habitantes' — über 880.000 Einwohner.",
+        "fr": "'Ochocientos ochenta mil'. Les grands chiffres ronds s'accompagnent de 'más de' (plus de) : 'más de 880.000 habitantes' — plus de 880 000 habitants."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Du_1foFVkco", "cueIndex": 3}]
+    },
+    "9": {
+      "lemma": "9",
+      "pos": "other",
+      "usage": {
+        "en": "'Nueve'. Time ranges: 'entre las 9 y 11 de la mañana' — between 9 and 11 a.m.; the feminine 'las' agrees with the unstated 'horas'.",
+        "cs": "'Nueve'. Časová rozmezí: 'entre las 9 y 11 de la mañana' — mezi 9. a 11. ráno; ženský člen 'las' se shoduje s nevysloveným 'horas'.",
+        "de": "'Nueve'. Zeitspannen: 'entre las 9 y 11 de la mañana' — zwischen 9 und 11 Uhr; das feminine 'las' richtet sich nach dem ungenannten 'horas'.",
+        "fr": "'Nueve'. Plages horaires : 'entre las 9 y 11 de la mañana' — entre 9 h et 11 h ; le féminin 'las' s'accorde avec 'horas' sous-entendu."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "hg7QoWD5BFs", "cueIndex": 5}, {"videoId": "XKZNMTBolps", "cueIndex": 9}]
+    },
+    "90": {
+      "lemma": "90",
+      "pos": "other",
+      "usage": {
+        "en": "'Noventa'. Angles and degrees read number + 'grados': '90 grados'; 'más de 90 grados' = more than 90 degrees, as in the squat clip.",
+        "cs": "'Noventa'. Úhly a stupně se čtou číslo + 'grados': '90 grados'; 'más de 90 grados' = více než 90 stupňů, jako v klipu o dřepech.",
+        "de": "'Noventa'. Winkel und Grade liest man Zahl + 'grados': '90 grados'; 'más de 90 grados' = mehr als 90 Grad, wie im Kniebeugen-Clip.",
+        "fr": "'Noventa'. Les angles se lisent nombre + 'grados' : '90 grados' ; 'más de 90 grados' = plus de 90 degrés, comme dans la vidéo de squat."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "BaCX4IV0T9g", "cueIndex": 4}, {"videoId": "8yY0zXMjBd0", "cueIndex": 2}, {"videoId": "l0FIqCFbJwk", "cueIndex": 12}]
+    },
+    "900": {
+      "lemma": "900",
+      "pos": "other",
+      "usage": {
+        "en": "'Novecientos' — irregular (not 'nuevecientos'), the third odd hundred with 'quinientos' and 'setecientos'. 'Entre 900 y 1000 al mes' = 900–1000 a month.",
+        "cs": "'Novecientos' — nepravidelné (nikoli 'nuevecientos'), třetí zvláštní stovka vedle 'quinientos' a 'setecientos'. 'Entre 900 y 1000 al mes' = 900–1000 měsíčně.",
+        "de": "'Novecientos' — unregelmäßig (nicht 'nuevecientos'), der dritte Sonderfall neben 'quinientos' und 'setecientos'. 'Entre 900 y 1000 al mes' = 900–1000 im Monat.",
+        "fr": "'Novecientos' — irrégulier (et non 'nuevecientos'), troisième centaine irrégulière avec 'quinientos' et 'setecientos'. 'Entre 900 y 1000 al mes' = 900–1000 par mois."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "a3sudA_IXgY", "cueIndex": 12}, {"videoId": "v7qRkX7k6pU", "cueIndex": 3}]
+    },
+    "95": {
+      "lemma": "95",
+      "pos": "adj",
+      "usage": {
+        "en": "'Noventa y cinco'. Before a noun it works like an adjective: '95 minutos' (as in the film clip); alone it can be a score or amount: 'Ok, 95'.",
+        "cs": "'Noventa y cinco'. Před podstatným jménem funguje jako přívlastek: '95 minutos' (jako v klipu o filmu); samostatně to bývá skóre nebo částka: 'Ok, 95'.",
+        "de": "'Noventa y cinco'. Vor einem Substantiv wirkt es wie ein Adjektiv: '95 minutos' (wie im Film-Clip); allein steht es für Punktzahl oder Betrag: 'Ok, 95'.",
+        "fr": "'Noventa y cinco'. Devant un nom, il fonctionne comme un adjectif : '95 minutos' (comme dans la vidéo sur le film) ; seul, c'est un score ou un montant : 'Ok, 95'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "IkQg75uZclc", "cueIndex": 6}, {"videoId": "la_JMqIcdMg", "cueIndex": 11}]
+    },
+    "96": {
+      "lemma": "96",
+      "pos": "other",
+      "usage": {
+        "en": "'Noventa y seis'. Floors use the plain number, not an ordinal: 'la planta 96' — literally 'floor 96'; Spanish avoids long ordinals like 'ninety-sixth'.",
+        "cs": "'Noventa y seis'. Patra se označují základní číslovkou, ne řadovou: 'la planta 96' — doslova 'patro 96'; dlouhým řadovým číslovkám se španělština vyhýbá.",
+        "de": "'Noventa y seis'. Stockwerke nennt man mit der Grundzahl, nicht ordinal: 'la planta 96' — wörtlich 'Etage 96'; lange Ordnungszahlen vermeidet das Spanische.",
+        "fr": "'Noventa y seis'. Les étages prennent le nombre simple, pas l'ordinal : 'la planta 96' — littéralement 'étage 96' ; l'espagnol évite les longs ordinaux."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "sNNoBSf3Tyc", "cueIndex": 15}]
+    },
+    "AMLO": {
+      "lemma": "AMLO",
+      "pos": "noun",
+      "usage": {
+        "en": "Acronym for Andrés Manuel López Obrador, Mexico's president 2018–2024 — media and everyday speech alike just say 'AMLO', pronounced as one word.",
+        "cs": "Zkratka jména Andrés Manuel López Obrador, mexického prezidenta 2018–2024 — média i běžná řeč říkají prostě 'AMLO', vyslovuje se jako jedno slovo.",
+        "de": "Kürzel für Andrés Manuel López Obrador, Mexikos Präsident 2018–2024 — Medien wie Alltagssprache sagen schlicht 'AMLO', wie ein Wort gesprochen.",
+        "fr": "Sigle d'Andrés Manuel López Obrador, président du Mexique de 2018 à 2024 — médias et conversations disent simplement 'AMLO', prononcé comme un mot."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "07iPO1DCuLQ", "cueIndex": 8}]
+    },
+    "Abelardo": {
+      "lemma": "Abelardo",
+      "pos": "noun",
+      "usage": {
+        "en": "Traditional Spanish male name. In the Albacete clip it names the city's big central park, 'el parque Abelardo Sánchez' — parks often carry a person's full name.",
+        "cs": "Tradiční španělské mužské jméno. V klipu o Albacete označuje velký městský park 'el parque Abelardo Sánchez' — parky často nesou celé jméno osobnosti.",
+        "de": "Traditioneller spanischer Männername. Im Albacete-Clip steht er für den großen Stadtpark 'el parque Abelardo Sánchez' — Parks tragen oft volle Personennamen.",
+        "fr": "Prénom masculin espagnol traditionnel. Dans la vidéo d'Albacete, il désigne le grand parc de la ville, 'el parque Abelardo Sánchez' — les parcs portent souvent un nom complet."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "kZfxWxZZTuQ", "cueIndex": 11}]
+    },
+    "Achiras": {
+      "lemma": "Achiras",
+      "pos": "noun",
+      "usage": {
+        "en": "Small sierra town in the south of Córdoba province, Argentina — the clip calls it 'la linda del sur cordobés', the pretty one of the Cordoban south.",
+        "cs": "Městečko v horách na jihu argentinské provincie Córdoba — klip mu říká 'la linda del sur cordobés', kráska cordobského jihu.",
+        "de": "Kleiner Gebirgsort im Süden der argentinischen Provinz Córdoba — der Clip nennt ihn 'la linda del sur cordobés', die Schöne des cordobesischen Südens.",
+        "fr": "Petite ville de montagne du sud de la province de Córdoba, en Argentine — la vidéo l'appelle 'la linda del sur cordobés', la belle du sud cordouan."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "-NSeE7KmIzw", "cueIndex": 6}]
+    },
+    "Adventure": {
+      "lemma": "Adventure",
+      "pos": "propn",
+      "usage": {
+        "en": "English word inside a brand: 'Dolphin Adventure', the tour company in the clip. Tourism businesses in Spanish-speaking areas often keep English names.",
+        "cs": "Anglické slovo uvnitř značky: 'Dolphin Adventure', cestovní společnost z klipu. Turistické firmy ve španělsky mluvících zemích si často nechávají anglické názvy.",
+        "de": "Englisches Wort in einem Markennamen: 'Dolphin Adventure', der Tourenanbieter im Clip. Tourismusfirmen in spanischsprachigen Ländern behalten oft englische Namen.",
+        "fr": "Mot anglais dans une marque : 'Dolphin Adventure', l'agence d'excursions de la vidéo. Le tourisme hispanophone garde souvent des noms anglais."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Y4CM1L1_fCU", "cueIndex": 15}]
+    },
+    "Albacete": {
+      "lemma": "Albacete",
+      "pos": "noun",
+      "usage": {
+        "en": "City in south-eastern Spain, the most populated in Castilla-La Mancha, traditionally famous for knife-making — 'su tradición cuchillera' in the clip.",
+        "cs": "Město na jihovýchodě Španělska, nejlidnatější v regionu Castilla-La Mancha, tradičně proslulé nožířstvím — v klipu 'su tradición cuchillera'.",
+        "de": "Stadt im Südosten Spaniens, die bevölkerungsreichste in Castilla-La Mancha, traditionell berühmt für Messerschmiedekunst — im Clip 'su tradición cuchillera'.",
+        "fr": "Ville du sud-est de l'Espagne, la plus peuplée de Castille-La Manche, réputée pour sa coutellerie — 'su tradición cuchillera' dans la vidéo."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "kZfxWxZZTuQ", "cueIndex": 0}, {"videoId": "kZfxWxZZTuQ", "cueIndex": 3}, {"videoId": "kZfxWxZZTuQ", "cueIndex": 21}]
+    },
+    "Alicante": {
+      "lemma": "Alicante",
+      "pos": "noun",
+      "usage": {
+        "en": "Coastal city in eastern Spain, in the Valencian Community. In Valencian it's 'Alacant' — the clip uses both, as signs and locals do.",
+        "cs": "Přímořské město na východě Španělska, ve Valencijském společenství. Valencijsky se jmenuje 'Alacant' — klip užívá obě podoby, stejně jako cedule a místní.",
+        "de": "Küstenstadt in Ostspanien, in der Valencianischen Gemeinschaft. Auf Valencianisch heißt sie 'Alacant' — der Clip nutzt beide Formen, wie Schilder und Einheimische.",
+        "fr": "Ville côtière de l'est de l'Espagne, dans la Communauté valencienne. En valencien, c'est 'Alacant' — la vidéo emploie les deux, comme les panneaux et les habitants."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "7u-OpBC5Asw", "cueIndex": 0}, {"videoId": "7u-OpBC5Asw", "cueIndex": 2}, {"videoId": "7u-OpBC5Asw", "cueIndex": 12}]
+    },
+    "Alpujarra": {
+      "lemma": "Alpujarra",
+      "pos": "noun",
+      "usage": {
+        "en": "Mountain area south of the Sierra Nevada, dotted with tiny white villages; 'la Alpujarra granadina' is its Granada side, as in the clip.",
+        "cs": "Horská oblast jižně od pohoří Sierra Nevada, posetá bílými vesničkami; 'la Alpujarra granadina' je její granadská část, jako v klipu.",
+        "de": "Bergregion südlich der Sierra Nevada, übersät mit kleinen weißen Dörfern; 'la Alpujarra granadina' ist ihr Teil in Granada, wie im Clip.",
+        "fr": "Région montagneuse au sud de la Sierra Nevada, parsemée de petits villages blancs ; 'la Alpujarra granadina' en est le versant grenadin, comme dans la vidéo."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "rnY8kn2rqDA", "cueIndex": 3}]
+    },
+    "Altea": {
+      "lemma": "Altea",
+      "pos": "noun",
+      "usage": {
+        "en": "Whitewashed seaside town on the Costa Blanca, in the province of Alicante — listed in the clip among the area's 'lugares mágicos'.",
+        "cs": "Bíle omítnuté přímořské městečko na Costa Blance v provincii Alicante — v klipu jmenované mezi 'lugares mágicos' oblasti.",
+        "de": "Weiß getünchtes Küstenstädtchen an der Costa Blanca, Provinz Alicante — im Clip unter den 'lugares mágicos' der Gegend aufgezählt.",
+        "fr": "Village balnéaire aux maisons blanches de la Costa Blanca, dans la province d'Alicante — cité dans la vidéo parmi les 'lugares mágicos' de la région."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "7u-OpBC5Asw", "cueIndex": 14}]
+    },
+    "Altosano": {
+      "lemma": "Altosano",
+      "pos": "noun",
+      "usage": {
+        "en": "Caption spelling of 'el Altozano', the central square of Albacete — locals say 'la plaza del Altozano'. Square names take 'la plaza de(l) …'.",
+        "cs": "Titulkový přepis jména 'el Altozano', hlavního náměstí v Albacete — místní říkají 'la plaza del Altozano'. Názvy náměstí mají vzorec 'la plaza de(l) …'.",
+        "de": "Untertitel-Schreibung von 'el Altozano', dem zentralen Platz von Albacete — man sagt 'la plaza del Altozano'. Platznamen folgen dem Muster 'la plaza de(l) …'.",
+        "fr": "Graphie de sous-titres pour 'el Altozano', la place centrale d'Albacete — on dit 'la plaza del Altozano'. Les places suivent le schéma 'la plaza de(l) …'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "kZfxWxZZTuQ", "cueIndex": 7}]
+    },
+    "Amadeo": {
+      "lemma": "Amadeo",
+      "pos": "noun",
+      "usage": {
+        "en": "Male given name. In the Bilbao clip it's Amadeo of Savoy, briefly King of Spain (1871–73) — known there as 'Amadeo I', read 'Amadeo primero'.",
+        "cs": "Mužské křestní jméno. V klipu o Bilbau jde o Amadea Savojského, krátce španělského krále (1871–73) — 'Amadeo I', čte se 'Amadeo primero'.",
+        "de": "Männlicher Vorname. Im Bilbao-Clip ist es Amadeus von Savoyen, kurz König von Spanien (1871–73) — dort 'Amadeo I', gelesen 'Amadeo primero'.",
+        "fr": "Prénom masculin. Dans la vidéo de Bilbao, il s'agit d'Amédée de Savoie, brièvement roi d'Espagne (1871–73) — 'Amadeo I', lu 'Amadeo primero'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "0oQwV4sKQis", "cueIndex": 4}, {"videoId": "0oQwV4sKQis", "cueIndex": 5}]
+    },
+    "Andalus": {
+      "lemma": "Andalus",
+      "pos": "noun",
+      "usage": {
+        "en": "From 'al-Ándalus', the name of Muslim-ruled medieval Iberia (8th–15th centuries). It lives on in the modern region name 'Andalucía'.",
+        "cs": "Z 'al-Ándalus', názvu středověké muslimské Iberie (8.–15. století). Přežívá v dnešním jménu regionu 'Andalucía'.",
+        "de": "Von 'al-Ándalus', dem Namen des maurisch beherrschten mittelalterlichen Iberiens (8.–15. Jh.). Er lebt im heutigen Regionsnamen 'Andalucía' fort.",
+        "fr": "D'« al-Ándalus », nom de l'Ibérie médiévale sous domination musulmane (VIIIe–XVe siècles). Il survit dans le nom actuel de la région, 'Andalucía'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "CspuHcf1unU", "cueIndex": 8}]
+    },
+    "Andorra": {
+      "lemma": "Andorra",
+      "pos": "noun",
+      "usage": {
+        "en": "Tiny principality in the Pyrenees between Spain and France — Catalan-speaking and outside the EU, which is why the clip mentions border formalities.",
+        "cs": "Malé knížectví v Pyrenejích mezi Španělskem a Francií — mluví se tam katalánsky a není v EU, proto klip zmiňuje hraniční formality.",
+        "de": "Winziges Fürstentum in den Pyrenäen zwischen Spanien und Frankreich — katalanischsprachig und nicht in der EU, weshalb der Clip Grenzformalitäten erwähnt.",
+        "fr": "Minuscule principauté des Pyrénées entre l'Espagne et la France — catalanophone et hors UE, d'où les formalités de frontière évoquées dans la vidéo."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "dtcK5MVeayk", "cueIndex": 1}, {"videoId": "dtcK5MVeayk", "cueIndex": 2}, {"videoId": "dtcK5MVeayk", "cueIndex": 5}]
+    },
+    "Andrea": {
+      "lemma": "Andrea",
+      "pos": "noun",
+      "usage": {
+        "en": "In Spanish, 'Andrea' is a female name (unlike Italian, where it's male). Note the self-introduction patterns in the cue: 'mi nombre es…', 'más conocida como…'.",
+        "cs": "Ve španělštině je 'Andrea' ženské jméno (na rozdíl od italštiny, kde je mužské). Všimněte si frází při představování: 'mi nombre es…', 'más conocida como…'.",
+        "de": "Im Spanischen ist 'Andrea' ein Frauenname (anders als im Italienischen). Man beachte die Vorstellungsformeln im Clip: 'mi nombre es…', 'más conocida como…'.",
+        "fr": "En espagnol, 'Andrea' est un prénom féminin (contrairement à l'italien). Notez les formules de présentation : 'mi nombre es…', 'más conocida como…'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "HNIiYi42reI", "cueIndex": 1}, {"videoId": "HNIiYi42reI", "cueIndex": 2}]
+    },
+    "Andrew": {
+      "lemma": "Andrew",
+      "pos": "noun",
+      "usage": {
+        "en": "English name kept as-is in Spanish. The cue shows a handy pattern: 'a lo Andrew McCarthy' — 'a lo + name' means 'in the style of' that person.",
+        "cs": "Anglické jméno, ve španělštině beze změny. Ukázka obsahuje užitečný vzorec: 'a lo Andrew McCarthy' — 'a lo + jméno' znamená 've stylu' dané osoby.",
+        "de": "Englischer Name, im Spanischen unverändert. Der Clip zeigt ein nützliches Muster: 'a lo Andrew McCarthy' — 'a lo + Name' heißt 'im Stil von' jemandem.",
+        "fr": "Prénom anglais gardé tel quel en espagnol. L'extrait montre un schéma utile : 'a lo Andrew McCarthy' — 'a lo + nom' signifie 'à la manière de' quelqu'un."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "T3ouNC3nc6M", "cueIndex": 13}]
+    },
+    "Antonio": {
+      "lemma": "Antonio",
+      "pos": "noun",
+      "usage": {
+        "en": "One of the most common Spanish male names. 'Marco Antonio' is Mark Antony; streets and districts often carry full names, like 'Antonio Nariño' in the Cali clip.",
+        "cs": "Jedno z nejběžnějších španělských mužských jmen. 'Marco Antonio' je Marcus Antonius; ulice a čtvrti často nesou celá jména, jako 'Antonio Nariño' v klipu z Cali.",
+        "de": "Einer der häufigsten spanischen Männernamen. 'Marco Antonio' ist Marcus Antonius; Straßen und Viertel tragen oft volle Namen, wie 'Antonio Nariño' im Cali-Clip.",
+        "fr": "L'un des prénoms masculins espagnols les plus courants. 'Marco Antonio', c'est Marc Antoine ; rues et quartiers portent souvent des noms complets, comme 'Antonio Nariño' à Cali."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "74iXbiR6X9M", "cueIndex": 14}, {"videoId": "74iXbiR6X9M", "cueIndex": 19}, {"videoId": "UNFYzvCC-zo", "cueIndex": 2}]
+    },
+    "Arabia": {
+      "lemma": "Arabia",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish for Arabia; the country is 'Arabia Saudita' (in Spain often 'Arabia Saudí'). Used without an article: 'desde Arabia' — from (Saudi) Arabia.",
+        "cs": "Španělsky Arábie; stát se jmenuje 'Arabia Saudita' (ve Španělsku často 'Arabia Saudí'). Užívá se bez členu: 'desde Arabia' — ze (Saúdské) Arábie.",
+        "de": "Spanisch für Arabien; das Land heißt 'Arabia Saudita' (in Spanien oft 'Arabia Saudí'). Ohne Artikel gebraucht: 'desde Arabia' — aus (Saudi-)Arabien.",
+        "fr": "« Arabie » en espagnol ; le pays se dit 'Arabia Saudita' (souvent 'Arabia Saudí' en Espagne). Sans article : 'desde Arabia' — depuis l'Arabie (saoudite)."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "jDxs5sQHqTM", "cueIndex": 0}]
+    },
+    "Aragón": {
+      "lemma": "Aragón",
+      "pos": "noun",
+      "usage": {
+        "en": "Historic region of north-eastern Spain (capital Zaragoza). The name travels: in the clip it's 'Plaza Aragón', a mall in the State of Mexico.",
+        "cs": "Historický region na severovýchodě Španělska (hlavní město Zaragoza). Jméno cestuje: v klipu jde o 'Plaza Aragón', nákupní centrum ve státě México.",
+        "de": "Historische Region im Nordosten Spaniens (Hauptstadt Zaragoza). Der Name wandert: Im Clip ist es 'Plaza Aragón', ein Einkaufszentrum im Bundesstaat México.",
+        "fr": "Région historique du nord-est de l'Espagne (capitale Saragosse). Le nom voyage : dans la vidéo, c'est 'Plaza Aragón', un centre commercial de l'État de Mexico."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "xdr2Vc6ajHA", "cueIndex": 13}]
+    },
+    "Argentina": {
+      "lemma": "Argentina",
+      "pos": "noun",
+      "usage": {
+        "en": "The country. Usually without an article ('en Argentina'), though 'la Argentina' also exists; a person or thing from there is 'argentino/argentina'.",
+        "cs": "Stát Argentina. Většinou bez členu ('en Argentina'), i když existuje i 'la Argentina'; obyvatel či věc odtud je 'argentino/argentina'.",
+        "de": "Das Land Argentinien. Meist ohne Artikel ('en Argentina'), obwohl es auch 'la Argentina' gibt; Personen und Dinge von dort heißen 'argentino/argentina'.",
+        "fr": "Le pays. Généralement sans article ('en Argentina'), même si 'la Argentina' existe aussi ; l'adjectif est 'argentino/argentina'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "FEid04kzNy8", "cueIndex": 1}]
+    },
+    "Aristóteles": {
+      "lemma": "Aristóteles",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish name of the philosopher Aristotle — note the accent: 'Aristóteles'. Classical names get fully Hispanicized forms in Spanish.",
+        "cs": "Španělská podoba jména filozofa Aristotela — pozor na přízvuk: 'Aristóteles'. Antická jména mají ve španělštině plně poštělštěné tvary.",
+        "de": "Spanischer Name des Philosophen Aristoteles — man beachte den Akzent: 'Aristóteles'. Antike Namen erhalten im Spanischen voll hispanisierte Formen.",
+        "fr": "Nom espagnol du philosophe Aristote — notez l'accent : 'Aristóteles'. Les noms antiques ont des formes entièrement hispanisées en espagnol."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "KNgN1rCHpns", "cueIndex": 7}]
+    },
+    "Asia": {
+      "lemma": "Asia",
+      "pos": "noun",
+      "usage": {
+        "en": "The continent, used without an article: 'el norte de Asia' (northern Asia). The adjective is 'asiático/asiática'.",
+        "cs": "Kontinent Asie, užívá se bez členu: 'el norte de Asia' (severní Asie). Přídavné jméno je 'asiático/asiática'.",
+        "de": "Der Kontinent Asien, ohne Artikel gebraucht: 'el norte de Asia' (Nordasien). Das Adjektiv lautet 'asiático/asiática'.",
+        "fr": "Le continent, sans article : 'el norte de Asia' (le nord de l'Asie). L'adjectif est 'asiático/asiática'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Rk-puzTEX-o", "cueIndex": 1}]
+    },
+    "Ati": {
+      "lemma": "Ati",
+      "pos": "noun",
+      "usage": {
+        "en": "Proper name — one of the spots the Santander guide recommends ('Los Seguros y Ati'). Venue names are dropped into Spanish sentences unchanged.",
+        "cs": "Vlastní jméno — jeden z podniků, které průvodce po Santanderu doporučuje ('Los Seguros y Ati'). Názvy podniků se do španělských vět vkládají beze změny.",
+        "de": "Eigenname — einer der Orte, die der Santander-Guide empfiehlt ('Los Seguros y Ati'). Lokalnamen werden unverändert in spanische Sätze eingebaut.",
+        "fr": "Nom propre — l'une des adresses recommandées dans la vidéo sur Santander ('Los Seguros y Ati'). Les noms d'établissements s'insèrent tels quels dans la phrase."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "iHZe6eR-JWE", "cueIndex": 13}]
+    },
+    "B": {
+      "lemma": "B",
+      "pos": "noun",
+      "usage": {
+        "en": "The letter B, called 'be'. B and V sound identical in Spanish, so speakers clarify with 'be larga/grande' (B) vs. 'uve' or 've corta' (V). Here the caption garbles English 'bike'.",
+        "cs": "Písmeno B, španělsky 'be'. B a V znějí ve španělštině stejně, proto se upřesňuje 'be larga/grande' (B) vs. 'uve' či 've corta' (V). Zde titulek komolí anglické 'bike'.",
+        "de": "Der Buchstabe B, 'be' genannt. B und V klingen im Spanischen gleich, daher präzisiert man 'be larga/grande' (B) vs. 'uve' oder 've corta' (V). Hier verstümmelt der Untertitel das englische 'bike'.",
+        "fr": "La lettre B, dite 'be'. B et V se prononcent pareil en espagnol, d'où les précisions 'be larga/grande' (B) et 'uve' ou 've corta' (V). Ici, le sous-titre déforme l'anglais 'bike'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "1qXXEK6pzYY", "cueIndex": 10}]
+    },
+    "Balazote": {
+      "lemma": "Balazote",
+      "pos": "noun",
+      "usage": {
+        "en": "Village in Albacete province, home of the 'Bicha de Balazote', a famous Iberian stone sculpture — the caption garbles 'Bicha' as 'dicha'.",
+        "cs": "Vesnice v provincii Albacete, odkud pochází 'Bicha de Balazote', slavná iberská kamenná socha — titulek komolí 'Bicha' na 'dicha'.",
+        "de": "Dorf in der Provinz Albacete, Heimat der 'Bicha de Balazote', einer berühmten iberischen Steinskulptur — der Untertitel macht aus 'Bicha' fälschlich 'dicha'.",
+        "fr": "Village de la province d'Albacete, d'où vient la 'Bicha de Balazote', célèbre sculpture ibérique — le sous-titre déforme 'Bicha' en 'dicha'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "kZfxWxZZTuQ", "cueIndex": 8}]
+    },
+    "Barcelona": {
+      "lemma": "Barcelona",
+      "pos": "noun",
+      "usage": {
+        "en": "Capital of Catalonia and Spain's second city. No article: 'en Barcelona', 'a Barcelona'; someone from there is 'barcelonés/barcelonesa'.",
+        "cs": "Hlavní město Katalánska a druhé největší město Španělska. Bez členu: 'en Barcelona', 'a Barcelona'; obyvatel je 'barcelonés/barcelonesa'.",
+        "de": "Hauptstadt Kataloniens und Spaniens zweitgrößte Stadt. Ohne Artikel: 'en Barcelona', 'a Barcelona'; die Einwohner heißen 'barcelonés/barcelonesa'.",
+        "fr": "Capitale de la Catalogne et deuxième ville d'Espagne. Sans article : 'en Barcelona', 'a Barcelona' ; l'habitant est 'barcelonés/barcelonesa'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "OkMKzWdPlRw", "cueIndex": 0}, {"videoId": "OkMKzWdPlRw", "cueIndex": 2}, {"videoId": "OkMKzWdPlRw", "cueIndex": 16}]
+    },
+    "Battery": {
+      "lemma": "Battery",
+      "pos": "propn",
+      "usage": {
+        "en": "English fragment: 'O'Hara's Battery', a gun emplacement on top of the Rock of Gibraltar — the clip keeps the English place name inside Spanish speech.",
+        "cs": "Anglický útržek: 'O'Hara's Battery', dělostřelecké postavení na vrcholu Gibraltarské skály — klip nechává anglický místní název uvnitř španělské řeči.",
+        "de": "Englisches Fragment: 'O'Hara's Battery', eine Geschützstellung auf dem Felsen von Gibraltar — der Clip behält den englischen Ortsnamen im spanischen Satz bei.",
+        "fr": "Fragment anglais : 'O'Hara's Battery', une batterie d'artillerie au sommet du rocher de Gibraltar — la vidéo garde le nom anglais dans la phrase espagnole."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Y4CM1L1_fCU", "cueIndex": 25}]
+    },
+    "Bel": {
+      "lemma": "Bel",
+      "pos": "noun",
+      "usage": {
+        "en": "Caption fragment of a proper name: in the cycling clip 'el Bel fique' renders the Velefique mountain climb (Almería). Not an ordinary Spanish word.",
+        "cs": "Titulkový útržek vlastního jména: v cyklistickém klipu 'el Bel fique' zachycuje stoupání Velefique (Almería). Není to běžné španělské slovo.",
+        "de": "Untertitel-Fragment eines Eigennamens: Im Radsport-Clip steht 'el Bel fique' für den Anstieg Velefique (Almería). Kein gewöhnliches spanisches Wort.",
+        "fr": "Fragment de sous-titre d'un nom propre : dans la vidéo de cyclisme, 'el Bel fique' rend le col de Velefique (Almería). Ce n'est pas un mot espagnol ordinaire."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "hg7QoWD5BFs", "cueIndex": 2}]
+    },
+    "Benidorm": {
+      "lemma": "Benidorm",
+      "pos": "noun",
+      "usage": {
+        "en": "High-rise beach resort on the Costa Blanca (province of Alicante), famous for its skyline — the captions misspell it 'Benidorn'.",
+        "cs": "Přímořské letovisko plné výškových budov na Costa Blance (provincie Alicante), proslulé svým panoramatem — titulky ho komolí na 'Benidorn'.",
+        "de": "Hochhaus-Badeort an der Costa Blanca (Provinz Alicante), berühmt für seine Skyline — die Untertitel schreiben fälschlich 'Benidorn'.",
+        "fr": "Station balnéaire aux gratte-ciel de la Costa Blanca (province d'Alicante), célèbre pour sa skyline — les sous-titres l'écrivent à tort 'Benidorn'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "7u-OpBC5Asw", "cueIndex": 15}]
+    },
+    "Bilbao": {
+      "lemma": "Bilbao",
+      "pos": "noun",
+      "usage": {
+        "en": "Largest city of the Basque Country, on the Nervión river — once industrial, now known for the Guggenheim. The clip plays with 'Venecia en Bilbao'.",
+        "cs": "Největší město Baskicka na řece Nervión — kdysi průmyslové, dnes známé Guggenheimovým muzeem. Klip si pohrává s obrazem 'Venecia en Bilbao'.",
+        "de": "Größte Stadt des Baskenlands am Fluss Nervión — einst Industriestadt, heute bekannt für das Guggenheim. Der Clip spielt mit 'Venecia en Bilbao'.",
+        "fr": "Plus grande ville du Pays basque, sur le Nervión — jadis industrielle, connue aujourd'hui pour le Guggenheim. La vidéo joue sur 'Venecia en Bilbao'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "0oQwV4sKQis", "cueIndex": 0}, {"videoId": "0oQwV4sKQis", "cueIndex": 14}, {"videoId": "0oQwV4sKQis", "cueIndex": 19}]
+    },
+    "Bisbal": {
+      "lemma": "Bisbal",
+      "pos": "noun",
+      "usage": {
+        "en": "Surname of David Bisbal, a hugely popular Spanish pop singer from Almería. Spaniards routinely refer to celebrities by surname alone.",
+        "cs": "Příjmení Davida Bisbala, nesmírně populárního španělského popového zpěváka z Almeríe. Španělé o celebritách běžně mluví jen příjmením.",
+        "de": "Nachname von David Bisbal, einem sehr populären spanischen Popsänger aus Almería. Spanier nennen Prominente oft nur beim Nachnamen.",
+        "fr": "Nom de famille de David Bisbal, chanteur pop espagnol très populaire originaire d'Almería. Les Espagnols désignent souvent les célébrités par leur seul nom."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "hElUUMzLfqg", "cueIndex": 0}]
+    },
+    "Bolivia": {
+      "lemma": "Bolivia",
+      "pos": "noun",
+      "usage": {
+        "en": "The Andean country. No article: 'en Bolivia'; the adjective is 'boliviano/boliviana'. Note the cue's warm 'en tu país' — in your country.",
+        "cs": "Andská země. Bez členu: 'en Bolivia'; přídavné jméno je 'boliviano/boliviana'. Všimněte si vřelého 'en tu país' — ve tvé zemi.",
+        "de": "Das Andenland. Ohne Artikel: 'en Bolivia'; das Adjektiv lautet 'boliviano/boliviana'. Man beachte das herzliche 'en tu país' — in deinem Land.",
+        "fr": "Le pays andin. Sans article : 'en Bolivia' ; l'adjectif est 'boliviano/boliviana'. Notez le chaleureux 'en tu país' — dans ton pays."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "EYIPFPkSUOE", "cueIndex": 1}]
+    },
+    "Boris": {
+      "lemma": "Boris",
+      "pos": "noun",
+      "usage": {
+        "en": "Foreign male name, unchanged in Spanish. In the clip it's the ice diver Boris Orabec — Spanish keeps name + surname order for foreign people too.",
+        "cs": "Cizí mužské jméno, ve španělštině beze změny. V klipu jde o potápěče pod ledem Borise Orabce — španělština u cizinců zachovává pořadí jméno + příjmení.",
+        "de": "Ausländischer Männername, im Spanischen unverändert. Im Clip ist es der Eistaucher Boris Orabec — auch bei Ausländern gilt die Folge Vorname + Nachname.",
+        "fr": "Prénom masculin étranger, inchangé en espagnol. Dans la vidéo, il s'agit du plongeur sous glace Boris Orabec — l'ordre prénom + nom est conservé."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "kJ4TEKtmDyM", "cueIndex": 0}]
+    },
+    "Brasil": {
+      "lemma": "Brasil",
+      "pos": "noun",
+      "usage": {
+        "en": "Brazil, spelled with an s in Spanish. Usually no article: 'a Brasil', 'en Brasil'; the adjective is 'brasileño/brasileña' (also 'brasilero' in South America).",
+        "cs": "Brazílie, španělsky se píše se s. Většinou bez členu: 'a Brasil', 'en Brasil'; přídavné jméno je 'brasileño/brasileña' (v Jižní Americe i 'brasilero').",
+        "de": "Brasilien, im Spanischen mit s geschrieben. Meist ohne Artikel: 'a Brasil', 'en Brasil'; das Adjektiv ist 'brasileño/brasileña' (in Südamerika auch 'brasilero').",
+        "fr": "Le Brésil, écrit avec un s en espagnol. Généralement sans article : 'a Brasil', 'en Brasil' ; l'adjectif est 'brasileño/brasileña' (aussi 'brasilero' en Amérique du Sud)."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "94d510ae521b4b57981f4e12b74622a2", "cueIndex": 2}, {"videoId": "FEid04kzNy8", "cueIndex": 2}]
+    },
+    "Bridge": {
+      "lemma": "Bridge",
+      "pos": "noun",
+      "usage": {
+        "en": "English fragment from 'Brooklyn Bridge' and 'Brooklyn Bridge Park' — famous foreign place names stay in English inside Spanish sentences.",
+        "cs": "Anglický útržek z názvů 'Brooklyn Bridge' a 'Brooklyn Bridge Park' — slavné cizí místní názvy zůstávají ve španělské větě anglicky.",
+        "de": "Englisches Fragment aus 'Brooklyn Bridge' und 'Brooklyn Bridge Park' — berühmte fremde Ortsnamen bleiben im spanischen Satz englisch.",
+        "fr": "Fragment anglais de 'Brooklyn Bridge' et 'Brooklyn Bridge Park' — les grands noms de lieux étrangers restent en anglais dans la phrase espagnole."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "GGU9AMA3p1c", "cueIndex": 10}]
+    },
+    "Brooklyn": {
+      "lemma": "Brooklyn",
+      "pos": "noun",
+      "usage": {
+        "en": "New York borough; Spanish keeps the English name (the captions render 'Brooklyn Heights' phonetically as 'Brooklyn hites').",
+        "cs": "Newyorská čtvrť; španělština zachovává anglické jméno (titulky přepisují 'Brooklyn Heights' foneticky jako 'Brooklyn hites').",
+        "de": "New Yorker Stadtbezirk; das Spanische behält den englischen Namen (die Untertitel schreiben 'Brooklyn Heights' lautlich als 'Brooklyn hites').",
+        "fr": "Arrondissement de New York ; l'espagnol garde le nom anglais (les sous-titres transcrivent 'Brooklyn Heights' phonétiquement en 'Brooklyn hites')."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "GGU9AMA3p1c", "cueIndex": 3}, {"videoId": "GGU9AMA3p1c", "cueIndex": 9}, {"videoId": "GGU9AMA3p1c", "cueIndex": 10}]
+    },
+    "Bruin": {
+      "lemma": "Bruin",
+      "pos": "noun",
+      "usage": {
+        "en": "Surname of Daniel de Bruin, a Dutch maker-inventor mentioned in the clip. Foreign surnames keep their original spelling in Spanish.",
+        "cs": "Příjmení Daniela de Bruina, nizozemského kutila a vynálezce zmíněného v klipu. Cizí příjmení si ve španělštině nechávají původní pravopis.",
+        "de": "Nachname von Daniel de Bruin, einem niederländischen Erfinder aus dem Clip. Ausländische Nachnamen behalten im Spanischen ihre Originalschreibung.",
+        "fr": "Nom de famille de Daniel de Bruin, inventeur néerlandais mentionné dans la vidéo. Les noms étrangers gardent leur orthographe d'origine en espagnol."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "tP5uPogAnxY", "cueIndex": 15}]
+    },
+    "Cabalango": {
+      "lemma": "Cabalango",
+      "pos": "noun",
+      "usage": {
+        "en": "Small village in the Punilla area of Córdoba province, Argentina — pitched in the clip as a quiet paradise 45 minutes from Córdoba city.",
+        "cs": "Vesnička v oblasti Punilla v argentinské provincii Córdoba — klip ji líčí jako klidný ráj 45 minut od města Córdoba.",
+        "de": "Kleines Dorf in der Punilla-Gegend der argentinischen Provinz Córdoba — im Clip als stilles Paradies 45 Minuten von der Stadt Córdoba angepriesen.",
+        "fr": "Petit village de la zone de Punilla, province de Córdoba (Argentine) — présenté dans la vidéo comme un paradis tranquille à 45 minutes de la ville de Córdoba."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "-NSeE7KmIzw", "cueIndex": 1}]
+    },
+    "Calamuchita": {
+      "lemma": "Calamuchita",
+      "pos": "noun",
+      "usage": {
+        "en": "Valley and department in Córdoba province, Argentina, known for lakes and hill towns — a classic Argentine summer-holiday area, as the clip suggests.",
+        "cs": "Údolí a departement v argentinské provincii Córdoba, známé jezery a horskými městečky — klasická argentinská prázdninová oblast, jak naznačuje klip.",
+        "de": "Tal und Departament in der argentinischen Provinz Córdoba, bekannt für Seen und Bergorte — ein klassisches argentinisches Ferienziel, wie der Clip andeutet.",
+        "fr": "Vallée et département de la province de Córdoba, en Argentine, connus pour leurs lacs et villages — une zone de vacances argentine classique, comme le suggère la vidéo."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "-NSeE7KmIzw", "cueIndex": 14}]
+    },
+    "Calatayud": {
+      "lemma": "Calatayud",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish surname and also a town in Aragón. In the clip it's Pau Calatayud, an online coach — self-introductions go 'soy + name + role'.",
+        "cs": "Španělské příjmení a zároveň město v Aragonii. V klipu jde o Paua Calatayuda, online trenéra — představení má vzorec 'soy + jméno + role'.",
+        "de": "Spanischer Nachname und zugleich eine Stadt in Aragonien. Im Clip ist es Pau Calatayud, ein Online-Coach — man stellt sich vor mit 'soy + Name + Rolle'.",
+        "fr": "Nom de famille espagnol et aussi une ville d'Aragon. Dans la vidéo, c'est Pau Calatayud, coach en ligne — on se présente avec 'soy + nom + fonction'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "l0FIqCFbJwk", "cueIndex": 1}]
+    },
+    "Cali": {
+      "lemma": "Cali",
+      "pos": "noun",
+      "usage": {
+        "en": "Colombia's third city, in the Valle del Cauca — self-styled world capital of salsa. In the street interview it's discussed neighbourhood by neighbourhood ('barrio').",
+        "cs": "Třetí největší kolumbijské město ve Valle del Cauca — samozvané světové hlavní město salsy. V pouliční anketě se probírá čtvrť po čtvrti ('barrio').",
+        "de": "Kolumbiens drittgrößte Stadt im Valle del Cauca — selbsternannte Welthauptstadt der Salsa. Im Straßeninterview geht es Viertel für Viertel ('barrio') durch.",
+        "fr": "Troisième ville de Colombie, dans le Valle del Cauca — capitale autoproclamée de la salsa. Dans le micro-trottoir, on en parle quartier par quartier ('barrio')."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "74iXbiR6X9M", "cueIndex": 1}, {"videoId": "74iXbiR6X9M", "cueIndex": 12}, {"videoId": "74iXbiR6X9M", "cueIndex": 13}]
+    },
+    "Cantabria": {
+      "lemma": "Cantabria",
+      "pos": "noun",
+      "usage": {
+        "en": "Small green region on Spain's north coast; its capital is Santander, and Castro Urdiales and Comillas from the cues are its coastal towns.",
+        "cs": "Malý zelený region na severním pobřeží Španělska; hlavním městem je Santander a Castro Urdiales i Comillas z ukázek jsou jeho pobřežní městečka.",
+        "de": "Kleine grüne Region an Spaniens Nordküste; Hauptstadt ist Santander, und Castro Urdiales sowie Comillas aus den Clips sind ihre Küstenorte.",
+        "fr": "Petite région verte de la côte nord de l'Espagne ; sa capitale est Santander, et Castro Urdiales comme Comillas, cités dans les extraits, sont ses villes côtières."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "iHZe6eR-JWE", "cueIndex": 3}, {"videoId": "iHZe6eR-JWE", "cueIndex": 35}, {"videoId": "qx5VQ8nR4sM", "cueIndex": 1}]
+    },
+    "Car": {
+      "lemma": "Car",
+      "pos": "noun",
+      "usage": {
+        "en": "Caption fragment of the English 'MetroCard', New York's transit card — 'la MetroCard ilimitada' is the unlimited pass. Not a Spanish word on its own.",
+        "cs": "Titulkový útržek anglického 'MetroCard', newyorské jízdenkové karty — 'la MetroCard ilimitada' je neomezený kupon. Samo o sobě to není španělské slovo.",
+        "de": "Untertitel-Fragment des englischen 'MetroCard', New Yorks Fahrkarte — 'la MetroCard ilimitada' ist das Unlimited-Ticket. Für sich kein spanisches Wort.",
+        "fr": "Fragment de sous-titre de l'anglais 'MetroCard', la carte de transport new-yorkaise — 'la MetroCard ilimitada' est le pass illimité. Ce n'est pas un mot espagnol en soi."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "VsM7XZF-Ihs", "cueIndex": 3}]
+    },
+    "Carabanchel": {
+      "lemma": "Carabanchel",
+      "pos": "noun",
+      "usage": {
+        "en": "Big working-class district in the south of Madrid — a name Madrilenians drop constantly, here in a joking aside about style.",
+        "cs": "Velká dělnická čtvrť na jihu Madridu — jméno, které Madriďané zmiňují neustále, tady v žertovné poznámce o stylu.",
+        "de": "Großes Arbeiterviertel im Süden Madrids — ein Name, den Madrilenen ständig fallen lassen, hier in einem scherzhaften Einwurf über Stil.",
+        "fr": "Grand quartier populaire du sud de Madrid — un nom que les Madrilènes citent sans cesse, ici dans une remarque plaisante sur le style."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "t-nVEBfvrCM", "cueIndex": 2}]
+    },
+    "Carmen": {
+      "lemma": "Carmen",
+      "pos": "noun",
+      "usage": {
+        "en": "Very common Spanish female name, from 'la Virgen del Carmen' (Our Lady of Mount Carmel) — which is who 'del Carmen' refers to in the processions cue.",
+        "cs": "Velmi časté španělské ženské jméno, podle 'la Virgen del Carmen' (Panny Marie Karmelské) — právě k ní odkazuje 'del Carmen' v ukázce o procesích.",
+        "de": "Sehr häufiger spanischer Frauenname, von 'la Virgen del Carmen' (Unserer Lieben Frau auf dem Berge Karmel) — auf sie verweist 'del Carmen' im Prozessions-Clip.",
+        "fr": "Prénom féminin espagnol très courant, issu de 'la Virgen del Carmen' (Notre-Dame du Mont-Carmel) — c'est elle que désigne 'del Carmen' dans l'extrait sur les processions."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "gIXYvLKBTgw", "cueIndex": 2}]
+    },
+    "Castilla": {
+      "lemma": "Castilla",
+      "pos": "noun",
+      "usage": {
+        "en": "Castile, the historic heart of Spain — today in the region names 'Castilla-La Mancha' (Albacete's region, as in the cues) and 'Castilla y León'.",
+        "cs": "Kastilie, historické jádro Španělska — dnes ve jménech regionů 'Castilla-La Mancha' (region Albacete, jako v ukázkách) a 'Castilla y León'.",
+        "de": "Kastilien, das historische Kernland Spaniens — heute in den Regionsnamen 'Castilla-La Mancha' (Albacetes Region, wie in den Clips) und 'Castilla y León'.",
+        "fr": "La Castille, cœur historique de l'Espagne — aujourd'hui dans les noms de régions 'Castilla-La Mancha' (celle d'Albacete, comme dans les extraits) et 'Castilla y León'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "kZfxWxZZTuQ", "cueIndex": 3}, {"videoId": "kZfxWxZZTuQ", "cueIndex": 31}]
+    },
+    "Castro": {
+      "lemma": "Castro",
+      "pos": "noun",
+      "usage": {
+        "en": "Common Spanish surname and place name. In the cues it's short for Castro Urdiales, a harbour town in Cantabria — locals clip long town names this way.",
+        "cs": "Běžné španělské příjmení i místní jméno. V ukázkách jde o zkrácené Castro Urdiales, přístavní městečko v Kantábrii — dlouhá jména měst se takto běžně krátí.",
+        "de": "Häufiger spanischer Nachname und Ortsname. In den Clips steht es kurz für Castro Urdiales, ein Hafenstädtchen in Kantabrien — lange Ortsnamen werden so gekürzt.",
+        "fr": "Nom de famille et toponyme espagnol courant. Dans les extraits, c'est l'abrégé de Castro Urdiales, port de Cantabrie — les longs noms de villes se raccourcissent ainsi."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "qx5VQ8nR4sM", "cueIndex": 1}, {"videoId": "qx5VQ8nR4sM", "cueIndex": 6}]
+    },
+    "Cata": {
+      "lemma": "Cata",
+      "pos": "noun",
+      "usage": {
+        "en": "Here a person's nickname, short for 'Catalina'. As a common noun, 'una cata' is a tasting — 'cata de vinos' is a wine tasting.",
+        "cs": "Zde přezdívka, zkrácenina jména 'Catalina'. Jako obecné slovo znamená 'una cata' ochutnávku — 'cata de vinos' je degustace vín.",
+        "de": "Hier ein Spitzname, Kurzform von 'Catalina'. Als normales Substantiv ist 'una cata' eine Verkostung — 'cata de vinos' ist eine Weinprobe.",
+        "fr": "Ici un surnom, diminutif de 'Catalina'. Comme nom commun, 'una cata' est une dégustation — 'cata de vinos', une dégustation de vins."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "GCD8FZ2Hv_I", "cueIndex": 9}]
+    },
+    "Cataluña": {
+      "lemma": "Cataluña",
+      "pos": "noun",
+      "usage": {
+        "en": "Catalonia, Spain's north-eastern region (capital Barcelona); 'Catalunya' in Catalan. Girona, named in the cue, is one of its four provinces.",
+        "cs": "Katalánsko, severovýchodní region Španělska (hlavní město Barcelona); katalánsky 'Catalunya'. Girona z ukázky je jednou z jeho čtyř provincií.",
+        "de": "Katalonien, Spaniens Nordostregion (Hauptstadt Barcelona); auf Katalanisch 'Catalunya'. Girona aus dem Clip ist eine seiner vier Provinzen.",
+        "fr": "La Catalogne, région du nord-est de l'Espagne (capitale Barcelone) ; 'Catalunya' en catalan. Gérone, citée dans l'extrait, est l'une de ses quatre provinces."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "KqA6vBP2LUA", "cueIndex": 15}]
+    },
+    "Charlie": {
+      "lemma": "Charlie",
+      "pos": "noun",
+      "usage": {
+        "en": "English nickname used as-is in Spanish; in the clip it's simply someone's name. Note the doubled negative around it: 'nadie… ni Charlie' — not even Charlie.",
+        "cs": "Anglická přezdívka užívaná ve španělštině beze změny; v klipu je to prostě něčí jméno. Všimněte si dvojího záporu: 'nadie… ni Charlie' — ani Charlie.",
+        "de": "Englischer Spitzname, im Spanischen unverändert; im Clip einfach jemandes Name. Man beachte die doppelte Verneinung: 'nadie… ni Charlie' — nicht einmal Charlie.",
+        "fr": "Surnom anglais employé tel quel en espagnol ; dans la vidéo, c'est simplement le nom de quelqu'un. Notez la double négation : 'nadie… ni Charlie' — même pas Charlie."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "GCD8FZ2Hv_I", "cueIndex": 4}]
+    },
+    "Chelo": {
+      "lemma": "Chelo",
+      "pos": "proper noun",
+      "usage": {
+        "en": "Nickname, short for Marcelo or Consuelo — here the traveller's handle 'Chelo Travels'. Also the everyday word for the cello ('violonchelo').",
+        "cs": "Přezdívka, zkrácenina jmen Marcelo nebo Consuelo — zde cestovatelský pseudonym 'Chelo Travels'. Také běžné slovo pro violoncello ('violonchelo').",
+        "de": "Spitzname, Kurzform von Marcelo oder Consuelo — hier der Reise-Handle 'Chelo Travels'. Außerdem das Alltagswort für das Cello ('violonchelo').",
+        "fr": "Surnom, diminutif de Marcelo ou Consuelo — ici le pseudo de voyage 'Chelo Travels'. C'est aussi le mot courant pour le violoncelle ('violonchelo')."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "ruDD1b72B-c", "cueIndex": 21}]
+    },
+    "China": {
+      "lemma": "China",
+      "pos": "noun",
+      "usage": {
+        "en": "The country, normally without an article: 'de China', 'en China'. The adjective is 'chino/china' — and lowercase 'china' can also mean a pebble in Spain.",
+        "cs": "Čína, obvykle bez členu: 'de China', 'en China'. Přídavné jméno je 'chino/china' — a malé 'china' může ve Španělsku znamenat i oblázek.",
+        "de": "Das Land, normalerweise ohne Artikel: 'de China', 'en China'. Das Adjektiv ist 'chino/china' — kleingeschrieben kann 'china' in Spanien auch Kieselstein heißen.",
+        "fr": "Le pays, normalement sans article : 'de China', 'en China'. L'adjectif est 'chino/china' — et 'china' en minuscule peut aussi désigner un caillou en Espagne."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "TsSrAhJwU14", "cueIndex": 0}, {"videoId": "TsSrAhJwU14", "cueIndex": 2}, {"videoId": "G6ogFdFu9i4", "cueIndex": 22}]
+    },
+    "Chinchero": {
+      "lemma": "Chinchero",
+      "pos": "noun",
+      "usage": {
+        "en": "Andean town near Cusco, Peru, on the Sacred Valley tour route — the clip calls it 'la tierra del arcoíris', the land of the rainbow.",
+        "cs": "Andské městečko u peruánského Cuska na trase po Posvátném údolí — klip mu říká 'la tierra del arcoíris', země duhy.",
+        "de": "Andenstädtchen bei Cusco, Peru, auf der Route durchs Heilige Tal — der Clip nennt es 'la tierra del arcoíris', das Land des Regenbogens.",
+        "fr": "Bourg andin près de Cusco, au Pérou, sur la route de la Vallée sacrée — la vidéo l'appelle 'la tierra del arcoíris', la terre de l'arc-en-ciel."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "-PtGkAdnh6c", "cueIndex": 3}, {"videoId": "-PtGkAdnh6c", "cueIndex": 6}]
+    },
+    "City": {
+      "lemma": "City",
+      "pos": "noun",
+      "usage": {
+        "en": "English fragment: 'Go City', a brand of tourist sightseeing passes in the New York clip. Brand names stay untranslated in Spanish speech.",
+        "cs": "Anglický útržek: 'Go City', značka turistických zvýhodněných vstupenek z klipu o New Yorku. Názvy značek se ve španělštině nepřekládají.",
+        "de": "Englisches Fragment: 'Go City', eine Marke von Touristen-Sightseeing-Pässen im New-York-Clip. Markennamen bleiben im Spanischen unübersetzt.",
+        "fr": "Fragment anglais : 'Go City', une marque de pass touristiques dans la vidéo sur New York. Les noms de marques ne se traduisent pas en espagnol."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "VsM7XZF-Ihs", "cueIndex": 8}]
+    },
+    "Claus": {
+      "lemma": "Claus",
+      "pos": "noun",
+      "usage": {
+        "en": "From 'Santa Claus', the usual name across much of Latin America; in Spain the gift-bringer is more often 'Papá Noel'.",
+        "cs": "Ze jména 'Santa Claus', běžného ve velké části Latinské Ameriky; ve Španělsku nosí dárky spíš 'Papá Noel'.",
+        "de": "Aus 'Santa Claus', dem üblichen Namen in weiten Teilen Lateinamerikas; in Spanien bringt eher 'Papá Noel' die Geschenke.",
+        "fr": "De 'Santa Claus', nom courant dans une grande partie de l'Amérique latine ; en Espagne, c'est plutôt 'Papá Noel' qui apporte les cadeaux."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "T3ouNC3nc6M", "cueIndex": 17}]
+    },
+    "Colombia": {
+      "lemma": "Colombia",
+      "pos": "noun",
+      "usage": {
+        "en": "The country — spelled with two o's in Spanish, never 'Columbia'. No article: 'en Colombia'; the adjective is 'colombiano/colombiana'.",
+        "cs": "Kolumbie — španělsky se píše se dvěma o, nikdy 'Columbia'. Bez členu: 'en Colombia'; přídavné jméno je 'colombiano/colombiana'.",
+        "de": "Das Land — im Spanischen mit zwei o geschrieben, nie 'Columbia'. Ohne Artikel: 'en Colombia'; das Adjektiv lautet 'colombiano/colombiana'.",
+        "fr": "Le pays — écrit avec deux o en espagnol, jamais 'Columbia'. Sans article : 'en Colombia' ; l'adjectif est 'colombiano/colombiana'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "k17EHLC25hY", "cueIndex": 0}]
+    },
+    "Colya": {
+      "lemma": "Colya",
+      "pos": "noun",
+      "usage": {
+        "en": "Caption garbling of 'Saboya' (Savoy): the Bilbao clip is about Amadeo de Saboya — Amadeo of Savoy, briefly King Amadeo I of Spain.",
+        "cs": "Titulkové zkomolení jména 'Saboya' (Savojsko): klip o Bilbau mluví o Amadeovi Savojském — 'Amadeo de Saboya', krátce španělský král Amadeo I.",
+        "de": "Untertitel-Verstümmelung von 'Saboya' (Savoyen): Im Bilbao-Clip geht es um Amadeo de Saboya — Amadeus von Savoyen, kurz König Amadeo I. von Spanien.",
+        "fr": "Déformation de sous-titre de 'Saboya' (Savoie) : la vidéo de Bilbao parle d'Amadeo de Saboya — Amédée de Savoie, brièvement roi d'Espagne sous le nom d'Amadeo I."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "0oQwV4sKQis", "cueIndex": 4}]
+    },
+    "Colón": {
+      "lemma": "Colón",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish name of Columbus — 'Cristóbal Colón'. It also names countless streets, plazas and theatres across the Spanish-speaking world.",
+        "cs": "Španělské jméno Kolumba — 'Cristóbal Colón'. Nese ho také bezpočet ulic, náměstí a divadel po celém španělsky mluvícím světě.",
+        "de": "Spanischer Name von Kolumbus — 'Cristóbal Colón'. Er benennt außerdem unzählige Straßen, Plätze und Theater in der spanischsprachigen Welt.",
+        "fr": "Nom espagnol de Colomb — 'Cristóbal Colón'. Il baptise aussi d'innombrables rues, places et théâtres du monde hispanophone."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Xz0cRtym_N4", "cueIndex": 7}]
+    },
+    "Comillas": {
+      "lemma": "Comillas",
+      "pos": "noun",
+      "usage": {
+        "en": "Seaside town in Cantabria with famous architecture, including Gaudí's El Capricho. As a common noun, 'las comillas' means quotation marks.",
+        "cs": "Přímořské městečko v Kantábrii se slavnou architekturou včetně Gaudího El Capricho. Jako obecné slovo znamenají 'las comillas' uvozovky.",
+        "de": "Küstenstädtchen in Kantabrien mit berühmter Architektur, darunter Gaudís El Capricho. Als normales Substantiv bedeutet 'las comillas' Anführungszeichen.",
+        "fr": "Ville côtière de Cantabrie à l'architecture célèbre, dont El Capricho de Gaudí. Comme nom commun, 'las comillas' signifie les guillemets."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "qx5VQ8nR4sM", "cueIndex": 7}]
+    },
+    "Concepción": {
+      "lemma": "Concepción",
+      "pos": "noun",
+      "usage": {
+        "en": "Female name from 'la Inmaculada Concepción' (the Immaculate Conception); it also names streets and cities across the Spanish-speaking world — here 'la calle Concepción'.",
+        "cs": "Ženské jméno podle 'la Inmaculada Concepción' (Neposkvrněného početí); nesou ho i ulice a města napříč španělsky mluvícím světem — zde 'la calle Concepción'.",
+        "de": "Frauenname von 'la Inmaculada Concepción' (der Unbefleckten Empfängnis); auch Straßen und Städte tragen ihn — hier 'la calle Concepción'.",
+        "fr": "Prénom féminin issu de 'la Inmaculada Concepción' (l'Immaculée Conception) ; il baptise aussi rues et villes du monde hispanophone — ici 'la calle Concepción'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Ao31mCAWHCE", "cueIndex": 2}]
+    },
+    "Concho": {
+      "lemma": "Concho",
+      "pos": "noun",
+      "usage": {
+        "en": "Here the pet name of the '76 VW van in the road-trip clip — Spanish speakers love naming vehicles. In the Dominican Republic, 'un concho' is also a shared taxi.",
+        "cs": "Zde domácké jméno VW dodávky z roku '76 v cestovatelském klipu — hispánci rádi pojmenovávají vozidla. V Dominikánské republice je 'un concho' také sdílené taxi.",
+        "de": "Hier der Kosename des 76er-VW-Busses im Roadtrip-Clip — Fahrzeuge bekommen im Spanischen gern Namen. In der Dominikanischen Republik ist 'un concho' auch ein Sammeltaxi.",
+        "fr": "Ici le petit nom du van VW de 76 dans la vidéo de road trip — les hispanophones aiment baptiser leurs véhicules. En République dominicaine, 'un concho' est aussi un taxi collectif."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "88_ryfbVd1Y", "cueIndex": 10}]
+    },
+    "Corea": {
+      "lemma": "Corea",
+      "pos": "noun",
+      "usage": {
+        "en": "Korea. Spanish distinguishes 'Corea del Sur' and 'Corea del Norte'; the adjective is 'coreano/coreana', as the speaker says: 'soy coreana'.",
+        "cs": "Korea. Španělština rozlišuje 'Corea del Sur' a 'Corea del Norte'; přídavné jméno je 'coreano/coreana', jak říká mluvčí: 'soy coreana'.",
+        "de": "Korea. Das Spanische unterscheidet 'Corea del Sur' und 'Corea del Norte'; das Adjektiv ist 'coreano/coreana', wie die Sprecherin sagt: 'soy coreana'.",
+        "fr": "La Corée. L'espagnol distingue 'Corea del Sur' et 'Corea del Norte' ; l'adjectif est 'coreano/coreana', comme le dit la locutrice : 'soy coreana'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "2wSYOw4WnZQ", "cueIndex": 0}, {"videoId": "2wSYOw4WnZQ", "cueIndex": 2}]
+    },
+    "Costa": {
+      "lemma": "Costa",
+      "pos": "noun",
+      "usage": {
+        "en": "In the cues, the first half of 'Costa Rica' — literally 'rich coast'. On its own, 'la costa' is the everyday word for the coast: 'ir a la costa'.",
+        "cs": "V ukázkách první polovina názvu 'Costa Rica' — doslova 'bohaté pobřeží'. Samostatně je 'la costa' běžné slovo pro pobřeží: 'ir a la costa'.",
+        "de": "In den Clips die erste Hälfte von 'Costa Rica' — wörtlich 'reiche Küste'. Allein ist 'la costa' das Alltagswort für die Küste: 'ir a la costa'.",
+        "fr": "Dans les extraits, la première moitié de 'Costa Rica' — littéralement « côte riche ». Seul, 'la costa' est le mot courant pour la côte : 'ir a la costa'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "img-2054", "cueIndex": 0}, {"videoId": "img-2054", "cueIndex": 1}]
+    },
+    "Cristian": {
+      "lemma": "Cristian",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish male name (also written 'Cristián' or 'Christian'). In friendly speech names are used bare, with no title: 'Pero Cristian, yo voy a tu casa'.",
+        "cs": "Španělské mužské jméno (píše se i 'Cristián' nebo 'Christian'). V přátelské řeči se jména užívají bez titulu: 'Pero Cristian, yo voy a tu casa'.",
+        "de": "Spanischer Männername (auch 'Cristián' oder 'Christian' geschrieben). Unter Freunden nutzt man Namen ohne Anrede: 'Pero Cristian, yo voy a tu casa'.",
+        "fr": "Prénom masculin espagnol (aussi écrit 'Cristián' ou 'Christian'). Entre proches, le prénom s'emploie seul, sans titre : 'Pero Cristian, yo voy a tu casa'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "luDpj59rpPo", "cueIndex": 20}]
+    },
+    "Cristiano": {
+      "lemma": "Cristiano",
+      "pos": "noun",
+      "usage": {
+        "en": "Here the footballer Cristiano Ronaldo, known by first name alone. As an ordinary word, 'cristiano' means Christian; colloquially 'hablar en cristiano' is to talk plainly.",
+        "cs": "Zde fotbalista Cristiano Ronaldo, známý jen křestním jménem. Jako obecné slovo znamená 'cristiano' křesťan; hovorové 'hablar en cristiano' je mluvit srozumitelně.",
+        "de": "Hier der Fußballer Cristiano Ronaldo, nur beim Vornamen genannt. Als normales Wort heißt 'cristiano' Christ; umgangssprachlich ist 'hablar en cristiano' Klartext reden.",
+        "fr": "Ici le footballeur Cristiano Ronaldo, désigné par son seul prénom. Comme mot ordinaire, 'cristiano' signifie chrétien ; familièrement, 'hablar en cristiano' veut dire parler clairement."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "FEid04kzNy8", "cueIndex": 1}]
+    },
+    "Cristo": {
+      "lemma": "Cristo",
+      "pos": "noun",
+      "usage": {
+        "en": "Christ. Key for dates: 'antes de Cristo' (a.C.) is BC and 'después de Cristo' (d.C.) is AD — exactly how the history cue uses it.",
+        "cs": "Kristus. Klíčové pro letopočty: 'antes de Cristo' (a.C.) je př. n. l. a 'después de Cristo' (d.C.) je n. l. — přesně tak to užívá historická ukázka.",
+        "de": "Christus. Wichtig für Jahreszahlen: 'antes de Cristo' (a.C.) heißt v. Chr. und 'después de Cristo' (d.C.) n. Chr. — genau so im Geschichts-Clip.",
+        "fr": "Le Christ. Essentiel pour les dates : 'antes de Cristo' (a.C.) = av. J.-C. et 'después de Cristo' (d.C.) = apr. J.-C. — exactement l'usage de l'extrait historique."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "7u-OpBC5Asw", "cueIndex": 10}, {"videoId": "68wXtr2aNXQ", "cueIndex": 9}]
+    },
+    "Cristóbal": {
+      "lemma": "Cristóbal",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish form of Christopher — most famously 'Cristóbal Colón', Christopher Columbus. Spanish translates the first names of historical figures.",
+        "cs": "Španělská podoba jména Kryštof — nejslavněji 'Cristóbal Colón', Kryštof Kolumbus. Křestní jména historických osobností španělština překládá.",
+        "de": "Spanische Form von Christoph — am bekanntesten 'Cristóbal Colón', Christoph Kolumbus. Vornamen historischer Figuren werden im Spanischen übersetzt.",
+        "fr": "Forme espagnole de Christophe — la plus célèbre étant 'Cristóbal Colón', Christophe Colomb. L'espagnol traduit les prénoms des personnages historiques."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "Xz0cRtym_N4", "cueIndex": 7}]
+    },
+    "Cusco": {
+      "lemma": "Cusco",
+      "pos": "noun",
+      "usage": {
+        "en": "City in the Peruvian Andes, capital of the Inca Empire and gateway to Machu Picchu. Both spellings exist — 'Cusco' (usual in Peru) and 'Cuzco'; often 'el Cusco' locally.",
+        "cs": "Město v peruánských Andách, hlavní město incké říše a brána k Machu Picchu. Existují oba zápisy — 'Cusco' (běžné v Peru) i 'Cuzco'; místně často 'el Cusco'.",
+        "de": "Stadt in den peruanischen Anden, Hauptstadt des Inkareichs und Tor nach Machu Picchu. Beide Schreibungen existieren — 'Cusco' (in Peru üblich) und 'Cuzco'; lokal oft 'el Cusco'.",
+        "fr": "Ville des Andes péruviennes, capitale de l'Empire inca et porte du Machu Picchu. Les deux graphies existent — 'Cusco' (usuelle au Pérou) et 'Cuzco' ; localement souvent 'el Cusco'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "lo-O-AIog-U", "cueIndex": 0}, {"videoId": "84iEA087y2k", "cueIndex": 7}]
+    },
+    "Cuzco": {
+      "lemma": "Cuzco",
+      "pos": "noun",
+      "usage": {
+        "en": "Older, Spain-style spelling of Cusco, the Inca capital in Peru — same pronunciation in Latin America. In Peru, 'Cusco' is now the official form.",
+        "cs": "Starší, ve Španělsku běžný zápis města Cusco, inckého hlavního města v Peru — v Latinské Americe se vyslovuje stejně. V Peru je dnes úřední podoba 'Cusco'.",
+        "de": "Ältere, in Spanien übliche Schreibung von Cusco, der Inka-Hauptstadt in Peru — in Lateinamerika gleich ausgesprochen. In Peru ist heute 'Cusco' die offizielle Form.",
+        "fr": "Graphie ancienne, à l'espagnole, de Cusco, capitale inca du Pérou — même prononciation en Amérique latine. Au Pérou, la forme officielle est désormais 'Cusco'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "-PtGkAdnh6c", "cueIndex": 1}]
+    },
+    "César": {
+      "lemma": "César",
+      "pos": "noun",
+      "usage": {
+        "en": "Spanish form of Caesar — 'Julio César' is Julius Caesar, as in the cue. Also a common male name today; note the accent on 'é'.",
+        "cs": "Španělská podoba jména Caesar — 'Julio César' je Julius Caesar, jako v ukázce. Dnes také běžné mužské jméno; pozor na přízvuk na 'é'.",
+        "de": "Spanische Form von Caesar — 'Julio César' ist Julius Cäsar, wie im Clip. Heute auch ein gängiger Männername; man beachte den Akzent auf 'é'.",
+        "fr": "Forme espagnole de César — 'Julio César', c'est Jules César, comme dans l'extrait. Aussi un prénom masculin courant ; notez l'accent sur le 'é'."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "UNFYzvCC-zo", "cueIndex": 2}]
+    },
+    "Córdoba": {
+      "lemma": "Córdoba",
+      "pos": "noun",
+      "usage": {
+        "en": "Name shared by several places: in the cues it's the Argentine province and city; Spain's Andalusian Córdoba (with the Mezquita) is the other famous one.",
+        "cs": "Jméno více míst: v ukázkách jde o argentinskou provincii a město; druhá slavná Córdoba je ta andaluská ve Španělsku (s mešitou Mezquita).",
+        "de": "Name mehrerer Orte: In den Clips sind es Provinz und Stadt in Argentinien; das andere berühmte Córdoba liegt in Andalusien (mit der Mezquita).",
+        "fr": "Nom partagé par plusieurs lieux : dans les extraits, la province et la ville argentines ; l'autre Córdoba célèbre est l'andalouse, avec sa Mezquita."
+      },
+      "grammar": null,
+      "register": null,
+      "examples": [{"videoId": "-NSeE7KmIzw", "cueIndex": 1}, {"videoId": "-NSeE7KmIzw", "cueIndex": 2}, {"videoId": "-NSeE7KmIzw", "cueIndex": 7}]
+    }
+  }
+}
