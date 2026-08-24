@@ -33,17 +33,30 @@ jobs:
 
     steps:
       - name: Check out the release commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Node 24, matching the local toolchain
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
+          # TWO LOCKFILES, because there are two npm projects — see below.
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
 
-      - name: Install workspace dependencies
-        # The mobile app resolves @loro/core through the workspace, so the
-        # install has to happen at the repository root.
+      # ⚠️ apps/mobile IS NOT A WORKSPACE MEMBER. The root workspaces field
+      # covers packages/* only; the app is its own npm project with its own
+      # lockfile, and depends on core as file:../../packages/core. A single
+      # root `npm ci` therefore installs nothing the app needs, which is
+      # exactly how the first run of this workflow failed: "Failed to resolve
+      # plugin for module expo-splash-screen ... Do you have node modules
+      # installed?".
+      - name: Install core's dependencies
+        run: npm ci
+
+      - name: Install the app's dependencies
+        working-directory: apps/mobile
         run: npm ci
 
       - name: Install EAS CLI
@@ -67,7 +80,7 @@ jobs:
       - name: Keep the .ipa whatever happens next
         # Uploaded BEFORE the submit step so that a failed upload to Apple
         # still leaves a downloadable artifact rather than a wasted build.
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: loro-ios-ipa
           path: ${{ runner.temp }}/loro.ipa
