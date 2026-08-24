@@ -13,6 +13,7 @@ import { storage } from '@loro/core/storage';
 import { formatDue, MAX_BOX } from '@loro/core/srs';
 import { enableRecallForSession } from '../feed/recall';
 import { SavePromptCard } from '../auth/SavePromptCard';
+import { WordDetailSheet } from './WordDetailSheet';
 
 /**
  * VOCAB — port of the web's app/vocab/page.tsx.
@@ -110,11 +111,11 @@ function BoxMeter({ word }: { word: SavedWord }) {
 function WordRow({
   word,
   now,
-  onRemove,
+  onOpen,
 }: {
   word: SavedWord;
   now: number;
-  onRemove: () => void;
+  onOpen: () => void;
 }) {
   const meta = STATE_META[word.state];
   const isLapsed = word.state === 'lapsed';
@@ -124,8 +125,20 @@ function WordRow({
   const edge = isLapsed ? '#f87171' : isKnown ? '#5ee6a8' : 'rgba(94,230,168,0.4)';
   const fill = isLapsed ? '#f87171' : TONE_COLOR[meta.tone];
 
+  // The whole row opens the detail sheet; remove lives in the sheet's footer
+  // now, which un-clutters the row and puts a destructive action one
+  // deliberate step further from a scroll-past thumb.
   return (
-    <View style={[styles.row, isLapsed && styles.rowLapsed]}>
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`${word.text} — details`}
+      style={({ pressed }) => [
+        styles.row,
+        isLapsed && styles.rowLapsed,
+        pressed && styles.rowPressed,
+      ]}
+    >
       {/* left status edge — pulls the eye to lapsed words */}
       <View style={[styles.edge, { backgroundColor: edge }]} />
 
@@ -137,15 +150,6 @@ function WordRow({
               {word.translation}
             </Text>
           </View>
-          <Pressable
-            onPress={onRemove}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={`Remove ${word.text}`}
-            style={({ pressed }) => [styles.trash, pressed && styles.pressed]}
-          >
-            <Text style={styles.trashText}>🗑</Text>
-          </Pressable>
         </View>
 
         <View style={styles.rowMeta}>
@@ -168,7 +172,7 @@ function WordRow({
       <View style={styles.fillTrack}>
         <View style={[styles.fillBar, { width: `${fillPct}%`, backgroundColor: fill }]} />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -183,6 +187,7 @@ export function VocabScreen({
   const [words, setWords] = useState<SavedWord[]>(() => storage.getSavedWords());
   const [query, setQuery] = useState('');
   const [now, setNow] = useState(() => Date.now());
+  const [detail, setDetail] = useState<SavedWord | null>(null);
 
   /**
    * Live in both directions: onWordsChanged catches saves and grades from the
@@ -264,6 +269,8 @@ export function VocabScreen({
   const handleRemove = (word: SavedWord) => {
     setWords(storage.removeWord(word.text, word.videoId));
   };
+
+  const openDetail = (word: SavedWord) => setDetail(word);
 
   return (
     <View style={styles.root}>
@@ -350,7 +357,7 @@ export function VocabScreen({
                       key={wordKey(word)}
                       word={word}
                       now={now}
-                      onRemove={() => handleRemove(word)}
+                      onOpen={() => openDetail(word)}
                     />
                   ))}
                 </View>
@@ -359,6 +366,12 @@ export function VocabScreen({
           </>
         )}
       </ScrollView>
+
+      <WordDetailSheet
+        word={detail}
+        onClose={() => setDetail(null)}
+        onRemove={handleRemove}
+      />
     </View>
   );
 }
@@ -446,6 +459,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   rowLapsed: { borderColor: 'rgba(248,113,113,0.4)', borderWidth: 1 },
+  rowPressed: { opacity: 0.8 },
   edge: { bottom: 0, left: 0, position: 'absolute', top: 0, width: 3 },
   rowBody: { paddingBottom: 14, paddingLeft: 16, paddingRight: 10, paddingTop: 12 },
   rowHead: { flexDirection: 'row', gap: 8 },
@@ -457,8 +471,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 1,
   },
-  trash: { padding: 4 },
-  trashText: { color: 'rgba(242,245,243,0.35)', fontSize: 14 },
   rowMeta: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 10 },
   stateLabel: { fontSize: 12, fontWeight: '700' },
   meter: { flexDirection: 'row', gap: 3 },
