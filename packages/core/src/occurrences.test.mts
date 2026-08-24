@@ -50,6 +50,11 @@ describe('findWordOccurrences', () => {
     assert.deepEqual(findWordOccurrences([v], 'perro'), []);
   });
 
+  it('records which word of the cue matched', () => {
+    const occ = findWordOccurrences([video('a', [['y', 'el', 'perro']])], 'perro');
+    assert.deepEqual([occ[0].cueIndex, occ[0].wordIndex], [0, 2]);
+  });
+
   it('matches loosely on punctuation but keeps ñ distinct', () => {
     const occ = findWordOccurrences([video('a', [['¡Mañana!']])], 'mañana');
     assert.equal(occ.length, 1);
@@ -62,6 +67,7 @@ describe('pickReplayOccurrence', () => {
     videoId,
     youtubeId,
     cueIndex,
+    wordIndex: 0,
     start: cueIndex,
     end: cueIndex + 0.4,
   });

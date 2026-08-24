@@ -91,12 +91,19 @@ export function WordDetailSheet({
   /** Called after the user confirms removal; the caller owns the storage call. */
   onRemove: (word: SavedWord) => void;
   /**
-   * Ask for a review of this word. The caller closes the window and navigates
-   * once it is off screen — this must NOT also call onClose, or the dismissal
-   * and the tab change land in one commit, which is the shape that stranded a
-   * native window before.
+   * Review this word. `occurrence` is the clip that says it — when there is
+   * one, the review happens in this same window as a flashcard; when there is
+   * not, the caller falls back to arming a session in the feed.
+   *
+   * This must NOT also call onClose: on the fallback path the dismissal and
+   * the tab change would land in one commit, which is the shape that stranded
+   * a native window before.
    */
-  onReview: (word: SavedWord) => void;
+  onReview: (
+    word: SavedWord,
+    occurrence: WordOccurrence | null,
+    video: Video | null
+  ) => void;
   /** Swap this window's contents to the hear-it player. */
   onHear: (occurrence: WordOccurrence, video: Video) => void;
 }) {
@@ -141,7 +148,24 @@ export function WordDetailSheet({
       { videoId: word.videoId, cueIndex: word.cueIndex },
       { requireYoutube: true }
     );
-    return { catalog, sourceVideo, hearOccurrence };
+    /**
+     * WHERE TO REVIEW IT, which is a different question from where to hear it.
+     * pickReplayOccurrence deliberately EXCLUDES the cue the word was saved
+     * from — hearing it somewhere new is the point of that button. A review
+     * wants the opposite: the sentence the user already has a memory of, and
+     * only failing that, anywhere else that says it.
+     */
+    const reviewOccurrence =
+      occurrences.find(
+        (o) =>
+          o.videoId === word.videoId &&
+          o.cueIndex === word.cueIndex &&
+          o.youtubeId !== null
+      ) ??
+      occurrences.find((o) => o.videoId === word.videoId && o.youtubeId !== null) ??
+      occurrences.find((o) => o.youtubeId !== null) ??
+      null;
+    return { catalog, sourceVideo, hearOccurrence, reviewOccurrence };
   }, [word]);
 
   /**
@@ -259,12 +283,24 @@ export function WordDetailSheet({
           {/* The primary action: practise it. Recall is what the app is FOR,
               so it leads — hearing the word is the warm-up, not the goal. */}
           <Pressable
-            onPress={() => onReview(word)}
+            onPress={() => {
+              const occ = derived.reviewOccurrence;
+              const clip = occ
+                ? (derived.catalog.find((v) => v.id === occ.videoId) ?? null)
+                : null;
+              onReview(word, occ && clip ? occ : null, clip);
+            }}
             accessibilityRole="button"
-            accessibilityHint="Opens the feed with your due words as blanks"
+            accessibilityHint={
+              derived.reviewOccurrence
+                ? 'Hear it in the video, then type it from memory'
+                : 'Opens the feed with your due words as blanks'
+            }
             style={({ pressed }) => [styles.reviewButton, pressed && styles.pressed]}
           >
-            <Text style={styles.reviewLabel}>Review in the feed</Text>
+            <Text style={styles.reviewLabel}>
+              {derived.reviewOccurrence ? 'Review it now' : 'Review in the feed'}
+            </Text>
           </Pressable>
 
           {/* Jump to a video that speaks this word. Hidden, not disabled, when

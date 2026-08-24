@@ -20,6 +20,9 @@ export type WordOccurrence = {
   /** null for hosted (non-embed) clips — the modal player needs YouTube. */
   youtubeId: string | null;
   cueIndex: number;
+  /** Which word OF THAT CUE — a cue that says the word twice must blank the
+      one that was actually timed, not the first spelling that matches. */
+  wordIndex: number;
   /** Seconds — the word's audible span inside the video. */
   start: number;
   end: number;
@@ -35,17 +38,18 @@ export function findWordOccurrences(
   const found: WordOccurrence[] = [];
   for (const video of videos) {
     video.cues.forEach((cue, cueIndex) => {
-      for (const word of cue.words) {
-        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) continue;
-        if (normalizeSurface(word.text) !== wanted) continue;
+      cue.words.forEach((word, wordIndex) => {
+        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) return;
+        if (normalizeSurface(word.text) !== wanted) return;
         found.push({
           videoId: video.id,
           youtubeId: video.youtubeId ?? null,
           cueIndex,
+          wordIndex,
           start: word.start,
           end: word.end,
         });
-      }
+      });
     });
   }
   return found;

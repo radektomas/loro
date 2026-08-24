@@ -17,7 +17,7 @@ import { pickReviewTarget, type WordOccurrence } from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
 import { requestReviewTarget } from '../feed/reviewTarget';
 import { SavePromptCard } from '../auth/SavePromptCard';
-import { HearItPanel } from './HearItPanel';
+import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
 import { WordDetailSheet } from './WordDetailSheet';
 
 /**
@@ -219,9 +219,15 @@ export function VocabScreen({
    * is already up — no dismissal, no presentation, nothing to strand.
    */
   const [detail, setDetail] = useState<SavedWord | null>(null);
-  const [hearing, setHearing] = useState<{
+  /**
+   * The video face of the window: the clip that says this word, either to
+   * listen to ('listen') or to be quizzed on ('review'). Null means the word
+   * sheet is showing.
+   */
+  const [playing, setPlaying] = useState<{
     occurrence: WordOccurrence;
     video: Video;
+    mode: PanelMode;
   } | null>(null);
   /**
    * Dismissal in flight. `visible` goes false while the contents stay mounted,
@@ -283,7 +289,7 @@ export function VocabScreen({
   useEffect(() => {
     if (active) return;
     setDetail(null);
-    setHearing(null);
+    setPlaying(null);
     setClosing(false);
   }, [active]);
 
@@ -431,7 +437,7 @@ export function VocabScreen({
     }
     setClosing(false);
     setDetail(null);
-    setHearing(null);
+    setPlaying(null);
     const pending = pendingReviewRef.current;
     pendingReviewRef.current = null;
     if (pending) reviewWord(pending.word, pending.preferVideoId);
@@ -555,24 +561,39 @@ export function VocabScreen({
         onDismiss={afterDismiss}
       >
         {detail !== null &&
-          (hearing ? (
-            <HearItPanel
-              occurrence={hearing.occurrence}
-              word={detail.text}
-              video={hearing.video}
-              onClose={() => setHearing(null)}
-              // Land on the clip they just listened to, not a different one.
-              onReview={() =>
-                closeWindow({ word: detail, preferVideoId: hearing.occurrence.videoId })
-              }
+          (playing ? (
+            <WordVideoPanel
+              word={detail}
+              occurrence={playing.occurrence}
+              video={playing.video}
+              mode={playing.mode}
+              onClose={() => setPlaying(null)}
+              // Answered. Back to the list they were reading, which is still
+              // scrolled exactly where they left it.
+              onDone={() => closeWindow()}
             />
           ) : (
             <WordDetailSheet
               word={detail}
               onClose={() => closeWindow()}
               onRemove={handleRemove}
-              onReview={(word) => closeWindow({ word })}
-              onHear={(occurrence, video) => setHearing({ occurrence, video })}
+              /**
+               * A word the catalog SPEAKS is reviewed right here, as a
+               * flashcard over the clip that says it. A word it does not — a
+               * starter-deck word with no clip — has nothing to play, so it
+               * falls back to the old behaviour: arm a session and hand the
+               * user to the feed.
+               */
+              onReview={(word, occurrence, video) => {
+                if (occurrence && video) {
+                  setPlaying({ occurrence, video, mode: 'review' });
+                } else {
+                  closeWindow({ word });
+                }
+              }}
+              onHear={(occurrence, video) =>
+                setPlaying({ occurrence, video, mode: 'listen' })
+              }
             />
           ))}
       </Modal>
