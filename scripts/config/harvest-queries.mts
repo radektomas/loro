@@ -39,7 +39,8 @@ export type TopicSlug =
   | 'sports'
   | 'technology'
   | 'talking-head'
-  | 'travel-vlog';
+  | 'travel-vlog'
+  | 'positive-shorts';
 
 export type Topic = {
   slug: TopicSlug;
@@ -260,6 +261,38 @@ export const TOPICS: readonly Topic[] = [
     tags: ['travel', 'talking-head'],
     // Geographic on its face (trips, cities, countries), so it sweeps the
     // full region set like 'travel' does.
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'positive-shorts',
+    label: 'Positive shorts (person speaking)',
+    /**
+     * Added 2026-08-22 — the third format-first topic. Motivated by a
+     * measured gap, not a hunch: after the 2026-08-21 moderation pass the
+     * owner asked for 15-40s "people talking about nice things", and two
+     * full-quota sweeps of the existing matrix produced almost nothing in
+     * that window — street-interview queries at depth pull news/politics,
+     * and the subject topics pull demos and B-roll. What DID work was
+     * hand-picking small vox-pop channels (12 of 13 passed the vision gate),
+     * which is exactly the format these queries name: one person telling
+     * you something pleasant — a memory, a piece of advice, good news.
+     *
+     * All six terminate on a noun or adjective per rule 1. Accent-free like
+     * the rest of the file; query strings are yield-history keys.
+     */
+    queries: [
+      'mi consejo favorito',
+      'una historia bonita',
+      'mi mejor recuerdo',
+      'te cuento algo bonito',
+      'una buena noticia',
+      'lo que me hace feliz',
+    ],
+    tags: ['talking-head', 'positive'],
+    // Format-first and non-geographic on its face, but kept on the full
+    // region sweep like talking-head: accent diversity is the feed's goal
+    // and these queries are cheap (6 x 4 x 1 page = 2,400 units).
     regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
