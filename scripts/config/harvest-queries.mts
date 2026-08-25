@@ -40,7 +40,9 @@ export type TopicSlug =
   | 'technology'
   | 'talking-head'
   | 'travel-vlog'
-  | 'positive-shorts';
+  | 'positive-shorts'
+  | 'personal-story'
+  | 'life-lesson';
 
 export type Topic = {
   slug: TopicSlug;
@@ -293,6 +295,75 @@ export const TOPICS: readonly Topic[] = [
     // Format-first and non-geographic on its face, but kept on the full
     // region sweep like talking-head: accent diversity is the feed's goal
     // and these queries are cheap (6 x 4 x 1 page = 2,400 units).
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'personal-story',
+    label: 'Personal story (to camera)',
+    /**
+     * Added 2026-08-24 — the fifth format-first topic, and NEW QUERIES rather
+     * than another sweep, which is the only thing that pays here: a pages:1
+     * topic has no cursor to advance into, so re-running one re-fetches page 0
+     * and dedupes almost everything (positive-shorts re-run, 2 424 units for
+     * ~1 net eligible).
+     *
+     * The format is the one the feed is shortest on: a person telling you
+     * something that happened to them, straight down the lens. Not a subject —
+     * an anecdote, a Q&A, a reflection, a hard-won lesson. There is nothing
+     * else to film, so the camera has to be on their face, which is exactly
+     * what the on-camera gate looks for.
+     *
+     * All six terminate on a noun, per rule 1 at the top of this file. ñ is
+     * written as ñ ('español') per rule 2; ordinary accents are left off
+     * ('superacion', 'reflexion', 'decision') like the rest of the file,
+     * because the query string is the yield-history key and must not churn.
+     * 'mi peor experiencia' is a deliberate near-synonym of talking-head's
+     * 'mi experiencia personal' — near-synonyms have measured out as
+     * surfacing substantially different rows.
+     */
+    queries: [
+      'storytime en español',
+      'respondiendo sus preguntas',
+      'mi peor experiencia',
+      'mi historia de superacion',
+      'reflexion del dia',
+      'la mejor decision de mi vida',
+    ],
+    tags: ['talking-head', 'conversation'],
+    // Same reasoning as positive-shorts: format-first, but swept across all
+    // four regions for accent diversity. 6 x 4 x 1 page = 2,400 units.
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'life-lesson',
+    label: 'Life lesson (to camera)',
+    /**
+     * Added 2026-08-24 alongside personal-story, which yielded 96 eligible
+     * from 373 rows on its first sweep — 25.7%, against ~1 net eligible for
+     * re-running an exhausted pages:1 topic. New queries are the only lever
+     * that moves this pool, so this is a second set aimed at the same format
+     * from a different angle: not the story, but the conclusion drawn from it.
+     *
+     * Where personal-story asks for the anecdote ('mi peor experiencia'),
+     * these ask for the lesson, the correction, the reply to the audience.
+     * Same physical consequence: nothing to film but the speaker's face.
+     *
+     * All six terminate on a noun or a content gerund, per rule 1. ñ written
+     * as ñ ('año') per rule 2; ordinary accents left off ('cambio',
+     * 'aprendi') as everywhere else in this file, because the query string is
+     * the yield-history key.
+     */
+    queries: [
+      'mi mayor error',
+      'lo que cambio mi vida',
+      'respondo comentarios',
+      'consejo para mi yo del pasado',
+      'lo que aprendi este año',
+      'mi experiencia trabajando',
+    ],
+    tags: ['talking-head', 'conversation'],
     regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
