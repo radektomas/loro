@@ -19,10 +19,25 @@ import { CHROME } from './copy';
 import { SLIDE_MS, olog } from './flow';
 import {
   INITIAL_FLOW,
+  STEPS,
   visibleSteps,
   type FlowState,
   type StepId,
 } from './steps';
+import { track } from '../platform/analytics';
+
+/**
+ * The step's position in the CANONICAL list, not in the visible one.
+ *
+ * The funnel report orders screens by this number, so it has to mean the same
+ * thing for every user — and the visible list does not: answering "starting
+ * from zero" removes three screens, which would shift every screen after it
+ * up by three for that half of the population and interleave two orderings
+ * into nonsense. The canonical index is fixed for the life of the build.
+ */
+function canonicalIndex(id: StepId): number {
+  return STEPS.findIndex((step) => step.id === id);
+}
 
 /**
  * CHECKPOINT H — the onboarding host.
@@ -91,6 +106,26 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   /** Mirrors currentId for the same reason stateRef mirrors state. */
   const currentIdRef = useRef<StepId>(currentId);
 
+  /**
+   * The FIRST screen, which goBy never sees.
+   *
+   * Arrivals are recorded by the navigator, and screen 1 is not arrived at —
+   * it is where the flow starts. Without this the funnel's widest step is
+   * missing entirely and every drop-off percentage is computed against the
+   * second screen, which flatters the intro by exactly the number of people
+   * who quit on the first one.
+   *
+   * Empty deps: this component mounts once per launch, and only on a launch
+   * that shows onboarding at all.
+   */
+  useEffect(() => {
+    track('onboarding_step', {
+      step: 'hook',
+      index: canonicalIndex('hook'),
+      direction: 'forward',
+    });
+  }, []);
+
   const goBy = useCallback((delta: number) => {
     // Recomputed from the ref rather than from `steps`: the same handler may
     // have just changed which steps are in play.
@@ -101,6 +136,17 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     currentIdRef.current = target.id;
     setCurrentId(target.id);
     olog(`step -> ${target.id}`);
+    /**
+     * Every ARRIVAL, including one reached by going back. Re-arrivals cannot
+     * inflate the report — it counts distinct installs per step and takes the
+     * MAX index for "where they stopped" — and dropping them would hide the
+     * screens people actually re-read, which is a signal about the copy.
+     */
+    track('onboarding_step', {
+      step: target.id,
+      index: canonicalIndex(target.id),
+      direction: delta > 0 ? 'forward' : 'back',
+    });
     return true;
   }, []);
 
@@ -119,15 +165,41 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
    * the grid, and that is correct. Feed order falls back to catalog order when
    * the level is null rather than guessing one.
    */
-  const finish = useCallback(() => {
-    storage.setOnboarded();
-    olog(
-      `finished — onboarded=1 selfLevel=${storage.getSelfLevel() ?? 'none'} ` +
-        `startLevel=${storage.getStartLevel() ?? 'none'} ` +
-        `calibrationKnown=${storage.getCalibrationKnown().length}`
-    );
-    onDone();
-  }, [onDone]);
+  const finishWith = useCallback(
+    (skipped: boolean) => {
+      /**
+       * Recorded BEFORE setOnboarded, so the event exists even if the write
+       * throws — a device that cannot commit the flag will march this user
+       * through onboarding again on the next launch, and the log saying they
+       * finished twice is the only evidence of it.
+       *
+       * `step` is where they were standing when they left, which is the whole
+       * value of the skipped case: "skipped from screen 2" and "skipped from
+       * screen 11" are different products failing in different ways.
+       */
+      track('onboarding_completed', {
+        skipped,
+        step: currentIdRef.current,
+        index: canonicalIndex(currentIdRef.current),
+      });
+      storage.setOnboarded();
+      olog(
+        `finished — onboarded=1 skipped=${skipped ? 1 : 0} ` +
+          `selfLevel=${storage.getSelfLevel() ?? 'none'} ` +
+          `startLevel=${storage.getStartLevel() ?? 'none'} ` +
+          `calibrationKnown=${storage.getCalibrationKnown().length}`
+      );
+      onDone();
+    },
+    [onDone]
+  );
+
+  /** What the steps get: reaching the end of the flow is completing it. */
+  const finish = useCallback(() => finishWith(false), [finishWith]);
+  /** What the chrome's Skip gets. Same commit, different verdict — the two
+      were one handler before, which made the funnel unable to tell a finished
+      intro from an abandoned one. */
+  const skip = useCallback(() => finishWith(true), [finishWith]);
 
   /**
    * Android's hardware back walks the flow instead of closing the app —
@@ -182,7 +254,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
         <View style={[styles.chromeSide, styles.chromeSideEnd]}>
           <Pressable
-            onPress={finish}
+            onPress={skip}
             accessibilityRole="button"
             accessibilityLabel={CHROME.skip}
             hitSlop={10}

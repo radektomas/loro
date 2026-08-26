@@ -19,6 +19,7 @@ import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { SignInCard } from '../auth/SignInCard';
 import { BRAND } from '../onboarding/brand';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
+import { track } from '../platform/analytics';
 import {
   ACCENT,
   CARD,
@@ -140,6 +141,18 @@ export function PaywallScreen() {
   const [busy, setBusy] = useState<'purchase' | 'restore' | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
+  /**
+   * THE WALL WAS SEEN. The denominator of every conversion number on the
+   * dashboard, and the reason it is an effect with empty deps rather than
+   * something the gate fires: App.tsx decides WHETHER to render this screen,
+   * but only the screen itself knows it actually mounted, and a verdict that
+   * flips to entitled mid-resolve must not be counted as a wall anybody
+   * looked at.
+   */
+  useEffect(() => {
+    track('paywall_shown');
+  }, []);
+
   const loadOfferings = useCallback(() => {
     setOffer({ status: 'loading' });
     const api = getPurchasesApi();
@@ -147,6 +160,7 @@ export function PaywallScreen() {
       // No native module: the gate is already open (purchases.ts fails open),
       // so this screen should not be mounted at all. Fail visibly rather than
       // throwing.
+      track('paywall_offerings_failed', { reason: 'no_native_module' });
       setOffer({ status: 'error' });
       return;
     }
@@ -155,6 +169,7 @@ export function PaywallScreen() {
         const packages = offerings.current?.availablePackages ?? [];
         if (packages.length === 0) {
           console.warn('[loro] current offering is empty');
+          track('paywall_offerings_failed', { reason: 'empty_offering' });
           setOffer({ status: 'error' });
           return;
         }
@@ -167,6 +182,12 @@ export function PaywallScreen() {
       })
       .catch((err) => {
         console.warn('[loro] offerings fetch failed', err);
+        /**
+         * Worth its own row rather than folding into "left": this is the
+         * failure that presents as a paywall with no prices and no way to
+         * pay, so a spike here is a revenue outage, not a pricing problem.
+         */
+        track('paywall_offerings_failed', { reason: 'fetch_failed' });
         setOffer({ status: 'error' });
       });
   }, []);
@@ -184,16 +205,61 @@ export function PaywallScreen() {
   const purchase = useCallback(async () => {
     if (!selected || busy) return;
     setBusy('purchase');
+    /**
+     * INTENT, RECORDED BEFORE THE SHEET OPENS. This is the event that splits
+     * "the price was wrong" from "the checkout was broken": everyone below it
+     * in the funnel wanted to pay, so the gap between this and
+     * purchase_completed is money the App Store sheet lost, not money the
+     * pricing lost. It must be written before the await for the obvious
+     * reason — the process can die inside Apple's sheet.
+     */
+    track('purchase_started', {
+      packageId: selected.identifier,
+      packageType: selected.packageType,
+      productId: selected.product.identifier,
+      price: selected.product.price,
+      currency: selected.product.currencyCode,
+    });
     try {
       // Success needs no handling here: the CustomerInfo listener in
       // purchases.ts flips the gate and App.tsx unmounts this screen.
       const api = getPurchasesApi();
       if (!api) return;
       await api.purchasePackage(selected);
+      /**
+       * Recorded here even though the gate has already flipped underneath us.
+       * RevenueCat knows about the money; this row is what ties it back to an
+       * install_id, and therefore to the onboarding run and the paywall view
+       * that produced it — the join the dashboard's funnel is built on.
+       */
+      track('purchase_completed', {
+        packageId: selected.identifier,
+        packageType: selected.packageType,
+        productId: selected.product.identifier,
+        price: selected.product.price,
+        currency: selected.product.currencyCode,
+      });
     } catch (err) {
-      // A cancelled sheet is the user changing their mind, not an event.
-      if ((err as { userCancelled?: boolean | null }).userCancelled) return;
+      // A cancelled sheet is the user changing their mind, so it stays silent
+      // in the UI — but it is emphatically an EVENT: someone who opened the
+      // Apple sheet and backed out is the most persuadable person the funnel
+      // has, and telling them apart from a failed charge is the difference
+      // between a pricing fix and a bug fix.
+      if ((err as { userCancelled?: boolean | null }).userCancelled) {
+        track('purchase_cancelled', {
+          packageId: selected.identifier,
+          packageType: selected.packageType,
+        });
+        return;
+      }
       console.warn('[loro] purchase failed', err);
+      track('purchase_failed', {
+        packageId: selected.identifier,
+        packageType: selected.packageType,
+        // RevenueCat's stable code, not the localised message: the message is
+        // in the user's language and would fragment one cause into twenty.
+        code: (err as { code?: string | number }).code ?? null,
+      });
       Alert.alert(
         'Purchase not completed',
         'Nothing was charged. Please try again in a moment.'
@@ -213,13 +279,26 @@ export function PaywallScreen() {
       // If a subscription came back, the gate has already opened via the
       // listener; this alert is only for the other outcome.
       if (Object.keys(info.entitlements.active).length === 0) {
+        track('restore_empty');
         Alert.alert(
           'Nothing to restore',
           'No previous subscription was found for this Apple ID.'
         );
+      } else {
+        /**
+         * A restore is NOT a sale, and the paywall report keeps it in its own
+         * row for that reason: these are reinstalls and second devices. Folding
+         * them into purchases would inflate conversion by exactly the number of
+         * existing subscribers who reinstalled — which rises when retention
+         * falls, so the metric would look best when the product was doing worst.
+         */
+        track('restore_succeeded');
       }
     } catch (err) {
       console.warn('[loro] restore failed', err);
+      track('restore_failed', {
+        code: (err as { code?: string | number }).code ?? null,
+      });
       Alert.alert(
         'Restore not completed',
         'Please check your connection and try again.'

@@ -23,6 +23,7 @@ import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
 import { refreshCatalog } from '../platform/catalog';
+import { trackOnce } from '../platform/analytics';
 import {
   usePlayerApi,
   usePlayerBox,
@@ -920,7 +921,23 @@ const Slide = memo(function Slide({
    * slide of a feed nobody was looking at.
    */
   useEffect(() => {
-    if (isActive) storage.markWatched(video.id);
+    if (!isActive) return;
+    storage.markWatched(video.id);
+    /**
+     * The same moment, reported outward.
+     *
+     * DELIBERATELY THE SAME DEFINITION OF "WATCHED" AS markWatched — the slide
+     * took the screen on the visible tab — rather than a stricter one based on
+     * playback progress. Two reasons: the app already tells the user "videos
+     * watched" on Progress using exactly this rule, so a dashboard using a
+     * different one would disagree with the app in front of the person reading
+     * it; and the embed player's progress is not reliable enough to key a
+     * metric on. Read the number as "reached", not "finished".
+     *
+     * trackOnce, not track: this effect re-runs on every activation, and a
+     * user swiping back to a video has not watched a second video.
+     */
+    trackOnce(`video:${video.id}`, 'video_watched', { videoId: video.id });
   }, [isActive, video.id]);
 
   /** Stable for as long as this cell shows this video — see Karaoke's memo. */

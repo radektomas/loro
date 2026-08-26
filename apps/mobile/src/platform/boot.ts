@@ -8,6 +8,7 @@ import { storageDriver } from './storage';
 import { initAuth } from './supabaseInit';
 import { initNotifications } from './notifications';
 import { captureCampaignAttribution, initPurchases } from './purchases';
+import { initAnalytics } from './analytics';
 import { installCachedCatalog, refreshCatalog, type CatalogSource } from './catalog';
 
 /**
@@ -89,6 +90,20 @@ storage.initSync();
  * (see purchases.ts / config.ts on failing open).
  */
 initPurchases();
+
+/**
+ * Product analytics, last of the seams and deliberately after the auth one:
+ * it mirrors onAuthChange to stamp a user_id on events, and a subscription
+ * registered before initAuth would hold a dead bus for the whole launch — the
+ * same trap initSync sits above.
+ *
+ * At module scope rather than in finishBoot() because the launch pair
+ * (app_install / app_open) must be recorded even for a launch that never
+ * reaches a rendered frame: a crash on the way to first paint is exactly the
+ * kind of thing worth having a row for. Nothing here reaches the network
+ * synchronously — track() writes to MMKV and returns.
+ */
+initAnalytics();
 
 /**
  * The catalog seam, filled immediately after the platform seam and before any
