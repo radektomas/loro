@@ -54,6 +54,64 @@ Setup:
 
 The n8n workflow should use the service-role key (bypasses RLS) to move videos through `uploaded → processing → published | pending_review` and fill `cues`/`dictionary`. The webhook payload is `{ video_id, creator_id, storage_path, audio_path, duration }` — **transcribe from `audio_path`** (browser-extracted mono 16 kHz m4a, a few hundred KB); `storage_path` is the playable video and should never be sent to Whisper.
 
+## Product analytics: the iOS funnel
+
+`/admin/analytics` answers the questions RevenueCat and App Store Connect
+cannot: how far people get before the paywall, whether they buy, and whether
+the ones who buy actually use the app.
+
+**Why it had to be built rather than queried.** Before this, the only
+server-side record of a mobile user was `loro_progress` — and that keys on
+`auth.users`, while the iOS app is a hard paywall anyone can buy through
+anonymously and never sign in. The population the paywall question is *about*
+was invisible by construction.
+
+### The pieces
+
+| Where | What |
+|---|---|
+| `supabase/migrations/20260826000000_analytics_events.sql` | `loro_analytics_events` + seven admin-gated report functions |
+| `supabase/migrations/20260826010000_analytics_ingest.sql` | `loro_analytics_ingest()` — the write path (see below) |
+| `apps/mobile/src/platform/analytics.ts` | the client: install pseudonym, queue, batched flush |
+| `lib/analytics.ts` | typed RPC wrappers for the dashboard |
+| `app/admin/analytics/page.tsx` | the dashboard |
+| `components/admin/AnalyticsCharts.tsx` | the marks (validated palettes — see the header comment) |
+
+### Rules that are easy to break by accident
+
+- **Writes go through `loro_analytics_ingest()`, never a table upsert.** The
+  table has an INSERT policy and deliberately no UPDATE policy, and PostgREST's
+  upsert path (`Prefer: resolution=ignore-duplicates`, which is what
+  `supabase-js .upsert({ ignoreDuplicates: true })` sends) is refused by RLS
+  without one — verified live: plain insert 201, same insert with that header
+  42501. Never "fix" that by adding an UPDATE policy; it would let any holder
+  of the anon key rewrite the log.
+- **The event vocabulary is a closed union** (`EventName`). The SQL reports
+  match the names literally, so a typo lands a row that satisfies every
+  constraint and appears in no chart. Add a name in both places or not at all.
+- **`received_at`, never `at`.** `at` is the device clock and is kept only to
+  order an offline batch; every report groups by the server's clock so a phone
+  with the wrong date cannot move a purchase into last week.
+- **The table has no SELECT policy.** Reads go exclusively through the
+  `loro_analytics_*` SECURITY DEFINER functions, each of which re-checks
+  `loro_is_admin()`. A `.select()` returns an empty array — not an error — for
+  admin and stranger alike. This is also why the dashboard needs **no**
+  `SUPABASE_SERVICE_ROLE_KEY`.
+- **Cohort vs activity windows.** Funnel / onboarding / paywall / watch are
+  keyed on installs whose *first event* falls in the window (so recent days
+  keep filling in); overview and daily count events where they landed. Each
+  function's comment says which.
+- **Deletion anonymises, it does not delete** — see `ANONYMISED_USER_TABLES`
+  in `app/api/_lib/accountDeletion.ts`. Deleting rows would let any user
+  silently rewrite last month's funnel.
+
+### After changing anything user-facing here
+
+The privacy policy describes these events concretely (what is recorded, the
+install pseudonym, retention). It is not boilerplate — if you add an event that
+records something new about a person, `app/(legal)/privacy/page.tsx` needs the
+same edit, and Apple's App Privacy answers may too.
+
 ## Discovery: YouTube candidate harvest
 
 Third source of feed content, alongside the static `data/videos.json` seed set and

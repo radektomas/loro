@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
   countVideosByCreator,
@@ -119,7 +120,17 @@ export default function AdminCreatorsPage() {
 
   return (
     <main className="min-h-[100dvh] bg-background pb-safe">
-      <PageHeader title="Creator applications" />
+      <PageHeader
+        title="Creator applications"
+        right={
+          <Link
+            href="/admin/analytics"
+            className="rounded-xl bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:text-text"
+          >
+            Analytics
+          </Link>
+        }
+      />
       <div className="mx-auto max-w-md space-y-8 px-4 pb-10">
         {ready && loaded && (!user || !admin) && (
           <GateMessage
