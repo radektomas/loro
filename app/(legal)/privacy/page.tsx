@@ -18,17 +18,30 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <article>
-      <PageTitle title="Privacy Policy" updated="17 August 2026" />
+      <PageTitle title="Privacy Policy" updated="26 August 2026" />
 
       <Section title="The short version">
         <p>
           Loro is built anonymous-first. You can use the whole app without an
           account, and in that mode your learning data lives only on your
-          device — we never see it. Data reaches our servers only when you
-          choose something that needs them: signing in to sync, joining the
-          launch waitlist, or applying as a creator. There are no ads, no
-          third-party analytics and no trackers; the only usage measurement is
-          our own product telemetry, described below.
+          device — we never see it. Your learning data reaches our servers only
+          when you choose something that needs them: signing in to sync,
+          joining the launch waitlist, or applying as a creator. There are no
+          ads, no third-party analytics and no trackers; the only usage
+          measurement is our own product telemetry, described below.
+        </p>
+        <p>
+          One exception, stated plainly because it is the only thing we send
+          without you asking: the{' '}
+          <strong className="text-text">iOS app</strong> records which screens
+          you reach — onboarding, the subscription screen, videos opened — and
+          sends those events to us, including before you sign in and even if
+          you never do. They are tied to a random identifier the app generates
+          for itself on first launch, not to your name, your email or any
+          identifier Apple gives us; we do not read the advertising identifier
+          and we do not track you across other apps or websites. It exists so
+          we can see where the app loses people. Details below under{' '}
+          <em>Product telemetry</em>.
         </p>
         <p>
           The iOS app adds exactly one category: subscriptions. Payment
@@ -85,8 +98,12 @@ export default function PrivacyPage() {
               def: 'Saved words (word, translation, which video and sentence it came from, review schedule and results), practice-day dates, watched-video list, level state, and creators you follow. This is the product; syncing it is why accounts exist.',
             },
             {
-              term: 'Product telemetry — GDPR Art. 6(1)(f), legitimate interest',
+              term: 'Product telemetry (web) — GDPR Art. 6(1)(f), legitimate interest',
               def: 'First-party event logs we write ourselves — there are no third-party analytics or trackers. The starter-deck log records progress through the onboarding deck: each card shown and answered (round, card number, the word and whether you said you knew it), each clip started or completed, and where you left if you quit early, all timestamped. The paywall log records when your saved-word count first reaches a milestone (10, 25, 40 or 50) and — only if a free-tier saved-word limit is active, which it currently is not — when a save is blocked and how the upgrade screen was answered, including the plan chosen. Collected to see where people drop off and whether the limits are set right. Stored in your browser like everything else; mirrored to your profile row while signed in. Anonymous sessions never send them.',
+            },
+            {
+              term: 'Product telemetry (iOS app) — GDPR Art. 6(1)(f), legitimate interest',
+              def: 'The iOS app sends a first-party event log to our own database — no third-party analytics service is involved and nothing is shared with advertisers. What is recorded: that the app was installed and each time it was opened; which onboarding screen you reached and whether you finished or skipped; that the subscription screen was shown; that you tapped subscribe and what happened next (bought, cancelled the Apple sheet, or an error, with the plan and its price); restores; and each video that took the screen, by video id. Each event carries a timestamp, the app version, and — this is the important part — a random identifier the app generates for itself the first time it runs, kept on your device. That identifier is not your name, your email, your Apple ID, your device id or the advertising identifier, and it is not shared with anyone or used to track you across other apps or websites. Reinstalling the app generates a new one, and we cannot connect the two. If you are signed in, your account id is attached as well, so that we can remove it if you delete your account. UNLIKE THE WEB LOG, THIS IS SENT WHETHER OR NOT YOU HAVE AN ACCOUNT: the app is a paid app whose subscription screen appears before sign-in, so measuring it at all means measuring people who have not signed in. Why we collect it: to see how far people get before the subscription screen, and whether the people who subscribe actually use the app. You can object to this processing at any time by emailing us (see below).',
             },
             {
               term: 'Waitlist — GDPR Art. 6(1)(a), consent',
@@ -196,7 +213,7 @@ export default function PrivacyPage() {
             },
             {
               term: 'Telemetry',
-              def: 'loro.starterEvents and loro.paywallEvents — the on-device half of the product telemetry described above. Without an account it never leaves your browser.',
+              def: 'loro.starterEvents and loro.paywallEvents — the on-device half of the web product telemetry described above. Without an account it never leaves your browser. In the iOS app only, two more: loro.analytics.installId, the random per-install identifier described above, and loro.analytics.queue, events waiting to be sent (they are held on the device while it is offline and cleared once delivered). Both are destroyed when you delete your account or reset the app.',
             },
             {
               term: 'Session',
@@ -251,8 +268,16 @@ export default function PrivacyPage() {
       <Section title="How long we keep things">
         <UL>
           <li>
-            Account data, learning data and product telemetry: until you
-            delete your account (below).
+            Account data, learning data and the web product telemetry stored on
+            your profile: until you delete your account (below).
+          </li>
+          <li>
+            iOS product-telemetry events: the events themselves are kept
+            indefinitely as counts, because they describe how the app behaved
+            rather than who you are. Your account id is removed from them the
+            moment you delete your account, and the random install identifier
+            they carry is destroyed on your device at the same time — after
+            which nothing links them to you or to each other.
           </li>
           <li>
             On-device data: until you clear your browser storage — it is yours,
@@ -291,7 +316,11 @@ export default function PrivacyPage() {
           This permanently deletes your saved words, progress, follows,
           profile — including the onboarding and paywall telemetry and the
           plan tier stored on it — creator application, uploaded videos and
-          files, and the sign-in itself. One honest caveat: if your sign-in is also used by
+          files, and the sign-in itself. The iOS app&apos;s telemetry events
+          are handled differently and deliberately so: rather than being
+          deleted they are stripped of your account id, and the random install
+          identifier held on your device is destroyed, so what remains is an
+          anonymous count that can no longer be connected to you. One honest caveat: if your sign-in is also used by
           another service run by the same developer on the same
           infrastructure, all Loro data is deleted but the shared sign-in
           identity is kept — the app tells you when that is the case. And

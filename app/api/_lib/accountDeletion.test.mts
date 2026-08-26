@@ -5,6 +5,7 @@ import {
   deleteAccount,
   BLOCKING_CROSS_PRODUCT_TABLES,
   CROSS_PRODUCT_TABLES,
+  ANONYMISED_USER_TABLES,
   LORO_USER_TABLES,
   USER_BUCKETS,
   type AdminLike,
@@ -21,7 +22,7 @@ import {
  * path is the route handler, which is not imported by any test.
  */
 
-type Row = Record<string, string>;
+type Row = Record<string, string | null>;
 
 /** In-memory stand-in for the AdminLike surface. */
 function makeFakeAdmin(opts?: {
@@ -33,6 +34,8 @@ function makeFakeAdmin(opts?: {
   foreignRows?: Record<string, number> | { error: string };
   /** table that should error on delete */
   failDeleteOn?: string;
+  /** table that should error on update (the anonymisation step) */
+  failUpdateOn?: string;
   /** make storage.remove fail */
   failRemove?: boolean;
 }) {
@@ -41,6 +44,7 @@ function makeFakeAdmin(opts?: {
   const authUsers = new Set<string>(['user-a', 'user-b', 'admin-1']);
   const removedPaths: Record<string, string[]> = {};
   const deletedTables: string[] = [];
+  const anonymisedTables: string[] = [];
 
   const admin: AdminLike = {
     from(table) {
@@ -65,6 +69,25 @@ function makeFakeAdmin(opts?: {
               rows.set(
                 table,
                 (rows.get(table) ?? []).filter((r) => r[column] !== value)
+              );
+              return { error: null };
+            },
+          };
+        },
+        /** Nulls the patched columns IN PLACE, leaving the row — the whole
+            point of the anonymisation step is that the row survives. */
+        update(patch) {
+          return {
+            async eq(column, value) {
+              if (opts?.failUpdateOn === table) {
+                return { error: { message: `boom updating ${table}` } };
+              }
+              anonymisedTables.push(`${table}.${column}`);
+              rows.set(
+                table,
+                (rows.get(table) ?? []).map((r) =>
+                  r[column] === value ? { ...r, ...patch } : r
+                )
               );
               return { error: null };
             },
@@ -126,7 +149,15 @@ function makeFakeAdmin(opts?: {
     },
   };
 
-  return { admin, rows, files, authUsers, removedPaths, deletedTables };
+  return {
+    admin,
+    rows,
+    files,
+    authUsers,
+    removedPaths,
+    deletedTables,
+    anonymisedTables,
+  };
 }
 
 /** Rows for user-a in every Loro table, plus user-b noise that must survive. */
@@ -147,6 +178,14 @@ function seedAllTables(): Record<string, Row[]> {
     loro_creators: [{ user_id: 'user-a' }, { user_id: 'user-b' }],
     loro_admins: [{ user_id: 'admin-1' }],
     loro_profiles: [{ id: 'user-a' }, { id: 'user-b' }],
+    // Anonymised, not deleted — see ANONYMISED_USER_TABLES. The third row is
+    // already anonymous (an install that never signed in), which is the
+    // majority case on a hard-paywall app and must survive untouched.
+    loro_analytics_events: [
+      { user_id: 'user-a' },
+      { user_id: 'user-b' },
+      { user_id: null },
+    ],
   };
 }
 
@@ -305,6 +344,66 @@ describe('deleteAccount', () => {
     assert.deepEqual(fake.files.get('loro-videos'), ['user-b/keep.mp4']);
     assert.deepEqual(fake.files.get('avatars'), ['user-b/456.webp']);
     assert.equal(fake.removedPaths['loro-videos'].length, 131);
+  });
+
+  test('analytics events are ANONYMISED, not deleted — the row survives without the user', async () => {
+    const fake = makeFakeAdmin({ rows: seedAllTables() });
+    const result = await deleteAccount(fake.admin, 'user-a', noLog);
+    assert.deepEqual(result, { ok: true, authDeleted: true });
+
+    const events = fake.rows.get('loro_analytics_events') ?? [];
+    // The count is the point: a funnel must not change shape because someone
+    // closed their account.
+    assert.equal(events.length, 3, 'no analytics row may be deleted');
+    assert.equal(
+      events.filter((r) => r.user_id === 'user-a').length,
+      0,
+      'user-a must no longer be linked to any event'
+    );
+    // And nobody else was touched.
+    assert.equal(events.filter((r) => r.user_id === 'user-b').length, 1);
+    assert.equal(events.filter((r) => r.user_id === null).length, 2);
+  });
+
+  test('anonymisation runs even on the cross-product path, where the FK never fires', async () => {
+    // authDeleted: false means auth.admin.deleteUser() is skipped, so the
+    // column's own ON DELETE SET NULL never triggers. This is the branch the
+    // explicit step exists for.
+    const fake = makeFakeAdmin({
+      rows: seedAllTables(),
+      foreignRows: { 'public.generation_history': 3 },
+    });
+    const result = await deleteAccount(fake.admin, 'user-a', noLog);
+    assert.deepEqual(result, { ok: true, authDeleted: false });
+    assert.ok(fake.authUsers.has('user-a'), 'the shared sign-in must survive');
+
+    const events = fake.rows.get('loro_analytics_events') ?? [];
+    assert.equal(
+      events.filter((r) => r.user_id === 'user-a').length,
+      0,
+      'the link must be destroyed whether or not the auth user was'
+    );
+  });
+
+  test('an anonymisation failure aborts BEFORE storage and auth', async () => {
+    const fake = makeFakeAdmin({
+      rows: seedAllTables(),
+      files: { 'loro-videos': ['user-a/clip.mp4'] },
+      failUpdateOn: 'loro_analytics_events',
+    });
+    const result = await deleteAccount(fake.admin, 'user-a', noLog);
+    assert.equal(result.ok, false);
+    assert.ok(fake.authUsers.has('user-a'), 'auth user must survive the abort');
+    assert.deepEqual(fake.removedPaths, {}, 'storage must not have been touched');
+  });
+
+  test('ANONYMISED_USER_TABLES and LORO_USER_TABLES are disjoint', () => {
+    // A table in both lists would be deleted and then "anonymised" — the
+    // update would silently match nothing and the intent would be lost.
+    const deleted = new Set(LORO_USER_TABLES.map((t) => t.table));
+    for (const { table } of ANONYMISED_USER_TABLES) {
+      assert.ok(!deleted.has(table), `${table} is in both lists`);
+    }
   });
 
   test('a DB delete failure aborts BEFORE storage and auth', async () => {

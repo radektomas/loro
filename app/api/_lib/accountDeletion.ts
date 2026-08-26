@@ -14,6 +14,9 @@
  *      ON DELETE CASCADE (belt over braces: every table cascades today, but
  *      an explicit list is auditable and survives a constraint change).
  *      Any failure aborts BEFORE storage or auth — re-running is safe.
+ *   2b. ANONYMISE, rather than delete, the tables that are measurements of
+ *      what happened rather than the user's own data (loro_analytics_events).
+ *      See ANONYMISED_USER_TABLES for why this is not step 2.
  *   3. Empty the user's storage folders (both buckets, paginated walk).
  *      Partial failure logs and CONTINUES: an orphaned file is recoverable
  *      by hand, an account stuck half-deleted is worse.
@@ -38,6 +41,10 @@ export type AdminLike = {
       ): PromiseLike<DbResult & { count?: number | null }>;
     };
     delete(): {
+      eq(column: string, value: string): PromiseLike<DbResult>;
+    };
+    /** Only ever used to NULL a column — see ANONYMISED_USER_TABLES. */
+    update(patch: Record<string, null>): {
       eq(column: string, value: string): PromiseLike<DbResult>;
     };
   };
@@ -131,6 +138,34 @@ export const LORO_USER_TABLES: readonly { table: string; column: string }[] = [
   { table: 'loro_profiles', column: 'id' },
 ];
 
+/**
+ * Loro tables whose rows are ANONYMISED, not deleted: the user_id is nulled
+ * and the row stays.
+ *
+ * WHY NOT JUST DELETE THEM. loro_analytics_events is a product measurement,
+ * not the user's data — the rows say "an install reached the paywall and did
+ * not buy", and the person is incidental to that. Deleting them would let any
+ * user silently rewrite last month's funnel by closing their account, which is
+ * both a data-integrity problem and, in the aggregate, an invitation to
+ * misread the product. Nulling the FK keeps the count and destroys the link,
+ * which is exactly what the shared project's own analytics_events was designed
+ * for (ON DELETE SET NULL) and why accountDeletion treats THAT table as
+ * non-blocking. We hold ourselves to the same standard.
+ *
+ * WHY NOT RELY ON THE FK'S OWN ON DELETE SET NULL. Because it only fires if
+ * auth.admin.deleteUser() actually runs, and the cross-product guard means it
+ * frequently does not (authDeleted: false — the shared sign-in survives). In
+ * that branch the FK never triggers and the events would keep pointing at a
+ * live user whose Loro data we just told them we deleted. Doing it explicitly
+ * here makes the anonymisation unconditional, which is what was promised.
+ *
+ * Also note what is NOT here: install_id stays. It is a client-minted
+ * pseudonym with no path back to a person, and the device's own copy of it is
+ * destroyed by the local `loro.` sweep at the same moment.
+ */
+export const ANONYMISED_USER_TABLES: readonly { table: string; column: string }[] =
+  [{ table: 'loro_analytics_events', column: 'user_id' }];
+
 /** Storage buckets holding user files, keyed <user_id>/... */
 export const USER_BUCKETS: readonly string[] = ['loro-videos', 'avatars'];
 
@@ -220,6 +255,22 @@ export async function deleteAccount(
         `[account-delete] delete ${table}.${column}=${userId} failed: ${error.message} — aborting before storage/auth`
       );
       return { ok: false, status: 500, reason: `db delete failed at ${table}` };
+    }
+  }
+
+  // 2b. Anonymise the measurement tables. Aborts like step 2 does: a user who
+  //     was told their account was deleted must not be left linked to rows we
+  //     failed to unlink, and a re-run is safe (nulling a null is a no-op).
+  for (const { table, column } of ANONYMISED_USER_TABLES) {
+    const { error } = await admin
+      .from(table)
+      .update({ [column]: null })
+      .eq(column, userId);
+    if (error) {
+      log(
+        `[account-delete] anonymise ${table}.${column}=${userId} failed: ${error.message} — aborting before storage/auth`
+      );
+      return { ok: false, status: 500, reason: `db anonymise failed at ${table}` };
     }
   }
 
