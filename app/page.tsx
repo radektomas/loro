@@ -4,15 +4,20 @@ import Link from 'next/link';
 import './join/join.css';
 import { CheckIcon } from '@/components/icons/Icons';
 import { HeroPhone } from './join/HeroPhone';
-import { WaitlistForm } from './join/WaitlistForm';
+import { AppStoreButton, APP_STORE_ID } from './join/AppStoreButton';
 
 /**
- * / — pre-launch landing for the founding-member offer (launch: Aug 30).
- * Promoted from /join to the root (2026-07-27); /join now redirects here
- * (next.config.ts) and the feed lives at /feed.
+ * / — the public landing page. Promoted from /join to the root (2026-07-27);
+ * /join still redirects here (next.config.ts) and the feed lives at /feed.
  *
- * Server-rendered top to bottom; the only client JS on the page is
- * WaitlistForm. Every product visual is recomposed from the app's real UI —
+ * WAS a pre-launch page for the founding-member offer, with an email capture
+ * in both CTA slots. The app shipped, so both now point at the App Store
+ * instead — see AppStoreButton. WaitlistForm and /api/waitlist are untouched
+ * and still work; nothing on this page references them any more.
+ *
+ * Server-rendered top to bottom, and since the waitlist form left, the page
+ * ships NO client JavaScript at all. Every product visual is recomposed from
+ * the app's real UI —
  * real posters, real cues, real dictionary entries — because "learn from real
  * Spanish" is the claim and the page itself is the evidence. Scroll reveals
  * and the hero's walking highlight are pure CSS (join.css).
@@ -40,6 +45,10 @@ export const metadata: Metadata = {
     title: 'Loro — Learn real Spanish',
     description: DESCRIPTION,
   },
+  // Smart App Banner. On iOS Safari this turns the whole page into a second
+  // route to the store — and into "OPEN" for anyone who already has the app,
+  // which no link on the page can do.
+  itunes: { appId: APP_STORE_ID },
 };
 
 /* ------------------------------------------------------------- section 2 */
@@ -217,7 +226,7 @@ export default function JoinPage() {
               {DESCRIPTION}
             </p>
             <div className="mt-9">
-              <WaitlistForm source="landing-hero" />
+              <AppStoreButton />
             </div>
           </div>
           <div className="order-1 lg:order-2">
@@ -304,10 +313,10 @@ export default function JoinPage() {
             className="join-wave mx-auto h-28 w-auto"
           />
           <h2 className="mt-6 text-3xl font-bold tracking-[-0.02em] md:text-4xl">
-            Lock in your founding spot.
+            Start with one video.
           </h2>
           <div className="mt-8">
-            <WaitlistForm source="landing-final" align="center" />
+            <AppStoreButton align="center" />
           </div>
         </div>
       </section>
