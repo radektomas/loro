@@ -9,9 +9,11 @@ import { getAuthRedirectTo, getSupabase, TABLES } from './supabase.ts';
  * every function no-ops gracefully when Supabase isn't configured (or not
  * yet initialised — see initSupabase in ./supabase.ts).
  *
- * EVERY auth entry point below must pass the platform's redirect target
- * (getAuthRedirectTo) — omit it and Supabase falls back to the project's
- * Site URL, which lands sign-in on whatever domain that happens to name.
+ * EVERY auth entry point that LEAVES the page must pass the platform's
+ * redirect target (getAuthRedirectTo) — omit it and Supabase falls back to
+ * the project's Site URL, which lands sign-in on whatever domain that happens
+ * to name. signInWithPassword is the one exception, and the reason it exists:
+ * it never leaves the origin it was called on, so it cannot be misrouted.
  * The web's "is auth enabled" render flag deliberately does NOT live here:
  * it must agree between server render and hydration, so the web derives it
  * from env vars in lib/supabaseInit.ts.
@@ -60,6 +62,44 @@ export async function signInWithMagicLink(email: string): Promise<SignInResult> 
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim(),
     options: { emailRedirectTo: getAuthRedirectTo() },
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/**
+ * Email + password — the only sign-in here that never leaves the origin.
+ *
+ * WHY THIS EXISTS WHEN MAGIC LINK AND GOOGLE ALREADY DO. Both of those hand
+ * the session to whatever origin Supabase decides to redirect to: the
+ * platform asks for one via getAuthRedirectTo, but Supabase silently
+ * substitutes the project's Site URL when that origin is not in the Redirect
+ * URLs allowlist (see lib/supabaseInit.ts). Sessions live in per-origin
+ * localStorage, so a substituted redirect signs you in somewhere that is not
+ * where you are standing — you come back to the page you started on and it
+ * still says signed out, with no error anywhere in the flow. That failure is
+ * unfixable from inside the app and indistinguishable from a broken provider.
+ * This call has no redirect to misroute: the session is written to the origin
+ * that made the request, always.
+ *
+ * It is used by the admin analytics gate, where being locked out of your own
+ * numbers by an OAuth misconfiguration is the difference between a dashboard
+ * and a decoration. Nothing in the product invites a password — the account
+ * layer stays passwordless for everyone who has not set one.
+ *
+ * "Invalid login credentials" is ALSO what Supabase returns for an account
+ * that simply has no password set (every Google- or magic-link-created user),
+ * which is a completely different fix from a typo. Callers that gate on this
+ * should say so rather than pass the message through raw.
+ */
+export async function signInWithPassword(
+  email: string,
+  password: string
+): Promise<SignInResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: 'Sync is not configured.' };
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
   });
   return error ? { ok: false, error: error.message } : { ok: true };
 }
@@ -126,6 +166,29 @@ export async function signInWithApple(credential: {
     token: credential.identityToken,
     nonce: credential.rawNonce,
   });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/**
+ * Give the CURRENT session's account a password (or replace the one it has).
+ *
+ * An account created through Google or a magic link has no password at all,
+ * so signInWithPassword can never succeed on it until this has run once. The
+ * only other ways to set one are the Supabase dashboard's user editor and the
+ * admin API — and the admin API needs SUPABASE_SERVICE_ROLE_KEY, which this
+ * project deliberately does not carry (see app/api/_lib/serviceRole.ts).
+ * Hence a first-party path: sign in once by any means, set a password, and
+ * stop depending on a redirect landing on the right origin.
+ *
+ * Requires a live session — it is an update to the signed-in user, not an
+ * account-recovery flow. Errors come back verbatim because the two that
+ * happen are worth reading: a project-configured minimum length/strength, and
+ * "reauthentication needed" when Secure Password Change is on for the project.
+ */
+export async function setPassword(password: string): Promise<SignInResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: 'Sync is not configured.' };
+  const { error } = await supabase.auth.updateUser({ password });
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 

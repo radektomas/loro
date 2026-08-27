@@ -5,6 +5,10 @@ import { checkAdmin, loadDashboard, type Dashboard } from '@/lib/analytics';
 import { GateMessage, PageHeader, useSupabaseUser } from '@/components/creator/ugc';
 import { SignInCard } from '@/components/SignInCard';
 import {
+  AdminPasswordSignIn,
+  SetAdminPassword,
+} from '@/components/admin/AdminPasswordSignIn';
+import {
   DailyChart,
   DropOffChart,
   Empty,
@@ -75,9 +79,17 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     if (!ready) return;
     if (!user) {
+      // Signing OUT must close the dashboard, not leave the last admin's
+      // numbers on screen for whoever signs in next.
+      setAdmin(false);
       setChecked(true);
       return;
     }
+    // Signing IN mid-session re-runs this with `checked` already true from the
+    // signed-out pass. Without this reset, the RPC round trip renders as "This
+    // account is not an admin" — every single time you sign in from the gate
+    // below, on the one screen where that message is most alarming.
+    setChecked(false);
     void checkAdmin().then((result) => {
       if (result.ok) {
         setAdmin(result.data);
@@ -114,7 +126,12 @@ export default function AdminAnalyticsPage() {
               title="Sign in to view"
               body="Your session is per-origin, so signing in on the deployed site does not carry over to a local dev server. Sign in with the same account here."
             />
-            <div className="mx-auto mt-8 max-w-sm">
+            <div className="mx-auto mt-8 max-w-sm space-y-3">
+              {/* Password first, deliberately. The two below hand the session
+                  to whichever origin Supabase redirects to, and when that is
+                  not this one you land back here still signed out — the exact
+                  failure this screen keeps hitting. This one cannot miss. */}
+              <AdminPasswordSignIn />
               <SignInCard />
             </div>
           </div>
@@ -128,10 +145,18 @@ export default function AdminAnalyticsPage() {
         )}
 
         {ready && checked && user && !admin && !gateError && (
-          <GateMessage
-            title="This account is not an admin"
-            body={`Signed in as ${user.email ?? user.id}, which is not in loro_admins. If you have more than one Google/Apple account, you may be signed in as the other one — sign out and back in with the right one.`}
-          />
+          <>
+            <GateMessage
+              title="This account is not an admin"
+              body={`Signed in as ${user.email ?? user.id}, which is not in loro_admins. If you have more than one Google/Apple account, you may be signed in as the other one — sign out and back in with the right one.`}
+            />
+            {/* The advice above used to have nowhere to act on it: this branch
+                was a message and nothing else, so "sign out and back in"
+                meant finding a sign-out button on another screen. */}
+            <div className="mx-auto mt-8 max-w-sm">
+              <SignInCard />
+            </div>
+          </>
         )}
 
         {ready && checked && admin && (
@@ -334,6 +359,12 @@ export default function AdminAnalyticsPage() {
                 </Panel>
               </div>
             )}
+
+            {/* Setup, not a control — collapsed to a single line, and the only
+                place in the app that can give a Google/magic-link account a
+                password (the admin API route needs a service role key this
+                project does not carry). */}
+            <SetAdminPassword />
           </>
         )}
       </div>
