@@ -133,6 +133,15 @@ export const useRecallView = () => useContext(ViewContext);
  */
 export const useHeldBlank = () => useContext(GradingContext).entry !== null;
 /**
+ * TELL THE HOST THE USER SEEKED, from where to where, BEFORE the seek command
+ * is sent. The seek bar calls this so blanks jumped over are skipped rather
+ * than sprung at the landing point — see skippedMask. The ordering matters:
+ * the mask must be set before the player can land, or one frame of the hold
+ * worklet could engage a blank the seek was about to skip.
+ */
+const NoteSeekContext = createContext<(from: number, to: number) => void>(() => {});
+export const useNoteSeek = () => useContext(NoteSeekContext);
+/**
  * The live typed text. SEPARATE FROM useRecallView ON PURPOSE: this changes on
  * every keystroke, and if it rode along with the plan then every mounted
  * Karaoke would re-render per character — breaking that component's stated
@@ -331,6 +340,23 @@ export function RecallHost({
   // worklet can skip answered blanks without touching a JS structure.
   const heldSv = useSharedValue(-1);
   const resolvedMask = useSharedValue(0);
+  /**
+   * Blanks the user SEEKED PAST, as a twin of resolvedMask — same bit layout,
+   * same consumer. A recall blank asks "what did she just say?", and a word
+   * jumped over by the seek bar was never said to this user: engaging the hold
+   * at the landing point asks them to recall audio they did not hear, which is
+   * the one way a review can be unfair rather than merely hard.
+   *
+   * Skipping is not answering: the word stays due in the SRS untouched and
+   * comes back in another video (or in this one, on a seek back — a backward
+   * seek re-arms every skipped blank behind the landing point, because the
+   * word WILL now be heard on the way). Mirrored into skippedBits below for
+   * the render side.
+   */
+  const skippedMask = useSharedValue(0);
+  /** The React half of skippedMask: the karaoke un-blanks a skipped word (a
+      gap that will never ask is just a hole in the line). */
+  const [skippedBits, setSkippedBits] = useState(0);
   const lastActionAt = useSharedValue(0);
   /** 1 once this hold's landing position has been reported. Per-blank. */
   const measuredSv = useSharedValue(0);
@@ -500,13 +526,15 @@ export function RecallHost({
     setHeldIndex(-1);
     heldSv.value = -1;
     resolvedMask.value = 0;
+    skippedMask.value = 0;
+    setSkippedBits(0);
     lastActionAt.value = 0;
     measuredSv.value = 0;
     replayingSv.value = 0;
     reseatsRef.current = 0;
     if (resumeTimer.current) clearTimeout(resumeTimer.current);
     Keyboard.dismiss();
-  }, [plan, heldSv, resolvedMask, lastActionAt, measuredSv, replayingSv]);
+  }, [plan, heldSv, resolvedMask, skippedMask, lastActionAt, measuredSv, replayingSv]);
 
   /**
    * Holds the gap between a correct answer and the notification explainer, so
@@ -642,7 +670,7 @@ export function RecallHost({
       : anchorTime.value;
 
     for (let i = 0; i < count; i++) {
-      if ((resolvedMask.value >> i) & 1) continue;
+      if (((resolvedMask.value | skippedMask.value) >> i) & 1) continue;
       const pauseAt = pauseAts[i];
 
       if (heldSv.value === i) {
@@ -912,12 +940,55 @@ export function RecallHost({
     );
   }, [api, video, heldSv, lastActionAt, measuredSv, replayingSv]);
 
+  /**
+   * The seek bar's report. Forward: every unresolved blank whose hold point
+   * lies inside the jumped-over span is skipped — its audio was skipped, so
+   * the ask goes with it. Backward: every skipped blank ahead of the landing
+   * point is re-armed, because playback will now reach it the honest way.
+   * resolvedMask is never touched in either direction: an answered blank is
+   * answered, however the clock later moves.
+   */
+  const noteSeek = useCallback(
+    (from: number, to: number) => {
+      const entries = entriesRef.current;
+      if (entries.length === 0) return;
+      if (to > from) {
+        let bits = 0;
+        for (let i = 0; i < entries.length; i++) {
+          const p = entries[i].pauseAt;
+          if (p > from && p <= to && !((resolvedMask.value >> i) & 1)) bits |= 1 << i;
+        }
+        if (bits === 0) return;
+        skippedMask.value |= bits;
+        setSkippedBits((prev) => prev | bits);
+        flog(
+          `seek ${from.toFixed(2)}s -> ${to.toFixed(2)}s skips ` +
+            `${entries.filter((_, i) => (bits >> i) & 1).map((e) => `"${e.surface}"`).join(', ')}`
+        );
+      } else {
+        let bits = 0;
+        for (let i = 0; i < entries.length; i++) {
+          if (entries[i].pauseAt > to && (skippedMask.value >> i) & 1) bits |= 1 << i;
+        }
+        if (bits === 0) return;
+        skippedMask.value &= ~bits;
+        setSkippedBits((prev) => prev & ~bits);
+        flog(`seek back to ${to.toFixed(2)}s re-arms ${entries.filter((_, i) => (bits >> i) & 1).length} blank(s)`);
+      }
+    },
+    [resolvedMask, skippedMask]
+  );
+
   const view = useMemo<RecallView | null>(() => {
     if (!planned || !video || plan.entries.length === 0) return null;
     const byCue = new Map<number, BlankEntry>();
-    for (const entry of plan.entries) byCue.set(entry.cueIndex, entry);
+    plan.entries.forEach((entry, i) => {
+      // A skipped blank's word renders as itself — see skippedMask.
+      if ((skippedBits >> i) & 1) return;
+      byCue.set(entry.cueIndex, entry);
+    });
     return { videoKey: video.id, byCue, results };
-  }, [planned, video, plan, results]);
+  }, [planned, video, plan, results, skippedBits]);
 
   const entry = heldIndex >= 0 ? (plan.entries[heldIndex] ?? null) : null;
 
@@ -943,9 +1014,11 @@ export function RecallHost({
 
   return (
     <ViewContext.Provider value={view}>
-      <GradingContext.Provider value={grading}>
-        <AnswerLayer>{children}</AnswerLayer>
-      </GradingContext.Provider>
+      <NoteSeekContext.Provider value={noteSeek}>
+        <GradingContext.Provider value={grading}>
+          <AnswerLayer>{children}</AnswerLayer>
+        </GradingContext.Provider>
+      </NoteSeekContext.Provider>
     </ViewContext.Provider>
   );
 }

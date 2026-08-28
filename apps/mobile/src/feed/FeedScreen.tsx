@@ -46,6 +46,7 @@ import {
 import { SEEK_BACK_PAD_S } from './recall';
 import { SessionSavePrompt } from './SessionSavePrompt';
 import { WalkthroughCoach, type CoachCardContent } from './WalkthroughCoach';
+import { SeekBar } from './SeekBar';
 import { currentCueStart } from './subtitles';
 import { WordSheet, type WordSheetData } from './WordSheet';
 
@@ -1344,6 +1345,12 @@ const Slide = memo(function Slide({
           { paddingBottom: tabBarHeight > 0 ? 8 : insets.bottom + 8 },
         ]}
       >
+        {/* THE SEAM ROW: the seek bar, first thing under the video. Rendered on
+            every slide so the band's height never differs between cells, but
+            only the active slide's is live — an inactive cell's bar is a
+            resting line at zero. It reads the same clock as Karaoke and stands
+            down while a blank holds the video; see SeekBar's header. */}
+        <SeekBar cues={video.cues} active={isActive && ownsMedia} />
         {/* TWO EXPLICIT ROWS, replacing one wrapping row of four children.
             The old row relied on wrap to push the attribution onto line 2,
             which meant the sound pill sat wherever the level chip and speed
