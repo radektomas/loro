@@ -14,6 +14,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { onCatalogChanged } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
 import { CHROME } from './copy';
 import { SLIDE_MS, olog } from './flow';
@@ -73,6 +74,26 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [currentId, setCurrentId] = useState<StepId>('hook');
 
   /**
+   * THE STEP LIST CAN GROW WHILE THE FLOW IS RUNNING, and only the catalog can
+   * do it: the taste reel's step removes itself until a snapshot with playable
+   * clips has landed (steps.tsx), which on a first launch happens somewhere in
+   * the middle of the questions.
+   *
+   * This tick is what keeps the two halves of the navigation honest. `goBy`
+   * recomputes the visible list on every move, so without a re-render here the
+   * rendered row would hold twelve screens while the navigator counted
+   * thirteen, and every index after the change would point at the wrong slide.
+   *
+   * The list only ever grows AT THE END (see tasteAvailable, which is one-way),
+   * so nothing the user is standing on can move underneath them.
+   */
+  const [catalogTick, setCatalogTick] = useState(0);
+  useEffect(
+    () => onCatalogChanged(() => setCatalogTick((n) => n + 1)),
+    []
+  );
+
+  /**
    * A synchronous mirror of the flow state.
    *
    * The screens patch and advance in ONE handler — pick "starting from zero",
@@ -84,7 +105,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
    */
   const stateRef = useRef(state);
 
-  const steps = useMemo(() => visibleSteps(state), [state]);
+  const steps = useMemo(() => visibleSteps(state), [state, catalogTick]);
   const index = Math.max(
     0,
     steps.findIndex((step) => step.id === currentId)
@@ -221,10 +242,25 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   const canGoBack = index > 0;
 
+  /**
+   * FULL-BLEED STEPS GET NO CHROME, and the taste reel is the only one.
+   *
+   * Not a styling preference: the reel mounts the real FeedScreen, whose player
+   * box is published in WINDOW space while the slide measures it against
+   * itself. A progress bar above the row would put roughly ninety points
+   * between those two frames of reference and slide the WebView off the poster
+   * it is supposed to cover. See StepDef.fullBleed and TasteStep.
+   *
+   * The Skip button goes with it. That costs nothing: the step's own button
+   * leaves, and Android's hardware back still walks the flow.
+   */
+  const fullBleed = steps[index]?.fullBleed === true;
+
   return (
     <View style={styles.root}>
       {/* Chrome sits ABOVE the row and does not move with it: a progress bar
           that slid off screen with its own screen would be a strange thing. */}
+      {!fullBleed && (
       <View style={[styles.chrome, { paddingTop: insets.top + 8 }]}>
         <View style={styles.chromeSide}>
           {canGoBack && (
@@ -264,6 +300,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           </Pressable>
         </View>
       </View>
+      )}
 
       <View style={styles.viewport}>
         <Animated.View style={[styles.row, { width: width * steps.length }, rowStyle]}>
@@ -289,6 +326,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 // from the start, so a screen that ran a clock on mount would
                 // run it, and finish it, from off-stage.
                 isCurrent={i === index}
+                // Against the VISIBLE list, which is the only place that knows
+                // where the flow actually ends — see StepProps.isLast.
+                isLast={i === steps.length - 1}
               />
             </View>
           ))}

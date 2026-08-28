@@ -7,6 +7,7 @@ import { lifecycle } from './lifecycle';
 import { storageDriver } from './storage';
 import { initAuth } from './supabaseInit';
 import { initNotifications } from './notifications';
+import { installDevMenu } from './devMenu';
 import { captureCampaignAttribution, initPurchases } from './purchases';
 import { initAnalytics } from './analytics';
 import { installCachedCatalog, refreshCatalog, type CatalogSource } from './catalog';
@@ -132,6 +133,11 @@ export const catalogSource: CatalogSource = installCachedCatalog();
  * install it. See the note there on the split.
  */
 export function finishBoot(): void {
+  // Dev builds only, and a no-op in production — see devMenu.ts. Registered
+  // here rather than at module scope for the same reason the splash is hidden
+  // here: there is a device with a screen by this point, which is the only
+  // context in which a shake menu means anything.
+  installDevMenu();
   void SplashScreen.hideAsync();
   void refreshCatalog();
   initNotifications();

@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import type { Level, SelfLevel } from '@loro/core/types';
+import { getCatalog } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
 import { buildCalibrationWords, deriveLevel } from '@loro/core/calibration';
 import {
@@ -37,6 +38,8 @@ import {
   SELF_LEVEL,
 } from './copy';
 import { PAYWALL_ENABLED, olog, setFrequency, setMotivation } from './flow';
+import { TasteStep } from './TasteStep';
+import { tasteAvailable } from './taste';
 
 /**
  * The screens, in order. Each one is a pure component over the flow state; the
@@ -99,11 +102,24 @@ export type StepProps = {
    * an intro animation would play to an empty room and be over before the user
    * arrived, and a timed screen would run its clock from five screens away.
    *
-   * NO STEP CONSUMES THIS TODAY. It is the host's contract rather than any
-   * one screen's; anything timed or animated added later must key off it
-   * rather than off mount.
+   * The taste reel consumes this: it arms the real feed on arrival rather
+   * than on mount, because PlayerDriver starts streaming as soon as it is
+   * mounted and does not consult `active` (see TasteStep). Anything else
+   * timed or animated added later must key off this too.
    */
   isCurrent: boolean;
+  /**
+   * IS THIS THE LAST SCREEN IN PLAY, so its button ends the flow?
+   *
+   * Computed by the host against the VISIBLE list, which is the only place
+   * that knows. Two things move the finish line — the taste step removes
+   * itself when the catalog has not landed, and the paywall step appears when
+   * PAYWALL_ENABLED flips — and before this existed the last screen owned
+   * `finish()` by hard-coding it. That is how a step gets stranded on a dead
+   * button: `next()` at the end of the list is a no-op, so a screen that
+   * assumed something came after it would simply stop responding.
+   */
+  isLast: boolean;
 };
 
 export type StepId =
@@ -118,8 +134,9 @@ export type StepId =
   | 'frequency'
   | 'fluencyGoal'
   | 'progressComparison'
-  | 'paywall'
-  | 'handoff';
+  | 'handoff'
+  | 'taste'
+  | 'paywall';
 
 /**
  * The grid's fifteen words. Built once: buildCalibrationWords is deterministic
@@ -638,10 +655,20 @@ function PaywallStep({ next }: StepProps) {
 
 // ------------------------------------------------------------- 13. handoff
 
-function HandoffStep({ finish }: StepProps) {
+function HandoffStep({ next, finish, isLast }: StepProps) {
+  /**
+   * THIS IS NO LONGER ALWAYS THE LAST SLIDE.
+   *
+   * The taste reel sits after it when the catalog has landed, and this screen's
+   * copy turned out to be its lead-in almost word for word: "Swipe it like
+   * anything else, and tap a word the moment it stops making sense" is the
+   * instruction for the three clips that now follow. When the reel is absent
+   * (no catalog yet) and the in-flow paywall is dark, this IS the last slide
+   * again and owns the exit, which is what isLast is for.
+   */
+  const leave = isLast ? finish : next;
   return (
-    // `finish`, not `next`: this is the last slide, so it owns the exit.
-    <Screen footer={<PrimaryButton label={HANDOFF.cta} onPress={finish} />}>
+    <Screen footer={<PrimaryButton label={HANDOFF.cta} onPress={leave} />}>
       {/* Waving, on the screen that hands over to the feed. It is the last
           time the mascot appears, so it may as well be saying something. */}
       <Image
@@ -665,6 +692,18 @@ export type StepDef = {
   /** Filtered out of the flow when this returns true. Evaluated against the
       LIVE state, so answering screen 3 changes what screen 4 is. */
   skip?: (state: FlowState) => boolean;
+  /**
+   * HIDE THE HOST'S CHROME while this step is on stage: no progress bar, no
+   * back arrow, no Skip.
+   *
+   * One step sets it, and for a geometry reason rather than a styling one. The
+   * taste reel mounts the real FeedScreen, whose player box is published in
+   * WINDOW space (PlayerHost's WebView is positioned against the app root)
+   * while the slide measures it against itself. Those agree only when the step
+   * starts at the top of the window, so chrome above it would slide the
+   * WebView off the poster and tap surface it is meant to cover. See TasteStep.
+   */
+  fullBleed?: boolean;
 };
 
 /** A 'zero' self-assessment has no grid to fill: the deck calibrates instead
@@ -699,8 +738,48 @@ export const STEPS: StepDef[] = [
    */
   { id: 'fluencyGoal', Component: FluencyGoalStep },
   { id: 'progressComparison', Component: ProgressComparisonStep },
-  { id: 'paywall', Component: PaywallStep, skip: () => !PAYWALL_ENABLED },
+  /**
+   * HANDOFF THEN TASTE THEN THE WALL, and the order is the argument.
+   *
+   * The taste reel is deliberately the LAST thing before the paywall, because
+   * that is where the purchase decision is actually made: everything above it
+   * describes the product and this is the only screen that shows it. Putting
+   * it earlier would spend the demonstration on someone who is still answering
+   * questions.
+   *
+   * Handoff moved above it rather than being cut. Its copy reads as the reel's
+   * instructions ("Swipe it like anything else, and tap a word the moment it
+   * stops making sense") and its button is the one that launches into them.
+   *
+   * ⚠️ WHAT THIS DOES NOT FIX. Handoff also says "Your feed is ready", and
+   * after the reel the user still meets PaywallScreen rather than the feed.
+   * Three clips make that promise less wrong, not right. The copy and the
+   * placement of the real wall are a separate decision — see the conversion
+   * audit — and nothing here should be read as having settled it.
+   */
   { id: 'handoff', Component: HandoffStep },
+  {
+    id: 'taste',
+    Component: TasteStep,
+    fullBleed: true,
+    /**
+     * NO CATALOG, NO REEL, NO STEP — the flow simply ends one screen earlier.
+     *
+     * Resolved against the live catalog rather than against FlowState, which is
+     * the one predicate here that is not a function of the user's answers. That
+     * is safe because the host recomputes the visible list on every navigation
+     * AND re-renders when the catalog changes (see Onboarding's catalog
+     * subscription): both halves see the same answer, so the row and the
+     * index can never disagree.
+     *
+     * A first launch is the case this exists for. The snapshot downloads during
+     * onboarding, so most people have it by the time they get here; anyone who
+     * does not gets the flow as it was before this step existed, rather than a
+     * screen apologising for itself.
+     */
+    skip: () => !tasteAvailable(getCatalog()),
+  },
+  { id: 'paywall', Component: PaywallStep, skip: () => !PAYWALL_ENABLED },
 ];
 
 /** The steps actually in play for this answer set, in order. */

@@ -139,6 +139,19 @@ type WordSheetProps = {
    * the device. Null until the first layout lands.
    */
   bandTop: number | null;
+  /**
+   * A verified save just landed, with the word's text.
+   *
+   * Added for the onboarding walkthrough, which has to know that the user
+   * completed the save it asked for — and has to know it AFTER the real sheet
+   * did the real work, rather than by intercepting the tap and doing its own.
+   * The sheet is most of what is being demonstrated (the gloss, the Save
+   * button, the confirmation toast); a guided run that replaced it would be
+   * showing people something the app does not do.
+   *
+   * Fires only on the true branch of saveWord(), i.e. a verified write.
+   */
+  onSaved?: (word: string) => void;
 };
 
 /** What a shell needs on top of the public props: how to report a save. */
@@ -159,7 +172,14 @@ export function WordSheet(props: WordSheetProps) {
    * USE_BOTTOM_SHEET does not quietly lose it.
    */
   const [savedWord, setSavedWord] = useState<string | null>(null);
-  const handleSaved = useCallback((word: string) => setSavedWord(word), []);
+  const notify = props.onSaved;
+  const handleSaved = useCallback(
+    (word: string) => {
+      setSavedWord(word);
+      notify?.(word);
+    },
+    [notify]
+  );
   const handleToastDone = useCallback(() => setSavedWord(null), []);
 
   return (

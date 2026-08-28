@@ -126,6 +126,13 @@ const SessionContext = createContext<RecallSession>({
 /** The plan for the active video, or null. Consumed by every mounted slide. */
 export const useRecallView = () => useContext(ViewContext);
 /**
+ * IS A BLANK HOLDING THE VIDEO RIGHT NOW? Boolean only, on purpose: the one
+ * consumer (the walkthrough's floating coach card) needs to get out of the way
+ * while the user answers, and handing it the whole grading context would
+ * re-render it on every keystroke for a yes/no it already had.
+ */
+export const useHeldBlank = () => useContext(GradingContext).entry !== null;
+/**
  * The live typed text. SEPARATE FROM useRecallView ON PURPOSE: this changes on
  * every keystroke, and if it rode along with the plan then every mounted
  * Karaoke would re-render per character — breaking that component's stated
@@ -155,6 +162,10 @@ export function RecallHost({
   active,
   language,
   focusWord,
+  levelBlanks = true,
+  maxLevelBlanks,
+  minLevelBlankAtS,
+  quiet = false,
   onObscurePlayer,
   children,
 }: {
@@ -175,6 +186,70 @@ export function RecallHost({
    * caps were already spent, never asks theirs at all.
    */
   focusWord: string | null;
+  /**
+   * MAY BLUE LEVEL BLANKS BE PLANNED? True everywhere except the onboarding
+   * taste reel.
+   *
+   * The walkthrough scripts one green blank on one word and stops the clip on
+   * it. A blue blank is indistinguishable from that beat to a first-time user
+   * and can be planned anywhere, including before the coached moment — so on a
+   * fresh device, where band 1 is 91% articles and prepositions, the guided run
+   * would routinely be interrupted by an unexplained gap asking for "la". This
+   * turns them off for the duration of the reel; RECALL_ENABLED and
+   * LEVELS_ENABLED are untouched and the real feed is unaffected.
+   */
+  levelBlanks?: boolean;
+  /**
+   * At most this many blue blanks on a video. Undefined means core's own cap
+   * (maxLevelBlanks in levels.ts), which is what the real feed wants.
+   *
+   * The onboarding reel sets 1 on its last clip. The point there is to show
+   * that the blue ladder EXISTS, once, in a screen the user has been led
+   * through beat by beat — four of them would turn the last thing before the
+   * paywall into a test, which is the opposite of the feeling that sells it.
+   *
+   * The earliest cues win, not the highest bands: a blank the user never
+   * reaches teaches nothing, and core orders its plan by band preference
+   * rather than by time.
+   */
+  maxLevelBlanks?: number;
+  /**
+   * NO BLUE BLANK BEFORE THIS SECOND. Undefined means core's own rule, which
+   * is what the real feed wants.
+   *
+   * Core's floor is MIN_CUE_INDEX — the first two cues, an INDEX rather than a
+   * clock. On a fast opening those two lines can be over in four seconds, and
+   * the blank lands while the viewer is still working out what they are
+   * watching. That is fine in the feed, where the video before it earned the
+   * same interruption, and wrong on the last clip of the onboarding reel, which
+   * has to be watched before it asks for anything.
+   *
+   * Applied to `pauseAt` (the moment the video actually STOPS) rather than to
+   * the cue's start, because that is the instant the user experiences as the
+   * interruption. A clip with nothing left after the filter gets no blue blank
+   * at all — see WALKTHROUGH.last.blankAfterS for why that is the right way to
+   * fail.
+   */
+  minLevelBlankAtS?: number;
+  /**
+   * NOTHING MAY INTERRUPT. True for the onboarding taste reel and nowhere else.
+   *
+   * The celebration after a correct answer is a scheduling moment: it is where
+   * the feed asks for notification permission, and where it offers to save the
+   * user's progress to an account. Both are right in the real feed and both are
+   * wrong in the guided run — the walkthrough asks the user to fill one blank
+   * and then covers its own demonstration with a modal about accounts, seconds
+   * before the paywall asks them for money. Two asks stacked on one screen is
+   * how you lose both.
+   *
+   * The guard is HERE, at the raise, rather than at the two cards, and that is
+   * the point of it: maybeAskToSaveProgress latches promptedThisSession and
+   * spends a recordSavePromptShown record on the way past, and
+   * maybeAskForPermission latches its own session flag. Suppressing further
+   * down would silence the modal and still burn the budget, so the real ask
+   * later in the feed would never come.
+   */
+  quiet?: boolean;
   /**
    * Raised while the answer bar would otherwise sit over the player area — see
    * HIDE_PLAYER_WHILE_TYPING for the geometry that forces this. The feed
@@ -222,7 +297,9 @@ export function RecallHost({
    * both kinds.
    */
   const owns = Boolean(video) && status.loadedVideoId === video?.youtubeId;
-  const planned = (recallActive || LEVELS_ENABLED) && owns && video !== null;
+  /** LEVELS_ENABLED is the build's switch; `levelBlanks` is this host's. */
+  const levelsOn = LEVELS_ENABLED && levelBlanks;
+  const planned = (recallActive || levelsOn) && owns && video !== null;
   const armed = planned && active;
 
   const [plan, setPlan] = useState(EMPTY_PLAN);
@@ -277,6 +354,11 @@ export function RecallHost({
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const armedRef = useRef(armed);
   armedRef.current = armed;
+  /** Read inside grade(), which must not take `quiet` as a dependency: it is
+      rebuilt on identity and a rebuild mid-hold re-registers the worklet that
+      is holding the video. Same pattern as armedRef, for the same reason. */
+  const quietRef = useRef(quiet);
+  quietRef.current = quiet;
 
   entriesRef.current = plan.entries;
 
@@ -355,7 +437,10 @@ export function RecallHost({
       );
     }
 
-    const levelEntries = LEVELS_ENABLED
+    /** Named for what it is, and NOT `planned` — that identifier is already the
+        effect's own guard above, and shadowing it here would put the guard in
+        the temporal dead zone and throw on every plan. */
+    const levelCandidates = levelsOn
       ? buildLevelPlan(
           video,
           storage.getLevelState().level,
@@ -364,6 +449,19 @@ export function RecallHost({
           new Set(recallEntries.map((e) => e.cueIndex))
         )
       : [];
+    // The floor comes FIRST, so the cap below picks the earliest blank that is
+    // actually allowed rather than dropping to none when the earliest is too
+    // early.
+    const lateEnough =
+      minLevelBlankAtS === undefined
+        ? levelCandidates
+        : levelCandidates.filter((e) => e.pauseAt >= minLevelBlankAtS);
+    const levelEntries =
+      maxLevelBlanks === undefined
+        ? lateEnough
+        : [...lateEnough]
+            .sort((a, b) => a.cueIndex - b.cueIndex)
+            .slice(0, Math.max(0, maxLevelBlanks));
 
     setPlan(mergeBlankPlans(levelEntries, recallEntries));
     // recallActive is listed even though `planned` already folds it in: with
@@ -376,7 +474,19 @@ export function RecallHost({
     // The saved words are deliberately NOT a dependency — replanning on every
     // grade would wipe the results of the session in progress. staleVersion is
     // how a change made on ANOTHER tab gets in; see below.
-  }, [planned, recallActive, video, language, focusWord, staleVersion]);
+    // levelsOn joins the list for the same reason recallActive is on it: the
+    // taste reel turns the blue planner off for a host that is already mounted.
+  }, [
+    planned,
+    recallActive,
+    levelsOn,
+    maxLevelBlanks,
+    minLevelBlankAtS,
+    video,
+    language,
+    focusWord,
+    staleVersion,
+  ]);
 
   /**
    * A new plan resets every scrap of local recall state — the web does the
@@ -729,7 +839,7 @@ export function RecallHost({
       const sessionComplete =
         entry.kind === 'recall' &&
         dueCount(storage.getSavedWords(), Date.now()) === 0;
-      if (sessionComplete || wasCorrect) {
+      if (!quietRef.current && (sessionComplete || wasCorrect)) {
         if (askTimer.current) clearTimeout(askTimer.current);
         askTimer.current = setTimeout(() => {
           askTimer.current = null;

@@ -118,6 +118,28 @@ export default function App() {
   }, [onboarding, gate.ready]);
 
   /**
+   * SAY WHERE ONBOARDING JUST HANDED OVER, AND WHY. Development only.
+   *
+   * The last screen of the flow ends with a button, and what comes after it is
+   * decided here rather than there: not entitled -> the wall, entitled -> the
+   * feed. On a device with a real or promotional subscription that second
+   * branch is CORRECT and looks exactly like a broken handoff, which has cost
+   * more than one debugging session. The line below is the answer, printed at
+   * the moment it happens.
+   */
+  const sawOnboarding = useRef(false);
+  if (onboarding) sawOnboarding.current = true;
+  useEffect(() => {
+    if (!__DEV__ || onboarding || !sawOnboarding.current || !gate.ready) return;
+    console.log(
+      gate.entitled
+        ? '[loro:dev] onboarding done -> FEED. The gate says you ARE entitled. ' +
+            'Dev menu -> "Loro · Show paywall now" to see the wall instead.'
+        : '[loro:dev] onboarding done -> PAYWALL.'
+    );
+  }, [onboarding, gate.ready, gate.entitled]);
+
+  /**
    * The magic-link callback, listened for at the ROOT and for the whole app
    * lifetime — deliberately not inside the sign-in card.
    *

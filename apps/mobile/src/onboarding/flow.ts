@@ -30,6 +30,49 @@ import { storageDriver } from '../platform/storage';
 export const DEV_FORCE_ONBOARDING = false;
 
 /**
+ * WIPE EVERY loro.* KEY AT LAUNCH. Dev builds only, and off by default.
+ *
+ * DEV_FORCE_ONBOARDING ALONE IS NOT ENOUGH TO RE-TEST THE TASTE REEL, and the
+ * reason is not obvious enough to leave anyone to discover it. The walkthrough
+ * saves a word on the first run. On the second, storage.saveWordAtBox finds it
+ * already there and returns ok WITHOUT touching its schedule — so the word
+ * keeps whatever due date the previous run left it with. If that run answered
+ * the blank correctly the word is in box 1, due in ten minutes, and core
+ * declines to plan it: clip two shows no blank at all and the run looks broken
+ * when it is only stale.
+ *
+ * The real reset is the Progress tab's dev row, and it is out of reach in
+ * exactly the state worth testing — Progress lives inside Shell, behind the
+ * paywall, so a signed-out tester has no route to it and would have to delete
+ * and reinstall the app between runs.
+ *
+ * So: flip this on, reload, and every run starts from a genuinely cold device.
+ * Flip it back off when you are done, or the app forgets everything on every
+ * launch, which is a confusing way to test anything else.
+ *
+ * THE CATALOG SURVIVES. Its keys are deliberately outside the 'loro.'
+ * namespace (platform/catalog.ts), so the snapshot on disk is untouched, the
+ * reel resolves on the first render, and no re-download is needed to reach the
+ * walkthrough.
+ *
+ * Guarded by __DEV__ as well as by the flag: the bundler inlines it, so the
+ * whole block is eliminated from a production build rather than merely skipped.
+ */
+export const DEV_RESET_ON_LAUNCH = false;
+
+/**
+ * Run at MODULE EVAL, not in a component, and that is the point: this has to
+ * happen before anything reads storage, and App.tsx's onboarding gate is a lazy
+ * useState initialiser that reads it on the very first render. The boot import
+ * at the top of App.tsx has already installed the storage seam by the time this
+ * module is evaluated, so the driver below is live.
+ */
+if (__DEV__ && DEV_RESET_ON_LAUNCH) {
+  storageDriver.clearByPrefix('loro.');
+  olog('DEV_RESET_ON_LAUNCH — wiped all loro.* keys before first render');
+}
+
+/**
  * The paywall seam. Dark, and the screen behind it renders NOTHING while it is
  * false — the step is filtered out of the flow entirely, so there is no empty
  * frame to slide through. Same dark-ship pattern as RECALL_ENABLED

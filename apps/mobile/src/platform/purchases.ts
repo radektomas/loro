@@ -146,6 +146,70 @@ export type PurchaseGate = {
   configured: boolean;
 };
 
+/**
+ * DEV ONLY — pretend the entitlement is absent, so the wall renders on a device
+ * that is actually entitled.
+ *
+ * WHY THIS EXISTS. The paywall is the hardest screen in the app to reach on a
+ * development device, and for good reasons that all compound: the local .env
+ * carries the RevenueCat key so the gate does NOT fail open, the promotional
+ * `plus` entitlement granted for support is attached to a real account, and
+ * signing out to drop it also signs out of everything else worth testing. The
+ * result is that the one screen every onboarding change hands over to is the
+ * one nobody can look at without dismantling their session.
+ *
+ * ⚠️ THIS IS THE ONE EXCEPTION TO "THE VERDICT COMES FROM CustomerInfo ONLY",
+ * and it is bounded on purpose. It can only make the gate STRICTER, never more
+ * permissive — forcing the wall shut can lose a sale in dev and can never give
+ * anybody the app for free, which is the direction that would matter. `__DEV__`
+ * is inlined by the bundler, so in a production build the flag read below is
+ * eliminated along with every branch that mentions it. Do not add the opposite
+ * override, and do not consult storage for a real verdict anywhere else.
+ *
+ * The key sits OUTSIDE the 'loro.' namespace deliberately: the dev menu's
+ * "onboarding from scratch" wipes that whole namespace, and an override that
+ * cleared itself every time you restarted onboarding would be useless for
+ * exactly the flow it exists to test.
+ */
+const DEV_FORCE_PAYWALL_KEY = 'dev.forcePaywall';
+
+/**
+ * THE SAME OVERRIDE, AS A CONSTANT YOU EDIT. Set it to true, save, reload.
+ *
+ * The dev menu below is the convenient way in and this is the RELIABLE one,
+ * which is a distinction worth having after the menu turned out to be
+ * unreachable in this app's own build (see devMenu.ts — expo-dev-menu does not
+ * show React Native's DevSettings items, so four entries were registered into a
+ * menu nobody could open). A constant in a file cannot go missing.
+ *
+ * It ORs with the stored key rather than replacing it, so leaving this on and
+ * also tapping "Clear paywall override" is not a contradiction the app has to
+ * resolve: the constant wins, because someone who edited a file meant it.
+ *
+ * A RELOAD IS REQUIRED, not just a Fast Refresh: App.tsx reads the gate in a
+ * lazy useState initialiser, which does not re-run when a module is swapped.
+ * Press r in the Metro terminal.
+ */
+const DEV_FORCE_PAYWALL = false;
+
+export function isDevPaywallForced(): boolean {
+  if (!__DEV__) return false;
+  if (DEV_FORCE_PAYWALL) return true;
+  return storageDriver.local.getItem(DEV_FORCE_PAYWALL_KEY) === '1';
+}
+
+export function setDevPaywallForced(on: boolean): void {
+  if (!__DEV__) return;
+  if (on) storageDriver.local.setItem(DEV_FORCE_PAYWALL_KEY, '1');
+  else storageDriver.local.removeItem(DEV_FORCE_PAYWALL_KEY);
+}
+
+/** Ready, and not entitled — the state that renders PaywallScreen. */
+function withDevOverride(current: PurchaseGate): PurchaseGate {
+  if (!__DEV__ || !isDevPaywallForced()) return current;
+  return { ...current, ready: true, entitled: false };
+}
+
 let gate: PurchaseGate = { ready: false, entitled: false, configured: false };
 const gateChanged = createEmitter<void>('purchaseGateChanged');
 
@@ -163,7 +227,7 @@ function setGate(next: Partial<PurchaseGate>): void {
 }
 
 export function getPurchaseGate(): PurchaseGate {
-  return gate;
+  return withDevOverride(gate);
 }
 
 export function onPurchaseGateChanged(callback: () => void): () => void {
@@ -172,8 +236,11 @@ export function onPurchaseGateChanged(callback: () => void): () => void {
 
 /** The gate as React state. App.tsx decides Shell vs PaywallScreen on it. */
 export function usePurchaseGate(): PurchaseGate {
-  const [state, setState] = useState(gate);
-  useEffect(() => onPurchaseGateChanged(() => setState(gate)), []);
+  const [state, setState] = useState(() => withDevOverride(gate));
+  useEffect(
+    () => onPurchaseGateChanged(() => setState(withDevOverride(gate))),
+    []
+  );
   return state;
 }
 

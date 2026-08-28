@@ -1,11 +1,14 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useFrameCallback,
+  useReducedMotion,
   useSharedValue,
+  withRepeat,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
@@ -58,11 +61,25 @@ import { buildCueSpans, cueIndexAt, wordIndexAt } from './subtitles';
  * which is the promise this component already made; the memo is what finally
  * keeps it.
  */
+/**
+ * The spotlight's match rule. Deliberately looser than the app's
+ * normalizeSurface: a coach mark only has to find the word a human named, so
+ * accents and punctuation are stripped and nothing depends on the result.
+ */
+function normalizeSpotlight(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9ñ]/g, '');
+}
+
 export const Karaoke = memo(function Karaoke({
   cues,
   language,
   active,
   videoKey,
+  spotlight,
   onWordTap,
 }: {
   cues: Cue[];
@@ -82,6 +99,23 @@ export const Karaoke = memo(function Karaoke({
    * slide — the guard is structural rather than a check.
    */
   onWordTap?: (word: Word, cueIndex: number) => void;
+  /**
+   * POINT AT ONE WORD — the onboarding walkthrough, and nothing else.
+   *
+   * The taste reel stops its first clip on a cue and asks the user to tap a
+   * specific word; without a mark, "tap a word you don't know" on a line of
+   * nine words is a guess. This draws a ring around that one word while its cue
+   * is on screen.
+   *
+   * Matched on the NORMALISED surface rather than a word index, because the
+   * script names a word ("como") and the same surface can appear more than once
+   * in a cue. The first match in the cue wins, which is the one the hold was
+   * placed on.
+   *
+   * Null everywhere in the real feed. Nothing else may set it: a coach mark in
+   * the feed would be an instruction on a screen the user is not being taught.
+   */
+  spotlight?: { cueIndex: number; surface: string } | null;
 }) {
   const { anchorTime, anchorAt, isPlaying, rate } = usePlayerClock();
   const spans = useMemo(() => buildCueSpans(cues), [cues]);
@@ -133,6 +167,18 @@ export const Karaoke = memo(function Karaoke({
   );
 
   const cue = cueIndex >= 0 ? cues[cueIndex] : null;
+
+  /**
+   * Which word index carries the ring, or -1. Resolved here rather than in the
+   * map below so the normalisation runs once per cue instead of once per word,
+   * and so "the cue is not the spotlit one" is a single cheap comparison.
+   */
+  const spotlitIndex = useMemo(() => {
+    if (!spotlight || !cue || spotlight.cueIndex !== cueIndex) return -1;
+    return cue.words.findIndex(
+      (w) => normalizeSpotlight(w.text) === normalizeSpotlight(spotlight.surface)
+    );
+  }, [spotlight, cue, cueIndex]);
 
   /**
    * CHECKPOINT F. Is there a blank on the cue currently on screen?
@@ -272,6 +318,7 @@ export const Karaoke = memo(function Karaoke({
                   text={word.text}
                   index={index}
                   current={wordIndexSv}
+                  spotlit={index === spotlitIndex}
                   onPress={
                     onWordTap ? () => onWordTap(word, cueIndex) : undefined
                   }
@@ -302,11 +349,14 @@ function KaraokeWord({
   text,
   index,
   current,
+  spotlit,
   onPress,
 }: {
   text: string;
   index: number;
   current: { value: number };
+  /** The walkthrough's ring. False for every word in the real feed. */
+  spotlit?: boolean;
   onPress?: () => void;
 }) {
   const boxStyle = useAnimatedStyle(() => ({
@@ -315,6 +365,41 @@ function KaraokeWord({
   const textStyle = useAnimatedStyle(() => ({
     color: current.value === index ? '#06130d' : '#f2f5f3',
   }));
+
+  /**
+   * THE RING BREATHES, and it is a JS-driven loop rather than the shared-value
+   * pattern the highlight uses. That is deliberate: the highlight runs on every
+   * word of every cue at 60fps and must never touch the JS thread, while this
+   * runs on exactly one word of one cue of one clip, once per install. Paying
+   * for a worklet here would buy nothing and cost a reader's attention.
+   *
+   * Reduced Motion is honoured by holding it at full opacity — the ring is the
+   * instruction, so it may fade but it may never disappear.
+   */
+  const pulse = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
+  useEffect(() => {
+    if (!spotlit) {
+      cancelAnimation(pulse);
+      pulse.value = 1;
+      return;
+    }
+    if (reducedMotion) {
+      pulse.value = 1;
+      return;
+    }
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(0.35, { duration: 620 }),
+        withTiming(1, { duration: 620 })
+      ),
+      -1,
+      false
+    );
+    return () => cancelAnimation(pulse);
+  }, [spotlit, reducedMotion, pulse]);
+
+  const ringStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
 
   /**
    * Pressable OUTSIDE the animated view, so the touch target is the word's own
@@ -327,6 +412,15 @@ function KaraokeWord({
   return (
     <Pressable onPress={onPress} disabled={!onPress} hitSlop={6}>
       <Animated.View style={[styles.word, boxStyle]}>
+        {/* Behind the text and inside the word's own box, so the line does not
+            re-flow when the ring appears — a coach mark that shifted the
+            subtitle would move the very word it is pointing at. */}
+        {spotlit && (
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.spotlightRing, ringStyle]}
+          />
+        )}
         <Animated.Text style={[styles.wordText, textStyle]}>{text}</Animated.Text>
       </Animated.View>
     </Pressable>
@@ -601,6 +695,11 @@ const styles = StyleSheet.create({
   placeholder: { height: 176 },
   line: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   word: { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  spotlightRing: {
+    borderColor: '#5ee6a8',
+    borderRadius: 8,
+    borderWidth: 2,
+  },
   wordText: { fontSize: 26, fontWeight: '700', lineHeight: 34 },
   blankRow: { alignItems: 'center', flexDirection: 'row', gap: 4 },
   /** Room at the foot of the box for the drawn rule, which overlays rather

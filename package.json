@@ -27,7 +27,8 @@
     "explanations-context": "node scripts/explanations-context.mts",
     "catalog-audit": "node scripts/catalog-blob-audit.mts",
     "sweep-embeds": "node scripts/sweep-embeds.mts",
-    "probe-captions": "node scripts/probe-captions.mts"
+    "probe-captions": "node scripts/probe-captions.mts",
+    "taste-candidates": "node scripts/taste-candidates.mts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

@@ -104,6 +104,9 @@ export type EventName =
   // onboarding
   | 'onboarding_step'      // { step, index } — one per screen ARRIVED at
   | 'onboarding_completed' // reached the end, or skipped from inside it
+  | 'taste_shown'          // { clips } — the guided reel before the wall
+  | 'taste_word_saved'     // { word, scripted } — the coached tap landed
+  | 'taste_outro'          // reached the closing card
   // the wall
   | 'paywall_shown'        // the gate rendered PaywallScreen
   | 'paywall_offerings_failed'

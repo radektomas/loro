@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
@@ -37,7 +37,7 @@ import { AuthorLine } from './AuthorLine';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
-import { RecallHost, useRecallReplay } from './RecallHost';
+import { RecallHost, useHeldBlank, useRecallReplay } from './RecallHost';
 import {
   consumeReviewTarget,
   subscribeToReviewTarget,
@@ -45,6 +45,7 @@ import {
 } from './reviewTarget';
 import { SEEK_BACK_PAD_S } from './recall';
 import { SessionSavePrompt } from './SessionSavePrompt';
+import { WalkthroughCoach, type CoachCardContent } from './WalkthroughCoach';
 import { currentCueStart } from './subtitles';
 import { WordSheet, type WordSheetData } from './WordSheet';
 
@@ -93,6 +94,99 @@ const EMPTY_RETRY_MS = 10_000;
 
 type EmbedVideo = Video & { youtubeId: string };
 
+/**
+ * THE ONBOARDING WALKTHROUGH'S HANDLE ON THE FEED, and nothing else's.
+ *
+ * The taste reel drives a scripted first run through three real clips: stop on
+ * a cue, ring one word, take the tap itself, then ask core to blank that same
+ * word in the next clip. All of that needs to reach INSIDE the feed, and the
+ * alternative — a second, simplified feed built for onboarding — is the thing
+ * this whole design exists to avoid, because a demonstration that is not the
+ * product demonstrates nothing.
+ *
+ * Bundled into one optional prop rather than five loose ones so the real feed
+ * reads as it did: `walkthrough` is undefined in Shell, and every branch below
+ * that mentions it is skipped. Nothing here has a default that changes feed
+ * behaviour.
+ */
+export type FeedWalkthrough = {
+  /** Ring this word, in this cue, on the ACTIVE slide. See Karaoke.spotlight. */
+  spotlight: { cueIndex: number; surface: string } | null;
+  /**
+   * The coach card to float over the band, or null for none. Drawn by the feed
+   * rather than by the step because only the feed knows where the player ends:
+   * the card is anchored at the measured bandTop, which is what keeps it off
+   * the frame on every device instead of on the ones a constant happened to
+   * fit. See WalkthroughCoach for the full geometry argument.
+   */
+  coach?: CoachCardContent | null;
+  /** Show the swipe hint in the same floating slot when no card is up. */
+  hint?: boolean;
+  hintText?: string;
+  /**
+   * Handed to core as the blank plan's `first`, overriding the Words tab's
+   * review target (which cannot be set during onboarding anyway). This is what
+   * makes the word saved in clip 1 come back in clip 2 rather than in whichever
+   * video happens to say it next.
+   */
+  focusWord: string | null;
+  /**
+   * A word was SAVED through the real sheet — the sheet opened, showed its
+   * gloss, and the user pressed Save.
+   *
+   * The script does not intercept the tap. It used to, and that was wrong: the
+   * sheet is most of what this screen exists to demonstrate, and replacing it
+   * with a bespoke card showed people a save flow the app does not have. So the
+   * tap behaves exactly as it does in the feed and the walkthrough reacts to
+   * the outcome instead.
+   */
+  onWordSaved?: (video: EmbedVideo, word: Word, cueIndex: number) => void;
+  /**
+   * Open the ACTIVE clip at this second instead of at its beginning.
+   *
+   * Handed to loadVideoById, which takes a start time — so the clip opens
+   * there rather than seeking after it has already begun playing the intro.
+   * The taste reel uses it to drop the user in a couple of seconds before the
+   * word it just promised would come back, because the wait between the swipe
+   * and the blank otherwise reads as the app having forgotten.
+   */
+  startSeconds?: number | null;
+  /**
+   * May the ACTIVE clip plan blue level blanks, and at most how many?
+   *
+   * Off for the coached clips, because a blue blank is indistinguishable from
+   * the scripted one to a first-time user and can land anywhere, including
+   * before the beat the script is building to. On for the last clip, capped at
+   * one: by then the guided part is over, and a single blue gap is how the user
+   * learns the ladder exists at all without the screen turning into a test.
+   */
+  levelBlanks?: boolean;
+  maxLevelBlanks?: number;
+  /** Earliest second a blue blank may stop the ACTIVE clip. See RecallHost. */
+  minLevelBlankAtS?: number;
+  /** Which slide is on screen now. Drives the script's beats. */
+  onSlideChange?: (index: number, total: number) => void;
+  /**
+   * Hands the script a way to move the list itself, so the walkthrough's own
+   * button can advance a clip rather than only ending the flow.
+   *
+   * Called with the controls when the list is up and with null when it goes
+   * away, so a held reference can never outlive the list it drives.
+   */
+  registerControls?: (controls: FeedControls | null) => void;
+  /** The user pulled past the last slide. Fired once per arrival at the end. */
+  onPastEnd?: () => void;
+};
+
+/** What the walkthrough can ask the feed to do. */
+export type FeedControls = {
+  /** Move to a slide, animated, exactly as a swipe would. */
+  scrollToIndex: (index: number) => void;
+};
+
+/** How far past the end counts as "tried to scroll on the last one", in points. */
+const PAST_END_SLOP = 56;
+
 /** Feed-side diagnostics. Its own tag rather than recall's flog, so filtering
     for one does not drag in the other. */
 function feedLog(message: string): void {
@@ -112,7 +206,28 @@ function noteHiddenLayout(): void {
   feedLog('ignoring 0x0 layout from a hidden tab (keeping the last real one)');
 }
 
-export function FeedScreen({ active }: { active: boolean }) {
+export function FeedScreen({
+  active,
+  reel,
+  walkthrough,
+}: {
+  active: boolean;
+  /**
+   * SHOW EXACTLY THESE VIDEOS, IN THIS ORDER — the onboarding taste reel.
+   *
+   * When it is present the feed stops being a feed: no shuffle, no
+   * unseen-first, no append-on-refresh, and the list is whatever these ids
+   * resolve to against the live catalog. Everything BELOW this line is
+   * untouched, which is the point — the taste has to be the real slide, the
+   * real player and the real karaoke, or it is not a demonstration of
+   * anything. See onboarding/taste.ts.
+   *
+   * Absent (the normal feed) every path behaves exactly as it did before.
+   */
+  reel?: readonly Video[];
+  /** Present ONLY in onboarding's taste step. See FeedWalkthrough. */
+  walkthrough?: FeedWalkthrough;
+}) {
   /**
    * The order settled on for THIS mount, or null before anything has settled.
    *
@@ -123,7 +238,17 @@ export function FeedScreen({ active }: { active: boolean }) {
    */
   const orderedRef = useRef<EmbedVideo[] | null>(null);
 
+  /**
+   * A reel is a FIXED list, so it needs none of the settling machinery below:
+   * there is no order to preserve against a refresh, nothing to append, and
+   * the caller has already resolved it against the catalog. Held in a ref so
+   * the identity is stable for the effect's early return.
+   */
+  const reelRef = useRef(reel);
+  reelRef.current = reel;
+
   const [videos, setVideos] = useState<EmbedVideo[]>(() => {
+    if (reel) return embedsFrom(reel as Video[]);
     const ordered = orderFeed(embedsFrom(getCatalog()));
     // An EMPTY list settles nothing — see the note on the effect below.
     if (ordered.length > 0) orderedRef.current = ordered;
@@ -160,7 +285,11 @@ export function FeedScreen({ active }: { active: boolean }) {
   useEffect(
     () =>
       onCatalogChanged(() => {
-        setVideos(() => {
+        setVideos((current) => {
+          // A reel is fixed for the life of the step — a catalog refresh must
+          // not reorder or extend the three clips someone is mid-swipe through.
+          if (reelRef.current) return current;
+
           const incoming = embedsFrom(getCatalog());
           const settled = orderedRef.current;
 
@@ -293,6 +422,7 @@ export function FeedScreen({ active }: { active: boolean }) {
       box={box}
       bandTop={bandTop}
       active={active}
+      walkthrough={walkthrough}
       onAreaLayout={onAreaLayout}
     />
   );
@@ -406,6 +536,7 @@ function FeedBody({
   box,
   bandTop,
   active,
+  walkthrough,
   onAreaLayout,
 }: {
   videos: EmbedVideo[];
@@ -414,6 +545,7 @@ function FeedBody({
   /** Is the feed the visible tab? Gates the player, the karaoke loop and the
       blank hold — everything that should go quiet behind another screen. */
   active: boolean;
+  walkthrough?: FeedWalkthrough;
   onAreaLayout: (event: LayoutChangeEvent) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -471,6 +603,24 @@ function FeedBody({
       setSheet({ video, word, cueIndex }),
     []
   );
+
+  /**
+   * The sheet's own data, mirrored so the save callback can name the video.
+   *
+   * WordSheet reports a save as a bare string — that is all its toast needs —
+   * while the walkthrough needs the video and the cue the word came from, to
+   * find the entry that was just written. The panel has usually closed by then,
+   * so the ref rather than the state.
+   */
+  const sheetRef = useRef<WordSheetData | null>(null);
+  sheetRef.current = sheet;
+
+  const onWordSaved = walkthrough?.onWordSaved;
+  const handleSheetSaved = useCallback(() => {
+    const data = sheetRef.current;
+    if (data) onWordSaved?.(data.video as EmbedVideo, data.word, data.cueIndex);
+  }, [onWordSaved]);
+
 
   // Read once per mount, exactly as the web's Feed does: /profile is a separate
   // screen, so returning here remounts with the new value.
@@ -574,6 +724,49 @@ function FeedBody({
   const swipe = useSwipeLifecycle(setDragging);
 
   const activeVideo = videos[activeIndex] ?? null;
+
+  /**
+   * Tell the script where we are. An effect rather than a call inside
+   * applyViewableIndex, so it also fires for the FIRST slide — which is never
+   * "changed to" and is exactly the one the walkthrough opens on.
+   */
+  const onSlideChange = walkthrough?.onSlideChange;
+  useEffect(() => {
+    onSlideChange?.(activeIndex, videos.length);
+  }, [onSlideChange, activeIndex, videos.length]);
+
+  /**
+   * "They pulled past the last one." Fired at most once per visit to the end —
+   * iOS bounces, so a single flick produces a run of frames beyond the content,
+   * and an unlatched handler would raise the outro modal several times.
+   */
+  const pastEndRef = useRef(false);
+  const onPastEnd = walkthrough?.onPastEnd;
+
+  /**
+   * The list itself, so the script's button can move it.
+   *
+   * scrollToIndex rather than the review jump's remount-at-index trick: that
+   * one exists because a jump from ANOTHER TAB has no geometry to scroll
+   * against, which is not this case — the list is on screen and measured, and
+   * remounting it here would rebuild every cell and restart the player for
+   * what the user experiences as a swipe.
+   */
+  const listRef = useRef<FlashListRef<EmbedVideo>>(null);
+  const registerControls = walkthrough?.registerControls;
+  useEffect(() => {
+    if (!registerControls) return;
+    registerControls({
+      scrollToIndex: (index: number) => {
+        const clamped = Math.min(Math.max(index, 0), videos.length - 1);
+        listRef.current?.scrollToIndex({ index: clamped, animated: true });
+        // The viewability callback will confirm it, but setting it here means
+        // the script's own state moves on the press rather than a frame later.
+        applyViewableIndex(clamped);
+      },
+    });
+    return () => registerControls(null);
+  }, [registerControls, videos.length]);
   // Written during render on purpose — see mountIndexRef. Any mount from here
   // on, jump or otherwise, starts on the slide the user is actually on.
   mountIndexRef.current = activeIndex;
@@ -637,11 +830,22 @@ function FeedBody({
         video={activeVideo}
         active={active}
         language={language}
+        // The script's word wins when there is one. A review target cannot
+        // exist during onboarding (the Words tab is behind the paywall), so
+        // these two can never both be set.
         focusWord={
-          landing && activeVideo && landing.videoId === activeVideo.id
-            ? landing.word
-            : null
+          walkthrough
+            ? walkthrough.focusWord
+            : landing && activeVideo && landing.videoId === activeVideo.id
+              ? landing.word
+              : null
         }
+        // Per-clip during the guided run, core's own rules everywhere else.
+        levelBlanks={walkthrough ? (walkthrough.levelBlanks ?? false) : true}
+        maxLevelBlanks={walkthrough?.maxLevelBlanks}
+        minLevelBlankAtS={walkthrough?.minLevelBlankAtS}
+        // The guided run raises no asks of its own. See RecallHost's `quiet`.
+        quiet={Boolean(walkthrough)}
         onObscurePlayer={setPlayerObscured}
       >
         <View
@@ -658,6 +862,7 @@ function FeedBody({
         >
           {pageHeight > 0 && (
             <FlashList
+              ref={listRef}
               // The review jump's mechanism: a new key means a new list, and a
               // new list starts at initialScrollIndex. Nothing else changes it.
               key={listGeneration}
@@ -682,6 +887,14 @@ function FeedBody({
                   isActive={active && index === activeIndex}
                   box={box}
                   language={language}
+                  // ACTIVE SLIDE ONLY. FlashList recycles cells, and a ring
+                  // drawn on a background slide would be waiting on a screen
+                  // the user has already left.
+                  spotlight={
+                    active && index === activeIndex
+                      ? (walkthrough?.spotlight ?? null)
+                      : null
+                  }
                   onWordTap={handleWordTap}
                   onAreaLayout={index === 0 ? onAreaLayout : undefined}
                 />
@@ -700,6 +913,26 @@ function FeedBody({
               // FOUR HANDLERS, NOT THREE — see useSwipeLifecycle. The old
               // trio cleared `dragging` on onScrollEndDrag, which is the
               // moment the FINGER lifts, not the moment the swipe ends.
+              onScroll={
+                onPastEnd
+                  ? (event) => {
+                      const { contentOffset, contentSize, layoutMeasurement } =
+                        event.nativeEvent;
+                      const past =
+                        contentOffset.y >
+                        contentSize.height - layoutMeasurement.height + PAST_END_SLOP;
+                      if (past && !pastEndRef.current) {
+                        pastEndRef.current = true;
+                        onPastEnd();
+                      } else if (!past && contentOffset.y < contentSize.height - layoutMeasurement.height) {
+                        // Re-armed only after they come back off the end, so a
+                        // dismissed modal can be raised again by pulling again.
+                        pastEndRef.current = false;
+                      }
+                    }
+                  : undefined
+              }
+              scrollEventThrottle={32}
               onScrollBeginDrag={() => {
                 jumpTargetRef.current = null;
                 swipe.onBeginDrag();
@@ -710,28 +943,79 @@ function FeedBody({
             />
           )}
 
-          <PlayerDriver video={activeVideo} landing={landing} />
+          <PlayerDriver
+            video={activeVideo}
+            landing={landing}
+            startSeconds={walkthrough?.startSeconds ?? null}
+          />
           <WordSheet
             data={sheet}
             language={language}
             bandTop={bandTop}
+            onSaved={onWordSaved ? handleSheetSaved : undefined}
             onClose={() => setSheet(null)}
           />
           {/* Hoisted out of the list for the same reason WordSheet is, plus
               two of its own — see the header note in RecallBar.tsx. */}
           <RecallBar />
-          {/* Raised by RecallHost after the first correct answer's celebration,
-              and silent every other time. Last child so it covers the band and
-              the answer bar as well as the slide. */}
-          <NotificationPrompt onObscurePlayer={setPromptObscured} />
-          {/* Raised by RecallHost after the celebration for the grade that
-              emptied the due queue — and it wins that moment over the
-              notification explainer (see RecallHost's priority note). Same
-              obscure contract, same layering reason. */}
-          <SessionSavePrompt onObscurePlayer={setPromptObscured} />
+          {/* The guided run's floating coach marks, anchored at the measured
+              bandTop so they can never touch the frame. Above RecallBar in
+              paint order but pointer-transparent, so nothing changes for the
+              answer flow; it also yields to a held blank on its own. */}
+          {walkthrough && (
+            <CoachLayer
+              coach={walkthrough.coach ?? null}
+              hint={walkthrough.hint ?? false}
+              hintText={walkthrough.hintText ?? ''}
+              top={bandTop}
+            />
+          )}
+          {/* NEITHER CARD EXISTS DURING THE GUIDED RUN.
+              RecallHost's `quiet` already stops them being raised, and that is
+              the guard that matters — it is the one that keeps their budgets
+              unspent. This is the second lock on the same door: these two are
+              the only things in the feed that can cover the demonstration, and
+              a subscription that outlived its raise (both are module-level
+              listener sets) would put a modal about accounts on the screen
+              before the paywall. Not rendering them cannot be defeated. */}
+          {!walkthrough && (
+            <>
+              {/* Raised by RecallHost after the first correct answer's
+                  celebration, and silent every other time. Last child so it
+                  covers the band and the answer bar as well as the slide. */}
+              <NotificationPrompt onObscurePlayer={setPromptObscured} />
+              {/* Raised by RecallHost after the celebration for the grade that
+                  emptied the due queue — and it wins that moment over the
+                  notification explainer (see RecallHost's priority note). Same
+                  obscure contract, same layering reason. */}
+              <SessionSavePrompt onObscurePlayer={setPromptObscured} />
+            </>
+          )}
         </View>
       </RecallHost>
     </>
+  );
+}
+
+/**
+ * Bridges the held-blank fact into the walkthrough overlay. A separate leaf so
+ * the GradingContext read re-renders this and WalkthroughCoach, never FeedBody
+ * — the same isolation discipline as AnswerLayer in RecallHost.
+ */
+function CoachLayer({
+  coach,
+  hint,
+  hintText,
+  top,
+}: {
+  coach: CoachCardContent | null;
+  hint: boolean;
+  hintText: string;
+  top: number | null;
+}) {
+  const held = useHeldBlank();
+  return (
+    <WalkthroughCoach coach={coach} hint={hint} hintText={hintText} held={held} top={top} />
   );
 }
 
@@ -846,9 +1130,12 @@ function useStableViewability(setActiveIndex: (index: number) => void) {
 function PlayerDriver({
   video,
   landing,
+  startSeconds,
 }: {
   video: EmbedVideo | null;
   landing: ReviewTarget | null;
+  /** Open the clip here instead of at 0. Null in the real feed. */
+  startSeconds?: number | null;
 }) {
   const api = usePlayerApi();
   const status = usePlayerStatus();
@@ -861,11 +1148,15 @@ function PlayerDriver({
         ? landing
         : null;
     if (opening) appliedRef.current = opening;
-    api.loadAndPlay(
-      video.youtubeId,
-      opening ? Math.max(0, opening.startsAt - REVIEW_LEAD_IN_S) : undefined
-    );
-  }, [video, status.ready, api, landing]);
+    // A review target wins: it is a specific word the user asked to see, while
+    // the walkthrough's offset is only a nicety about pacing.
+    const from = opening
+      ? Math.max(0, opening.startsAt - REVIEW_LEAD_IN_S)
+      : startSeconds != null && startSeconds > 0
+        ? startSeconds
+        : undefined;
+    api.loadAndPlay(video.youtubeId, from);
+  }, [video, status.ready, api, landing, startSeconds]);
 
   return null;
 }
@@ -886,6 +1177,7 @@ const Slide = memo(function Slide({
   isActive,
   box,
   language,
+  spotlight,
   onWordTap,
   onAreaLayout,
 }: {
@@ -894,6 +1186,8 @@ const Slide = memo(function Slide({
   isActive: boolean;
   box: Omit<PlayerBox, 'visible'> | null;
   language: string;
+  /** The walkthrough's ring, or null in the real feed. See Karaoke.spotlight. */
+  spotlight?: { cueIndex: number; surface: string } | null;
   /** Takes the video so the feed can hold ONE handler for every slide. */
   onWordTap: (video: EmbedVideo, word: Word, cueIndex: number) => void;
   onAreaLayout?: (event: LayoutChangeEvent) => void;
@@ -1075,6 +1369,7 @@ const Slide = memo(function Slide({
           language={language}
           active={isActive && ownsMedia}
           videoKey={video.id}
+          spotlight={spotlight}
           onWordTap={tapWord}
         />
       </View>

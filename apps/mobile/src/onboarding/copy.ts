@@ -229,6 +229,75 @@ export const PROGRESS_COMPARISON = {
   cta: 'Continuar',
 };
 
+// ---------------------------------------------------------------- taste reel
+
+/**
+ * REWRITTEN. No web counterpart.
+ *
+ * ALMOST NO COPY, AND THAT IS THE SCREEN. This step is three real clips with
+ * the real karaoke line and the real word sheet, so anything written over it
+ * competes with the thing it is trying to sell. The instructions the user needs
+ * were already given by the screen before it, which says "Swipe it like
+ * anything else, and tap a word the moment it stops making sense" — read HANDOFF
+ * and this block together, because they are now one beat.
+ *
+ * `waiting` is the honest state for a first launch whose catalog has not
+ * downloaded yet. It promises nothing and blames nobody; the screen keeps
+ * asking for the catalog behind it, and the button below stays live so the
+ * flow is never a dead end. Do not turn this into an apology or an error.
+ */
+export const TASTE = {
+  cta: 'Continuar',
+  waiting: 'Getting your first videos ready. This needs a connection, and it only happens once.',
+
+  /**
+   * THE COACHED BEATS. One short line each, because every one of them is read
+   * over a paused video the user would rather be watching.
+   *
+   * The second person and the present tense are doing work here: "Tap it" and
+   * "It comes back" describe what is happening on screen right now, not what
+   * the product does in general. The general version of each sentence was
+   * already made on screens 7 and 8; this is the same claim, demonstrated.
+   */
+  tap: {
+    title: 'Tap the word you don’t know.',
+    body: 'This one is highlighted to get you started.',
+  },
+  saved: {
+    title: 'Saved.',
+    body: 'It comes back as a blank in the videos you scroll, right before you would forget it.',
+  },
+  scrollHint: 'Swipe up for the next one',
+  fill: {
+    /** Shown as the blank arrives, so the gap is not a surprise. */
+    title: 'There it is.',
+    body: 'The video waits. Type it and it carries on.',
+  },
+
+  /**
+   * The outro, raised when they pull past the last clip.
+   *
+   * IT NAMES THE WORDS TAB ON PURPOSE and is the only place in onboarding that
+   * does. The tab is behind the paywall, so this is a description of what is
+   * being bought rather than a pointer to somewhere they can go.
+   *
+   * "One word at a time" rather than a number: nothing here should imply a
+   * catalog size or a daily quota that the app does not enforce.
+   */
+  outro: {
+    title: 'That’s how Loro works.',
+    body: 'Watch real Spanish, tap what you don’t know, and fill it back in when it returns. Everything you save collects in Words, where you can practise it one word at a time.',
+    /** The last button in the flow, and the fourth Spanish word it teaches by
+        using it. HOOK opens on the same verb, so the intro and the handover
+        rhyme. */
+    cta: 'Empezar',
+    /** Shown under the button, the way a gloss sits under a subtitle. The word
+        is doing double duty as copy and as vocabulary, so it has to be
+        readable as both. */
+    ctaGloss: 'start',
+  },
+};
+
 // -------------------------------------------------------------- 12. paywall
 
 /** REWRITTEN, and dark. Nothing renders while PAYWALL_ENABLED is false. */
