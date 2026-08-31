@@ -230,6 +230,87 @@ export function LoroCelebration({
 }
 
 /**
+ * THE CENTRE-STAGE CELEBRATION — the same hop, played big in the middle of
+ * the screen, with the feather burst thrown from the parrot itself.
+ *
+ * FOR SURFACES WITH NOTHING UNDERNEATH. The feed's hop is deliberately small
+ * and cornered because the video resumes 600ms after grading and the clip is
+ * the show. The Words-tab review is the opposite moment: by grading time the
+ * player is gone and the panel is about to close, so the reward IS the screen
+ * — a corner-sized parrot there reads as an afterthought. Do not reach for
+ * this in the feed; over a playing video it is exactly the loudness the small
+ * hop was sized to avoid.
+ *
+ * SAME KEYFRAME, DOUBLED IN AMPLITUDE RATHER THAN RE-TIMED: the segment
+ * durations are the web's numbers above, untouched, so this finishes inside
+ * CELEBRATE_MS exactly like the small hop and every caller's close timer
+ * keeps working. Only the travel (lift, entry scale) and the art grow.
+ */
+export function LoroCelebrationCenter({
+  variant = 'correct',
+}: {
+  variant?: CelebrationVariant;
+}) {
+  const reduceMotion = useReduceMotion();
+  const lift = useSharedValue(24);
+  const scale = useSharedValue(0.5);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const ease = Easing.inOut(Easing.ease);
+
+    opacity.value = withSequence(
+      withTiming(1, { duration: RISE, easing: ease }),
+      withDelay(OPACITY_HOLD, withTiming(0, { duration: FADE_OUT, easing: ease }))
+    );
+    lift.value = withSequence(
+      withTiming(-16, { duration: RISE, easing: ease }),
+      withTiming(0, { duration: SETTLE, easing: ease }),
+      withTiming(-10, { duration: HOP2, easing: ease }),
+      withTiming(0, { duration: LAND, easing: ease }),
+      withTiming(8, { duration: OUT, easing: ease })
+    );
+    scale.value = withSequence(
+      withTiming(1.12, { duration: RISE, easing: ease }),
+      withTiming(1, { duration: SETTLE, easing: ease }),
+      withDelay(HOP2 + LAND, withTiming(0.94, { duration: OUT, easing: ease }))
+    );
+  }, [reduceMotion, lift, scale, opacity]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: lift.value }, { scale: scale.value }],
+  }));
+
+  // Hidden outright under Reduce Motion, like the small hop: the recalled
+  // word's colour change carries the result.
+  if (reduceMotion) return null;
+
+  return (
+    <View pointerEvents="none" style={styles.centerLayer}>
+      <Animated.View style={[styles.centerStage, style]}>
+        {/* The burst rides a scaled wrapper so the feathers' fixed offsets
+            (±50pt, sized for a word) become a screen-sized throw. */}
+        <View style={styles.centerBurst}>
+          <FeatherBurst variant={variant} />
+        </View>
+        <View style={styles.centerPill}>
+          <Text style={[styles.centerPillText, { color: VARIANT[variant].color }]}>
+            {VARIANT[variant].label}
+          </Text>
+        </View>
+        <Image
+          source={BRAND.parrotWaving}
+          style={styles.centerParrot}
+          resizeMode="contain"
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+/**
  * The feather burst, thrown from the centre of the revealed word.
  *
  * ⚠️ ITS PARENT MUST NOT CLIP. The feathers travel up to 50pt out of a box
@@ -334,6 +415,36 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   pillText: { fontSize: 12, fontWeight: '700' },
+  /** Fills the caller's screen and centres the stage; the caller mounts it
+      absolutely over everything, pointer-transparent. */
+  centerLayer: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  centerStage: { alignItems: 'center' },
+  centerBurst: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    transform: [{ scale: 2.6 }],
+  },
+  /** The same 375x420 art at centre-stage size. */
+  centerParrot: { height: 140, width: 125 },
+  centerPill: {
+    backgroundColor: '#1b2420',
+    borderRadius: 999,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  centerPillText: { fontSize: 20, fontWeight: '800' },
   /** Anchored at the parent's centre; the margins above do the -50% part. */
   feather: {
     borderBottomLeftRadius: 3,

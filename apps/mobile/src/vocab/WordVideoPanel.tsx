@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,7 +18,11 @@ import type { AnswerMatch } from '@loro/core/srs';
 import { storage } from '@loro/core/storage';
 import type { WordOccurrence } from '@loro/core/occurrences';
 import { AuthorLine } from '../feed/AuthorLine';
-import { CELEBRATE_MS, LoroCelebration, FeatherBurst } from '../feed/Celebration';
+import {
+  CELEBRATE_MS,
+  LoroCelebrationCenter,
+  FeatherBurst,
+} from '../feed/Celebration';
 import { gradeAnswer, recallHaptic } from '../feed/recall';
 import { noteCorrectRecall } from '../platform/notifications';
 import { PLAYER_EMBED_ORIGIN } from '../platform/config';
@@ -92,6 +97,31 @@ export function WordVideoPanel({
   const [reviewing, setReviewing] = useState(mode === 'review');
   /** Bumped to remount the player for "play again". */
   const [take, setTake] = useState(0);
+
+  /**
+   * The keyboard's height, so the sentence can centre in the space that is
+   * actually VISIBLE while answering — the panel is full-screen and absolute,
+   * so the keyboard is not part of its layout and flex alone would centre
+   * against the covered bottom half. Same listener split as RecallHost: `will`
+   * events on iOS so the content moves with the keyboard's animation; Android
+   * only emits `did` — and only iOS feeds the padding below, because Expo's
+   * default `resize` mode already shrinks the Android window under a keyboard
+   * and padding on top of that would compensate twice.
+   */
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (event) =>
+      setKeyboardHeight(event.endCoordinates.height)
+    );
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  const keyboardInset = Platform.OS === 'ios' ? keyboardHeight : 0;
 
   const cue = video.cues[occurrence.cueIndex];
   const spoken = cue?.words[occurrence.wordIndex]?.text ?? word.text;
@@ -212,12 +242,27 @@ export function WordVideoPanel({
       )}
 
       {/* Everything of Loro's lives BELOW the frame, never over it. */}
-      <View style={[styles.below, { paddingBottom: insets.bottom + 12 }]}>
+      <View
+        style={[
+          styles.below,
+          { paddingBottom: Math.max(insets.bottom, keyboardInset) + 12 },
+        ]}
+      >
         {showPlayer && (
           <View style={styles.attribution}>
             <AuthorLine video={video} />
           </View>
         )}
+
+        {/* THE PLAYER GONE, THE SENTENCE TAKES THE STAGE. With the frame on
+            screen the sentence reads as a subtitle and belongs right under it;
+            once the player yields, a line hugging the top of an empty screen
+            reads as a leftover. These spacers float the question group to the
+            optical middle of whatever is visible — the keyboard padding above
+            keeps "visible" honest while typing — with slightly more room below
+            so it sits a touch above true centre. Spacers, not justifyContent:
+            the actions row must stay pinned at the bottom either way. */}
+        {!showPlayer && <View style={styles.stageAbove} />}
 
         {/* THE SENTENCE, WITH THE HOLE IN IT. Present from the first frame:
             it is the context while the clip plays and the question the moment
@@ -302,6 +347,9 @@ export function WordVideoPanel({
           </Text>
         )}
 
+        {/* The other half of the centring — see stageAbove. */}
+        {!showPlayer && <View style={styles.stageBelow} />}
+
         {/* ⚠️ While the keyboard is up, `marginTop: auto` would push these
             under it — the panel is full-screen and the keyboard is not part of
             its layout. Answering pins them directly below the input instead. */}
@@ -355,12 +403,12 @@ export function WordVideoPanel({
         </View>
       </View>
 
-      {/* Loro hops in over the panel, not over the player: by the time anything
-          is graded the frame is gone. */}
+      {/* Loro takes centre stage, not the feed's corner hop: by grading time
+          the frame is gone and the panel is closing, so the reward is the
+          screen — see LoroCelebrationCenter's header for why the feed keeps
+          the small one. */}
       {(result === 'correct' || result === 'almost') && (
-        <View style={[styles.hopLayer, { top: insets.top + 8 }]} pointerEvents="none">
-          <LoroCelebration variant={result} />
-        </View>
+        <LoroCelebrationCenter variant={result} />
       )}
     </View>
   );
@@ -468,6 +516,8 @@ const styles = StyleSheet.create({
   },
   secondaryLabel: { color: '#f2f5f3', fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.7 },
-  /** The hop is anchored to the panel's top-right, clear of the input. */
-  hopLayer: { left: 0, position: 'absolute', right: 0 },
+  /** The centring pair — grow-only, so a tall sentence plus keyboard simply
+      collapses them back to today's top-anchored layout. */
+  stageAbove: { flexGrow: 1, flexShrink: 0 },
+  stageBelow: { flexGrow: 1.25, flexShrink: 0 },
 });
