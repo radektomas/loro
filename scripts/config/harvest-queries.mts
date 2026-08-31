@@ -42,7 +42,9 @@ export type TopicSlug =
   | 'travel-vlog'
   | 'positive-shorts'
   | 'personal-story'
-  | 'life-lesson';
+  | 'life-lesson'
+  | 'vox-pop'
+  | 'local-speech';
 
 export type Topic = {
   slug: TopicSlug;
@@ -364,6 +366,91 @@ export const TOPICS: readonly Topic[] = [
       'mi experiencia trabajando',
     ],
     tags: ['talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'vox-pop',
+    label: 'Vox pop (strangers answering)',
+    /**
+     * Added 2026-08-27 — the sixth format-first topic. Same reasoning as
+     * personal-story and life-lesson: a pages:1 topic has no cursor to
+     * advance into, so NEW QUERIES are the only lever that moves the pool,
+     * and the previous sweep's publishable tail had gone junk-dry (the
+     * >=5k-view auto-plan surfaced ~60 rows under 50s of which ~11 were
+     * actually a person speaking).
+     *
+     * street-interviews already asks a stranger a question; these ask it in
+     * the words the genre's own channels use, which measured out as
+     * surfacing substantially different rows for every near-synonym tried so
+     * far. 'cuanto gana la gente' is the salary vox-pop format specifically:
+     * it is the one query here with live evidence behind it, since the two
+     * Adrian G.Martin rows it describes ('¿Cuánto gana el dueño de un Taxi?',
+     * 28s; '¿Cuánto Gana un Barbero en España?', 32s) were the strongest
+     * short talking-heads left in the drained pool.
+     *
+     * All six terminate on a noun, adjective or adverb, per rule 1. ñ written
+     * as ñ ('extraños') per rule 2; ordinary accents left off ('cuanto',
+     * 'opina') like the rest of the file, because the query string is the
+     * yield-history key and must not churn.
+     */
+    queries: [
+      'entrevistando desconocidos',
+      'hablando con extraños',
+      'que opina la gente',
+      'cuanto gana la gente',
+      'preguntas a desconocidos',
+      'opiniones de la calle',
+    ],
+    tags: ['street-interviews', 'talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    /**
+     * 1 -> 2 on its own first-run evidence (2026-08-27), the same test
+     * street-interviews passed before it: depth is only worth buying where
+     * page 0 came back unexhausted. It did — 23 of 24 combinations returned a
+     * nextPageToken — and this topic's yield is the best measured in the
+     * matrix: 'cuanto gana la gente' 55.5%, above street-interviews' best
+     * ('le pregunte a la gente', 54.9%) and the 18.6% topic average.
+     *
+     * Deliberately 2, not 3: page 1 is a fresh page, page 0 is a re-fetch
+     * that dedupes (see [[loro-harvest-gotchas]] #4), so the marginal page
+     * has to earn its 2,400 units against a topic that has now been swept
+     * once. Raise to 3 only if a pages:2 run comes back still unexhausted
+     * AND still yielding.
+     */
+    pages: 2,
+  },
+  {
+    slug: 'local-speech',
+    label: 'Local speech (how we talk here)',
+    /**
+     * Added 2026-08-27 alongside vox-pop, from a different angle: people
+     * talking about how their own country speaks — slang, accent, local
+     * expressions. Two reasons it belongs in a format-first list.
+     *
+     * Physically, it is a to-camera format by necessity: the subject is
+     * speech itself, so there is nothing to film but the speaker saying the
+     * words. Editorially, it is the one subject where an accent-diverse feed
+     * is the POINT rather than a side effect — GEOGRAPHIC_REGIONS returns
+     * four different answers to the same query by construction.
+     *
+     * Known failure mode, accepted: language-teaching channels post the same
+     * titles over text-card slideshows with a voiceover. The on-camera gate
+     * is exactly the filter for that, and it runs before anything expensive.
+     *
+     * All six terminate on a noun or adverb, per rule 1. ñ written as ñ
+     * ('españoles') per rule 2; ordinary accents left off ('pais', 'region',
+     * 'tipicas') like the rest of the file.
+     */
+    queries: [
+      'expresiones tipicas de mi pais',
+      'palabras que solo decimos aqui',
+      'como hablamos en mi pais',
+      'jerga de mi pais',
+      'acento de mi region',
+      'palabras que usamos los españoles',
+    ],
+    tags: ['local-speech', 'talking-head', 'conversation'],
     regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
