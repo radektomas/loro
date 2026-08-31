@@ -1,11 +1,18 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withDelay,
+  withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import type { Level, SelfLevel } from '@loro/core/types';
 import { getCatalog } from '@loro/core/catalog';
@@ -16,6 +23,8 @@ import {
   Body,
   BlankMock,
   ChoiceCard,
+  MUTED,
+  ON_ACCENT,
   PrimaryButton,
   Screen,
   TEXT,
@@ -33,7 +42,7 @@ import {
   HOW_IT_WORKS,
   MOTIVATION,
   PAYWALL,
-  PROGRESS_COMPARISON,
+  PLAN_BUILD,
   RESULT,
   SELF_LEVEL,
 } from './copy';
@@ -75,6 +84,10 @@ export type FlowState = {
   known: Set<string>;
   derived: Level | null;
   frequency: string | null;
+  /** The fluency slider's months. IN FLOW STATE FOR DISPLAY ONLY — the plan
+      screen draws the A→B journey from it. It is still never persisted:
+      no storage key holds it and nothing after onboarding reads it. */
+  goalMonths: number | null;
 };
 
 export const INITIAL_FLOW: FlowState = {
@@ -83,6 +96,7 @@ export const INITIAL_FLOW: FlowState = {
   known: new Set(),
   derived: null,
   frequency: null,
+  goalMonths: null,
 };
 
 export type StepProps = {
@@ -133,7 +147,7 @@ export type StepId =
   | 'blanks'
   | 'frequency'
   | 'fluencyGoal'
-  | 'progressComparison'
+  | 'planBuild'
   | 'handoff'
   | 'taste'
   | 'paywall';
@@ -389,18 +403,63 @@ function ResultStep({ state, next }: StepProps) {
 
 // --------------------------------------------------------- 7. how it works
 
-function HowItWorksStep({ next }: StepProps) {
+/**
+ * One row fading in after another, keyed off `active`, NOT off mount — every
+ * step is mounted at once (see StepProps.isCurrent), so a mount-time entrance
+ * would play to an empty room five screens before anyone arrived. Once shown,
+ * a row stays shown: `active` going false again (the back arrow) must not
+ * make content vanish.
+ */
+function Reveal({
+  active,
+  delay,
+  children,
+}: {
+  active: boolean;
+  delay: number;
+  children: ReactNode;
+}) {
+  const reduced = useReducedMotion();
+  const shown = useSharedValue(0);
+  useEffect(() => {
+    if (!active) return;
+    shown.value = reduced
+      ? 1
+      : withDelay(delay, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) }));
+  }, [active, delay, reduced, shown]);
+  const style = useAnimatedStyle(() => ({
+    opacity: shown.value,
+    transform: [{ translateY: (1 - shown.value) * 14 }],
+  }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
+function HowItWorksStep({ next, isCurrent }: StepProps) {
   return (
     <Screen footer={<PrimaryButton label={HOW_IT_WORKS.cta} onPress={next} />}>
       <Title>{HOW_IT_WORKS.title}</Title>
       <View style={styles.steps}>
+        {/* Staggered so the three read as a sequence — which is what they
+            are — rather than a wall of text competing with the title. The
+            button is live from the start: the reveal is rhythm, not a gate.
+
+            A timeline, not numbered badges: a dot per step and a rail
+            running to the next, so the sequence is drawn instead of
+            captioned. The rail lives inside its row and reaches down through
+            the text's bottom padding, which is why the container has no gap
+            — a gap would cut the line at every joint. */}
         {HOW_IT_WORKS.steps.map((line, i) => (
-          <View key={line} style={styles.stepRow}>
-            <View style={styles.stepNumber}>
-              <Text style={styles.stepNumberText}>{i + 1}</Text>
+          <Reveal key={line} active={isCurrent} delay={250 + i * 450}>
+            <View style={styles.stepRow}>
+              <View style={styles.stepSpine}>
+                <View style={styles.stepDot} />
+                {i < HOW_IT_WORKS.steps.length - 1 && (
+                  <View style={styles.stepRail} />
+                )}
+              </View>
+              <Text style={styles.stepText}>{line}</Text>
             </View>
-            <Text style={styles.stepText}>{line}</Text>
-          </View>
+          </Reveal>
         ))}
       </View>
     </Screen>
@@ -495,7 +554,7 @@ function targetLabel(months: number): string {
  * invisible to a screen reader, so without the increment/decrement actions
  * this control would not exist for VoiceOver users.
  */
-function FluencyGoalStep({ next }: StepProps) {
+function FluencyGoalStep({ update, next }: StepProps) {
   const [months, setMonths] = useState(DEFAULT_MONTHS);
   const [trackWidth, setTrackWidth] = useState(0);
 
@@ -544,7 +603,21 @@ function FluencyGoalStep({ next }: StepProps) {
   };
 
   return (
-    <Screen footer={<PrimaryButton label={FLUENCY_GOAL.cta} onPress={next} />}>
+    <Screen
+      footer={
+        <PrimaryButton
+          label={FLUENCY_GOAL.cta}
+          // Patched on leave, not per drag: the flow state is the answer, and
+          // the answer is whatever the knob rests on when they move on. The
+          // plan screen draws its point B from this; it is still written to
+          // no storage key — see FlowState.goalMonths.
+          onPress={() => {
+            update({ goalMonths: months });
+            next();
+          }}
+        />
+      }
+    >
       <Title>{FLUENCY_GOAL.title}</Title>
       <Body>{FLUENCY_GOAL.body}</Body>
 
@@ -586,7 +659,8 @@ function FluencyGoalStep({ next }: StepProps) {
       </GestureDetector>
 
       {/* DERIVED FOR DISPLAY, NEVER SAVED. Recomputed from today's date on
-          every render; no key holds it and nothing downstream reads it. */}
+          every render; no key holds it. The months (not this date) travel to
+          the plan screen via FlowState, which re-derives its own label. */}
       <Text style={styles.goalDerived}>
         {FLUENCY_GOAL.derivedPrefix}{' '}
         <Text style={styles.goalDerivedStrong}>{targetLabel(months)}</Text>
@@ -595,44 +669,310 @@ function FluencyGoalStep({ next }: StepProps) {
   );
 }
 
-// ------------------------------------------------------------ 11. reassurance
+// ------------------------------------------------------------ 11. plan build
+
+/** How long the bar takes. The lines land inside this window, and the
+    button unlocks just after it — long enough to read them, short enough
+    that nobody reaches for the button while it is still dimmed. */
+const PLAN_BUILD_MS = 2600;
 
 /**
- * A STATIC SCREEN, AND THAT IS THE CHANGE.
+ * Minutes per week each frequency answer amounts to, FOR THE SUM LINE ONLY.
+ * Each figure is the option's own copy turned into arithmetic — change the
+ * copy in FREQUENCY.options and these must move with it:
  *
- * This used to be a 2:1 bar chart growing in on arrival, "Other apps 1x"
- * beside "Loro 2x". The ratio was the comparative claim, so the chart could
- * not stay once the claim went, and no chart can replace it here: any two bars
- * side by side re-assert a comparison. See the note in copy.ts.
- *
- * The parrot takes its place, at the same size and treatment ResultStep uses.
- * That is a deliberate reuse rather than a new illustration: this screen is
- * now reassurance, which is what the mascot already means everywhere else in
- * the flow.
- *
- * NOTHING ANIMATES, so nothing keys off isCurrent. That is why this component
- * takes only `next`.
+ *   light    "A few times a week · About 5 minutes"  → 3 × 5
+ *   daily    "Every day · About 10 minutes"          → 7 × 10
+ *   serious  "As much as I can · 20 minutes or more" → 7 × 20, the FLOOR —
+ *            an open-ended promise is summed at its minimum, never padded.
  */
-function ProgressComparisonStep({ next }: StepProps) {
+const WEEKLY_MINUTES: Record<string, number> = {
+  light: 15,
+  daily: 70,
+  serious: 140,
+};
+
+/** "about N hours": months × weeks × their weekly minutes, rounded to a
+    figure that does not pretend precision the inputs never had. */
+function planHours(weeklyMinutes: number, months: number): number {
+  const weeks = (months * 365.25) / 12 / 7;
+  const hours = (weeks * weeklyMinutes) / 60;
+  return hours >= 10 ? Math.round(hours / 5) * 5 : Math.round(hours);
+}
+
+/**
+ * Verdict tiers for the sum line, cut against the REAL spread of the inputs
+ * (light 3–25h, daily 15–120h, serious 30–245h across the 3–24 month
+ * slider): under 25h only the lightest plans land, so the verdict nudges for
+ * more; 100h and up is only reachable by leaning in, so the verdict can
+ * afford awe. The lines themselves live in PLAN_BUILD and are coaching on
+ * commitment, never outcome promises — see the note there.
+ */
+const PLAN_VERDICT_LOW_H = 25;
+const PLAN_VERDICT_HIGH_H = 100;
+
+function planVerdict(hours: number): string {
+  if (hours < PLAN_VERDICT_LOW_H) return PLAN_BUILD.verdictLow;
+  if (hours >= PLAN_VERDICT_HIGH_H) return PLAN_BUILD.verdictHigh;
+  return PLAN_BUILD.verdictMid;
+}
+
+/**
+ * Geometry of the rising line. The journey is drawn as a climb — point B
+ * sits PLAN_RISE higher than point A, because the level going UP is the
+ * point of the picture — and the path between them is a polyline of small
+ * rotated track segments, not one straight bar. Layout needs the seat's real
+ * width (every angle depends on it), so the path renders only after onLayout
+ * reports one; RN rotates around the centre, which is why the maths below
+ * places each segment's midpoint first and tilts it second.
+ */
+const PLAN_RISE = 36;
+/** Badge midline: paddingVertical 6 × 2 + one 18pt line of 14pt/800 ≈ 30. */
+const PLAN_BADGE_MID = 15;
+
+/**
+ * The climb's silhouette. x is the fraction of the run, y the fraction of
+ * the CLIMB reached — and it dips on purpose, because that is what the user
+ * asked the picture to say: progress that wobbles and still ends up at B.
+ * The shape is drawing, not data — it is the same fixed squiggle for
+ * everyone, asserts nothing about how learning actually paces, and must
+ * never grow axes, ticks or labels that would claim otherwise.
+ */
+const PLAN_WAYPOINTS = [
+  { x: 0, y: 0 },
+  { x: 0.24, y: 0.42 },
+  { x: 0.42, y: 0.26 },
+  { x: 0.62, y: 0.74 },
+  { x: 0.76, y: 0.6 },
+  { x: 1, y: 1 },
+] as const;
+
+/**
+ * One leg of the path. Its own component because each leg owns an animated
+ * style (hooks cannot live in a loop), filling only across its span of the
+ * shared 0→1 progress — so the fill runs the polyline end to end, leg by
+ * leg, instead of all legs growing at once.
+ */
+function PlanSegment({
+  progress,
+  from,
+  to,
+  left,
+  top,
+  width,
+  angle,
+}: {
+  progress: SharedValue<number>;
+  from: number;
+  to: number;
+  left: number;
+  top: number;
+  width: number;
+  angle: number;
+}) {
+  const fill = useAnimatedStyle(() => ({
+    width: `${interpolate(progress.value, [from, to], [0, 100], Extrapolation.CLAMP)}%`,
+  }));
+  return (
+    <View
+      style={[
+        styles.planBarTilt,
+        styles.planBar,
+        { left, top, transform: [{ rotate: `${angle}rad` }], width },
+      ]}
+    >
+      <Animated.View style={[styles.planBarFill, fill]} />
+    </View>
+  );
+}
+
+/**
+ * The plan assembling on screen — and every element of it is TRUE, which is
+ * the condition this slot exists under (see the history in copy.ts: the fake
+ * loader with invented testimonials that once followed this screen was
+ * deleted, not disabled). Point A of the journey is the level the grid
+ * derived — or the A1 the zero path writes — point B is the goal month the
+ * slider just set, the pace line is the frequency card tapped two screens
+ * ago, and the recall line is shipped behaviour. The bar paces the reveal of
+ * real answers; it does not simulate computation.
+ *
+ * Keyed off isCurrent, not mount: every step is mounted at once, so a
+ * mount-time clock would have finished five screens before anyone arrived.
+ * It runs ONCE — coming back through the back arrow shows the finished
+ * state, because watching the same loader twice is where trust goes to die.
+ */
+function PlanBuildStep({ state, next, isCurrent }: StepProps) {
+  const reduced = useReducedMotion();
+  const started = useRef(false);
+  const [done, setDone] = useState(false);
+  /** The seat's measured width — the tilt angle depends on it. */
+  const [run, setRun] = useState(0);
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    if (!isCurrent || started.current) return;
+    started.current = true;
+    if (reduced) {
+      progress.value = 1;
+      setDone(true);
+      return;
+    }
+    progress.value = withTiming(1, {
+      duration: PLAN_BUILD_MS,
+      easing: Easing.inOut(Easing.cubic),
+    });
+    const timer = setTimeout(() => setDone(true), PLAN_BUILD_MS + 150);
+    return () => clearTimeout(timer);
+  }, [isCurrent, reduced, progress]);
+
+  const pace = FREQUENCY.options.find((option) => option.id === state.frequency);
+  // Defensive 'A1' matches the zero path's real write (setStartLevel('A1')),
+  // so the fallback is still a true statement, not a guess.
+  const level = state.derived ?? 'A1';
+  // Unreachable null: the goal screen patches this on the only way forward.
+  // The slider's untouched default is the honest stand-in if it ever is.
+  const goalMonths = state.goalMonths ?? DEFAULT_MONTHS;
+  const goalDate = targetLabel(goalMonths);
+  const lines = [
+    PLAN_BUILD.clips,
+    pace
+      ? `${pace.label} · ${pace.body.replace(/\.$/, '')}`
+      : PLAN_BUILD.paceFallback,
+    PLAN_BUILD.recall,
+  ];
+  // The sum line needs a pace to multiply; without one there is no honest
+  // number, so the hero simply does not render rather than inventing one.
+  const hours = pace ? planHours(WEEKLY_MINUTES[pace.id] ?? 0, goalMonths) : 0;
+
   return (
     <Screen
-      footer={<PrimaryButton label={PROGRESS_COMPARISON.cta} onPress={next} />}
+      footer={
+        <PrimaryButton label={PLAN_BUILD.cta} onPress={next} disabled={!done} />
+      }
     >
-      <Title>{PROGRESS_COMPARISON.title}</Title>
-      <Body>{PROGRESS_COMPARISON.body}</Body>
+      <Title>{PLAN_BUILD.title}</Title>
 
-      {/* Centred on its own, so the headline and body above keep their
-          left-aligned reading rhythm. Same asset and same sizing as
-          ResultStep; only the wrapper's spacing differs. */}
-      <View style={styles.reassureArt}>
-        <Image
-          source={BRAND.parrot}
-          style={styles.parrot}
-          resizeMode="contain"
-          accessibilityRole="image"
-          accessibilityLabel="Loro the parrot"
-        />
+      {/* THE JOURNEY IS THE PROGRESS BAR, AND IT CLIMBS. Point A is the
+          level the grid just derived, sitting low; point B is the user's own
+          goal from the slider one screen back, sitting PLAN_RISE higher; and
+          the bar filling between them is the same loader as before — now it
+          visibly rises from where they are toward where they said they want
+          to be. Both ends are true inputs; the slope is drawing, not data,
+          and the bar is pacing, not a measured forecast. */}
+      <View
+        style={styles.planJourney}
+        accessible
+        accessibilityLabel={`Your plan: from ${level} today to fluent by ${goalDate}`}
+      >
+        <View style={[styles.planNode, { marginTop: PLAN_RISE }]}>
+          <View style={styles.planNodeBadge}>
+            <Text style={styles.planNodeBadgeText}>{level}</Text>
+          </View>
+          <Text style={styles.planNodeLabel}>{PLAN_BUILD.todayLabel}</Text>
+        </View>
+
+        <View
+          style={styles.planBarSeat}
+          onLayout={(event) => setRun(event.nativeEvent.layout.width)}
+        >
+          {run > 0 &&
+            (() => {
+              // Waypoints in seat coordinates: y = 0 of the climb is A's
+              // badge midline, y = 1 is B's. Fill spans are proportional to
+              // each leg's LENGTH, so the travel reads at one speed instead
+              // of sprinting the short legs.
+              const aMid = PLAN_RISE + PLAN_BADGE_MID;
+              const pts = PLAN_WAYPOINTS.map((p) => ({
+                x: p.x * run,
+                y: aMid - p.y * PLAN_RISE,
+              }));
+              const legs = pts.slice(1).map((p2, i) => {
+                const p1 = pts[i];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                return {
+                  length: Math.hypot(dx, dy),
+                  angle: Math.atan2(dy, dx),
+                  midX: (p1.x + p2.x) / 2,
+                  midY: (p1.y + p2.y) / 2,
+                };
+              });
+              const total = legs.reduce((sum, leg) => sum + leg.length, 0);
+              let travelled = 0;
+              return legs.map((leg, i) => {
+                const from = travelled / total;
+                travelled += leg.length;
+                // +4 overlaps the joints by ~2pt each side; with rounded
+                // caps that reads as one bending line, not five bars.
+                const drawn = leg.length + 4;
+                return (
+                  <PlanSegment
+                    key={i}
+                    progress={progress}
+                    from={from}
+                    to={travelled / total}
+                    left={leg.midX - drawn / 2}
+                    top={leg.midY - 3}
+                    width={drawn}
+                    angle={leg.angle}
+                  />
+                );
+              });
+            })()}
+        </View>
+
+        <View style={styles.planNode}>
+          <View style={[styles.planNodeBadge, styles.planNodeBadgeGoal]}>
+            <Text style={styles.planNodeBadgeGoalText}>
+              {PLAN_BUILD.goalBadge}
+            </Text>
+          </View>
+          <Text style={styles.planNodeLabel}>{goalDate}</Text>
+        </View>
       </View>
+
+      <View style={styles.planLines}>
+        {lines.map((line, i) => (
+          <Reveal
+            key={line}
+            active={isCurrent}
+            // Spread across the bar's run, with the last landing before it
+            // completes — a line arriving after "100%" would read as an
+            // afterthought.
+            delay={300 + i * ((PLAN_BUILD_MS - 900) / (lines.length - 1))}
+          >
+            <View style={styles.planRow}>
+              <View style={styles.planTick}>
+                <Text style={styles.planTickMark}>✓</Text>
+              </View>
+              <Text style={styles.planText}>{line}</Text>
+            </View>
+          </Reveal>
+        ))}
+      </View>
+
+      {/* THE SUM, LAST — the payoff the lines build to, landing just before
+          the bar completes. Their pace times their window, as hours of real
+          Spanish: the one number this screen may show, because it is the
+          user's own two answers multiplied and nothing else (see
+          WEEKLY_MINUTES). "About" and the rounding in planHours keep it from
+          pretending precision. */}
+      {pace && hours > 0 && (
+        <Reveal active={isCurrent} delay={PLAN_BUILD_MS - 400}>
+          <View style={styles.planTotal}>
+            <Text style={styles.planTotalLead}>{PLAN_BUILD.totalLead}</Text>
+            <Text style={styles.planTotalValue}>
+              ≈ {hours}{' '}
+              <Text style={styles.planTotalUnit}>{PLAN_BUILD.totalUnit}</Text>
+            </Text>
+            <Text style={styles.planTotalBody}>
+              {PLAN_BUILD.totalBodyPrefix}
+              {goalDate}
+            </Text>
+            <Text style={styles.planVerdict}>{planVerdict(hours)}</Text>
+          </View>
+        </Reveal>
+      )}
     </Screen>
   );
 }
@@ -726,18 +1066,25 @@ export const STEPS: StepDef[] = [
    * fluencyGoal sits against frequency because they are one beat: "how often"
    * and "by when" are both the user setting their own stakes.
    *
-   * progressComparison follows the goal rather than preceding it, so the
-   * screen answers the question the goal has just raised ("can I actually do
-   * that?") instead of arriving unprompted. Swap these two lines to try it the
-   * other way round; nothing else depends on the order.
+   * planBuild follows the goal rather than preceding it, so the screen
+   * answers the question the goal has just raised ("can I actually do
+   * that?") with the plan assembled from everything just answered, instead
+   * of arriving unprompted. Swap these two lines to try it the other way
+   * round; nothing else depends on the order.
    *
-   * THERE WAS A THIRD, and its absence is deliberate: a "Building your plan"
-   * loader that sat for four seconds rotating fabricated five-star reviews. It
-   * is deleted, not disabled. Nothing in the flow depended on it, and nothing
-   * indexes these steps by number, so removing it needed no other change.
+   * THIS SLOT HAS FORM. An earlier "Building your plan" loader here sat for
+   * four seconds rotating fabricated five-star reviews, and was deleted, not
+   * disabled. planBuild is its honest successor: every line it shows is the
+   * user's own answer or shipped behaviour — see PlanBuildStep and the
+   * history note in copy.ts before adding anything to it.
+   *
+   * Renamed from 'progressComparison' 2026-08-31 (the screen it named — a
+   * static reassurance card — is gone). The analytics step name changes with
+   * it ON PURPOSE: the dashboard's drop-off report can then compare the old
+   * screen's losses against the new one's instead of blending them.
    */
   { id: 'fluencyGoal', Component: FluencyGoalStep },
-  { id: 'progressComparison', Component: ProgressComparisonStep },
+  { id: 'planBuild', Component: PlanBuildStep },
   /**
    * HANDOFF THEN TASTE THEN THE WALL, and the order is the argument.
    *
@@ -824,23 +1171,32 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
     marginTop: 6,
   },
-  steps: { gap: 14, marginTop: 26 },
-  stepRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 12 },
-  stepNumber: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(94,230,168,0.14)',
-    borderRadius: 999,
-    height: 26,
-    justifyContent: 'center',
-    width: 26,
+  steps: { marginTop: 26 },
+  stepRow: { alignItems: 'stretch', flexDirection: 'row', gap: 14 },
+  stepSpine: { alignItems: 'center', width: 12 },
+  stepDot: {
+    backgroundColor: ACCENT,
+    borderRadius: 4,
+    height: 8,
+    // Centres on the text's first line (lineHeight 22).
+    marginTop: 7,
+    width: 8,
   },
-  stepNumberText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
+  stepRail: {
+    backgroundColor: 'rgba(94,230,168,0.25)',
+    borderRadius: 1,
+    flex: 1,
+    marginTop: 6,
+    width: 2,
+  },
   stepText: {
     color: 'rgba(242,245,243,0.75)',
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    paddingTop: 2,
+    // The rail's reach: rows have no gap, so this is the space between steps
+    // and the rail runs through it unbroken.
+    paddingBottom: 20,
   },
   mockLine: {
     alignItems: 'center',
@@ -894,5 +1250,73 @@ const styles = StyleSheet.create({
   // ---- reassurance ----
   /** The one thing left of the old bar chart's block of styles: a centred slot
       for the mascot, at roughly the spacing the chart used to sit at. */
-  reassureArt: { alignItems: 'center', marginTop: 30 },
+  planJourney: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 30,
+  },
+  planNode: { alignItems: 'center', gap: 6 },
+  planNodeBadge: {
+    backgroundColor: 'rgba(94,230,168,0.14)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  planNodeBadgeText: { color: ACCENT, fontSize: 14, fontWeight: '800' },
+  /** The destination is the loud end: filled, not tinted. */
+  planNodeBadgeGoal: { backgroundColor: ACCENT },
+  planNodeBadgeGoalText: { color: ON_ACCENT, fontSize: 14, fontWeight: '800' },
+  planNodeLabel: { color: MUTED, fontSize: 12, fontWeight: '600' },
+  /** Full height of the journey, so the tilted track can be positioned
+      against both badge midlines (see PLAN_TRACK_MID). */
+  planBarSeat: { alignSelf: 'stretch', flex: 1 },
+  planBarTilt: { position: 'absolute' },
+  planBar: {
+    backgroundColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 3,
+    height: 6,
+    overflow: 'hidden',
+  },
+  planBarFill: {
+    backgroundColor: ACCENT,
+    borderRadius: 3,
+    height: '100%',
+  },
+  planLines: { gap: 16, marginTop: 26 },
+  planTotal: { marginTop: 30 },
+  planTotalLead: { color: MUTED, fontSize: 13, fontWeight: '600' },
+  planTotalValue: {
+    color: TEXT,
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginTop: 4,
+  },
+  planTotalUnit: { color: ACCENT, fontSize: 22, fontWeight: '800' },
+  planTotalBody: { color: MUTED, fontSize: 13, lineHeight: 19, marginTop: 2 },
+  planVerdict: {
+    color: TEXT,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+    marginTop: 10,
+  },
+  planRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 12 },
+  planTick: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.15)',
+    borderRadius: 11,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  planTickMark: { color: ACCENT, fontSize: 12, fontWeight: '800' },
+  planText: {
+    color: TEXT,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 21,
+  },
 });

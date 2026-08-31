@@ -67,15 +67,25 @@ export function Body({ children }: { children: string }) {
 export function PrimaryButton({
   label,
   onPress,
+  disabled,
 }: {
   label: string;
   onPress: () => void;
+  /** Rendered dimmed and inert, but still present — a footer that appears
+      out of nowhere shifts the centred content above it. */
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+      accessibilityState={{ disabled: Boolean(disabled) }}
+      style={({ pressed }) => [
+        styles.primary,
+        disabled && styles.primaryDisabled,
+        pressed && !disabled && styles.pressed,
+      ]}
     >
       <Text style={styles.primaryText}>{label}</Text>
     </Pressable>
@@ -209,6 +219,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   primaryText: { color: ON_ACCENT, fontSize: 17, fontWeight: '800' },
+  primaryDisabled: { opacity: 0.35 },
   textButton: { alignItems: 'center', paddingVertical: 10 },
   textButtonLabel: { color: MUTED, fontSize: 14, fontWeight: '600' },
   pressed: { opacity: 0.7 },

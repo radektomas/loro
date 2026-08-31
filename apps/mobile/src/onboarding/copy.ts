@@ -202,30 +202,70 @@ export const FLUENCY_GOAL = {
   ],
 };
 
-// -------------------------------------------------------- 11. reassurance
+// -------------------------------------------------------- 11. plan build
 
 /**
- * REWRITTEN. No web counterpart.
+ * REWRITTEN twice, and the history is the guardrail.
  *
- * WHAT THIS BLOCK USED TO BE, because the screen still occupies its slot. It
- * was "Make twice as much progress with Loro", drawn as a precise 2:1 bar
- * chart against a bar labelled "Other apps". Nothing in this repo measures
- * that, so it was a comparative performance claim with no data under it, and
- * the chart asserted the ratio whatever the headline above it said. Both are
- * gone. The screen now describes what Loro does and leaves ranking out of it.
+ * WHAT THIS SLOT USED TO HOLD. First, "Make twice as much progress with
+ * Loro" over a precise 2:1 bar chart against "Other apps" — a comparative
+ * performance claim nothing in this repo measures. Then a static reassurance
+ * screen. Separately, the step after this one was once a fake "Building your
+ * plan" loader that sat for four seconds rotating five-star testimonials
+ * attributed to invented people. Chart, multiplier and testimonials were all
+ * deleted, not disabled.
  *
- * KEEP IT THAT WAY. Copy here that names a competitor, a category of app, or a
- * multiplier needs evidence before it ships.
+ * WHAT IT IS NOW — a plan-build loader again, and the difference is that
+ * every line it shows is TRUE: the level line is the one the calibration
+ * grid derived (or the A1 the zero path writes), the pace line is the
+ * frequency option the user tapped two screens ago, and the recall line
+ * describes the scheduling the app actually does. The bar paces the reveal;
+ * it does not claim computation that is not happening — the plan really is
+ * assembled from these answers, this screen just shows the assembly.
  *
- * The screen that followed this one, a fake "Building your plan" loader with
- * four invented five-star testimonials attached to invented people, is gone
- * outright. It is not commented out and it is not waiting for real quotes:
- * both the copy and the step were deleted. If real, attributable testimonials
- * ever exist, that is a new screen written from scratch.
+ * KEEP IT THAT WAY. No competitor names, no multipliers, no testimonials,
+ * and no line on this screen that is not a statement of the user's own
+ * answers or of shipped behaviour. Evidence first, then copy.
  */
-export const PROGRESS_COMPARISON = {
-  title: 'Make significant progress',
-  body: 'You learn from real speech at real speed, and the words you save come back on a schedule. A few minutes a day is enough to keep moving.',
+export const PLAN_BUILD = {
+  title: 'Building your customized plan',
+  /** Under point A, whose badge is the derived level. */
+  todayLabel: 'Today',
+  /** Point B's badge. "Fluent" is the user's own stated aim — it is the word
+      the goal screen's question uses — not a promise of outcome; the label
+      under it is the month they picked. */
+  goalBadge: 'Fluent',
+  /** Used only if frequency is somehow unanswered — the screen order makes
+      that unreachable, but a fallback beats rendering "undefined". */
+  paceFallback: 'Paced to fit your routine',
+  /** Restates RESULT's established claim (level-tuned feed that moves with
+      you) — it introduces no new promise. */
+  clips: 'Real clips at your level, and the feed moves up as you do',
+  recall: 'Saved words return right before they slip away',
+  /**
+   * The sum line: their pace × their window, as hours. Arithmetic on the
+   * user's own two answers, rounded and hedged with "about" — the one kind
+   * of number this screen is allowed (see the block comment above). It says
+   * what the plan ADDS UP TO, never what it guarantees.
+   */
+  totalLead: 'At your pace, that adds up to',
+  totalUnit: 'hours',
+  totalBodyPrefix: 'of real Spanish between now and ',
+  /**
+   * The verdict under the number — coaching on the SIZE OF THE COMMITMENT,
+   * chosen by hour tier (see PLAN_VERDICT_* in steps.tsx). These may advise
+   * and encourage; what they must never do is promise an outcome. "You will
+   * be like a native" was the requested high line and is deliberately not
+   * here — it is a performance guarantee nothing measures, the same species
+   * of claim as the deleted 2x chart. The shipped lines stay on the honest
+   * side: a recommendation, an assessment of feasibility, a description of
+   * exposure.
+   */
+  verdictLow:
+    'Honestly? That’s light for fluency. Even one more session a week would move this number a lot.',
+  verdictMid: 'That’s a real runway. At your pace, this goal is very doable.',
+  verdictHigh:
+    'That’s immersion territory. Live with this much Spanish and it stops sounding foreign.',
   cta: 'Continuar',
 };
 
