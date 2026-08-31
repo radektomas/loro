@@ -165,6 +165,9 @@ export type FeedWalkthrough = {
   maxLevelBlanks?: number;
   /** Earliest second a blue blank may stop the ACTIVE clip. See RecallHost. */
   minLevelBlankAtS?: number;
+  /** The word plays as itself and becomes a gap only at the freeze — the
+      taste reel's deliberate giveaway. See RecallHost. */
+  revealBlanksUntilHeld?: boolean;
   /** Which slide is on screen now. Drives the script's beats. */
   onSlideChange?: (index: number, total: number) => void;
   /**
@@ -845,6 +848,7 @@ function FeedBody({
         levelBlanks={walkthrough ? (walkthrough.levelBlanks ?? false) : true}
         maxLevelBlanks={walkthrough?.maxLevelBlanks}
         minLevelBlankAtS={walkthrough?.minLevelBlankAtS}
+        revealBlanksUntilHeld={walkthrough?.revealBlanksUntilHeld ?? false}
         // The guided run raises no asks of its own. See RecallHost's `quiet`.
         quiet={Boolean(walkthrough)}
         onObscurePlayer={setPlayerObscured}

@@ -174,6 +174,7 @@ export function RecallHost({
   levelBlanks = true,
   maxLevelBlanks,
   minLevelBlankAtS,
+  revealBlanksUntilHeld = false,
   quiet = false,
   onObscurePlayer,
   children,
@@ -236,10 +237,29 @@ export function RecallHost({
    * Applied to `pauseAt` (the moment the video actually STOPS) rather than to
    * the cue's start, because that is the instant the user experiences as the
    * interruption. A clip with nothing left after the filter gets no blue blank
-   * at all — see WALKTHROUGH.last.blankAfterS for why that is the right way to
-   * fail.
+   * at all — degrading to a clip you simply watch, never to an early gap.
+   * (The taste reel used this floor until 2026-08-31; its blank is now meant
+   * to arrive EARLY — an attempted blank beats an admired one before the
+   * wall — so it passes no floor at all. The prop stays for the next
+   * scripted surface that wants the opposite trade.)
    */
   minLevelBlankAtS?: number;
+  /**
+   * THE GIVEAWAY MODE, for the taste reel's try-it blank and nowhere else.
+   *
+   * Normally a planned blank is a gap from the moment its line renders — the
+   * word must never be shown, or there is nothing to recall. The reel's blank
+   * inverts that on purpose: the word plays as itself, spoken and highlighted
+   * like any other, and turns into the gap only when the hold freezes the
+   * video on it. The user types back a word they watched land two beats ago.
+   * That is a giveaway, and it is meant to be — this blank exists to teach
+   * the mechanic with a guaranteed win, not to test anything. It also means
+   * the line reads as a normal subtitle right up to the freeze, so the clip
+   * is watched, not scanned for the gap.
+   *
+   * False everywhere real: a feed blank shown-then-hidden is an answer key.
+   */
+  revealBlanksUntilHeld?: boolean;
   /**
    * NOTHING MAY INTERRUPT. True for the onboarding taste reel and nowhere else.
    *
@@ -985,10 +1005,19 @@ export function RecallHost({
     plan.entries.forEach((entry, i) => {
       // A skipped blank's word renders as itself — see skippedMask.
       if ((skippedBits >> i) & 1) return;
+      // Giveaway mode: the word also renders as itself until its hold
+      // engages (or it is answered, so the reveal styling still shows).
+      if (
+        revealBlanksUntilHeld &&
+        i !== heldIndex &&
+        !results.has(entry.cueIndex)
+      ) {
+        return;
+      }
       byCue.set(entry.cueIndex, entry);
     });
     return { videoKey: video.id, byCue, results };
-  }, [planned, video, plan, results, skippedBits]);
+  }, [planned, video, plan, results, skippedBits, revealBlanksUntilHeld, heldIndex]);
 
   const entry = heldIndex >= 0 ? (plan.entries[heldIndex] ?? null) : null;
 

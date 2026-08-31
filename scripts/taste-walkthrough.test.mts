@@ -191,28 +191,28 @@ test('the tap clip and the fill clip are different videos', () => {
 });
 
 /**
- * THE ONE BLUE BLANK ON THE LAST CLIP, AND THE CARD THAT MUST NOT BEAT IT.
+ * THE EARLY BLUE BLANK, AND THE CARD THAT ARRIVES THREE SECONDS AFTER IT.
  *
- * The last clip's level blank is the only place in onboarding that shows the
- * level ladder exists, and TWO numbers decide whether anybody ever sees it:
- * a floor that pushes it out of the clip's opening seconds, and the closing
- * card's timer, which is racing it. Both live in WALKTHROUGH.last.
+ * 2026-08-31, twice revised: the blank was first retired for a 4s card, then
+ * brought back EARLY — the last clip's job is now to have the user TRY a
+ * level blank before the wall, with the closing card following ~3 seconds of
+ * playback after it resolves. Two numbers make that beat, and neither is
+ * checked at runtime: the planner's earliest candidate (a property of the
+ * clip data — a clip swap moves it silently) and
+ * WALKTHROUGH.last.outroAfterPlayedMs, which must sit a small tail past it.
+ * Too early a card covers the blank; too late and "3 seconds after" quietly
+ * becomes ten.
  *
- * Neither is checked at runtime and both fail silently — too high a floor and
- * there is no blue blank, too low a timer and the card covers it — so a clip
- * swap could delete the beat with nothing to show for it but a reel that feels
- * slightly emptier. Hence this.
- *
- * LEVEL 1 IS THE CASE THAT MATTERS. It is what every fresh device carries, and
- * a device reaching onboarding has by definition not climbed anywhere, so it is
- * the only level this reel is ever planned at in practice. The others are
- * checked for the floor alone, since a returning user replaying the flow should
- * not meet a gap in the first breath either.
+ * LEVEL 1 IS THE CASE THAT MATTERS. It is what every fresh device carries,
+ * and a device reaching onboarding has by definition not climbed anywhere.
+ * At higher levels the earliest candidate may land past the card — that
+ * degrades to a clip that plays 8.6s and closes, which is acceptable and
+ * not asserted against.
  */
-test('the last clip keeps its blue blank, and the closing card waits for it', () => {
+test('the last clip blanks early, and the closing card follows ~3s behind', () => {
   const clip = byId.get(TASTE_REEL[TASTE_REEL.length - 1]);
   assert.ok(clip, 'the last clip is missing');
-  const { blankAfterS, outroAfterPlayedMs } = WALKTHROUGH.last;
+  const { outroAfterPlayedMs } = WALKTHROUGH.last;
   const outroAtS = outroAfterPlayedMs / 1000;
 
   /** recall.ts's CUE_START_PAD_S, mirrored so pauseAt matches the app's. */
@@ -233,35 +233,29 @@ test('the last clip keeps its blue blank, and the closing card waits for it', ()
           pauseAt: Math.min(cue.end, Math.max(word.end, cue.start + CUE_START_PAD_S)),
         };
       })
-      .sort((a, b) => a.cueIndex - b.cueIndex);
+      .sort((a, b) => a.pauseAt - b.pauseAt);
 
-  for (const level of [1, 2, 3, 4, 5, 6]) {
-    const survivors = planAt(level).filter((e) => e.pauseAt >= blankAfterS);
-    assert.ok(
-      survivors.length > 0,
-      `at level ${level} the floor of ${blankAfterS}s removes every blue blank ` +
-        `from ${clip.id}, so the last clip would show none at all`
-    );
-    if (level !== 1) continue;
+  const candidates = planAt(1);
+  assert.ok(
+    candidates.length > 0,
+    `level 1 plans no blue blank at all on ${clip.id}, so the try-it beat is gone`
+  );
 
-    const first = survivors[0];
-    assert.ok(
-      first.pauseAt >= blankAfterS,
-      `the level 1 blank stops the clip at ${first.pauseAt.toFixed(2)}s, ` +
-        `inside the ${blankAfterS}s the clip is meant to just play`
-    );
-    assert.ok(
-      first.pauseAt < outroAtS,
-      `the closing card comes up after ${outroAtS}s of playback but the level 1 ` +
-        `blank does not arrive until ${first.pauseAt.toFixed(2)}s, so the card ` +
-        'would cover the only blue blank in the whole flow'
-    );
-    // A tail, so the reel ends on speech rather than on a gap that was just
-    // filled. Under a second would read as the card interrupting the answer.
-    assert.ok(
-      outroAtS - first.pauseAt >= 2,
-      `only ${(outroAtS - first.pauseAt).toFixed(2)}s of video is left after the ` +
-        'blank before the closing card, which is too abrupt an ending'
-    );
-  }
+  const first = candidates[0];
+  // TasteStep passes no minLevelBlankAtS, so the planner's earliest candidate
+  // is the one the user meets. It must arrive while the card's timer still
+  // has room — i.e. this beat happens BEFORE the close, with a tail after it.
+  assert.ok(
+    first.pauseAt < outroAtS,
+    `the closing card comes up after ${outroAtS}s of playback but the level 1 ` +
+      `blank does not arrive until ${first.pauseAt.toFixed(2)}s, so the card ` +
+      'would cover the blank the reel exists to have the user try'
+  );
+  const tail = outroAtS - first.pauseAt;
+  assert.ok(
+    tail >= 2 && tail <= 4,
+    `the card follows the blank by ${tail.toFixed(2)}s of playback — the beat ` +
+      'is "about three seconds after the answer", so retune ' +
+      'outroAfterPlayedMs to the new pause point plus ~3s'
+  );
 });

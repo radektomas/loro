@@ -185,40 +185,28 @@ export const WALKTHROUGH = {
    */
   last: {
     /**
-     * NO BLUE BLANK IN THE FIRST EIGHT SECONDS.
+     * How much of the last clip must PLAY before the closing card comes up.
+     * Playback, not wall clock: the accumulator only advances while the
+     * player reports playing, so the blue blank's hold suspends it — the
+     * user can sit on the answer as long as they like without the card
+     * racing them.
      *
-     * Core already refuses the first two cues (MIN_CUE_INDEX in levels.ts), but
-     * a cue index is not a clock: on this clip the first three lines are fast
-     * and cue 2 opens at 4.24s, so "not in the first two cues" put the blank at
-     * 5.56s — the video started and a gap was already there. On the LAST clip
-     * that is the wrong trade. The other two clips have each earned their
-     * interruption with a coach mark first; this one has to be watched before
-     * it asks for anything, or the reel reads as a quiz rather than a feed.
+     * THE BLUE BLANK IS BACK, AND EARLY (2026-08-31, second revision of the
+     * day; the first cut it entirely for a 4s card). The revised call: the
+     * user should TRY a level blank before the wall, not just watch — so the
+     * blank now comes as early as core allows (no floor; MIN_CUE_INDEX
+     * refusing the first two cues puts it at ~5.6s at level 1 on this clip),
+     * and the card follows ~3 seconds of playback AFTER it resolves, right
+     * or wrong. 8_600 = that 5.56s pause point + a 3s tail; the guard test
+     * in scripts/taste-walkthrough.test.mts pins the pair together.
      *
-     * Eight seconds moves it to the next candidate rather than nudging it: at
-     * level 1 (every fresh device) the choice on this clip is 5.56s, 11.28s,
-     * 15.64s or 21.84s, and this floor takes the second. A floor of three or
-     * four would have changed nothing at all.
-     *
-     * If nothing on a clip survives the floor there is simply no blue blank.
-     * Degrading to a clip you only watch is the right failure here, and the
-     * guard test is what stops it happening to the reel we actually ship.
+     * The gloss in the empty slot is what makes an early blank fair: the
+     * word's meaning is the prompt, so the ask is visible the moment the
+     * video stops. And every degradation still lands somewhere sane — if the
+     * planner yields nothing, the clip simply plays 8.6s and the card comes
+     * up on its own.
      */
-    blankAfterS: 8,
-    /**
-     * How much of this clip must PLAY before the closing card comes up.
-     *
-     * Playback, not wall clock: the accumulator suspends while a blank holds
-     * the video, so the user can take as long as they like over it. That is
-     * also why this number has to clear blankAfterS by a real margin — at 9s,
-     * which is what it was, the card would have come up two seconds BEFORE the
-     * 11.28s blank and the one demonstration of the level ladder in the entire
-     * flow would never have been seen. The guard test asserts the ordering.
-     *
-     * The remainder is the tail: a few seconds of video after the blank
-     * resolves, so the reel ends on speech rather than on a gap.
-     */
-    outroAfterPlayedMs: 15_000,
+    outroAfterPlayedMs: 8_600,
   },
 
   /**

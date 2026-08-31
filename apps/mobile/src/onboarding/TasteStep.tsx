@@ -438,13 +438,15 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
    * THE LAST CLIP RAISES THE CARD ITSELF, once it has actually played.
    *
    * Everything before this point has had something to do next — a word to tap,
-   * a blank to fill, a swipe to make. The last clip has nothing after its blue
-   * blank, so leaving it to run would be the one moment in the flow where the
-   * app stops leading and the user has to guess.
+   * a blank to fill, a swipe to make. The last clip's job is the blue blank:
+   * it arrives early, the video holds while the user tries it, and about
+   * three seconds of playback after it resolves — right or wrong — this
+   * timer brings the card up. Leaving the clip to just run after that would
+   * be the one moment in the flow where the app stops leading.
    *
-   * The accumulator only advances while the player reports playing, so the blue
-   * blank's hold suspends it rather than racing it. Pulling past the clip or
-   * pressing Continue raise the same card sooner.
+   * The accumulator only advances while the player reports playing, so the
+   * blank's hold suspends it rather than racing it. Pulling past the clip
+   * or pressing Continue raise the same card sooner.
    */
   useEffect(() => {
     if (!isCurrent || !armed || outroOpen) return;
@@ -508,15 +510,27 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
     coach: card ? { kind: card, ...TASTE[card] } : null,
     hint: hintVisible && !card,
     hintText: TASTE.scrollHint,
+    /**
+     * ONE BLUE BLANK, EARLY, ON THE LAST CLIP ONLY — the try-it beat. No
+     * minLevelBlankAtS floor ON PURPOSE: undefined lets the planner take its
+     * earliest candidate (~5.6s at level 1; core's MIN_CUE_INDEX already
+     * keeps it out of the opening two cues), because this blank exists to be
+     * ATTEMPTED before the wall, not admired from a distance. The closing
+     * card waits for it and follows ~3s after — see WALKTHROUGH.last.
+     */
     levelBlanks: reel.length > 0 && slide === reel.length - 1,
     maxLevelBlanks: 1,
     /**
-     * And not in the opening seconds of it. Core's floor is the first two
-     * cues, which on a fast-talking clip is over in four — see
-     * WALKTHROUGH.last.blankAfterS. This clip is the one the user is meant to
-     * simply watch, so it has to run before it asks.
+     * The word is SHOWN before it is asked. Without this, the gap is drawn
+     * the moment its line renders (~4.2s in, barely after the clip starts),
+     * which reads as "straight to the blank" — the clip never gets watched.
+     * With it, the line plays as a normal subtitle, the word lands spoken
+     * and highlighted, and only the freeze turns it into the gap: a few
+     * clean seconds of video, then an ask the user just saw the answer to.
+     * A guaranteed win is the point of this beat — see RecallHost for why
+     * the real feed must never do this.
      */
-    minLevelBlankAtS: WALKTHROUGH.last.blankAfterS,
+    revealBlanksUntilHeld: true,
     onWordSaved,
     onSlideChange,
     onPastEnd,
