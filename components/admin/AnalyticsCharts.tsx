@@ -1,67 +1,29 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type {
-  DailyPoint,
-  FunnelStage,
-  OnboardingStep,
-  PaywallOutcome,
-  WatchBucket,
-} from '@/lib/analytics';
+import type { DauPoint, UserRow } from '@/lib/analytics';
 
 /**
  * The dashboard's marks.
  *
- * COLOR IS NOT EYEBALLED HERE. Every palette below was generated in OKLCH and
- * run through the data-viz validator against THIS app's chart surface
- * (#151b17), not a generic dark grey:
- *
- *   ORDINAL (funnel, watch buckets) — one hue, evenly spaced in L, monotone,
- *     adjacent ΔL ≥ 0.06, dark end ≥ 2:1 against the surface. Used because
- *     both scales are ORDERED (funnel depth, videos-watched bands). A ramp on
- *     unordered categories would be a bug — it double-encodes bar length as
- *     hue — which is why the paywall outcomes below do NOT get one.
- *   CATEGORICAL (paywall outcomes, daily lines) — the four validated dark
- *     steps: worst adjacent CVD ΔE 8.4, worst normal-vision ΔE 19.8, all ≥ 3:1
- *     on the surface.
- *
- * Changing any hex here means re-running that validator. "It looks fine" is
- * not a check — the failure mode is invisible to anyone with normal vision.
+ * The retention rebuild retired the multi-series charts, and their validated
+ * categorical palette went with them — what remains draws in the app's own
+ * accent against the chart surface (#151b17), which the original OKLCH pass
+ * already cleared at ≥ 3:1. If a second series ever lands on the sparkline,
+ * its colour goes back through the data-viz validator first; "it looks fine"
+ * is not a check — the failure mode is invisible to anyone with normal
+ * vision.
  */
 
-/** Funnel depth, brightest at the bottom. The direction is deliberate: the
-    last stage is the one the business cares about, so it is the loudest mark
-    on the chart rather than the dimmest. */
-const RAMP_FUNNEL = [
-  '#146a25',
-  '#2e7f3a',
-  '#45944e',
-  '#5baa63',
-  '#71c178',
-  '#87d78d',
-  '#9eefa3',
-];
-
-/** Videos watched, more = brighter. Same hue, five steps. */
-const RAMP_BUCKETS = ['#146a25', '#3a8a44', '#5baa63', '#7ccc82', '#9eefa3'];
-
-/** Categorical slots 1–4, dark steps. Order is fixed and assigned by ENTITY,
-    never by rank — a filter that changes the numbers must not repaint them. */
-const CAT = {
-  blue: '#3987e5',
-  orange: '#d95926',
-  aqua: '#199e70',
-  yellow: '#c98500',
-} as const;
-
-/** The chart surface, matching --surface. Gaps and rings are drawn IN it —
-    that is the separator, never a stroke around a mark. */
-const SURFACE = '#151b17';
+const ACCENT = '#9eefa3';
 
 const fmt = new Intl.NumberFormat('en-GB');
-const pct = (part: number, whole: number): string =>
-  whole > 0 ? `${Math.round((part / whole) * 100)}%` : '—';
+const dateFmt = (iso: string): string =>
+  new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  });
 
 // ------------------------------------------------------------------ chrome
 
@@ -105,592 +67,235 @@ export function StatTile({
   );
 }
 
-/** Shared hover card. Absolutely positioned by the caller's relative wrapper. */
-function Tip({ x, y, children }: { x: number; y: number; children: ReactNode }) {
+export function Empty({ children }: { children: ReactNode }) {
   return (
-    <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-xl bg-surface-raised px-3 py-2 text-xs whitespace-nowrap text-text shadow-lg ring-1 ring-white/10"
-      style={{ left: x, top: y - 8 }}
-    >
+    <p className="py-8 text-center text-xs leading-relaxed text-muted">
       {children}
-    </div>
+    </p>
   );
 }
 
-// ------------------------------------------------------------------ funnel
+// --------------------------------------------------------------- DAU tile
 
 /**
- * The funnel. Horizontal bars because the stage names are long sentences, and
- * a horizontal bar gives them a full line each instead of a rotated tick.
- *
- * TWO PERCENTAGES, AND THEY ANSWER DIFFERENT QUESTIONS. "of installs" is the
- * absolute conversion; "of previous" is where the loss actually happens. A
- * funnel showing only the first hides which step is broken, and one showing
- * only the second hides that the whole thing is small.
+ * Today's DAU with the last seven days behind it. A sparkline, not an axed
+ * chart, on purpose: seven points support "up or down since Tuesday" and
+ * nothing finer, and axes would promise a precision the mark cannot keep.
+ * The exact daily values are one hover away in the title attribute.
  */
-export function FunnelChart({ stages }: { stages: FunnelStage[] }) {
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(
-    null
-  );
-  /**
-   * The tooltip is positioned inside THIS element, so the pointer has to be
-   * measured against it too. Measuring against the hovered row instead (the
-   * obvious thing to write) puts every tooltip at the top of the list, because
-   * the row's own origin is not the origin the `absolute` child resolves
-   * against.
-   */
-  const boxRef = useRef<HTMLDivElement>(null);
-  const top = stages[0]?.installs ?? 0;
+export function DauTile({ points, today }: { points: DauPoint[]; today: number }) {
+  const W = 120;
+  const H = 32;
+  const max = Math.max(1, ...points.map((p) => p.dau));
+  const x = (i: number) =>
+    points.length <= 1 ? W / 2 : (i / (points.length - 1)) * W;
+  const y = (v: number) => H - 3 - (v / max) * (H - 6);
+  const d = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.dau).toFixed(1)}`)
+    .join(' ');
+  const last = points[points.length - 1];
 
   return (
-    <div ref={boxRef} className="relative">
-      <ul className="space-y-3">
-        {stages.map((stage, i) => {
-          const prev = i === 0 ? null : stages[i - 1].installs;
-          const width = top > 0 ? (stage.installs / top) * 100 : 0;
-          return (
-            <li
-              key={stage.stage}
-              onMouseMove={(e) => {
-                const box = boxRef.current?.getBoundingClientRect();
-                if (!box) return;
-                setHover({ i, x: e.clientX - box.left, y: e.clientY - box.top });
-              }}
-              onMouseLeave={() => setHover(null)}
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-xs font-medium text-text">{stage.stage}</span>
-                {/* Direct label at the tip, every row: seven rows is few
-                    enough that labelling all of them is reading, not clutter,
-                    and this chart has no value axis to fall back on. */}
-                <span className="shrink-0 text-xs tabular-nums text-muted">
-                  <span className="font-semibold text-text">
-                    {fmt.format(stage.installs)}
-                  </span>{' '}
-                  · {pct(stage.installs, top)} of installs
-                  {prev !== null && ` · ${pct(stage.installs, prev)} of previous`}
-                </span>
-              </div>
-              {/* The track is the surface one step up, not a tinted version of
-                  the series hue — a tinted track reads as data. */}
-              <div className="mt-1.5 h-3 w-full overflow-hidden rounded-l-none bg-white/[0.04]">
-                <div
-                  className="h-full rounded-r"
-                  style={{
-                    width: `${Math.max(width, stage.installs > 0 ? 0.8 : 0)}%`,
-                    background: RAMP_FUNNEL[Math.min(i, RAMP_FUNNEL.length - 1)],
-                  }}
-                />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      {hover && stages[hover.i] && (
-        <Tip x={hover.x} y={hover.y}>
-          <span className="font-semibold">{stages[hover.i].stage}</span>
-          {' — '}
-          {fmt.format(stages[hover.i].installs)} installs
-        </Tip>
-      )}
-    </div>
-  );
-}
-
-// -------------------------------------------------------------- onboarding
-
-/**
- * Onboarding drop-off, in EMPHASIS form: one screen in the accent, the rest in
- * de-emphasis grey.
- *
- * Not an ordinal ramp, even though the screens are ordered. Thirteen steps of
- * one hue are indistinguishable from each other, and the question this panel
- * answers is not "what order are the screens in" — it is "WHICH ONE loses the
- * most people". That is a single-point story, and emphasis is its form.
- */
-export function DropOffChart({ steps }: { steps: OnboardingStep[] }) {
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(
-    null
-  );
-  const boxRef = useRef<HTMLDivElement>(null);
-  const worst = useMemo(() => {
-    let index = -1;
-    let most = 0;
-    steps.forEach((step, i) => {
-      if (step.stoppedHere > most) {
-        most = step.stoppedHere;
-        index = i;
-      }
-    });
-    return index;
-  }, [steps]);
-  const top = steps[0]?.reached ?? 0;
-
-  if (steps.length === 0) {
-    return <Empty>No onboarding runs recorded in this window.</Empty>;
-  }
-
-  return (
-    <div ref={boxRef} className="relative">
-      <ul className="space-y-2">
-        {steps.map((step, i) => {
-          const width = top > 0 ? (step.reached / top) * 100 : 0;
-          const isWorst = i === worst && step.stoppedHere > 0;
-          return (
-            <li
-              key={step.step}
-              className="grid grid-cols-[9rem_1fr_auto] items-center gap-3"
-              onMouseMove={(e) => {
-                const box = boxRef.current?.getBoundingClientRect();
-                if (!box) return;
-                setHover({ i, x: e.clientX - box.left, y: e.clientY - box.top });
-              }}
-              onMouseLeave={() => setHover(null)}
-            >
-              <span className="truncate text-xs text-muted" title={step.step}>
-                {step.step}
-              </span>
-              <div className="h-2.5 w-full bg-white/[0.04]">
-                <div
-                  className="h-full rounded-r"
-                  style={{
-                    width: `${Math.max(width, step.reached > 0 ? 0.8 : 0)}%`,
-                    // Emphasis: the loss leader in the accent, everyone else
-                    // recessive. Colour follows the STORY, and the story is
-                    // recomputed from the data, not from row order.
-                    background: isWorst ? CAT.orange : '#3f4a43',
-                  }}
-                />
-              </div>
-              <span className="w-24 shrink-0 text-right text-xs tabular-nums text-muted">
-                {fmt.format(step.reached)}
-                {step.stoppedHere > 0 && (
-                  <span className={isWorst ? 'text-text' : ''}>
-                    {' '}
-                    · −{fmt.format(step.stoppedHere)}
-                  </span>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      {worst >= 0 && steps[worst] && (
-        <p className="mt-4 text-xs leading-relaxed text-muted">
-          <span
-            className="mr-1.5 inline-block size-2 rounded-full align-middle"
-            style={{ background: CAT.orange }}
-          />
-          Most abandonments happen on{' '}
-          <span className="font-semibold text-text">{steps[worst].step}</span> —{' '}
-          {fmt.format(steps[worst].stoppedHere)} install
-          {steps[worst].stoppedHere === 1 ? '' : 's'} got no further.
+    <div className="rounded-2xl bg-surface px-4 py-4">
+      <p className="text-xs font-medium text-muted">Active today</p>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <p className="text-2xl font-bold tabular-nums text-text">
+          {fmt.format(today)}
         </p>
-      )}
-      {hover && steps[hover.i] && (
-        <Tip x={hover.x} y={hover.y}>
-          <span className="font-semibold">{steps[hover.i].step}</span>
-          {' — '}
-          {fmt.format(steps[hover.i].reached)} reached ·{' '}
-          {fmt.format(steps[hover.i].stoppedHere)} stopped here
-        </Tip>
-      )}
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------- paywall
-
-const OUTCOME_STYLE: Record<
-  string,
-  { label: string; color: string; note: string }
-> = {
-  subscribed: {
-    label: 'Subscribed',
-    color: CAT.aqua,
-    note: 'Bought on this install.',
-  },
-  restored: {
-    label: 'Restored',
-    color: CAT.blue,
-    note: 'Already subscribed — a reinstall or a second device, not a new sale.',
-  },
-  tried_and_failed: {
-    label: 'Tapped subscribe, did not finish',
-    color: CAT.yellow,
-    note: 'Opened the Apple sheet and backed out, or the purchase errored.',
-  },
-  left: {
-    label: 'Left without trying',
-    color: CAT.orange,
-    note: 'Saw the price and never tapped subscribe.',
-  },
-};
-
-/**
- * Part-to-whole of everyone who reached the wall: one stacked bar.
- *
- * Categorical, NOT a ramp — the four outcomes have no natural order (is
- * "restored" more or less than "left"?), and a ramp would falsely imply one.
- * Four series is the point at which direct labels stop being optional, so
- * every segment gets a labelled legend row carrying its own number; the bar
- * itself carries no inline text, because interior segments have no free end
- * and clipping a label is worse than omitting it.
- */
-export function PaywallChart({ outcomes }: { outcomes: PaywallOutcome[] }) {
-  const [hover, setHover] = useState<{ i: number; x: number } | null>(null);
-  const total = outcomes.reduce((sum, o) => sum + o.installs, 0);
-
-  if (total === 0) {
-    return <Empty>Nobody has reached the paywall in this window.</Empty>;
-  }
-
-  return (
-    <div>
-      <div className="relative">
-        {/* 2px surface gaps between segments — the separator is negative
-            space in the surface colour, never a stroke on the mark. */}
-        <div className="flex h-6 w-full gap-[2px] overflow-hidden rounded">
-          {outcomes
-            .filter((o) => o.installs > 0)
-            .map((o, i) => {
-              const style = OUTCOME_STYLE[o.outcome];
-              return (
-                <div
-                  key={o.outcome}
-                  className="h-full first:rounded-l last:rounded-r"
-                  style={{
-                    width: `${(o.installs / total) * 100}%`,
-                    background: style?.color ?? '#3f4a43',
-                  }}
-                  onMouseMove={(e) => {
-                    // The segment's parent is the flex track, which is itself
-                    // inside the `relative` wrapper at the same origin — so
-                    // this one is already measured against the right box.
-                    const track = e.currentTarget.parentElement;
-                    if (!track) return;
-                    const box = track.getBoundingClientRect();
-                    setHover({ i, x: e.clientX - box.left });
-                  }}
-                  onMouseLeave={() => setHover(null)}
-                />
-              );
-            })}
-        </div>
-        {hover !== null &&
-          (() => {
-            const shown = outcomes.filter((o) => o.installs > 0);
-            const o = shown[hover.i];
-            const style = o ? OUTCOME_STYLE[o.outcome] : null;
-            return o && style ? (
-              <Tip x={hover.x} y={0}>
-                <span className="font-semibold">{style.label}</span> —{' '}
-                {fmt.format(o.installs)} · {pct(o.installs, total)}
-              </Tip>
-            ) : null;
-          })()}
-      </div>
-
-      {/* The legend IS the direct-label layer here. Always present at four
-          series, and it carries the numbers so identity never rests on colour
-          alone. */}
-      <ul className="mt-5 space-y-2.5">
-        {outcomes.map((o) => {
-          const style = OUTCOME_STYLE[o.outcome];
-          return (
-            <li key={o.outcome} className="flex items-start gap-2.5">
-              <span
-                className="mt-1 size-2.5 shrink-0 rounded-full"
-                style={{ background: style?.color ?? '#3f4a43' }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-text">
-                  {style?.label ?? o.outcome}{' '}
-                  <span className="tabular-nums text-muted">
-                    — {fmt.format(o.installs)} · {pct(o.installs, total)}
-                  </span>
-                </p>
-                {style && (
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted">
-                    {style.note}
-                  </p>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------- buckets
-
-/** Videos watched per subscriber. Ordinal ramp: the bands ARE ordered. */
-export function WatchChart({ buckets }: { buckets: WatchBucket[] }) {
-  const total = buckets.reduce((sum, b) => sum + b.installs, 0);
-  if (total === 0) {
-    return <Empty>No subscribers in this window yet.</Empty>;
-  }
-  const max = Math.max(...buckets.map((b) => b.installs));
-  const LABELS: Record<string, string> = {
-    none: 'None',
-    '1-4': '1–4 videos',
-    '5-19': '5–19 videos',
-    '20-49': '20–49 videos',
-    '50+': '50+ videos',
-  };
-  return (
-    <ul className="space-y-2.5">
-      {buckets.map((b, i) => (
-        <li key={b.bucket} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-3">
-          <span className="text-xs text-muted">{LABELS[b.bucket] ?? b.bucket}</span>
-          <div className="h-2.5 w-full bg-white/[0.04]">
-            <div
-              className="h-full rounded-r"
-              style={{
-                width: `${max > 0 ? Math.max((b.installs / max) * 100, b.installs > 0 ? 1 : 0) : 0}%`,
-                background: RAMP_BUCKETS[Math.min(i, RAMP_BUCKETS.length - 1)],
-              }}
-            />
-          </div>
-          <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted">
-            <span className="font-semibold text-text">{fmt.format(b.installs)}</span>{' '}
-            · {pct(b.installs, total)}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// ------------------------------------------------------------------- daily
-
-const DAILY_SERIES = [
-  { key: 'newInstalls' as const, label: 'New installs', color: CAT.blue },
-  { key: 'paywallViews' as const, label: 'Paywall views', color: CAT.orange },
-  { key: 'purchases' as const, label: 'Purchases', color: CAT.aqua },
-] satisfies { key: keyof DailyPoint; label: string; color: string }[];
-
-const W = 900;
-const H = 240;
-const PAD = { top: 16, right: 16, bottom: 28, left: 40 };
-
-/** Clean axis maxima — 1/2/5 × 10ⁿ. A raw max produces ticks like "7" and
-    "3.5", which read as precision that is not there. */
-function niceMax(value: number): number {
-  if (value <= 4) return 4;
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  for (const step of [1, 2, 2.5, 5, 10]) {
-    if (value <= step * magnitude) return step * magnitude;
-  }
-  return 10 * magnitude;
-}
-
-/**
- * Daily activity, three series on ONE axis.
- *
- * All three are counts of installs-or-events per day, so they share a scale
- * honestly. If a fourth measure of a different order of magnitude is ever
- * wanted here (revenue, say), it gets its OWN chart — a second y-axis invents
- * a correlation that is not in the data, and is the single most common way a
- * dashboard lies.
- */
-export function DailyChart({ points }: { points: DailyPoint[] }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  const max = niceMax(
-    Math.max(
-      1,
-      ...points.flatMap((p) => DAILY_SERIES.map((s) => p[s.key] as number))
-    )
-  );
-  const plotW = W - PAD.left - PAD.right;
-  const plotH = H - PAD.top - PAD.bottom;
-  const x = useCallback(
-    (i: number) => PAD.left + (points.length <= 1 ? plotW / 2 : (i / (points.length - 1)) * plotW),
-    [points.length, plotW]
-  );
-  const y = useCallback(
-    (v: number) => PAD.top + plotH - (v / max) * plotH,
-    [max, plotH]
-  );
-
-  const onMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      const svg = svgRef.current;
-      if (!svg || points.length === 0) return;
-      const box = svg.getBoundingClientRect();
-      // Client px → viewBox units, so the nearest-point maths stays correct
-      // however the SVG has been scaled by its container.
-      const vx = ((e.clientX - box.left) / box.width) * W;
-      const ratio = (vx - PAD.left) / plotW;
-      const i = Math.round(ratio * (points.length - 1));
-      setHover(Math.min(Math.max(i, 0), points.length - 1));
-    },
-    [points.length, plotW]
-  );
-
-  if (points.length === 0) return <Empty>No activity in this window.</Empty>;
-
-  const ticks = [0, 0.5, 1].map((f) => Math.round(max * f));
-
-  return (
-    <div>
-      {/* Legend first and always — three series must never rest on colour
-          alone, and the endpoint labels below only supplement it. */}
-      <ul className="mb-3 flex flex-wrap gap-x-5 gap-y-1.5">
-        {DAILY_SERIES.map((s) => (
-          <li key={s.key} className="flex items-center gap-2">
-            <span
-              className="size-2.5 rounded-full"
-              style={{ background: s.color }}
-            />
-            <span className="text-xs text-muted">{s.label}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="relative overflow-x-auto">
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          className="h-auto w-full min-w-[560px]"
-          onMouseMove={onMove}
-          onMouseLeave={() => setHover(null)}
-          role="img"
-          aria-label="Daily new installs, paywall views and purchases"
-        >
-          {/* Gridlines: hairline, solid, one step off the surface. Recessive
-              by construction — never dashed, never at data weight. */}
-          {ticks.map((t) => (
-            <g key={t}>
-              <line
-                x1={PAD.left}
-                x2={W - PAD.right}
-                y1={y(t)}
-                y2={y(t)}
-                stroke="#2a332d"
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-              />
-              <text
-                x={PAD.left - 8}
-                y={y(t) + 4}
-                textAnchor="end"
-                className="fill-muted"
-                style={{ fontSize: 11 }}
-              >
-                {fmt.format(t)}
-              </text>
-            </g>
-          ))}
-
-          {DAILY_SERIES.map((s) => {
-            const d = points
-              .map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p[s.key] as number)}`)
-              .join(' ');
-            const last = points.length - 1;
-            return (
-              <g key={s.key}>
-                <path
-                  d={d}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-                {/* End marker: r=4 with a 2px surface ring, so it stays
-                    legible where two series cross. */}
-                <circle
-                  cx={x(last)}
-                  cy={y(points[last][s.key] as number)}
-                  r={4}
-                  fill={s.color}
-                  stroke={SURFACE}
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
-            );
-          })}
-
-          {hover !== null && (
-            <g>
-              <line
-                x1={x(hover)}
-                x2={x(hover)}
-                y1={PAD.top}
-                y2={PAD.top + plotH}
-                stroke="#4a564e"
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-              />
-              {DAILY_SERIES.map((s) => (
-                <circle
-                  key={s.key}
-                  cx={x(hover)}
-                  cy={y(points[hover][s.key] as number)}
-                  r={4}
-                  fill={s.color}
-                  stroke={SURFACE}
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-            </g>
-          )}
-
-          {/* Date ticks: first, middle and last only. Every day would collide
-              on any window longer than a fortnight. */}
-          {[0, Math.floor((points.length - 1) / 2), points.length - 1]
-            .filter((i, idx, arr) => arr.indexOf(i) === idx && i >= 0)
-            .map((i) => (
-              <text
-                key={i}
-                x={x(i)}
-                y={H - 8}
-                textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'}
-                className="fill-muted"
-                style={{ fontSize: 11 }}
-              >
-                {points[i].day.slice(5)}
-              </text>
-            ))}
-        </svg>
-
-        {hover !== null && (
-          <div className="pointer-events-none absolute left-0 top-0 w-full">
-            <div
-              className="absolute -translate-x-1/2 rounded-xl bg-surface-raised px-3 py-2 text-xs whitespace-nowrap text-text shadow-lg ring-1 ring-white/10"
-              style={{ left: `${(x(hover) / W) * 100}%`, top: 4 }}
-            >
-              <p className="font-semibold">{points[hover].day}</p>
-              {DAILY_SERIES.map((s) => (
-                <p key={s.key} className="mt-0.5 flex items-center gap-2">
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ background: s.color }}
-                  />
-                  <span className="text-muted">{s.label}</span>
-                  <span className="ml-auto tabular-nums">
-                    {fmt.format(points[hover][s.key] as number)}
-                  </span>
-                </p>
-              ))}
-            </div>
-          </div>
+        {points.length > 0 && (
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="h-8 w-[120px] shrink-0"
+            role="img"
+            aria-label="Daily active installs, last 7 days"
+          >
+            <title>
+              {points.map((p) => `${dateFmt(p.day)}: ${p.dau}`).join(' · ')}
+            </title>
+            <path d={d} fill="none" stroke={ACCENT} strokeWidth={2} />
+            {last && (
+              <circle cx={x(points.length - 1)} cy={y(last.dau)} r={2.5} fill={ACCENT} />
+            )}
+          </svg>
         )}
       </div>
+      <p className="mt-0.5 text-xs text-muted">last 7 days</p>
     </div>
   );
 }
 
-// ------------------------------------------------------------------ shared
+// ------------------------------------------------------------ users table
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-6 text-center text-xs text-muted">{children}</p>;
+type SortKey =
+  | 'installId'
+  | 'firstSeen'
+  | 'videosTotal'
+  | 'videos7d'
+  | 'lastActive'
+  | 'd1'
+  | 'd3'
+  | 'd7'
+  | 'subStatus';
+
+const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
+  { key: 'installId', label: 'User', numeric: false },
+  { key: 'firstSeen', label: 'First seen', numeric: true },
+  { key: 'videosTotal', label: 'Videos', numeric: true },
+  { key: 'videos7d', label: 'Videos 7d', numeric: true },
+  { key: 'lastActive', label: 'Last active', numeric: true },
+  { key: 'd1', label: 'D1', numeric: true },
+  { key: 'd3', label: 'D3', numeric: true },
+  { key: 'd7', label: 'D7', numeric: true },
+  { key: 'subStatus', label: 'Sub', numeric: false },
+];
+
+/**
+ * Every column carries one comparable number (or string), extracted once so
+ * the comparator has no per-type branches. Retention flags order as
+ * ✓ > ✗ > pending: a verdict, either verdict, is more information than none,
+ * and sorting "still open" between true and false would interleave the three
+ * into an unreadable stripe.
+ */
+function sortValue(row: UserRow, key: SortKey): number | string {
+  switch (key) {
+    case 'installId':
+      return row.installId;
+    case 'subStatus':
+      // Rank, not alphabet: subscribed > restored > none.
+      return row.subStatus === 'subscribed' ? 2 : row.subStatus === 'restored' ? 1 : 0;
+    case 'firstSeen':
+      return Date.parse(row.firstSeen) || 0;
+    case 'lastActive':
+      return Date.parse(row.lastActive) || 0;
+    case 'd1':
+    case 'd3':
+    case 'd7': {
+      const flag = row[key];
+      return flag === true ? 2 : flag === false ? 1 : 0;
+    }
+    default:
+      return row[key];
+  }
+}
+
+function Flag({ value }: { value: boolean | null }) {
+  if (value === null) {
+    // The day hasn't fully elapsed — an open question, not a churn.
+    return <span className="text-muted/50">—</span>;
+  }
+  return value ? (
+    <span className="font-semibold text-accent">✓</span>
+  ) : (
+    <span className="text-muted">✗</span>
+  );
+}
+
+export function UsersTable({ users }: { users: UserRow[] }) {
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({
+    key: 'lastActive',
+    desc: true,
+  });
+
+  const toggle = (key: SortKey) =>
+    setSort((prev) =>
+      prev.key === key
+        ? { key, desc: !prev.desc }
+        : // A fresh column starts at its useful end: big numbers and recent
+          // dates first, names A→Z.
+          { key, desc: COLUMNS.find((c) => c.key === key)?.numeric ?? false }
+    );
+
+  const sorted = useMemo(() => {
+    const dir = sort.desc ? -1 : 1;
+    return [...users].sort((a, b) => {
+      const va = sortValue(a, sort.key);
+      const vb = sortValue(b, sort.key);
+      if (typeof va === 'string' || typeof vb === 'string') {
+        return dir * String(va).localeCompare(String(vb));
+      }
+      return dir * (va - vb);
+    });
+  }, [users, sort]);
+
+  if (users.length === 0) {
+    return (
+      <Empty>
+        No installs recorded yet. If the app has been used since analytics
+        shipped, check that the migration is applied — and remember events only
+        exist from 26 Aug 2026 onward.
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-left text-xs">
+        <thead>
+          <tr className="text-muted">
+            {COLUMNS.map((col) => (
+              <th key={col.key} className="pb-2 font-medium">
+                <button
+                  type="button"
+                  onClick={() => toggle(col.key)}
+                  className={`transition-colors hover:text-text ${
+                    sort.key === col.key ? 'text-text' : ''
+                  }`}
+                >
+                  {col.label}
+                  {sort.key === col.key && (
+                    <span className="ml-1">{sort.desc ? '↓' : '↑'}</span>
+                  )}
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="align-top">
+          {sorted.map((row) => (
+            <tr key={row.installId} className="border-t border-white/5">
+              <td className="py-2 pr-3 whitespace-nowrap text-muted">
+                {/* Truncated because it is a client-minted pseudonym, not an
+                    identity to copy around; 8 hex chars is plenty to eyeball
+                    two rows apart. */}
+                {row.installId.slice(0, 8)}
+                {row.signedIn && (
+                  <span className="ml-1.5 text-accent">· signed in</span>
+                )}
+              </td>
+              <td className="py-2 pr-3 whitespace-nowrap text-muted tabular-nums">
+                {dateFmt(row.firstSeen)}
+              </td>
+              <td className="py-2 pr-3 tabular-nums text-text">
+                {fmt.format(row.videosTotal)}
+              </td>
+              <td className="py-2 pr-3 tabular-nums text-text">
+                {fmt.format(row.videos7d)}
+              </td>
+              <td className="py-2 pr-3 whitespace-nowrap text-muted tabular-nums">
+                {dateFmt(row.lastActive)}
+              </td>
+              <td className="py-2 pr-3"><Flag value={row.d1} /></td>
+              <td className="py-2 pr-3"><Flag value={row.d3} /></td>
+              <td className="py-2 pr-3"><Flag value={row.d7} /></td>
+              <td className="py-2 whitespace-nowrap">
+                {row.subStatus === 'none' ? (
+                  <span className="text-muted/50">—</span>
+                ) : (
+                  <span
+                    className={
+                      row.subStatus === 'subscribed'
+                        ? 'rounded-full bg-accent-soft px-2 py-0.5 font-semibold text-accent'
+                        : 'rounded-full bg-level-soft px-2 py-0.5 font-semibold text-level'
+                    }
+                  >
+                    {row.subStatus}
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

@@ -9,19 +9,14 @@ import {
   SetAdminPassword,
 } from '@/components/admin/AdminPasswordSignIn';
 import {
-  DailyChart,
-  DropOffChart,
-  Empty,
-  FunnelChart,
+  DauTile,
   Panel,
-  PaywallChart,
   StatTile,
-  WatchChart,
+  UsersTable,
 } from '@/components/admin/AnalyticsCharts';
 
 /**
- * The mobile product dashboard: how far people get, and what the paywall does
- * to them.
+ * The mobile product dashboard: who comes back, and how much they scroll.
  *
  * WHY THIS IS A CLIENT COMPONENT WITH NO SERVER FETCH. Every number comes from
  * a SECURITY DEFINER RPC that re-checks loro_is_admin() against auth.uid() —
@@ -34,17 +29,16 @@ import {
  * message instead of an error.
  *
  * WHAT THIS DASHBOARD IS NOT. It is not RevenueCat and it is not App Store
- * Connect. It does not know revenue, refunds, renewals or churn — those live
- * with Apple and RevenueCat, which are the systems of record for money. What
- * it knows is the half neither of them can see: what happened INSIDE the app
- * before and after the transaction, joined to the same install.
+ * Connect. The Sub column knows a purchase or restore EVENT happened on an
+ * install; whether that trial converted, renewed, refunded or lapsed lives
+ * with Apple and RevenueCat, which are the systems of record for money.
+ *
+ * WHEN THE CLOCK STARTED. Events exist from 26 Aug 2026, when the analytics
+ * table shipped — installs older than that surface here with a first-seen of
+ * their first event after updating, and their retention flags measure from
+ * that day, not from their true install day. The numbers are only fully
+ * accurate for installs born after the instrumentation.
  */
-
-const RANGES = [
-  { days: 7, label: '7 days' },
-  { days: 30, label: '30 days' },
-  { days: 90, label: '90 days' },
-] as const;
 
 export default function AdminAnalyticsPage() {
   const { user, ready } = useSupabaseUser();
@@ -54,7 +48,6 @@ export default function AdminAnalyticsPage() {
       the check answering "no", and one the old gate could not express. */
   const [gateError, setGateError] = useState<string | null>(null);
 
-  const [days, setDays] = useState<number>(30);
   const [allBuilds, setAllBuilds] = useState(false);
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +55,7 @@ export default function AdminAnalyticsPage() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const result = await loadDashboard(days, allBuilds);
+    const result = await loadDashboard(allBuilds);
     if (result.ok) {
       setData(result.data);
       setError(null);
@@ -74,7 +67,7 @@ export default function AdminAnalyticsPage() {
       setError(result.error);
     }
     setLoading(false);
-  }, [days, allBuilds]);
+  }, [allBuilds]);
 
   useEffect(() => {
     if (!ready) return;
@@ -105,6 +98,10 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     if (admin) void refresh();
   }, [admin, refresh]);
+
+  const r = data?.retention;
+  const rate = (returned: number, cohort: number): string =>
+    cohort > 0 ? `${Math.round((returned / cohort) * 100)}%` : '—';
 
   return (
     <main className="min-h-[100dvh] bg-background pb-safe">
@@ -161,27 +158,7 @@ export default function AdminAnalyticsPage() {
 
         {ready && checked && admin && (
           <>
-            {/* Filters in one row above the charts, and they apply to every
-                panel at once — a per-panel range control invites comparing two
-                different windows without noticing. */}
             <div className="flex flex-wrap items-center gap-2 pb-6">
-              <div className="flex gap-1 rounded-2xl bg-surface p-1">
-                {RANGES.map((range) => (
-                  <button
-                    key={range.days}
-                    type="button"
-                    onClick={() => setDays(range.days)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      days === range.days
-                        ? 'bg-accent text-background'
-                        : 'text-muted hover:text-text'
-                    }`}
-                  >
-                    {range.label}
-                  </button>
-                ))}
-              </div>
-
               <button
                 type="button"
                 onClick={() => setAllBuilds((on) => !on)}
@@ -191,11 +168,14 @@ export default function AdminAnalyticsPage() {
                     ? 'bg-level-soft text-level'
                     : 'bg-surface text-muted hover:text-text'
                 }`}
-                // The switch you need on day one and never again: production
-                // binaries only, unless you are checking your own simulator.
+                // The default EXCLUDES the profiles known to be dev/preview
+                // and keeps null — the shipped App Store binary was not built
+                // on an EAS worker, so it stamps no profile at all. Filtering
+                // to build_profile = 'production' would show zeros forever;
+                // see migration 20260830000000.
                 title="Include development and preview builds, not just the App Store binary"
               >
-                {allBuilds ? 'All builds' : 'Production only'}
+                {allBuilds ? 'All builds' : 'App Store only'}
               </button>
 
               <button
@@ -219,143 +199,47 @@ export default function AdminAnalyticsPage() {
               </div>
             )}
 
-            {data && (
+            {data && r && (
               <div className="space-y-6">
-                {/* KPI row. Headline numbers as stat tiles, not a grouped bar
-                    chart — five unrelated measures have nothing to compare. */}
+                {/* Headline row. Retention rates carry their cohort size in
+                    the sub-line because a percentage over four people is a
+                    coin flip wearing a suit — the n is the honest half of the
+                    number. */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   <StatTile
-                    label="New installs"
-                    value={data.overview.installs.toLocaleString('en-GB')}
-                    sub={`${data.overview.activeInstalls.toLocaleString('en-GB')} active`}
+                    label="D1 retention"
+                    value={rate(r.d1Returned, r.d1Cohort)}
+                    sub={`${r.d1Returned} of ${r.d1Cohort} returned`}
                   />
                   <StatTile
-                    label="Paywall views"
-                    value={data.overview.paywallViews.toLocaleString('en-GB')}
+                    label="D3 retention"
+                    value={rate(r.d3Returned, r.d3Cohort)}
+                    sub={`${r.d3Returned} of ${r.d3Cohort} returned`}
                   />
                   <StatTile
-                    label="Subscribers"
-                    value={data.overview.subscribers.toLocaleString('en-GB')}
-                    sub={`${data.overview.purchases.toLocaleString('en-GB')} purchase events`}
+                    label="D7 retention"
+                    value={rate(r.d7Returned, r.d7Cohort)}
+                    sub={`${r.d7Returned} of ${r.d7Cohort} returned`}
                   />
                   <StatTile
-                    label="Videos watched"
-                    value={data.overview.videosWatched.toLocaleString('en-GB')}
-                  />
-                  <StatTile
-                    label="Median per watcher"
-                    // null, not 0: nobody has watched anything yet, which is
-                    // a different fact from a measured median of zero.
+                    label="Median videos"
+                    // null, not 0: nobody was active this week, which is a
+                    // different fact from actives who scrolled nothing.
                     value={
-                      data.overview.medianVideos == null
+                      r.medianVideos7d == null
                         ? '—'
-                        : String(Math.round(data.overview.medianVideos))
+                        : String(Math.round(r.medianVideos7d * 10) / 10)
                     }
-                    sub="videos"
+                    sub="per active user, 7 days"
                   />
+                  <DauTile points={data.dau} today={r.dauToday} />
                 </div>
 
                 <Panel
-                  title="The funnel"
-                  hint="Installs whose FIRST event falls in this window, followed all the way through however long they took. The last few days are still filling in — someone who installed yesterday can still subscribe tomorrow."
+                  title="Users"
+                  hint="One row per install — the app's only identity for the anonymous majority, so retention counts from the first thing they ever did, signed in or not. D1/D3/D7 mean activity on exactly that day after first open: ✓ returned, ✗ did not, — the day is not over yet. Sub is what the event log knows (a purchase or restore happened); trial-versus-paid lives in RevenueCat. Events exist from 26 Aug 2026, so older installs count from their first event after updating."
                 >
-                  {data.funnel.length > 0 ? (
-                    <FunnelChart stages={data.funnel} />
-                  ) : (
-                    <Empty>No installs in this window.</Empty>
-                  )}
-                </Panel>
-
-                <Panel
-                  title="At the paywall"
-                  hint="What happened to everyone who reached the wall. The four outcomes are mutually exclusive and sum to the “Saw the paywall” row above."
-                >
-                  <PaywallChart outcomes={data.paywall} />
-                </Panel>
-
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <Panel
-                    title="Where onboarding loses people"
-                    hint="Bars are how many installs reached each screen; −n is how many got no further. A first launch abandoned an hour ago looks the same as one abandoned for good, so read the newest day gently."
-                  >
-                    <DropOffChart steps={data.onboarding} />
-                  </Panel>
-
-                  <Panel
-                    title="Videos watched, per subscriber"
-                    hint="Counted only for installs that got past the wall. “Watched” means the video took the screen — the same rule the app uses on Progress, not a playback-completion measure."
-                  >
-                    <WatchChart buckets={data.watch} />
-                  </Panel>
-                </div>
-
-                <Panel
-                  title="Day by day"
-                  hint="Counted where the events landed, not by install cohort — so a purchase appears on the day it happened even if that install arrived weeks ago."
-                >
-                  <DailyChart points={data.daily} />
-                </Panel>
-
-                <Panel
-                  title="Latest events"
-                  hint="The raw tail, unfiltered by build profile — this is where you confirm a new build's events are actually arriving. Install ids are truncated; they are client-minted pseudonyms, not device identifiers."
-                >
-                  {data.recent.length === 0 ? (
-                    <Empty>
-                      No events at all yet. If the app has been used since this
-                      shipped, check that the migration is applied and that the
-                      binary carries EXPO_PUBLIC_SUPABASE_* credentials.
-                    </Empty>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[640px] text-left text-xs">
-                        <thead>
-                          <tr className="text-muted">
-                            <th className="pb-2 font-medium">When</th>
-                            <th className="pb-2 font-medium">Event</th>
-                            <th className="pb-2 font-medium">Detail</th>
-                            <th className="pb-2 font-medium">Install</th>
-                            <th className="pb-2 font-medium">Build</th>
-                          </tr>
-                        </thead>
-                        <tbody className="align-top">
-                          {data.recent.map((event, i) => (
-                            <tr
-                              key={`${event.receivedAt}-${i}`}
-                              className="border-t border-white/5"
-                            >
-                              <td className="py-2 pr-3 whitespace-nowrap text-muted tabular-nums">
-                                {new Date(event.receivedAt).toLocaleString('en-GB')}
-                              </td>
-                              <td className="py-2 pr-3 whitespace-nowrap font-medium text-text">
-                                {event.name}
-                              </td>
-                              <td className="max-w-xs truncate py-2 pr-3 text-muted">
-                                {Object.entries(event.props)
-                                  .map(([key, value]) => `${key}=${String(value)}`)
-                                  .join(' ') || '—'}
-                              </td>
-                              <td className="py-2 pr-3 whitespace-nowrap text-muted">
-                                {event.installId.slice(0, 8)}
-                                {event.signedIn && (
-                                  <span className="ml-1.5 text-accent">·  signed in</span>
-                                )}
-                              </td>
-                              <td className="py-2 whitespace-nowrap text-muted">
-                                {event.appVersion ?? '—'}
-                                {event.buildProfile &&
-                                  event.buildProfile !== 'production' && (
-                                    <span className="ml-1.5 text-level">
-                                      {event.buildProfile}
-                                    </span>
-                                  )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                  <UsersTable users={data.users} />
                 </Panel>
               </div>
             )}
