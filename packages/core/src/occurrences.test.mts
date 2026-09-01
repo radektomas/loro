@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   findWordOccurrences,
+  pickFirstBlankTarget,
   pickReplayOccurrence,
   pickReviewTarget,
 } from './occurrences.ts';
@@ -198,5 +199,91 @@ describe('pickReviewTarget', () => {
     const hosted = video('hosted', [['perro']], { youtubeId: null });
     assert.equal(pickReviewTarget([hosted], target, [target], { now: NOW }), null);
     assert.equal(pickReviewTarget([clear], saved('gato', 'x'), [], { now: NOW }), null);
+  });
+});
+
+/**
+ * The Words tab's review CTA. The scenario that forced this function into
+ * existence (2026-09-01, on device): the most urgent due words were saved
+ * from videos the catalog has since pruned, the old five-candidate scan
+ * struck out, and the button switched tabs with no jump parked — the user
+ * landed on whatever paused video the feed was left on.
+ */
+describe('pickFirstBlankTarget', () => {
+  const NOW = 10_000_000;
+  const saved = (text: string, videoId: string, over: Partial<SavedWord> = {}) =>
+    ({
+      text,
+      translation: text,
+      videoId,
+      cueIndex: 0,
+      source: 'user',
+      savedAt: NOW - 60 * 60 * 1000,
+      state: 'learning',
+      box: 1,
+      dueAt: NOW - 60 * 1000,
+      correct: 0,
+      incorrect: 0,
+      lastReviewedAt: null,
+      learnedAt: null,
+      ...over,
+    }) as SavedWord;
+
+  const clear = video('clear', [['hola', 'perro']]);
+  /** Words the catalog no longer speaks — the pruned-video graveyard, and
+      MORE of them than the old scan's cap of five ever looked at. */
+  const ghosts = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7'].map((w) =>
+    saved(w, 'pruned', { state: 'lapsed', box: 0 })
+  );
+
+  it('walks past every lost word to the first that blanks — no cap', () => {
+    const findable = saved('perro', 'clear');
+    const found = pickFirstBlankTarget([clear], [...ghosts, findable], [
+      ...ghosts,
+      findable,
+    ], { now: NOW });
+    assert.equal(found?.word.text, 'perro');
+    assert.deepEqual(found?.landing, {
+      videoId: 'clear',
+      cueIndex: 0,
+      startsAt: 0.5,
+      willBlank: true,
+    });
+  });
+
+  it('takes the caller\'s urgency order — the first blankable candidate wins', () => {
+    const first = saved('hola', 'clear');
+    const second = saved('perro', 'clear');
+    const found = pickFirstBlankTarget([clear], [first, second], [first, second], {
+      now: NOW,
+    });
+    assert.equal(found?.word.text, 'hola');
+  });
+
+  it('prefers the video the word was saved from', () => {
+    const elsewhere = video('elsewhere', [['perro', 'grande']]);
+    const word = saved('perro', 'elsewhere');
+    const found = pickFirstBlankTarget([clear, elsewhere], [word], [word], {
+      now: NOW,
+    });
+    assert.equal(found?.landing.videoId, 'elsewhere');
+  });
+
+  it('falls back to a spoken-only landing when nothing will blank', () => {
+    // Spoken in the catalog but not due for an hour: the plan refuses it, and
+    // the caller still gets the word's own second to land on, flagged.
+    const later = saved('perro', 'clear', { dueAt: NOW + 60 * 60 * 1000 });
+    const found = pickFirstBlankTarget([clear], [...ghosts, later], [later], {
+      now: NOW,
+    });
+    assert.deepEqual(found, {
+      word: later,
+      landing: { videoId: 'clear', cueIndex: 0, startsAt: 0.5, willBlank: false },
+    });
+  });
+
+  it('returns null only when no candidate is spoken anywhere', () => {
+    assert.equal(pickFirstBlankTarget([clear], ghosts, ghosts, { now: NOW }), null);
+    assert.equal(pickFirstBlankTarget([clear], [], [], { now: NOW }), null);
   });
 });

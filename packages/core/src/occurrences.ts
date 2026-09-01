@@ -164,21 +164,135 @@ export function pickReviewTarget(
         };
       }
     }
-    const plan = computeBlankPlan(video, allWords, now, { first: word.text });
-    for (const [cueIndex, planned] of plan) {
-      if (normalizeAnswer(planned.text) !== wanted) continue;
-      // The plan matches accent-INSENSITIVELY, so read the second back off the
-      // cue the same way: this is where the blank will be, which is the only
-      // place worth opening the video at.
-      const spoken = video.cues[cueIndex].words.find(
-        (w) => normalizeAnswer(w.text) === wanted
-      );
-      return {
-        videoId,
-        cueIndex,
-        startsAt: spoken ? spoken.start : video.cues[cueIndex].start,
-        willBlank: true,
+    const planned = planFor(video, word, allWords, now);
+    if (planned) return planned;
+  }
+  return fallback;
+}
+
+/** The verification both pickers share: does this video's plan, told to put
+    `word` first, actually blank it — and at which second? */
+function planFor(
+  video: Video,
+  word: SavedWord,
+  allWords: SavedWord[],
+  now: number
+): ReviewLanding | null {
+  const wanted = normalizeAnswer(word.text);
+  const plan = computeBlankPlan(video, allWords, now, { first: word.text });
+  for (const [cueIndex, planned] of plan) {
+    if (normalizeAnswer(planned.text) !== wanted) continue;
+    // The plan matches accent-INSENSITIVELY, so read the second back off the
+    // cue the same way: this is where the blank will be, which is the only
+    // place worth opening the video at.
+    const spoken = video.cues[cueIndex].words.find(
+      (w) => normalizeAnswer(w.text) === wanted
+    );
+    return {
+      videoId: video.id,
+      cueIndex,
+      startsAt: spoken ? spoken.start : video.cues[cueIndex].start,
+      willBlank: true,
+    };
+  }
+  return null;
+}
+
+/**
+ * THE REVIEW CTA'S LANDING — the first due word the catalog can actually
+ * blank, scanned in the caller's urgency order.
+ *
+ * WHY THIS EXISTS when pickReviewTarget already does (2026-09-01, on
+ * device): the Words tab's "review" button used to try pickReviewTarget on
+ * a handful of its most urgent due words and give up, and on a device with
+ * history the most urgent words are exactly the ones the catalog has lost —
+ * saved from pruned videos, never spoken elsewhere. The button then
+ * switched tabs with no target parked and the user landed on whatever
+ * paused video the feed was left on, which reads as the button doing
+ * nothing. Capping harder was not the fix, because each pickReviewTarget
+ * call folds the whole catalog for ONE word; this scans every candidate in
+ * ONE fold, so trying all of them costs what trying five used to.
+ *
+ * The fold mirrors findWordOccurrences' rules exactly (accent-exact match,
+ * the audibility floor, embeds only), and each candidate video is verified
+ * through the same computeBlankPlan-with-`first` check pickReviewTarget
+ * runs (planFor, shared). Per word, the saved-from video is tried first,
+ * then catalog order, capped — a word whose first few speakers all refuse
+ * to blank it is a word to move past, not to exhaust the catalog on.
+ *
+ * Returns the first candidate that WILL blank; failing every candidate, a
+ * fallback landing on the most urgent word that is at least audibly SPOKEN
+ * somewhere (willBlank false — the caller decides whether that beats not
+ * jumping); null only when no candidate is spoken anywhere at all.
+ */
+const BLANK_VIDEOS_TRIED_PER_WORD = 4;
+
+export function pickFirstBlankTarget(
+  videos: readonly Video[],
+  candidates: readonly SavedWord[],
+  allWords: SavedWord[],
+  opts: { now?: number } = {}
+): { word: SavedWord; landing: ReviewLanding } | null {
+  const now = opts.now ?? Date.now();
+
+  const surfaces = new Set<string>();
+  for (const word of candidates) {
+    const s = normalizeSurface(word.text);
+    if (s) surfaces.add(s);
+  }
+  if (surfaces.size === 0) return null;
+
+  /** surface -> videoIds that audibly speak it (catalog order, deduped),
+      plus the first occurrence for the spoken-only fallback. */
+  const spoken = new Map<
+    string,
+    { videoIds: string[]; first: { videoId: string; cueIndex: number; start: number } }
+  >();
+  const byId = new Map<string, Video>();
+  for (const video of videos) {
+    if (!video.youtubeId) continue;
+    byId.set(video.id, video);
+    const seenHere = new Set<string>();
+    for (const [cueIndex, cue] of video.cues.entries()) {
+      for (const word of cue.words) {
+        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) continue;
+        const s = normalizeSurface(word.text);
+        if (!surfaces.has(s) || seenHere.has(s)) continue;
+        seenHere.add(s);
+        const entry = spoken.get(s);
+        if (entry) entry.videoIds.push(video.id);
+        else
+          spoken.set(s, {
+            videoIds: [video.id],
+            first: { videoId: video.id, cueIndex, start: word.start },
+          });
+      }
+    }
+  }
+
+  let fallback: { word: SavedWord; landing: ReviewLanding } | null = null;
+  for (const word of candidates) {
+    const entry = spoken.get(normalizeSurface(word.text));
+    if (!entry) continue;
+    if (fallback === null) {
+      fallback = {
+        word,
+        landing: {
+          videoId: entry.first.videoId,
+          cueIndex: entry.first.cueIndex,
+          startsAt: entry.first.start,
+          willBlank: false,
+        },
       };
+    }
+    const order = entry.videoIds.includes(word.videoId)
+      ? [word.videoId, ...entry.videoIds.filter((id) => id !== word.videoId)]
+      : entry.videoIds;
+    for (const videoId of order.slice(0, BLANK_VIDEOS_TRIED_PER_WORD)) {
+      const video = byId.get(videoId);
+      if (!video) continue;
+      const landing = planFor(video, word, allWords, now);
+      if (landing) return { word, landing };
     }
   }
   return fallback;

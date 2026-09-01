@@ -1173,6 +1173,7 @@ function PlayerDriver({
 }) {
   const api = usePlayerApi();
   const status = usePlayerStatus();
+  const { anchorTime, isPlaying } = usePlayerClock();
   const appliedRef = useRef<ReviewTarget | null>(null);
 
   useEffect(() => {
@@ -1190,10 +1191,57 @@ function PlayerDriver({
         ? startSeconds
         : undefined;
     api.loadAndPlay(video.youtubeId, from);
-  }, [video, status.ready, api, landing, startSeconds]);
+
+    /**
+     * A LANDING MUST NOT STRAND A PAUSED PLAYER (2026-09-01, on device: the
+     * review CTA "throws me on the start of the video, and the video is
+     * stopped"). The load above carries andPlay, but a review landing is the
+     * one load that fires straight out of a tab transition — the WebView is
+     * mid-fade from hidden, the clock has just been re-seeded, and any state
+     * the feed was left in (an engaged hold, a settling pause) can race the
+     * boot. An ordinary swipe that loses its play shows a poster the user
+     * immediately taps; a landing that loses its play is a frozen frame that
+     * reads as the button having done nothing.
+     *
+     * So the landing VERIFIES. If, a beat after the load, the player still
+     * reports paused AND the clock never left the seeded start, the play was
+     * lost — not paused by a person, not held by a blank (both move or hold
+     * the clock PAST the seed by engaging after playback) — and one play is
+     * re-asserted. One, deliberately: a second failure means the engine is
+     * refusing, and a loop of retries against a refusal is how autoplay
+     * fights users. The log states which way it went, because this fires on
+     * a path three device reports have already crossed.
+     */
+    if (!opening) return;
+    const seededAt = Math.max(0, opening.startsAt - REVIEW_LEAD_IN_S);
+    const verify = setTimeout(() => {
+      const t = anchorTime.value;
+      const stalled = !isPlaying.value && Math.abs(t - seededAt) < 0.25;
+      if (stalled) {
+        feedLog(
+          `review landing "${opening.word}" STALLED at ${t.toFixed(2)}s ` +
+            `(seeded ${seededAt.toFixed(2)}s, never played) — re-asserting play`
+        );
+        api.play();
+      } else {
+        feedLog(
+          `review landing "${opening.word}" ok — ` +
+            `${isPlaying.value ? 'playing' : 'held'} at ${t.toFixed(2)}s`
+        );
+      }
+    }, LANDING_VERIFY_MS);
+    return () => clearTimeout(verify);
+  }, [video, status.ready, api, landing, startSeconds, anchorTime, isPlaying]);
 
   return null;
 }
+
+/**
+ * Long enough for the load's boot to reach PLAYING over the bridge (§5e
+ * measured play latency at 316-825ms), short enough that a genuinely lost
+ * play recovers before the frozen frame reads as a dead end.
+ */
+const LANDING_VERIFY_MS = 1400;
 
 /**
  * MEMOISED, AND EVERY PROP IT TAKES IS STABLE SO THAT MEANS SOMETHING.

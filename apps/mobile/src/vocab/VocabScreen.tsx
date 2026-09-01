@@ -13,7 +13,11 @@ import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX } from '@loro/core/srs';
 import { getCatalog } from '@loro/core/catalog';
-import { pickReviewTarget, type WordOccurrence } from '@loro/core/occurrences';
+import {
+  pickFirstBlankTarget,
+  pickReviewTarget,
+  type WordOccurrence,
+} from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
 import { requestReviewTarget } from '../feed/reviewTarget';
 import { SavePromptCard } from '../auth/SavePromptCard';
@@ -364,18 +368,22 @@ export function VocabScreen({
   };
 
   /**
-   * THE "N WORDS READY" CARD. It promises a review, so it points the feed at
-   * one rather than dropping the user wherever the feed happened to be parked
-   * — which is what it did before, and which reads as "it threw me at a random
-   * video".
+   * THE "N WORDS READY" CARD. It promises a review, so it MUST point the feed
+   * at one — every time, not most times (2026-09-01, on device: "sometimes it
+   * throws me to a stopped video I was watching before").
    *
-   * Most urgent first, in the list's own order (slipped, then earliest due),
-   * and the first word the feed would ACTUALLY ask wins. The scan is capped
-   * because each candidate costs a catalog fold: a handful is plenty to find a
-   * good landing, and past that the honest fallback — the feed as it stands,
-   * blanks armed — is no worse than it ever was.
+   * The first version tried pickReviewTarget on the five most urgent due
+   * words and gave up, on the theory that the feed-as-parked was an honest
+   * fallback. It was not: on a device with history, the MOST urgent words are
+   * exactly the ones the catalog has lost (saved from pruned videos, spoken
+   * nowhere else), so the very users with the most to review were the ones
+   * the button did nothing for. pickFirstBlankTarget scans EVERY due word in
+   * one catalog fold — most urgent first, slipped before earliest-due — and
+   * returns the first that will actually blank; failing all of them, a
+   * landing where the most urgent word is at least audibly spoken, which
+   * still beats the stale paused video. Only a review with zero findable
+   * words changes nothing, and the log says so.
    */
-  const CANDIDATES_SCANNED = 5;
   const startReview = () => {
     const all = storage.getSavedWords();
     const at = Date.now();
@@ -385,18 +393,24 @@ export function VocabScreen({
         (a, b) =>
           Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
           a.dueAt - b.dueAt
-      )
-      .slice(0, CANDIDATES_SCANNED);
-    for (const word of due) {
-      const target = pickReviewTarget(getCatalog(), word, all, { now: at });
-      if (target?.willBlank) {
-        requestReviewTarget({
-          videoId: target.videoId,
-          word: word.text,
-          startsAt: target.startsAt,
-        });
-        break;
-      }
+      );
+    const found = pickFirstBlankTarget(getCatalog(), due, all, { now: at });
+    if (found) {
+      requestReviewTarget({
+        videoId: found.landing.videoId,
+        word: found.word.text,
+        startsAt: found.landing.startsAt,
+      });
+      console.log(
+        `[loro:V] review CTA -> "${found.word.text}" in ${found.landing.videoId} ` +
+          `@${found.landing.startsAt.toFixed(1)}s` +
+          (found.landing.willBlank ? '' : ' (SPOKEN ONLY — no due word blanks anywhere)')
+      );
+    } else if (due.length > 0) {
+      console.log(
+        `[loro:V] review CTA: none of ${due.length} due word(s) is spoken in ` +
+          'the catalog — no jump parked'
+      );
     }
     goToFeedForReview();
   };

@@ -506,6 +506,23 @@ export function RecallHost({
   }, [active]);
 
   /**
+   * COMING BACK DEBOUNCES THE HOLD'S BRIDGE ACTIONS FOR ONE BEAT
+   * (2026-09-01). A tab return can land a review-landing load, a replan and
+   * a re-seeded clock in one effects pass, and a HELD blank surviving the
+   * trip (deliberately — see the keyboard note above) still owns the frame
+   * callback in the frames between those commits. Its clamp, reading a
+   * clock the landing had just re-seeded, saw "displaced" and fired a seek
+   * into a video that was still booting — which kills the load's autoplay
+   * and strands the landing on a frozen first frame. Stamping the debounce
+   * on the way in gives the pass one HOLD_ACTION_DEBOUNCE_MS window to
+   * settle; a genuinely displaced hold re-seats 350ms later, which nobody
+   * can perceive.
+   */
+  useEffect(() => {
+    if (active) lastActionAt.value = Date.now();
+  }, [active, lastActionAt]);
+
+  /**
    * Plan when the slide takes the screen — the analogue of Feed.tsx:567-586.
    * Graded words get a future dueAt, so a replan never repeats them.
    *
