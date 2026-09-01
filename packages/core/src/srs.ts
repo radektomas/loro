@@ -35,11 +35,19 @@ const MAX_BLANKS_IN_FIRST_TWO_CUES = 1;
 /** Never blank a word saved less than this long ago (matches box 0's interval). */
 const MIN_AGE_MS = 1 * MIN;
 
+/**
+ * The box at which a word counts as KNOWN — stateForBox's own threshold,
+ * exported so progress UI can say "2 of 3 correct" against the same line
+ * the state flips on. Three correct answers from a fresh save land exactly
+ * here; if this number moves, every "of 3" in the apps moves with it.
+ */
+export const KNOWN_BOX = 3;
+
 /** The display/merge state a word in `box` carries. Exported for the callers
     that save words directly INTO a box (starter deck, calibration escape
     hatch) so box and state can never disagree. */
 export function stateForBox(box: number): WordState {
-  if (box >= 3) return 'known';
+  if (box >= KNOWN_BOX) return 'known';
   if (box >= 1) return 'learning';
   return 'new';
 }
@@ -53,6 +61,7 @@ export function initialSrs(now: number = Date.now()) {
     correct: 0,
     incorrect: 0,
     lastReviewedAt: null,
+    learnedAt: null,
   };
 }
 
@@ -64,13 +73,20 @@ export function grade(
 ): SavedWord {
   if (wasCorrect) {
     const box = Math.min(word.box + 1, MAX_BOX);
+    const state = stateForBox(box);
     return {
       ...word,
       box,
-      state: stateForBox(box),
+      state,
       dueAt: now + BOX_INTERVALS_MS[box],
       correct: word.correct + 1,
       lastReviewedAt: now,
+      // The crossing INTO known is the earning moment "learned this week"
+      // counts from. Only the transition stamps — a known word reviewed
+      // onward (box 3 -> 4) keeps its original date, and a lapse followed by
+      // re-earning stamps afresh, which is the honest reading of both.
+      learnedAt:
+        state === 'known' && word.state !== 'known' ? now : word.learnedAt,
     };
   }
   return {

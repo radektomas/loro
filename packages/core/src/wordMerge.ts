@@ -41,6 +41,11 @@ export function mergeSum(local: SavedWord, remote: SavedWord): SavedWord {
     savedAt: Math.min(local.savedAt, remote.savedAt),
     translation: local.translation || remote.translation || '',
     lastReviewedAt: maxNullable(local.lastReviewedAt, remote.lastReviewedAt),
+    // The remote side never carries a stamp today (no column — storage's
+    // toRow), so without this line a remote-side win would silently erase
+    // the local "learned this week" fact. Latest crossing wins if both ever
+    // exist.
+    learnedAt: maxNullable(local.learnedAt, remote.learnedAt),
   };
 }
 
@@ -60,6 +65,9 @@ export function mergePrefer(local: SavedWord, remote: SavedWord): SavedWord {
     savedAt: Math.min(local.savedAt, remote.savedAt),
     translation: hi.translation || lo.translation || '',
     lastReviewedAt: maxNullable(local.lastReviewedAt, remote.lastReviewedAt),
+    // Same as mergeSum: the stamp is local-only, so it must survive a
+    // remote-preferring merge.
+    learnedAt: maxNullable(local.learnedAt, remote.learnedAt),
   };
 }
 

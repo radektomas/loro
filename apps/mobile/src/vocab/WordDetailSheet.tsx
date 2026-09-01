@@ -22,7 +22,7 @@ import {
   pickReplayOccurrence,
   type WordOccurrence,
 } from '@loro/core/occurrences';
-import { formatDue, MAX_BOX } from '@loro/core/srs';
+import { formatDue, KNOWN_BOX } from '@loro/core/srs';
 import { storage } from '@loro/core/storage';
 import { getExplanations } from '../platform/explanations';
 
@@ -213,21 +213,18 @@ export function WordDetailSheet({
           <Text style={styles.word}>{word.text}</Text>
           <Text style={styles.translation}>{word.translation}</Text>
 
-          {/* The schedule, in the vocab list's own vocabulary. */}
+          {/* The schedule, in the vocab list's own vocabulary. The dot meter
+              that sat here went with the list's (2026-09-01, "nobody gets
+              that" — see VocabScreen's ProgressCount): the sheet has room
+              for the whole sentence, so it says it. Progress is measured
+              against KNOWN_BOX, the exact threshold the state flips on. */}
           <View style={styles.srsRow}>
             <Text style={styles.srsState}>{stateLabel[word.state]}</Text>
-            <View style={styles.meter} accessibilityRole="image"
-              accessibilityLabel={`${word.box} of ${MAX_BOX} toward learned`}>
-              {Array.from({ length: MAX_BOX }, (_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.meterDot,
-                    i < word.box ? styles.meterOn : styles.meterOff,
-                  ]}
-                />
-              ))}
-            </View>
+            {(word.state === 'new' || word.state === 'learning') && (
+              <Text style={styles.srsCount}>
+                {Math.min(word.box, KNOWN_BOX)} of {KNOWN_BOX} correct
+              </Text>
+            )}
             <Text style={styles.srsDue}>
               {word.dueAt <= now ? 'Ready now' : `Review ${formatDue(word.dueAt, now)}`}
             </Text>
@@ -377,10 +374,7 @@ const styles = StyleSheet.create({
   translation: { color: '#5ee6a8', fontSize: 20, fontWeight: '600', marginTop: 6 },
   srsRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 12 },
   srsState: { color: 'rgba(242,245,243,0.6)', fontSize: 12, fontWeight: '700' },
-  meter: { flexDirection: 'row', gap: 3 },
-  meterDot: { borderRadius: 999, height: 5, width: 5 },
-  meterOn: { backgroundColor: '#5ee6a8' },
-  meterOff: { backgroundColor: 'rgba(255,255,255,0.12)' },
+  srsCount: { color: 'rgba(242,245,243,0.45)', fontSize: 12, fontWeight: '600' },
   srsDue: { color: 'rgba(242,245,243,0.45)', fontSize: 12, marginLeft: 'auto' },
   explainBlock: {
     borderTopColor: 'rgba(242,245,243,0.08)',

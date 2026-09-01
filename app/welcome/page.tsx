@@ -75,6 +75,7 @@ function buildBlankWord(
     correct: 0,
     incorrect: 0,
     lastReviewedAt: null,
+    learnedAt: null,
   };
 }
 

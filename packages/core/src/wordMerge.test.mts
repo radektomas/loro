@@ -22,6 +22,7 @@ function word(overrides: Partial<SavedWord> & Pick<SavedWord, 'text' | 'videoId'
     correct: 0,
     incorrect: 0,
     lastReviewedAt: null,
+    learnedAt: null,
     savedAt: 500,
     ...overrides,
   };

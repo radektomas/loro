@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
-import { formatDue, MAX_BOX } from '@loro/core/srs';
+import { formatDue, KNOWN_BOX } from '@loro/core/srs';
 import { getCatalog } from '@loro/core/catalog';
 import { pickReviewTarget, type WordOccurrence } from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
@@ -98,25 +98,29 @@ function friendlyDue(word: SavedWord, now: number): string {
   return `Review ${formatDue(word.dueAt, now)}`;
 }
 
-/** Leitner meter — one dot per box, read as "progress toward Learned". */
-function BoxMeter({ word }: { word: SavedWord }) {
-  const on = TONE_COLOR[STATE_META[word.state].tone];
+/**
+ * "2 of 3" — how close this word is to Learned, in words a stranger reads on
+ * the first pass.
+ *
+ * THIS REPLACED THE LEITNER DOT METER (2026-09-01, Radek: "we have like the
+ * 5 dots but i don't think anybody gets that" — it was six, which is the
+ * point). The dots measured box-of-MAX_BOX, so a word ONE correct answer
+ * from flipping to Learned showed a third of a meter, and nothing anywhere
+ * said what a dot was. Progress here is measured against KNOWN_BOX — the
+ * exact threshold stateForBox flips on — so the number, the fill bar and
+ * the "Learned ✓" flip all tell one story. Boxes past KNOWN_BOX keep
+ * spacing reviews out (that is the schedule's business, shown by the due
+ * line); they are not a ladder the user is asked to read.
+ *
+ * Rendered only for new/learning: a lapsed row already carries the one
+ * message that matters ("Slipped"), and a learned row's count is over.
+ */
+function ProgressCount({ word }: { word: SavedWord }) {
+  if (word.state !== 'new' && word.state !== 'learning') return null;
   return (
-    <View
-      accessibilityRole="image"
-      accessibilityLabel={`${word.box} of ${MAX_BOX} toward learned`}
-      style={styles.meter}
-    >
-      {Array.from({ length: MAX_BOX }, (_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.meterDot,
-            { backgroundColor: i < word.box ? on : 'rgba(255,255,255,0.12)' },
-          ]}
-        />
-      ))}
-    </View>
+    <Text style={styles.progressCount}>
+      {Math.min(word.box, KNOWN_BOX)} of {KNOWN_BOX}
+    </Text>
   );
 }
 
@@ -132,8 +136,11 @@ function WordRow({
   const meta = STATE_META[word.state];
   const isLapsed = word.state === 'lapsed';
   const isKnown = word.state === 'known';
-  // Felt progress: known reads as complete; otherwise fill by Leitner box.
-  const fillPct = isKnown ? 100 : (word.box / MAX_BOX) * 100;
+  // Felt progress toward LEARNED, not toward the top of the schedule: the
+  // bar moves by thirds and hits full exactly when the row flips to
+  // "Learned ✓". Measuring against MAX_BOX made a nearly-learned word look
+  // a third done — see ProgressCount for the whole verdict.
+  const fillPct = isKnown ? 100 : (Math.min(word.box, KNOWN_BOX) / KNOWN_BOX) * 100;
   const edge = isLapsed ? '#f87171' : isKnown ? '#5ee6a8' : 'rgba(94,230,168,0.4)';
   const fill = isLapsed ? '#f87171' : TONE_COLOR[meta.tone];
 
@@ -168,7 +175,7 @@ function WordRow({
           <Text style={[styles.stateLabel, { color: TONE_COLOR[meta.tone] }]}>
             {meta.human}
           </Text>
-          <BoxMeter word={word} />
+          <ProgressCount word={word} />
           <Text
             style={[
               styles.due,
@@ -701,8 +708,12 @@ const styles = StyleSheet.create({
   },
   rowMeta: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 10 },
   stateLabel: { fontSize: 12, fontWeight: '700' },
-  meter: { flexDirection: 'row', gap: 3 },
-  meterDot: { borderRadius: 999, height: 5, width: 5 },
+  /** Sits where the dot meter used to; muted so the state phrase leads. */
+  progressCount: {
+    color: 'rgba(242,245,243,0.45)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   due: { fontSize: 12, marginLeft: 'auto' },
   dueNow: { color: '#5ee6a8', fontWeight: '700' },
   dueLater: { color: 'rgba(242,245,243,0.45)' },

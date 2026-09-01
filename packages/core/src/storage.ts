@@ -205,6 +205,7 @@ function migrateWord(raw: Partial<SavedWord>): SavedWord {
           correct: raw.correct ?? 0,
           incorrect: raw.incorrect ?? 0,
           lastReviewedAt: raw.lastReviewedAt ?? null,
+          learnedAt: raw.learnedAt ?? null,
         }
       : {}),
   };
@@ -281,6 +282,11 @@ function toRow(userId: string, w: SavedWord): SavedWordRow {
     last_reviewed_at: w.lastReviewedAt != null ? msToIso(w.lastReviewedAt) : null,
     saved_at: msToIso(w.savedAt),
     source: w.source,
+    // learnedAt is deliberately NOT mapped: the loro_ words table has no
+    // column for it and the stamp is a local display fact ("learned this
+    // week"), not schedule state. If it ever needs to survive a restore,
+    // add the column by manual SQL migration first, then map it here AND in
+    // fromRow in the same change.
   };
 }
 
@@ -299,6 +305,9 @@ function fromRow(r: SavedWordRow): SavedWord {
     correct: r.correct ?? 0,
     incorrect: r.incorrect ?? 0,
     lastReviewedAt: isoToMs(r.last_reviewed_at),
+    // No column carries it (see toRow), so a restored word starts unstamped:
+    // a fresh device's "learned this week" begins counting from the restore.
+    learnedAt: null,
   };
 }
 

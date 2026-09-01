@@ -188,4 +188,15 @@ export type SavedWord = {
   correct: number;
   incorrect: number;
   lastReviewedAt: number | null;
+  /**
+   * epoch ms of the moment this word first crossed into 'known' through a
+   * graded review — null until then. EARNED, deliberately: words filed as
+   * known on arrival (starter-deck grants, a level blank answered right on
+   * first sight) keep null, because "learned in Loro" must mean the review
+   * loop did it, not that prior knowledge was acknowledged. Re-earning after
+   * a lapse re-stamps. Local-only for now — the sync payload does not carry
+   * it (see toRow), so a restore onto a fresh device loses the stamp.
+   * Powers "words I learned this week".
+   */
+  learnedAt: number | null;
 };
