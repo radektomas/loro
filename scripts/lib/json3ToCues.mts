@@ -210,3 +210,30 @@ export function mergeOrphans(cues: CueOut[]): CueOut[] {
 export function json3ToCues(payload: Json3): CueOut[] {
   return groupIntoCues(json3ToWords(payload));
 }
+
+/**
+ * What fraction of word tokens are actually caption LINES — segs carrying
+ * interior whitespace. An ASR track's segs are single words; an uploaded
+ * track authored without word timing delivers one seg per subtitle line, and
+ * json3ToWords faithfully turns each into a "word" that is a whole sentence
+ * stamped MAX_WORD_SECONDS long. Downstream, every surface that assumes a
+ * token is a word breaks at once: the karaoke line blows its height budget
+ * (and the fixed player box then covers the band), a word tap hands the save
+ * sheet the whole sentence, and the blank planners can never match a token.
+ * Found live on 1qrp5PogzhU (Mi Coreana), 19/25 tokens.
+ *
+ * A stray glued pair ("el continente") appears in ~17% of otherwise healthy
+ * published videos at 1-5% of tokens, so the caller thresholds on the share
+ * rather than on any-hit.
+ */
+export function multiWordTokenShare(cues: readonly CueOut[]): number {
+  let tokens = 0;
+  let lines = 0;
+  for (const cue of cues) {
+    for (const word of cue.words) {
+      tokens += 1;
+      if (/\s/.test(word.text.trim())) lines += 1;
+    }
+  }
+  return tokens === 0 ? 0 : lines / tokens;
+}

@@ -997,6 +997,16 @@ export const BLOCKED_VIDEOS: readonly BlockedVideo[] = [
     title: 'Roberto Avaria — Pacto de sangre o decretos de sangre #pactos #sangreroja #co',
     reason: 'content_keyword match (sangre) — subject matter, not format; removed in the owner review of 2026-08-21.',
   },
+  {
+    youtubeId: '1qrp5PogzhU',
+    title: 'Mi Coreana — DORMÍ EN LA CALLE EN COREA Y VINO UN CHICO😵',
+    reason:
+      'captions have line-level timing only — 19/25 word tokens are whole sentences ' +
+      'stamped 0.6s, which breaks the karaoke layout (player box covers the band), ' +
+      'word taps (a tap saves a sentence) and blank planning; user bug report of ' +
+      '2026-09-01. publish-embeds now rejects this shape at ingest ' +
+      '(captions_no_word_timing).',
+  },
 ];
 
 /** Lookup set derived from the list above — the filter uses this. */

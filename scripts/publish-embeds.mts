@@ -35,7 +35,7 @@ import {
   fetchCaptions,
   NoCaptionsError,
 } from './lib/captionFetch.mts';
-import { json3ToCues, type CueOut } from './lib/json3ToCues.mts';
+import { json3ToCues, multiWordTokenShare, type CueOut } from './lib/json3ToCues.mts';
 import { estimateLevel } from './lib/estimateLevel.mts';
 import { curationScore } from './config/curation.mts';
 import {
@@ -351,6 +351,7 @@ async function main(): Promise<void> {
     published: 0,
     noCaptions: 0,
     thin: 0,
+    lineTimed: 0,
     offCamera: 0,
     skipped: 0,
     failed: 0,
@@ -453,6 +454,31 @@ async function main(): Promise<void> {
         continue;
       }
 
+      /**
+       * WORD TIMING IS A STRUCTURAL REQUIREMENT, not a nicety. A track whose
+       * segs are subtitle LINES (creator captions with line-level timing —
+       * pickSpanishTrack only falls back to these when there is no ASR track)
+       * yields "words" that are whole sentences: the karaoke band blows its
+       * height budget and the fixed player box covers it, a word tap saves a
+       * sentence, and no blank can ever be planned. Found live on 1qrp5PogzhU
+       * (Mi Coreana, 76% line tokens). The threshold tolerates the stray
+       * glued pair real ASR tracks produce (measured 1-5% on healthy videos).
+       */
+      const lineShare = multiWordTokenShare(cues);
+      if (lineShare > 0.1) {
+        stats.lineTimed += 1;
+        const { error: ltErr } = await supabase
+          .from(CANDIDATES_TABLE)
+          .update({ status: 'rejected', reject_reason: 'captions_no_word_timing' })
+          .eq('youtube_id', id);
+        if (ltErr) console.warn(`   ! status write failed: ${ltErr.message}`);
+        console.log(
+          `   ✗ ${(lineShare * 100).toFixed(0)}% of tokens are caption lines, ` +
+            'not words — rejected (captions_no_word_timing)\n'
+        );
+        continue;
+      }
+
       const videoName = candidate.title ?? id;
       await translateCues(cues, videoName);
       const dictionary = await glossWords(cues, videoName);
@@ -532,7 +558,7 @@ async function main(): Promise<void> {
   }
 
   console.log('='.repeat(56));
-  console.log(`published ${stats.published}   off_camera ${stats.offCamera}   no_captions ${stats.noCaptions}   too_thin ${stats.thin}   transient-skips ${stats.failed}`);
+  console.log(`published ${stats.published}   off_camera ${stats.offCamera}   no_captions ${stats.noCaptions}   too_thin ${stats.thin}   line_timed ${stats.lineTimed}   transient-skips ${stats.failed}`);
   console.log(`data/embedVideos.json now holds ${embeds.length} video(s).`);
   console.log('\nOpenAI spend this run:');
   console.log(costReport());
