@@ -299,13 +299,30 @@ export const TASTE = {
    * the product does in general. The general version of each sentence was
    * already made on screens 7 and 8; this is the same claim, demonstrated.
    */
+  /** The opening nudge. The clip autoplays muted (WebKit's rule), and the
+      FIRST tap on the video is wired to be the unmute, with the band's 🔇
+      pill as the fallback — so this card teaches the cheap gesture rather
+      than a hunt for a control. It yields to every scripted beat and
+      clears itself the moment sound is on. */
+  sound: {
+    title: 'Turn the sound on.',
+    body: 'Tap the video once. The 🔇 button below works too.',
+  },
+  /** Sharpened 2026-09-01: the old pair ("Tap the word you don't know" /
+      "This one is highlighted") read as a suggestion, and people watched
+      the ring breathe without touching it — and a missed tap costs the
+      next clip its promised blank. The instruction now points at the glow
+      and says what a tap does, in that order. */
   tap: {
-    title: 'Tap the word you don’t know.',
-    body: 'This one is highlighted to get you started.',
+    title: 'Tap the glowing word.',
+    body: 'It’s pulsing in the sentence below. A tap saves it.',
   },
   saved: {
     title: 'Saved.',
-    body: 'It comes back as a blank in the videos you scroll, right before you would forget it.',
+    /** Ends on the instruction: this card marks the end of a beat, and a
+        finished beat must always name the next move — the swipe hint alone
+        arrived seconds later and left a gap where people wondered. */
+    body: 'It comes back as a blank in the videos you scroll, right before you would forget it. Swipe up when you are ready.',
   },
   scrollHint: 'Swipe up for the next one',
   fill: {

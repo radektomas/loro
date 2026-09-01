@@ -163,11 +163,25 @@ export type FeedWalkthrough = {
    */
   levelBlanks?: boolean;
   maxLevelBlanks?: number;
+  /** May the ACTIVE clip plan green recall blanks? Off for the reel's
+      uncoached clips, so due words a returning device carries into
+      onboarding cannot freeze a scripted beat. See RecallHost. */
+  recallBlanks?: boolean;
   /** Earliest second a blue blank may stop the ACTIVE clip. See RecallHost. */
   minLevelBlankAtS?: number;
-  /** The word plays as itself and becomes a gap only at the freeze — the
-      taste reel's deliberate giveaway. See RecallHost. */
+  /** The word plays as itself and becomes a gap only at the freeze — a
+      giveaway mode no beat currently uses. See RecallHost. */
   revealBlanksUntilHeld?: boolean;
+  /** Exactly this word at exactly this cue as the blue blank, instead of the
+      planner's pick. See RecallHost's scriptedLevelBlank* props. */
+  scriptedLevelBlank?: { cueIndex: number; text: string } | null;
+  /** Pin the focusWord blank to this cue — see RecallHost's focusCueIndex. */
+  focusCueIndex?: number;
+  /** Fired after a blank is graded, either kind, right or wrong. */
+  onBlankResolved?: (kind: 'recall' | 'level', cueIndex: number) => void;
+  /** Draw the swipe hint loud — the walkthrough's full-stop moments, where
+      the video is paused and the swipe is the only move left. */
+  hintEmphatic?: boolean;
   /** Which slide is on screen now. Drives the script's beats. */
   onSlideChange?: (index: number, total: number) => void;
   /**
@@ -844,11 +858,16 @@ function FeedBody({
               ? landing.word
               : null
         }
+        focusCueIndex={walkthrough?.focusCueIndex}
+        recallBlanks={walkthrough?.recallBlanks ?? true}
         // Per-clip during the guided run, core's own rules everywhere else.
         levelBlanks={walkthrough ? (walkthrough.levelBlanks ?? false) : true}
         maxLevelBlanks={walkthrough?.maxLevelBlanks}
         minLevelBlankAtS={walkthrough?.minLevelBlankAtS}
         revealBlanksUntilHeld={walkthrough?.revealBlanksUntilHeld ?? false}
+        scriptedLevelBlankCue={walkthrough?.scriptedLevelBlank?.cueIndex}
+        scriptedLevelBlankText={walkthrough?.scriptedLevelBlank?.text}
+        onBlankResolved={walkthrough?.onBlankResolved}
         // The guided run raises no asks of its own. See RecallHost's `quiet`.
         quiet={Boolean(walkthrough)}
         onObscurePlayer={setPlayerObscured}
@@ -972,6 +991,7 @@ function FeedBody({
               coach={walkthrough.coach ?? null}
               hint={walkthrough.hint ?? false}
               hintText={walkthrough.hintText ?? ''}
+              hintEmphatic={walkthrough.hintEmphatic ?? false}
               top={bandTop}
             />
           )}
@@ -1011,16 +1031,25 @@ function CoachLayer({
   coach,
   hint,
   hintText,
+  hintEmphatic,
   top,
 }: {
   coach: CoachCardContent | null;
   hint: boolean;
   hintText: string;
+  hintEmphatic: boolean;
   top: number | null;
 }) {
   const held = useHeldBlank();
   return (
-    <WalkthroughCoach coach={coach} hint={hint} hintText={hintText} held={held} top={top} />
+    <WalkthroughCoach
+      coach={coach}
+      hint={hint}
+      hintText={hintText}
+      hintEmphatic={hintEmphatic}
+      held={held}
+      top={top}
+    />
   );
 }
 

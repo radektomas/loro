@@ -19,7 +19,11 @@ import type { AnswerMatch } from '@loro/core/srs';
 import { usePlayerApi, usePlayerClock, usePlayerStatus } from '../player/PlayerHost';
 import { maybeAskForPermission, noteCorrectRecall } from '../platform/notifications';
 import { CELEBRATE_MS } from './Celebration';
-import { LEVELS_ENABLED, buildLevelPlan } from './levelBlanks';
+import {
+  LEVELS_ENABLED,
+  buildLevelPlan,
+  buildScriptedLevelBlank,
+} from './levelBlanks';
 import { maybeAskToSaveProgress } from './saveProgressAsk';
 import {
   buildRecallPlan,
@@ -102,7 +106,15 @@ export type RecallSession = {
 type RecallGrading = {
   entry: BlankEntry | null;
   keyboardHeight: number;
-  grade: (match: AnswerMatch) => void;
+  /**
+   * `graded` is the entry the match was computed AGAINST — the one the answer
+   * layer's submit closure saw. grade() verifies it is still the held entry
+   * and otherwise drops the submit: the hold can move between the render that
+   * bound a handler and the event that fires it (a chain-engaged next blank),
+   * and applying one blank's match to another is how a correctly-typed word
+   * gets marked wrong.
+   */
+  grade: (match: AnswerMatch, graded: BlankEntry) => void;
   replay: () => void;
 };
 
@@ -171,10 +183,15 @@ export function RecallHost({
   active,
   language,
   focusWord,
+  recallBlanks = true,
   levelBlanks = true,
   maxLevelBlanks,
   minLevelBlankAtS,
+  focusCueIndex,
+  scriptedLevelBlankCue,
+  scriptedLevelBlankText,
   revealBlanksUntilHeld = false,
+  onBlankResolved,
   quiet = false,
   onObscurePlayer,
   children,
@@ -196,6 +213,22 @@ export function RecallHost({
    * caps were already spent, never asks theirs at all.
    */
   focusWord: string | null;
+  /** Pin focusWord's blank to this cue instead of core's earliest-occurrence
+      choice — see buildRecallPlan. Walkthrough only. */
+  focusCueIndex?: number;
+  /**
+   * MAY GREEN RECALL BLANKS BE PLANNED? True everywhere except the onboarding
+   * taste reel's uncoached clips — levelBlanks' twin, for the same reason.
+   *
+   * The reel's clips are scripted beats, but the SRS is device state: a
+   * device that has seen the app before carries due words into onboarding,
+   * and core would happily freeze clip one mid-tap-beat on one of them, or
+   * drop one right after the last clip's scripted blue blank. On a genuinely
+   * fresh install this changes nothing (there are no saved words yet); on a
+   * returning device it keeps the guided run guided. The fill clip keeps it
+   * true — its whole beat IS a recall blank.
+   */
+  recallBlanks?: boolean;
   /**
    * MAY BLUE LEVEL BLANKS BE PLANNED? True everywhere except the onboarding
    * taste reel.
@@ -245,17 +278,33 @@ export function RecallHost({
    */
   minLevelBlankAtS?: number;
   /**
-   * THE GIVEAWAY MODE, for the taste reel's try-it blank and nowhere else.
+   * THE SCRIPTED BLUE BLANK: exactly this word at exactly this cue, instead
+   * of whatever the planner would choose. Two primitives rather than one
+   * object ON PURPOSE — the walkthrough config is rebuilt every render, and
+   * an object prop here would put a fresh identity in the plan effect's deps
+   * and replan on every frame. Recall still wins the cue on a collision,
+   * matching the house rule. Walkthrough only; the feed passes neither.
+   */
+  scriptedLevelBlankCue?: number;
+  scriptedLevelBlankText?: string;
+  /** Fired after a blank is graded, either kind, right or wrong — the
+      walkthrough uses it to run its next beat off the answer. */
+  onBlankResolved?: (kind: 'recall' | 'level', cueIndex: number) => void;
+  /**
+   * THE GIVEAWAY MODE — currently unused, kept for the next scripted beat
+   * that wants it.
    *
    * Normally a planned blank is a gap from the moment its line renders — the
-   * word must never be shown, or there is nothing to recall. The reel's blank
-   * inverts that on purpose: the word plays as itself, spoken and highlighted
-   * like any other, and turns into the gap only when the hold freezes the
-   * video on it. The user types back a word they watched land two beats ago.
-   * That is a giveaway, and it is meant to be — this blank exists to teach
-   * the mechanic with a guaranteed win, not to test anything. It also means
-   * the line reads as a normal subtitle right up to the freeze, so the clip
-   * is watched, not scanned for the gap.
+   * word must never be shown, or there is nothing to recall. This inverts
+   * that on purpose: the word plays as itself, spoken and highlighted like
+   * any other, and turns into the gap only when the hold freezes the video
+   * on it — a guaranteed win for teaching the mechanic, at the price that
+   * nobody ever SEES a gap approaching. The taste reel used it for one
+   * morning (2026-09-01) to hide a blank that froze 0.96s into its clip;
+   * once its scripted blanks moved mid-line with real lead-ins, the visible
+   * gap became the demonstration and the reel went back to the feed's own
+   * rendering. The seam stays, minLevelBlankAtS-style, for the next surface
+   * that wants the opposite trade.
    *
    * False everywhere real: a feed blank shown-then-hidden is an answer key.
    */
@@ -328,7 +377,10 @@ export function RecallHost({
   const owns = Boolean(video) && status.loadedVideoId === video?.youtubeId;
   /** LEVELS_ENABLED is the build's switch; `levelBlanks` is this host's. */
   const levelsOn = LEVELS_ENABLED && levelBlanks;
-  const planned = (recallActive || levelsOn) && owns && video !== null;
+  /** Same split for green: the runtime arm is the build's, `recallBlanks`
+      is this host's. */
+  const recallOn = recallActive && recallBlanks;
+  const planned = (recallOn || levelsOn) && owns && video !== null;
   const armed = planned && active;
 
   const [plan, setPlan] = useState(EMPTY_PLAN);
@@ -400,6 +452,10 @@ export function RecallHost({
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const armedRef = useRef(armed);
   armedRef.current = armed;
+  /** A ref for the same reason `quiet` gets one below: grade() must not be
+      rebuilt on a walkthrough re-render, or the worklet re-registers. */
+  const onBlankResolvedRef = useRef(onBlankResolved);
+  onBlankResolvedRef.current = onBlankResolved;
   /** Read inside grade(), which must not take `quiet` as a dependency: it is
       rebuilt on identity and a rebuild mid-hold re-registers the worklet that
       is holding the video. Same pattern as armedRef, for the same reason. */
@@ -471,8 +527,8 @@ export function RecallHost({
     // RECALL FIRST, and its cues become the level planner's exclusion set —
     // the ordering is load-bearing, not incidental (Feed.tsx:563-565: "recall
     // of the user's own saved words always wins a collision").
-    const recallEntries = recallActive
-      ? buildRecallPlan(video, saved, Date.now(), focusWord)
+    const recallEntries = recallOn
+      ? buildRecallPlan(video, saved, Date.now(), focusWord, focusCueIndex)
       : [];
     if (recallEntries.length > 0) {
       flog(
@@ -486,15 +542,30 @@ export function RecallHost({
     /** Named for what it is, and NOT `planned` — that identifier is already the
         effect's own guard above, and shadowing it here would put the guard in
         the temporal dead zone and throw on every plan. */
-    const levelCandidates = levelsOn
-      ? buildLevelPlan(
-          video,
-          storage.getLevelState().level,
-          saved,
-          language,
-          new Set(recallEntries.map((e) => e.cueIndex))
-        )
-      : [];
+    const scripted =
+      levelsOn &&
+      scriptedLevelBlankCue !== undefined &&
+      scriptedLevelBlankText !== undefined &&
+      // Recall wins a cue collision, same as the planner's exclusion set.
+      !recallEntries.some((e) => e.cueIndex === scriptedLevelBlankCue)
+        ? buildScriptedLevelBlank(
+            video,
+            scriptedLevelBlankCue,
+            scriptedLevelBlankText,
+            language
+          )
+        : null;
+    const levelCandidates = scripted
+      ? [scripted]
+      : levelsOn && scriptedLevelBlankCue === undefined
+        ? buildLevelPlan(
+            video,
+            storage.getLevelState().level,
+            saved,
+            language,
+            new Set(recallEntries.map((e) => e.cueIndex))
+          )
+        : [];
     // The floor comes FIRST, so the cap below picks the earliest blank that is
     // actually allowed rather than dropping to none when the earliest is too
     // early.
@@ -510,27 +581,31 @@ export function RecallHost({
             .slice(0, Math.max(0, maxLevelBlanks));
 
     setPlan(mergeBlankPlans(levelEntries, recallEntries));
-    // recallActive is listed even though `planned` already folds it in: with
+    // recallOn is listed even though `planned` already folds it in: with
     // LEVELS_ENABLED on, `planned` is true either way, so arming recall
-    // mid-session would not otherwise replan the slide already on screen and
-    // the user would see nothing until the next swipe. focusWord for the same
-    // class of reason: the jump can land on the slide already on screen, and
-    // that plan has to be rebuilt around the word that was asked for.
+    // mid-session (or the taste reel flipping recallBlanks per slide) would
+    // not otherwise replan the slide already on screen and the user would see
+    // nothing until the next swipe. focusWord for the same class of reason:
+    // the jump can land on the slide already on screen, and that plan has to
+    // be rebuilt around the word that was asked for.
     //
     // The saved words are deliberately NOT a dependency — replanning on every
     // grade would wipe the results of the session in progress. staleVersion is
     // how a change made on ANOTHER tab gets in; see below.
-    // levelsOn joins the list for the same reason recallActive is on it: the
+    // levelsOn joins the list for the same reason recallOn is on it: the
     // taste reel turns the blue planner off for a host that is already mounted.
   }, [
     planned,
-    recallActive,
+    recallOn,
     levelsOn,
     maxLevelBlanks,
     minLevelBlankAtS,
+    scriptedLevelBlankCue,
+    scriptedLevelBlankText,
     video,
     language,
     focusWord,
+    focusCueIndex,
     staleVersion,
   ]);
 
@@ -755,10 +830,25 @@ export function RecallHost({
    * Nothing about the schedule is reimplemented here.
    */
   const grade = useCallback(
-    (match: AnswerMatch) => {
+    (match: AnswerMatch, graded: BlankEntry) => {
       const index = heldSv.value;
       const entry = entriesRef.current[index];
       if (!entry) return;
+      /**
+       * THE MATCH MUST BELONG TO THE HELD ENTRY. The submit handler that
+       * computed it was bound on an earlier render, and the hold can move in
+       * between — grading blank A's match onto blank B marks a correctly
+       * typed word wrong. A submit for an entry that is no longer held is
+       * dropped, not re-aimed: the user answered a question that has left the
+       * screen, and silently re-asking is the bar's job, not the grader's.
+       */
+      if (entry !== graded) {
+        flog(
+          `grade DROPPED — submit was for cue=${graded.cueIndex} "${graded.surface}" ` +
+            `but the hold is now cue=${entry.cueIndex} "${entry.surface}"`
+        );
+        return;
+      }
 
       // 'almost' — a spelling near-miss — GRADES as correct everywhere below
       // (SRS box, level meter, streak day). The three-way value is the UI's:
@@ -780,6 +870,10 @@ export function RecallHost({
       // gradeBlank celebrates on wasCorrect without looking at `kind`. The
       // haptic rides the SRS outcome (a near-miss is still a success).
       if (wasCorrect) recallHaptic();
+
+      // The walkthrough's hook: the answer, right or wrong, is what its next
+      // beat keys on. Via ref so grade() keeps its stable identity.
+      onBlankResolvedRef.current?.(entry.kind, entry.cueIndex);
 
       if (entry.kind === 'recall') {
         const { word } = storage.gradeWord(
@@ -903,7 +997,16 @@ export function RecallHost({
       if (resumeTimer.current) clearTimeout(resumeTimer.current);
       resumeTimer.current = setTimeout(
         () => {
-          if (armedRef.current) api.play();
+          /**
+           * heldSv, NOT just armed: when the clamp left the paused clock at or
+           * past the NEXT blank's pause point — a first-word blank on the next
+           * cue sits within the clamp's residual — that blank engages the
+           * instant this grade frees the hold, i.e. BEFORE this timer fires.
+           * Playing here would play straight through the freshly held blank
+           * and hand it to the slip/re-assert fight. The new hold owns
+           * playback now; its own grade schedules its own resume.
+           */
+          if (armedRef.current && heldSv.value === -1) api.play();
         },
         match === 'correct' ? RESUME_MS_CORRECT : RESUME_MS_WRONG
       );
@@ -1069,13 +1172,31 @@ export function RecallHost({
  */
 function AnswerLayer({ children }: { children: ReactNode }) {
   const { entry, keyboardHeight, grade, replay } = useContext(GradingContext);
-  const [answer, setAnswer] = useState('');
+  const [answer, setAnswerState] = useState('');
+
+  /**
+   * THE FRESHEST TEXT, OUTSIDE THE RENDER CYCLE. A submit handler is a
+   * closure from the render that bound it, and under a congested JS thread —
+   * the clamp re-seating a boundary-hugging hold point is exactly that — the
+   * return key's event can be dispatched in the same backed-up queue turn as
+   * the final keystrokes, before any of their re-renders. Grading the closed-
+   * over state then grades a PREFIX of what was typed, and sentence-initial
+   * words are short enough (<4 letters) that matchAnswer allows no edit —
+   * so a correctly-typed word came back wrong. The ref is written inside the
+   * change handler itself, so it is complete no matter how the renders queue.
+   */
+  const answerRef = useRef('');
+  const setAnswer = useCallback((text: string) => {
+    answerRef.current = text;
+    setAnswerState(text);
+  }, []);
 
   // A new blank (or none) starts empty. The web clears for the same reason
   // (SubtitleTrack.tsx:266): the next blank's input mounts before anything
   // else clears the field, so without this the previous answer sits in it.
   useEffect(() => {
-    setAnswer('');
+    answerRef.current = '';
+    setAnswerState('');
   }, [entry]);
 
   const session = useMemo<RecallSession>(
@@ -1084,18 +1205,26 @@ function AnswerLayer({ children }: { children: ReactNode }) {
       keyboardHeight,
       setAnswer,
       submit: () => {
-        if (!entry || !answer.trim()) return;
-        grade(gradeAnswer(answer, entry.word));
+        const typed = answerRef.current;
+        if (!entry || !typed.trim()) return;
+        const match = gradeAnswer(typed, entry.word);
+        // Temporary [loro:F] instrumentation for the first-word wrong-grade
+        // report: the graded STRING is the fact the reveal never shows.
+        flog(`submit "${typed}" vs "${entry.word.text}" -> ${match.toUpperCase()}`);
+        grade(match, entry);
       },
       /** Skip and reveal. Grades WRONG — the web has no neutral outcome
           (SubtitleTrack.tsx:384). */
       skip: () => {
         if (!entry) return;
-        grade('wrong');
+        grade('wrong', entry);
       },
       replay: entry ? replay : null,
     }),
-    [entry, keyboardHeight, answer, grade, replay]
+    // `answer` is deliberately absent now: submit reads answerRef, so the
+    // session no longer changes identity per keystroke. The bar's input value
+    // and its canSubmit read AnswerContext, which still does.
+    [entry, keyboardHeight, grade, replay, setAnswer]
   );
 
   return (

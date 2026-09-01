@@ -42,8 +42,8 @@ import Animated, {
  */
 
 export type CoachCardContent = {
-  /** Distinguishes beats for the swap animation, not for styling. */
-  kind: 'tap' | 'saved' | 'fill';
+  /** Distinguishes beats for the swap animation and the one urgent style. */
+  kind: 'sound' | 'tap' | 'saved' | 'fill';
   title: string;
   body: string;
 };
@@ -57,12 +57,16 @@ export function WalkthroughCoach({
   coach,
   hint,
   hintText,
+  hintEmphatic = false,
   held,
   top,
 }: {
   coach: CoachCardContent | null;
   hint: boolean;
   hintText: string;
+  /** The full-stop rendering: the walkthrough has paused the video and the
+      swipe is the only move left, so the hint stops whispering. */
+  hintEmphatic?: boolean;
   /** A blank is holding the video — passed in rather than read here so this
       component stays mountable outside RecallHost in some future screen. */
   held: boolean;
@@ -130,7 +134,10 @@ export function WalkthroughCoach({
   return (
     <View pointerEvents="none" style={[styles.layer, { top }]}>
       {content && (
-        <Animated.View style={[styles.card, cardStyle]} accessibilityLiveRegion="polite">
+        <Animated.View
+          style={[styles.card, content.kind === 'tap' && styles.cardUrgent, cardStyle]}
+          accessibilityLiveRegion="polite"
+        >
           <Text style={styles.title} numberOfLines={1}>
             {content.title}
           </Text>
@@ -139,13 +146,16 @@ export function WalkthroughCoach({
           </Text>
         </Animated.View>
       )}
-      {!content && hint && <ScrollHint text={hintText} />}
+      {!content && hint && <ScrollHint text={hintText} emphatic={hintEmphatic} />}
     </View>
   );
 }
 
-/** The swipe hint. A chevron that drifts up, because the gesture is up. */
-function ScrollHint({ text }: { text: string }) {
+/** The swipe hint. A chevron that drifts up, because the gesture is up.
+    Emphatic gets a card-weight pill and full-strength text — it appears over
+    a video the walkthrough has deliberately stopped, so it must read as the
+    instruction it is rather than the whisper the mid-play hint stays. */
+function ScrollHint({ text, emphatic = false }: { text: string; emphatic?: boolean }) {
   const y = useSharedValue(0);
   const fade = useSharedValue(0);
   const reducedMotion = useReducedMotion();
@@ -154,22 +164,22 @@ function ScrollHint({ text }: { text: string }) {
     if (reducedMotion) return;
     y.value = withRepeat(
       withSequence(
-        withTiming(-6, { duration: 700 }),
+        withTiming(emphatic ? -8 : -6, { duration: 700 }),
         withTiming(0, { duration: 700 })
       ),
       -1,
       false
     );
     return () => cancelAnimation(y);
-  }, [reducedMotion, y, fade]);
+  }, [reducedMotion, emphatic, y, fade]);
   const style = useAnimatedStyle(() => ({
     opacity: fade.value,
     transform: [{ translateY: y.value }],
   }));
   return (
-    <Animated.View style={[styles.hint, style]}>
-      <Text style={styles.hintChevron}>⌃</Text>
-      <Text style={styles.hintText}>{text}</Text>
+    <Animated.View style={[styles.hint, emphatic && styles.hintStrong, style]}>
+      <Text style={[styles.hintChevron, emphatic && styles.hintChevronStrong]}>⌃</Text>
+      <Text style={[styles.hintText, emphatic && styles.hintTextStrong]}>{text}</Text>
     </Animated.View>
   );
 }
@@ -190,9 +200,28 @@ const styles = StyleSheet.create({
   },
   title: { color: '#5ee6a8', fontSize: 15, fontWeight: '800' },
   body: { color: 'rgba(242,245,243,0.82)', fontSize: 13, lineHeight: 18 },
+  /** The tap card carries the reel's one must-not-miss instruction — a
+      missed tap costs the next clip its promised blank — so it wears a
+      full-strength border while the other beats keep the whisper. Same
+      footprint: only the border changes, never the size, per the header's
+      rule that nothing may grow toward the transcript. */
+  cardUrgent: { borderColor: 'rgba(94,230,168,0.75)', borderWidth: 1.5 },
 
   /** Centred in the covered chip row, small enough to read as a whisper. */
   hint: { alignItems: 'center', paddingTop: 4 },
   hintChevron: { color: '#5ee6a8', fontSize: 22, fontWeight: '800', lineHeight: 22 },
   hintText: { color: 'rgba(242,245,243,0.6)', fontSize: 13, fontWeight: '600' },
+  /** The full-stop variant, drawn with the coach card's own weight. */
+  hintStrong: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(16,22,18,0.94)',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  hintChevronStrong: { fontSize: 28, lineHeight: 26 },
+  hintTextStrong: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
 });

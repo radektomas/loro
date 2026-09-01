@@ -1,5 +1,11 @@
 import type { SavedWord, Video } from '@loro/core/types';
-import { computeLevelBlankPlan, tierFor } from '@loro/core/levels';
+import {
+  computeLevelBlankPlan,
+  tierFor,
+  wordLevel,
+  type LevelBlankWord,
+} from '@loro/core/levels';
+import { glossText, lookupGloss, normalizeSurface } from '@loro/core/dictionary';
 import { locateBlank, llog, type BlankEntry } from './recall';
 
 /**
@@ -76,6 +82,61 @@ export const LEVELS_ENABLED = true;
  * All selection, banding, capping and spacing stays in core. This chooses
  * nothing — see levels.ts:266-275 for the rules it is deferring to.
  */
+/**
+ * ONE NAMED BLANK AT ONE NAMED CUE — the walkthrough's scripted blue blank.
+ *
+ * The planner above chooses; this obeys. The taste reel needs the blank on a
+ * specific word in a specific cue ("mi" in the last clip's cue 2, the word
+ * its opening line hands out a beat earlier), and computeLevelBlankPlan can
+ * never reliably deliver that: it chooses by frequency band, not by which
+ * word the clip just gave away, and takes the first band-match in a cue. A
+ * scripted beat names its word exactly, the same way WALKTHROUGH.word names
+ * its coached word — so this resolves one word the script chose, with the
+ * same gloss rules the planner enforces (no translation, no blank), and the
+ * guard test pins it against the real clip.
+ *
+ * Returns null on any miss — a moved cue, a lost gloss — because the reel
+ * degrades to "a clip you watch" rather than throwing (WALKTHROUGH.required
+ * is false, and that is the contract).
+ */
+export function buildScriptedLevelBlank(
+  video: Video,
+  cueIndex: number,
+  text: string,
+  language: string
+): BlankEntry | null {
+  const cue = video.cues[cueIndex];
+  if (!cue) {
+    llog(`scripted blank: ${video.id} has no cue ${cueIndex}`);
+    return null;
+  }
+  const gloss = lookupGloss(video, text);
+  const translation = gloss && glossText(gloss, language);
+  if (!translation) {
+    llog(`scripted blank: "${text}" has no ${language} gloss in ${video.id}`);
+    return null;
+  }
+  const at = locateBlank(cue, text);
+  if (!at) {
+    llog(`scripted blank: "${text}" not found in cue ${cueIndex} of ${video.id}`);
+    return null;
+  }
+  const word: LevelBlankWord = {
+    text,
+    translation,
+    videoId: video.id,
+    cueIndex,
+    // The word's OWN band, same as the planner would stamp — the tier chip
+    // reads this, and a scripted blank must not lie about its difficulty.
+    level: wordLevel(normalizeSurface(text), gloss?.lemma),
+  };
+  llog(
+    `scripted blank: video=${video.id} cue${cueIndex} "${text}" ` +
+      `band=${word.level} @${at.pauseAt.toFixed(2)}s`
+  );
+  return { kind: 'level', cueIndex, word, ...at };
+}
+
 export function buildLevelPlan(
   video: Video,
   userLevel: number,

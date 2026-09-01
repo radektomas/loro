@@ -4,6 +4,12 @@ import type { Video } from '@loro/core/types';
  * THE TASTE REEL — the three clips shown at the end of onboarding, immediately
  * before the paywall.
  *
+ * ⚠️ CURRENTLY BENCHED: steps.tsx TASTE_BENCHED keeps this step out of the
+ * flow as of 2026-09-01 — the full why lives on that constant. The script
+ * below stays maintained (guard tests still run against the catalog) so the
+ * step can return, interactive or as recorded footage, without re-deriving
+ * every number.
+ *
  * WHY THIS EXISTS. Until this step, nobody had watched a second of Spanish
  * before being asked to subscribe. The whole pitch is "real people talking, at
  * real speed, with real accents", and onboarding only ever DESCRIBED it. This
@@ -78,15 +84,27 @@ export const TASTE_REEL: readonly string[] = [
  * the measured fact behind [[loro-update-1]]'s note that 67% of surfaces occur
  * in exactly one video.
  *
- * `como` wins on timing, which is what decides it:
+ * `que` holds the slot (2026-09-01; it was `como` before). `como` won on
+ * timing alone, but Radek watched people MISS its blank: como's only early
+ * clip-2 occurrence is its cue's FIRST word, so the line rendered and froze
+ * almost in one motion with the gap hard against the left edge. The beat
+ * needs the gap to be SEEN inside a sentence — words filling in around a
+ * hole, then the freeze landing on it. In the very same cue, `que` sits at
+ * word 6 of 8:
  *
- *   clip 1  cue 2 [4.6-5.9s], "como" spoken at 5.5s — lands exactly where the
- *           "watch for a few seconds first" beat wants it.
- *   clip 2  cue 2 [7.0-9.5s], "como" is the cue's FIRST word at 7.0s — so the
- *           blank arrives seven seconds after the scroll rather than forty.
+ *   clip 1  cue 1 [2.04-4.62s], "que" spoken at 4.20-4.38s — one occurrence
+ *           in the whole clip, so ONE hold, and it is the final one (14s).
+ *   clip 2  cue 2 [7.04-9.48s], "…como por dentro de granada y QUE se ve" —
+ *           the gap renders at 7.04s with six words lighting up ahead of it,
+ *           and the freeze lands at 9.08s. Two seconds of anticipation.
  *
- * Both clips gloss it identically ("like"), which matters: the sheet the user
- * saves from and the blank they fill have to agree.
+ * The blank's cue is ENFORCED, not derived: que's true first occurrence in
+ * clip 2 is cue 0 at 0.24s — before the clip even opens — so the fill beat
+ * pins the cue via focusCueIndex (fill.expectedCueIndex, which used to be a
+ * recorded fact and is now the instruction).
+ *
+ * Both clips gloss it identically ("that"), which matters: the sheet the
+ * user saves from and the blank they fill have to agree.
  *
  * IF YOU SWAP A CLIP, RE-DERIVE THIS. `npm run taste-candidates` ranks the
  * pool; the intersection has to be checked by hand. A word with no occurrence
@@ -122,57 +140,61 @@ export const WALKTHROUGH = {
    * The word the whole script hangs on. Must be spoken in BOTH the first and
    * the second clip of TASTE_REEL, and be in both their dictionaries.
    */
-  word: 'como',
+  word: 'que',
 
   /**
    * Clip 1: where to stop the video and ask for the tap.
    *
-   * SEVERAL HOLDS, NOT ONE, because the word is said three times and missing it
-   * used to mean missing the whole beat. The first is the one to aim for — it
-   * comes early, while the user is still watching rather than deciding — and
-   * each later one is a second chance at the same word if the tap does not
-   * come. The clip plays on between them, so a user who is simply watching sees
-   * a video that keeps going rather than one that is stuck.
+   * ONE HOLD, because "que" is spoken exactly once in this clip. The chain of
+   * second chances that `como` had (three occurrences, three holds) does not
+   * exist for this word, so the single hold IS the final hold — and the
+   * final hold WAITS. It used to release itself after 14s, and that timer
+   * cost real runs (2026-09-01, on device): slow readers, and anyone who
+   * opened the sheet and closed it without saving, got the clip back and
+   * sailed past the beat. Now the ring stays until the word is saved; the
+   * escapes are the swipe and the Continue bar, both live throughout, and a
+   * declined tap is caught by clip 2's blue fallback blank.
    *
-   * Each `holdAt` is just past its occurrence's END, so the word has been HEARD
+   * `holdAt` is just past the occurrence's END, so the word has been HEARD
    * before it is pointed at, and inside its own cue, so the karaoke line does
    * not move on underneath the ring. Measured, not chosen:
    *
-   *   cue 1 [2.04-4.62]  "como" 2.76 → 3.00   hold 3.1
-   *   cue 2 [4.62-5.94]  "como" 5.46 → 5.58   hold 5.7
-   *   cue 3 [5.94-9.00]  "como" 5.94 → 6.48   hold 6.6
+   *   cue 1 [2.04-4.62]  "que" 4.20 → 4.38   hold 4.5
    *
-   * The guard test checks every one of them against the catalog.
+   * The guard test checks it against the catalog.
    */
   tap: {
     /** Index into TASTE_REEL. */
     clip: 0,
-    holds: [
-      { cueIndex: 1, holdAt: 3.1 },
-      { cueIndex: 2, holdAt: 5.7 },
-      { cueIndex: 3, holdAt: 6.6 },
-    ],
+    holds: [{ cueIndex: 1, holdAt: 4.5 }],
   },
 
-  /** Clip 2: the blank is planned by core; this is only what it is asked for. */
+  /** Clip 2: the blank is core's, but WHERE it lands is the script's. */
   fill: {
     clip: 1,
-    /** Where core will place it, recorded so a clip swap fails loudly in dev. */
+    /**
+     * The cue the blank is PINNED to, via RecallHost's focusCueIndex — an
+     * instruction now, not a recorded prediction. locateAsked places an
+     * asked-for word at its earliest audible cue, and que's earliest is cue
+     * 0 at 0.24s, before this clip even opens; cue 2 is where it sits
+     * mid-sentence ("…y QUE se ve"), which is the whole reason it was
+     * chosen — see "the shared word" above.
+     */
     expectedCueIndex: 2,
     /**
      * OPEN THIS CLIP PART-WAY IN, a couple of seconds before the word.
      *
-     * The blank lands at 7.0s, which is a long time to sit through when you
-     * have just been told a specific thing is about to happen — the wait reads
-     * as the app having forgotten. Starting at 5s keeps a beat of real speech
-     * for context (cue 1 runs to 7.0s) and then the gap arrives.
+     * The gap renders when its cue does, at 7.04s, and the freeze lands at
+     * 9.08s. Starting at 6.5s gives half a beat of real speech for context,
+     * then the line with the hole in it, then two seconds of words lighting
+     * up on their way to the freeze.
      *
-     * This is the same lever a targeted review from the Words tab already uses:
-     * loadVideoById takes a start time, so the clip OPENS here rather than
-     * seeking after the fact. It must stay inside the clip and before the word,
-     * which the guard test checks.
+     * This is the same lever a targeted review from the Words tab already
+     * uses: loadVideoById takes a start time, so the clip OPENS here rather
+     * than seeking after the fact. It must stay inside the clip and before
+     * the word, which the guard test checks.
      */
-    startAt: 5,
+    startAt: 6.5,
   },
 
   /**
@@ -185,28 +207,41 @@ export const WALKTHROUGH = {
    */
   last: {
     /**
+     * THE BLANK IS SCRIPTED, not planned, and it sits on the SECOND "mi".
+     *
+     * The clip starts from 0:00 and the opening line hands out the answer —
+     * "Te voy a enseñar a hacer MI peinado siempre", the word spoken plainly
+     * at 0.80s. Then the clip PLAYS: the flexstyle line, and into cue 2,
+     * "empiezo seccionando MI cabello…", where the same word (2 of 8, inside
+     * the line) freezes the video at 5.36–5.56s.
+     *
+     * The first "mi" held this slot for a morning and taught the lesson the
+     * hard way (2026-09-01, Radek on device): a blank 0.96s in freezes the
+     * clip before it has visibly begun — it read as "starts ON the blank"
+     * rather than "gets to the blank". Five seconds of real playback first
+     * is what makes the freeze an event; that the answer was literally
+     * spoken in the opening line is what keeps it a guaranteed win.
+     *
+     * Scripted because the beat needs exactly THIS word — the one the
+     * opening line just gave away — and the planner chooses by frequency
+     * band, not by narrative. buildScriptedLevelBlank resolves it.
+     */
+    blank: { cueIndex: 2, text: 'mi' },
+    /**
      * How much of the last clip must PLAY before the closing card comes up.
      * Playback, not wall clock: the accumulator only advances while the
-     * player reports playing, so the blue blank's hold suspends it — the
-     * user can sit on the answer as long as they like without the card
-     * racing them.
+     * player reports playing, so the blank's hold suspends it — the user
+     * can sit on the answer as long as they like without the card racing
+     * them.
      *
-     * THE BLUE BLANK IS BACK, AND EARLY (2026-08-31, second revision of the
-     * day; the first cut it entirely for a 4s card). The revised call: the
-     * user should TRY a level blank before the wall, not just watch — so the
-     * blank now comes as early as core allows (no floor; MIN_CUE_INDEX
-     * refusing the first two cues puts it at ~5.6s at level 1 on this clip),
-     * and the card follows ~3 seconds of playback AFTER it resolves, right
-     * or wrong. 8_600 = that 5.56s pause point + a 3s tail; the guard test
-     * in scripts/taste-walkthrough.test.mts pins the pair together.
-     *
-     * The gloss in the empty slot is what makes an early blank fair: the
-     * word's meaning is the prompt, so the ask is visible the moment the
-     * video stops. And every degradation still lands somewhere sane — if the
-     * planner yields nothing, the clip simply plays 8.6s and the card comes
-     * up on its own.
+     * 7_500 = the 5.56s freeze on the cue-2 "mi" plus ~2 seconds of tail
+     * after the answer, right or wrong — the beat: the giveaway line, four
+     * more seconds of video, the freeze, the fill, a breath of speech,
+     * Empezar. The guard test pins the freeze point and the tail together.
+     * If the scripted blank fails to resolve (moved cue, lost gloss), the
+     * clip simply plays 7.5s and the card comes up on its own.
      */
-    outroAfterPlayedMs: 8_600,
+    outroAfterPlayedMs: 7_500,
   },
 
   /**

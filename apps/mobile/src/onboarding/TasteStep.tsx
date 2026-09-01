@@ -69,10 +69,12 @@ import type { StepProps } from './steps';
  * This screen is the last thing before a paywall, so a dead end here is a lost
  * sale rather than a bug report. Every beat is best-effort and every one of
  * them can be walked away from: the Continue bar is live from the first frame
- * to the last, the hold releases itself if the tap never comes, an unscripted
- * tap still opens the normal save sheet, and a clip the catalog does not have
- * removes the whole step from the flow. If the script fails silently the user
- * gets three videos to swipe, which is the version that shipped before it.
+ * to the last, the swipe is never blocked (a hold that goes untapped waits,
+ * but only the swipe releases it, and clip two then offers the same word as
+ * a blue fallback blank), an unscripted tap still opens the normal save
+ * sheet, and a clip the catalog does not have removes the whole step from
+ * the flow. If the script fails silently the user gets three videos to
+ * swipe, which is the version that shipped before it.
  *
  * -------------------------------------------------------- why it mounts LATE
  *
@@ -129,8 +131,12 @@ const SAVED_CARD_MS = 2600;
 const FILL_CARD_AT_MS = 600;
 const FILL_CARD_MS = 6000;
 /** How long after arriving on a clip the swipe hint appears, when nothing else
-    has raised it. Long enough that it never rushes the video. */
-const SCROLL_HINT_AFTER_MS = 9000;
+    has raised it. Was 9s; brought to 5s (2026-09-01) so the nudge lands about
+    as each clip's beat completes instead of after seconds of dead air — the
+    reel should lead, and this was its one silent stretch. Still long enough
+    not to rush the beat itself: it never shows over a card (hint is
+    suppressed while one is up) and clip 1's tap usually lands before it. */
+const SCROLL_HINT_AFTER_MS = 5000;
 /**
  * How much of the LAST clip must PLAY before the closing card comes up by
  * itself. Playback, not wall clock, and the difference is the whole point.
@@ -148,6 +154,10 @@ const SCROLL_HINT_AFTER_MS = 9000;
 const OUTRO_AFTER_PLAYED_MS = WALKTHROUGH.last.outroAfterPlayedMs;
 /** How often the outro's playback accumulator ticks. Coarse like the hold's. */
 const OUTRO_TICK_MS = 200;
+/** How long the fill clip keeps playing after its blank is answered before
+    the full stop — the same breath the last clip's outro gives, and for the
+    same reason: the answer should land on speech, not on a freeze. */
+const FILL_STOP_AFTER_MS = 2000;
 
 /**
  * How long a NON-FINAL hold waits before letting the clip play on to the next
@@ -155,19 +165,12 @@ const OUTRO_TICK_MS = 200;
  * short enough that a user who is just watching does not feel stuck.
  */
 const HOLD_RETRY_MS = 5000;
-/**
- * The last hold's escape hatch. If the coached tap never comes, the clip
- * resumes by itself rather than sitting frozen behind a card the user has
- * decided to ignore — a paused video with an instruction on it is the most
- * trapping thing this screen could do.
- */
-const HOLD_RELEASE_MS = 14_000;
 /** How often the hold checks the clock. Coarse on purpose: this is one
     scripted pause, not a subtitle track, and it runs on the JS thread. */
 const HOLD_TICK_MS = 120;
 
 
-type Card = null | 'tap' | 'saved' | 'fill';
+type Card = null | 'sound' | 'tap' | 'saved' | 'fill';
 
 export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
   const insets = useSafeAreaInsets();
@@ -250,6 +253,12 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
   const [slide, setSlide] = useState(0);
   const [card, setCard] = useState<Card>(null);
   const [hintVisible, setHintVisible] = useState(false);
+  /** The full-stop rendering of the hint: video paused, swipe is the only
+      move. Weak timed hints never set this. */
+  const [hintStrong, setHintStrong] = useState(false);
+  /** Clip two's blank has been answered (right or wrong) — arms the full
+      stop below. */
+  const [fillDone, setFillDone] = useState(false);
   const [outroOpen, setOutroOpen] = useState(false);
   /** The word actually saved, which is what clip two is asked for. Null until
       the tap happens, and NOT necessarily WALKTHROUGH.word — see onWordTap. */
@@ -316,22 +325,29 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
           `for "${WALKTHROUGH.word}" (hold ${holdIndex + 1}/${WALKTHROUGH.tap.holds.length})`
       );
 
-      release = setTimeout(
-        () => {
+      /**
+       * THE FINAL HOLD DOES NOT GIVE UP (2026-09-01, Radek on device). It
+       * used to release itself after 14s, and the release was doing real
+       * damage: a user who was slow, or who opened the sheet and closed it
+       * without saving, got the clip back and sailed past the beat — "the
+       * video continues and the word is not there, that cannot happen". So
+       * the ring and the card now wait. This is still not a trap, because
+       * the escapes were never the timer: the swipe and the Continue bar
+       * stay live the whole time, and a user who declines the tap meets
+       * the same word as a blue blank on the next clip (the fallback in
+       * the walkthrough config). Only a NON-final hold self-releases, to
+       * carry the user to the word's next occurrence.
+       */
+      if (!isFinal) {
+        release = setTimeout(() => {
           if (!heldRef.current) return;
           heldRef.current = false;
           setHeld(false);
           api.play();
-          if (isFinal) {
-            setCard(null);
-            olog('walkthrough: last hold released, no tap');
-          } else {
-            setHoldIndex((n) => n + 1);
-            olog('walkthrough: hold released, waiting for the next "como"');
-          }
-        },
-        isFinal ? HOLD_RELEASE_MS : HOLD_RETRY_MS
-      );
+          setHoldIndex((n) => n + 1);
+          olog('walkthrough: hold released, waiting for the next occurrence');
+        }, HOLD_RETRY_MS);
+      }
     }, HOLD_TICK_MS);
 
     return () => {
@@ -350,6 +366,40 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
     clock,
     status.loadedVideoId,
   ]);
+
+  /**
+   * THE TAP HOLD IS A CLAMP TOO, for the same WordSheet reason as the full
+   * stop below. Tapping the ringed word opens the real sheet, and the sheet
+   * resumes playback when it closes — right for the feed, and on this
+   * screen it meant a user who tapped and then dismissed WITHOUT saving got
+   * the clip back: the line moved on, the ring scrolled away, and clip two
+   * had nothing to ask (Radek on device, 2026-09-01: "the video continues
+   * and the word is not there, that cannot happen"). While the hold is
+   * engaged, any playing report gets paused again — the ring stays put and
+   * the paths forward are the scripted ones: save the word, or swipe on and
+   * meet it as the blue fallback.
+   */
+  useEffect(() => {
+    if (!isCurrent || !onTapClip || !held) return;
+    if (status.playing) api.pause();
+  }, [isCurrent, onTapClip, held, status.playing, api]);
+
+  /**
+   * THE SOUND NUDGE — the reel's opening card, up before any beat starts.
+   *
+   * The player autoplays muted (WebKit allows nothing else without a
+   * gesture), and the FIRST tap anywhere on the video is wired to be the
+   * unmute (FeedScreen's gesture surface), with the band's 🔇 pill pulsing
+   * as the fallback. Real Spanish with the sound off is half the pitch, so
+   * the reel says so instead of hoping the pill gets noticed. The card only
+   * ever fills an EMPTY slot — every scripted beat outranks it — and clears
+   * itself the moment sound is on.
+   */
+  useEffect(() => {
+    const wanted =
+      isCurrent && armed && onTapClip && status.muted && !held && savedWord === null;
+    setCard((c) => (wanted ? (c ?? 'sound') : c === 'sound' ? null : c));
+  }, [isCurrent, armed, onTapClip, status.muted, held, savedWord]);
 
   /**
    * The save landed — through the REAL sheet, with its gloss and its Save
@@ -384,16 +434,36 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
     [tapPending]
   );
 
-  /** The saved card holds the clip a moment longer, then plays on. */
+  /**
+   * The saved card holds the clip, and then the clip STAYS held — the full
+   * stop. It used to play on here, and Radek watched people not know the
+   * beat was over: a resumed video reads as "keep watching", when the only
+   * move left is the swipe. So the card clears into a paused frame and the
+   * emphatic hint, and the swipe itself is what starts the next clip.
+   */
   useEffect(() => {
     if (card !== 'saved') return;
     const id = setTimeout(() => {
       setCard(null);
       setHintVisible(true);
-      api.play();
+      setHintStrong(true);
     }, SAVED_CARD_MS);
     return () => clearTimeout(id);
-  }, [card, api]);
+  }, [card]);
+
+  /**
+   * THE FULL STOP IS A CLAMP, NOT A SINGLE PAUSE. WordSheet resumes playback
+   * when it closes (WordSheet.tsx — right for the feed, where the sheet was
+   * the interruption), and on this screen that resume can land before OR
+   * after the moment the stop begins, depending on how long the user reads
+   * the sheet. So while the emphatic hint is up, any playing report gets
+   * paused again — the swipe to the next clip is what ends the clamp, via
+   * onSlideChange clearing hintStrong.
+   */
+  useEffect(() => {
+    if (!isCurrent || !hintStrong || outroOpen) return;
+    if (status.playing) api.pause();
+  }, [isCurrent, hintStrong, outroOpen, status.playing, api]);
 
   /** Clip two: name the blank as it arrives, then get out of the way. */
   useEffect(() => {
@@ -418,9 +488,46 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
   }, [isCurrent, armed, slide, reel.length]);
 
   const onSlideChange = useCallback((index: number) => {
+    slideRef.current = index;
     setSlide(index);
     setCard(null);
+    // A full stop belongs to the slide that earned it; the next clip starts
+    // with the whisper-weight hint rules.
+    setHintStrong(false);
+    // Swiping away mid-hold is the hold's one release now (see the tap
+    // clamp above): declining the tap is allowed, clamping a clip that has
+    // left the screen is not. Swiping BACK re-engages it immediately — the
+    // clock is already past holdAt — which is the strictness working.
+    heldRef.current = false;
+    setHeld(false);
   }, []);
+  const slideRef = useRef(0);
+
+  /**
+   * Clip two's full stop. The answer lands, the clip gets a two-second
+   * breath of speech (RecallHost has already resumed it), and then it
+   * freezes under the emphatic hint — the same rhythm the last clip's outro
+   * keeps, and for the same reason: a video that just keeps playing after
+   * the beat reads as "keep watching" when the only move left is the swipe.
+   *
+   * EITHER KIND counts on this clip: the promised green blank when the tap
+   * was made, or the blue fallback when it was not (see scriptedLevelBlank
+   * below). Only one of the two can exist on the clip, so no kind check.
+   */
+  const onBlankResolved = useCallback<
+    NonNullable<FeedWalkthrough['onBlankResolved']>
+  >(() => {
+    if (slideRef.current === WALKTHROUGH.fill.clip) setFillDone(true);
+  }, []);
+  useEffect(() => {
+    if (!isCurrent || !fillDone || slide !== WALKTHROUGH.fill.clip) return;
+    const id = setTimeout(() => {
+      api.pause();
+      setHintVisible(true);
+      setHintStrong(true);
+    }, FILL_STOP_AFTER_MS);
+    return () => clearTimeout(id);
+  }, [isCurrent, fillDone, slide, api]);
 
   const openOutro = useCallback(() => {
     setOutroOpen((open) => {
@@ -480,26 +587,29 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
         }
       : null,
     focusWord: slide === WALKTHROUGH.fill.clip ? savedWord : null,
+    /** The blank's cue is the script's call, not locateAsked's: the coached
+        word is also in this clip's OPENING line, before startAt, and the
+        earliest-occurrence rule would put the gap where nobody is looking.
+        See WALKTHROUGH.fill.expectedCueIndex. */
+    focusCueIndex: WALKTHROUGH.fill.expectedCueIndex,
     /**
-     * Only on the clip whose blank was promised, and only when there is a word
-     * to promise. Opening a clip part-way in is a pacing fix for that one beat,
-     * not a house style: every other clip starts where its creator meant it to.
+     * Only on the fill clip, but with OR without the save now: the fallback
+     * blank (see scriptedLevelBlank) sits in the same cue, so the part-way
+     * open serves both paths. Opening a clip part-way in is a pacing fix for
+     * that one beat, not a house style: every other clip starts where its
+     * creator meant it to.
      */
-    startSeconds:
-      slide === WALKTHROUGH.fill.clip && savedWord
-        ? WALKTHROUGH.fill.startAt
-        : null,
+    startSeconds: slide === WALKTHROUGH.fill.clip ? WALKTHROUGH.fill.startAt : null,
     /**
-     * ONE BLUE BLANK, ON THE LAST CLIP ONLY.
+     * GREEN RECALL PLANNING ONLY ON THE CLIP THAT PROMISED A BLANK.
      *
-     * The coached clips keep them off: a blue gap is indistinguishable from the
-     * scripted one to someone seeing either for the first time, and core can
-     * place it anywhere, including ahead of the beat the script is building to.
-     * By the last clip the guided part is done, and a single blue gap is how
-     * the user finds out the level ladder exists — which is a different promise
-     * from the saved-word loop they have just been walked through, and the one
-     * thing about the product this reel would otherwise never mention.
+     * The SRS is device state, and a device that has seen the app before
+     * (or a user replaying onboarding) carries due words into the reel.
+     * Left on, core will happily freeze clip one on one of them mid-tap-beat
+     * or drop one behind the last clip's scripted blue. On a genuinely fresh
+     * install this changes nothing — nothing is saved yet.
      */
+    recallBlanks: slide === WALKTHROUGH.fill.clip,
     /**
      * WHAT the card says; the feed decides WHERE (WalkthroughCoach). The bar
      * below holds only the button now, so the bar's height never changes and
@@ -509,28 +619,48 @@ export function TasteStep({ next, finish, isCurrent, isLast }: StepProps) {
      */
     coach: card ? { kind: card, ...TASTE[card] } : null,
     hint: hintVisible && !card,
+    hintEmphatic: hintStrong,
     hintText: TASTE.scrollHint,
     /**
-     * ONE BLUE BLANK, EARLY, ON THE LAST CLIP ONLY — the try-it beat. No
-     * minLevelBlankAtS floor ON PURPOSE: undefined lets the planner take its
-     * earliest candidate (~5.6s at level 1; core's MIN_CUE_INDEX already
-     * keeps it out of the opening two cues), because this blank exists to be
-     * ATTEMPTED before the wall, not admired from a distance. The closing
-     * card waits for it and follows ~3s after — see WALKTHROUGH.last.
+     * BLUE BLANKS ARE SCRIPTED, NEVER PLANNED, AND APPEAR IN TWO PLACES:
+     *
+     *   - The last clip, always: the try-it beat — exactly "mi" at cue 2
+     *     (see WALKTHROUGH.last.blank), the word the opening line handed
+     *     out at 0.8s, asked back at ~5.6s. The one mention in the whole
+     *     flow that the level ladder exists. The closing card waits for it
+     *     and follows ~2s after.
+     *   - The fill clip, ONLY when the tap never came. A missed tap used to
+     *     mean the promise clip showed no blank at all — the beat the reel
+     *     exists for silently skipped, and the user arrived at the wall
+     *     having filled nothing. Now the same word lands in the same cue as
+     *     a blue try-it blank instead: green when they tapped, blue when
+     *     they did not, never nothing. (The fill coach card still needs the
+     *     save — its copy says "there it is", a promise this path never
+     *     made — so the fallback blank announces itself, which is exactly
+     *     how the real feed's blanks behave.)
      */
-    levelBlanks: reel.length > 0 && slide === reel.length - 1,
+    levelBlanks:
+      (reel.length > 0 && slide === reel.length - 1) ||
+      (slide === WALKTHROUGH.fill.clip && !savedWord),
     maxLevelBlanks: 1,
+    scriptedLevelBlank:
+      slide === WALKTHROUGH.fill.clip && !savedWord
+        ? { cueIndex: WALKTHROUGH.fill.expectedCueIndex, text: WALKTHROUGH.word }
+        : reel.length > 0 && slide === reel.length - 1
+          ? WALKTHROUGH.last.blank
+          : null,
+    onBlankResolved,
     /**
-     * The word is SHOWN before it is asked. Without this, the gap is drawn
-     * the moment its line renders (~4.2s in, barely after the clip starts),
-     * which reads as "straight to the blank" — the clip never gets watched.
-     * With it, the line plays as a normal subtitle, the word lands spoken
-     * and highlighted, and only the freeze turns it into the gap: a few
-     * clean seconds of video, then an ask the user just saw the answer to.
-     * A guaranteed win is the point of this beat — see RecallHost for why
-     * the real feed must never do this.
+     * Blanks render the way the real feed renders them: the gap is drawn
+     * from the moment its line appears, words light up on their way toward
+     * it, the audio speaks the word INTO it, and the freeze lands on it.
+     * The giveaway mode (revealBlanksUntilHeld) had one morning of service
+     * hiding the old 0.96s "mi" gap; both scripted blanks now sit mid-line
+     * with real lead-ins, and a visible gap coming closer IS the
+     * demonstration — "so the user actually sees the blank space" (Radek,
+     * 2026-09-01). The seam stays in RecallHost for the next beat that
+     * wants the opposite trade.
      */
-    revealBlanksUntilHeld: true,
     onWordSaved,
     onSlideChange,
     onPastEnd,

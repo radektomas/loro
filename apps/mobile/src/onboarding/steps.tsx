@@ -5,12 +5,14 @@ import Animated, {
   Easing,
   Extrapolation,
   interpolate,
+  interpolateColor,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
+  withSequence,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -340,26 +342,14 @@ function GridStep({ state, update, next }: StepProps) {
       <Title>{GRID.title}</Title>
       <Body>{GRID.body}</Body>
       <View style={styles.grid}>
-        {CALIBRATION_WORDS.map((word) => {
-          const on = state.known.has(word.text);
-          return (
-            <Pressable
-              key={word.text}
-              onPress={() => toggle(word.text)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: on }}
-              style={({ pressed }) => [
-                styles.chip,
-                on && styles.chipOn,
-                pressed && styles.chipPressed,
-              ]}
-            >
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>
-                {word.text}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {CALIBRATION_WORDS.map((word) => (
+          <WordChip
+            key={word.text}
+            text={word.text}
+            on={state.known.has(word.text)}
+            onToggle={() => toggle(word.text)}
+          />
+        ))}
       </View>
       {/*
         NO "I'M ACTUALLY STARTING FROM ZERO" ESCAPE HATCH, and that is a
@@ -372,6 +362,72 @@ function GridStep({ state, update, next }: StepProps) {
         with the deck; see the seam in SelfLevelStep.
       */}
     </Screen>
+  );
+}
+
+/**
+ * One tappable word of the calibration grid. Its own component because
+ * selection is ANIMATED per chip, and fifteen chips inside GridStep's render
+ * would mean fifteen hooks in a loop.
+ *
+ * THE GEOMETRY NEVER CHANGES, and holding that line is the reason this
+ * component exists (2026-09-01, Radek on device: tapping "imprescindible"
+ * made the grid "glitch into another position"). The old selected style
+ * bumped the font weight 600 -> 700; a bolder run of a long word is a few
+ * points wider, the chip is content-sized, and the flex-wrap grid reflowed
+ * every chip after it — the tap looked like it shuffled the deck. Selection
+ * may only touch PAINT (background, text colour) and TRANSFORM (the pop),
+ * because neither reflows layout. Do not add borders, weight changes, icons
+ * or padding to the selected state; any of them brings the jank back.
+ *
+ * The pop is transform-only for the same reason: the chip briefly overlaps
+ * its neighbours instead of pushing them. Reduce Motion collapses both
+ * animations to an instant colour change.
+ */
+function WordChip({
+  text,
+  on,
+  onToggle,
+}: {
+  text: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  /** 0 unselected -> 1 selected; one clock drives both colours so they can
+      never crossfade out of step. */
+  const sel = useSharedValue(on ? 1 : 0);
+  const pop = useSharedValue(1);
+
+  useEffect(() => {
+    sel.value = withTiming(on ? 1 : 0, { duration: reduceMotion ? 0 : 160 });
+    if (on && !reduceMotion) {
+      pop.value = withSequence(
+        withTiming(1.045, { duration: 110, easing: Easing.out(Easing.ease) }),
+        withTiming(1, { duration: 150, easing: Easing.inOut(Easing.ease) })
+      );
+    }
+  }, [on, reduceMotion, sel, pop]);
+
+  const box = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sel.value, [0, 1], ['#141a17', ACCENT]),
+    transform: [{ scale: pop.value }],
+  }));
+  const label = useAnimatedStyle(() => ({
+    color: interpolateColor(sel.value, [0, 1], [TEXT, ON_ACCENT]),
+  }));
+
+  return (
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: on }}
+      style={({ pressed }) => pressed && styles.chipPressed}
+    >
+      <Animated.View style={[styles.chip, box]}>
+        <Animated.Text style={[styles.chipText, label]}>{text}</Animated.Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -1050,6 +1106,32 @@ export type StepDef = {
     (and until it lands, nothing does — see the seam in SelfLevelStep). */
 const zeroPath = (state: FlowState) => state.selfLevel === 'zero';
 
+/**
+ * THE TASTE REEL IS BENCHED (2026-09-01, owner's call) — this update ships
+ * onboarding WITHOUT it, ending at handoff exactly as the live App Store
+ * build does.
+ *
+ * Why, so the next reader does not re-argue it from scratch: three days of
+ * device runs kept finding new ways for a first-timer to fall off the
+ * scripted path (missed taps, dismissed sheets, stale-device blanks), and
+ * each fix raised the machinery's complexity another notch. The last round
+ * closed every known hole — the hold clamps, the missed tap falls back to a
+ * blue blank, every path ends with a blank filled — but the owner chose to
+ * ship the update without the step rather than bet the wall on it.
+ *
+ * The replacement idea on the table, a screen recording of the reel inside a
+ * phone mockup, is BLOCKED on rights: the clips are other creators' YouTube
+ * videos, playable only inside YouTube's embedded player, and bundling a
+ * recording of them redistributes their content — the one thing the embed
+ * architecture exists to never do. A recorded demo needs footage Loro
+ * actually holds rights to.
+ *
+ * Everything stays: TasteStep, taste.ts, the walkthrough seams in the feed,
+ * and the guard tests still run so the script's numbers stay true to the
+ * catalog. Flipping this back to false is the entire un-bench.
+ */
+const TASTE_BENCHED = true;
+
 export const STEPS: StepDef[] = [
   { id: 'hook', Component: HookStep },
   { id: 'motivation', Component: MotivationStep },
@@ -1124,7 +1206,10 @@ export const STEPS: StepDef[] = [
      * does not gets the flow as it was before this step existed, rather than a
      * screen apologising for itself.
      */
-    skip: () => !tasteAvailable(getCatalog()),
+    /** BENCHED first (see TASTE_BENCHED above), catalog-gated second. The
+        short-circuit keeps tasteAvailable un-called while benched, so the
+        reel-resolution logs stay quiet in a flow that will not show it. */
+    skip: () => TASTE_BENCHED || !tasteAvailable(getCatalog()),
   },
   { id: 'paywall', Component: PaywallStep, skip: () => !PAYWALL_ENABLED },
 ];
@@ -1152,10 +1237,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 11,
   },
-  chipOn: { backgroundColor: ACCENT },
   chipPressed: { opacity: 0.7 },
+  /** ONE weight for both states — see WordChip: a selected chip that gets
+      bolder gets WIDER, and the flex-wrap grid reflows around it. The
+      selected colours live in WordChip's animated styles, not here. */
   chipText: { color: TEXT, fontSize: 17, fontWeight: '600' },
-  chipTextOn: { color: '#06130d', fontWeight: '700' },
   resultBlock: { alignItems: 'center' },
   kicker: {
     color: 'rgba(242,245,243,0.5)',

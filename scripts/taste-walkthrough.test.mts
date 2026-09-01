@@ -13,6 +13,11 @@
  *
  * So the loud failure lives here instead. If someone changes TASTE_REEL and the
  * shared word stops being shared, this test names the problem.
+ *
+ * THE STEP IS CURRENTLY BENCHED (steps.tsx TASTE_BENCHED, 2026-09-01) but
+ * these tests keep running on purpose: the script is maintained for its
+ * return, and numbers that rot silently while benched would make un-benching
+ * a debugging session instead of a flag flip.
  */
 
 import { readFileSync } from 'node:fs';
@@ -20,7 +25,6 @@ import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT } from './lib/env.mts';
-import { computeLevelBlankPlan } from '../packages/core/src/levels.ts';
 import { TASTE_REEL, WALKTHROUGH } from '../apps/mobile/src/onboarding/taste.ts';
 
 type Word = { text: string; start: number; end: number };
@@ -119,38 +123,51 @@ test('every hold point sits on the word, inside its own cue', () => {
   );
 });
 
-test('the coached word comes back in the fill clip', () => {
+test('the coached word comes back in the fill clip, mid-sentence', () => {
   const clip = byId.get(TASTE_REEL[WALKTHROUGH.fill.clip]);
   assert.ok(clip, 'the fill clip is missing');
 
-  const hits = occurrences(clip, WALKTHROUGH.word);
+  // The cue is PINNED (TasteStep passes fill.expectedCueIndex as
+  // focusCueIndex), not derived from earliest occurrence — que's earliest is
+  // this clip's opening line, before startAt, where nobody is looking. So
+  // what must hold is that the pinned cue actually speaks the word.
+  const cue = clip.cues[WALKTHROUGH.fill.expectedCueIndex];
+  assert.ok(cue, `${clip.id} has no cue ${WALKTHROUGH.fill.expectedCueIndex}`);
+  const wordIndex = cue.words.findIndex((w) => flat(w.text) === flat(WALKTHROUGH.word));
   assert.ok(
-    hits.length > 0,
-    `"${WALKTHROUGH.word}" is never spoken in ${clip.id} — the promise made in ` +
-      'clip one ("it comes back as a blank") would be broken by the next screen'
+    wordIndex >= 0,
+    `"${WALKTHROUGH.word}" is not in cue ${WALKTHROUGH.fill.expectedCueIndex} of ` +
+      `${clip.id} — the pinned blank would fall back to core's placement, before startAt`
   );
 
-  // core places the asked-for word at its EARLIEST audible cue (srs.ts
-  // locateAsked), so that is the cue the blank will land on.
-  const earliest = Math.min(...hits.map((h) => h.cueIndex));
-  assert.equal(
-    earliest,
-    WALKTHROUGH.fill.expectedCueIndex,
-    `core will blank "${WALKTHROUGH.word}" at cue ${earliest} of ${clip.id}, ` +
-      `but the script records ${WALKTHROUGH.fill.expectedCueIndex}`
+  // MID-SENTENCE, which is the visibility fix this pin exists for (Radek on
+  // device, 2026-09-01): a line-initial gap renders and freezes in one
+  // motion; a mid-line gap is seen with words lighting up around it.
+  assert.ok(
+    wordIndex > 0 && wordIndex < cue.words.length - 1,
+    `"${WALKTHROUGH.word}" is word ${wordIndex} of ${cue.words.length - 1} in its ` +
+      'cue — the blank must sit mid-sentence so the gap is visibly a gap'
   );
 
   // It has to arrive soon enough that nobody scrolls past it first.
-  const arrivesAt = clip.cues[earliest].start;
   assert.ok(
-    arrivesAt <= 20,
-    `the blank arrives ${arrivesAt.toFixed(1)}s into ${clip.id}, which is long ` +
+    cue.start <= 20,
+    `the blank arrives ${cue.start.toFixed(1)}s into ${clip.id}, which is long ` +
       'enough that most people will have swiped away before it appears'
   );
 
+  // An ENGLISH GLOSS, not just an entry: the saved-word path needs it for
+  // the sheet, and the missed-tap path needs it harder — when clip 1's tap
+  // never happened, this same word arrives in this same cue as a scripted
+  // BLUE blank (TasteStep's fallback), and buildScriptedLevelBlank refuses
+  // a word it cannot gloss. Either colour of the beat dies without it.
+  const fillGloss = (clip.dictionary ?? {})[dictKey(WALKTHROUGH.word)] as
+    | { glosses?: Record<string, string | null> }
+    | undefined;
   assert.ok(
-    clip.dictionary?.[dictKey(WALKTHROUGH.word)],
-    `${clip.id} has no dictionary entry for "${WALKTHROUGH.word}"`
+    fillGloss?.glosses?.en,
+    `"${WALKTHROUGH.word}" has no English gloss in ${clip.id}'s dictionary — ` +
+      'both the green blank and the blue fallback need one'
   );
 });
 
@@ -159,20 +176,22 @@ test('the fill clip opens just before the word, not at the start', () => {
   assert.ok(clip, 'the fill clip is missing');
   const startAt = WALKTHROUGH.fill.startAt;
 
-  const hits = occurrences(clip, WALKTHROUGH.word);
-  assert.ok(hits.length > 0, 'checked by the previous test');
-  const earliest = hits.reduce((a, b) => (a.cueIndex <= b.cueIndex ? a : b));
+  // The occurrence that matters is the PINNED one — see the previous test.
+  const pinned = occurrences(clip, WALKTHROUGH.word).find(
+    (h) => h.cueIndex === WALKTHROUGH.fill.expectedCueIndex
+  );
+  assert.ok(pinned, 'checked by the previous test');
 
   assert.ok(
-    startAt < earliest.start,
-    `startAt ${startAt}s is at or after "${WALKTHROUGH.word}" (${earliest.start}s), ` +
+    startAt < pinned.start,
+    `startAt ${startAt}s is at or after "${WALKTHROUGH.word}" (${pinned.start}s), ` +
       'so the clip would open past the word it exists to lead into'
   );
 
   // Close enough to be a lead-in rather than a wait. Anything longer and the
   // user is watching an unexplained clip; anything shorter and the blank is on
   // screen before they have settled.
-  const leadIn = earliest.start - startAt;
+  const leadIn = pinned.start - startAt;
   assert.ok(
     leadIn >= 1 && leadIn <= 6,
     `the lead-in is ${leadIn.toFixed(1)}s, which is outside the 1-6s the beat wants`
@@ -191,71 +210,105 @@ test('the tap clip and the fill clip are different videos', () => {
 });
 
 /**
- * THE EARLY BLUE BLANK, AND THE CARD THAT ARRIVES THREE SECONDS AFTER IT.
+ * THE SCRIPTED BLUE BLANK, AND THE CARD BEHIND IT.
  *
- * 2026-08-31, twice revised: the blank was first retired for a 4s card, then
- * brought back EARLY — the last clip's job is now to have the user TRY a
- * level blank before the wall, with the closing card following ~3 seconds of
- * playback after it resolves. Two numbers make that beat, and neither is
- * checked at runtime: the planner's earliest candidate (a property of the
- * clip data — a clip swap moves it silently) and
- * WALKTHROUGH.last.outroAfterPlayedMs, which must sit a small tail past it.
- * Too early a card covers the blank; too late and "3 seconds after" quietly
- * becomes ten.
+ * 2026-09-01, round two: the last clip's blank is scripted, not planned —
+ * exactly "mi", now at cue 2 (WALKTHROUGH.last.blank). The beat: the clip
+ * starts from 0:00, the OPENING line hands out the answer ("…a hacer MI
+ * peinado siempre"), two lines play, and the freeze lands on the second
+ * "mi" mid-line at ~5.6s. The first "mi" (cue 0, a 0.96s freeze) held the
+ * slot for one morning and read on device as "starts ON the blank" — a
+ * clip that never visibly played.
  *
- * LEVEL 1 IS THE CASE THAT MATTERS. It is what every fresh device carries,
- * and a device reaching onboarding has by definition not climbed anywhere.
- * At higher levels the earliest candidate may land past the card — that
- * degrades to a clip that plays 8.6s and closes, which is acceptable and
- * not asserted against.
+ * The planner cannot be trusted with any of this (it chooses by frequency
+ * band, not by which word the opening line just gave away), which is why
+ * it is scripted, and why nothing checks it at runtime:
+ * buildScriptedLevelBlank returns null on any miss and the reel silently
+ * degrades to a clip that plays 7.5s and closes. A clip swap, a
+ * re-transcription that moves the word, or a dictionary regeneration that
+ * drops the gloss would all delete the beat without a sound. Hence this.
  */
-test('the last clip blanks early, and the closing card follows ~3s behind', () => {
+test('the scripted "mi" blank waits mid-clip, after its giveaway line', () => {
   const clip = byId.get(TASTE_REEL[TASTE_REEL.length - 1]);
   assert.ok(clip, 'the last clip is missing');
-  const { outroAfterPlayedMs } = WALKTHROUGH.last;
+  const { blank, outroAfterPlayedMs } = WALKTHROUGH.last;
   const outroAtS = outroAfterPlayedMs / 1000;
 
-  /** recall.ts's CUE_START_PAD_S, mirrored so pauseAt matches the app's. */
+  /** recall.ts's pads, mirrored so pauseAt matches locateBlank exactly
+      (CUE_END_PAD_S keeps a last-word hold strictly inside its cue). */
   const CUE_START_PAD_S = 0.02;
+  const CUE_END_PAD_S = 0.12;
 
-  const planAt = (level: number) =>
-    [...computeLevelBlankPlan(clip as never, level, [], 'en', new Set()).entries()]
-      .map(([cueIndex, planned]) => {
-        // What RecallHost filters on: the moment the video actually STOPS.
-        // Same resolution as locateBlank — the first word in the cue matching
-        // the planned text, clamped inside the cue's display window.
-        const cue = clip.cues[cueIndex];
-        const word = cue.words.find((w) => flat(w.text) === flat(planned.text));
-        assert.ok(word, `cue ${cueIndex} does not contain "${planned.text}"`);
-        return {
-          cueIndex,
-          text: planned.text,
-          pauseAt: Math.min(cue.end, Math.max(word.end, cue.start + CUE_START_PAD_S)),
-        };
-      })
-      .sort((a, b) => a.pauseAt - b.pauseAt);
+  const cue = clip.cues[blank.cueIndex];
+  assert.ok(cue, `the last clip has no cue ${blank.cueIndex}`);
 
-  const candidates = planAt(1);
+  // The word must be there, audible, and glossable — the three conditions
+  // buildScriptedLevelBlank enforces, mirrored against the raw data.
+  const wordIndex = cue.words.findIndex((w) => flat(w.text) === flat(blank.text));
   assert.ok(
-    candidates.length > 0,
-    `level 1 plans no blue blank at all on ${clip.id}, so the try-it beat is gone`
+    wordIndex >= 0,
+    `cue ${blank.cueIndex} of ${clip.id} does not contain "${blank.text}" — ` +
+      'the scripted blank would silently resolve to nothing'
+  );
+  const word = cue.words[wordIndex];
+  assert.ok(
+    word.end - word.start > 0.05,
+    `"${blank.text}" has no audible span (${word.start}-${word.end}) — ` +
+      'a word never heard must not be blanked'
+  );
+  const gloss = (clip.dictionary ?? {})[flat(blank.text)] as
+    | { glosses?: Record<string, string | null> }
+    | undefined;
+  assert.ok(
+    gloss?.glosses?.en,
+    `"${blank.text}" has no English gloss in ${clip.id}'s dictionary — ` +
+      'the empty slot would have no prompt'
   );
 
-  const first = candidates[0];
-  // TasteStep passes no minLevelBlankAtS, so the planner's earliest candidate
-  // is the one the user meets. It must arrive while the card's timer still
-  // has room — i.e. this beat happens BEFORE the close, with a tail after it.
+  // MID-LINE, same rule as the fill clip's blank and the same device verdict
+  // behind it: the gap must be seen inside a sentence, words lighting up on
+  // their way toward it, not hugging an edge of the line.
   assert.ok(
-    first.pauseAt < outroAtS,
-    `the closing card comes up after ${outroAtS}s of playback but the level 1 ` +
-      `blank does not arrive until ${first.pauseAt.toFixed(2)}s, so the card ` +
-      'would cover the blank the reel exists to have the user try'
+    wordIndex > 0 && wordIndex < cue.words.length - 1,
+    `"${blank.text}" is word ${wordIndex} of ${cue.words.length - 1} in cue ` +
+      `${blank.cueIndex} — the blank must sit mid-sentence so the gap is visibly a gap`
   );
-  const tail = outroAtS - first.pauseAt;
+
+  // THE GIVEAWAY LINE: an earlier cue must speak the word first. The beat is
+  // "hear it handed out, then hand it back" — without the early occurrence
+  // this is just a quiz on a function word.
   assert.ok(
-    tail >= 2 && tail <= 4,
+    occurrences(clip, blank.text).some((h) => h.cueIndex < blank.cueIndex),
+    `no cue before ${blank.cueIndex} speaks "${blank.text}" — the giveaway ` +
+      'line the beat is built on is gone'
+  );
+
+  // THE LEAD-IN. The clip starts from 0:00, so the freeze point alone decides
+  // whether the clip visibly PLAYS first. Under ~3s reads as "starts on the
+  // blank" (the 0.96s version did, verbatim device feedback); past ~10s the
+  // last clip before the paywall is dragging.
+  const holdCeiling = Math.max(cue.start + CUE_START_PAD_S, cue.end - CUE_END_PAD_S);
+  const pauseAt = Math.min(holdCeiling, Math.max(word.end, cue.start + CUE_START_PAD_S));
+  assert.ok(
+    pauseAt >= 3 && pauseAt <= 10,
+    `the scripted blank freezes at ${pauseAt.toFixed(2)}s — outside the 3-10s ` +
+      'window where the clip has visibly played but not dragged'
+  );
+
+  // The card's timer a small tail past the freeze: enough video after the
+  // answer that the reel ends on speech, not so much that "the card follows
+  // the answer" quietly becomes a wait.
+  assert.ok(
+    pauseAt < outroAtS,
+    `the closing card comes up after ${outroAtS}s of playback but the scripted ` +
+      `blank does not freeze until ${pauseAt.toFixed(2)}s — the card would ` +
+      'cover the blank the reel exists to have the user try'
+  );
+  const tail = outroAtS - pauseAt;
+  assert.ok(
+    tail >= 1.5 && tail <= 3,
     `the card follows the blank by ${tail.toFixed(2)}s of playback — the beat ` +
-      'is "about three seconds after the answer", so retune ' +
-      'outroAfterPlayedMs to the new pause point plus ~3s'
+      'is "about two seconds after the answer", so retune outroAfterPlayedMs ' +
+      'to the freeze point plus ~2s'
   );
 });
