@@ -129,7 +129,14 @@ export function RecallBar() {
           ref={inputRef}
           value={answer}
           onChangeText={setAnswer}
-          onSubmitEditing={submit}
+          // The event's own text is the native field's content AT the return
+          // key — pushed through setAnswer first so the grade reads the full
+          // word even when the final keystrokes' change events are still
+          // queued behind a busy JS thread (the first-word wrong-grade bug).
+          onSubmitEditing={(event) => {
+            setAnswer(event.nativeEvent.text);
+            submit();
+          }}
           // R7: false until the keyboard-in vs re-seat overlap is measured.
           // See AUTO_FOCUS_BLANK.
           autoFocus={AUTO_FOCUS_BLANK}
@@ -151,12 +158,18 @@ export function RecallBar() {
           }
           style={[styles.input, { borderBottomColor: accent }]}
         />
+        {/* ✓ and ✕ sit 8pt apart, and ✕ grades WRONG unconditionally — so
+            their hitSlops must not meet in the gap. A symmetric 6pt on both
+            overlapped by 4pt, and the later sibling (skip) won the overlap:
+            a tap a few points right of the check mark discarded a correctly
+            typed answer as wrong. The slop stays generous on every edge that
+            does not face the other button. */}
         <Pressable
           onPress={submit}
           disabled={!canSubmit}
           accessibilityRole="button"
           accessibilityLabel="Check answer"
-          hitSlop={6}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 2 }}
           style={({ pressed }) => [
             styles.check,
             { backgroundColor: accent },
@@ -170,7 +183,7 @@ export function RecallBar() {
           onPress={skip}
           accessibilityRole="button"
           accessibilityLabel="Skip and reveal"
-          hitSlop={6}
+          hitSlop={{ top: 6, bottom: 6, left: 2, right: 6 }}
           style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
         >
           <Text style={styles.skipText}>✕</Text>

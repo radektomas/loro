@@ -168,10 +168,19 @@ export function WordVideoPanel({
    * counted for less here than in the feed would be a different feature
    * wearing the same name.
    */
-  const submit = () => {
+  /**
+   * `typedNow` is the native field's text at the return key
+   * (nativeEvent.text) — under a busy JS thread the closed-over `answer`
+   * state can trail the final keystrokes, and grading that prefix marked a
+   * correctly typed word wrong (same hardening as the feed's RecallBar).
+   * Button presses pass nothing and use the state, which has settled by then.
+   */
+  const submit = (typedNow?: string) => {
     if (phase === 'graded') return;
     Keyboard.dismiss();
-    const match = gradeAnswer(answer, word);
+    const typed = typedNow ?? answer;
+    if (typedNow !== undefined && typedNow !== answer) setAnswer(typedNow);
+    const match = gradeAnswer(typed, word);
     const wasCorrect = match !== 'wrong';
     storage.gradeWord(word.text, word.videoId, wasCorrect);
     if (wasCorrect) {
@@ -319,7 +328,7 @@ export function WordVideoPanel({
               <TextInput
                 value={answer}
                 onChangeText={setAnswer}
-                onSubmitEditing={submit}
+                onSubmitEditing={(event) => submit(event.nativeEvent.text)}
                 autoFocus
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -331,7 +340,7 @@ export function WordVideoPanel({
                 style={styles.input}
               />
               <Pressable
-                onPress={submit}
+                onPress={() => submit()}
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.check, pressed && styles.pressed]}
               >
