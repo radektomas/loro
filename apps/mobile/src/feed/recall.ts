@@ -139,6 +139,35 @@ export const RESEAT_EPSILON_S = 0.05;
 export const CUE_START_PAD_S = 0.02;
 
 /**
+ * A LAST-WORD BLANK MUST HOLD STRICTLY INSIDE ITS CUE, and this is how far
+ * inside (2026-09-01, Radek on device: blank the final word of a line and
+ * the subtitles jump to the NEXT line, then the correct answer celebrates
+ * into a cue that never had the blank).
+ *
+ * The mechanics, because the fix looks like a magic number without them:
+ * for a final word, word.end IS cue.end, so the web's formula holds exactly
+ * on the boundary — and with contiguous cues that timestamp belongs to both
+ * lines. cueIndexAt checks bounds inclusively on BOTH ends and gives the
+ * HINT first claim (subtitles.ts), so the sequence is: the pause's bridge
+ * latency lets the extrapolated clock run past the boundary, the display
+ * flips to the next cue and the next cue becomes the hint, the re-seat
+ * clamp then drags the clock back to exactly cue.end — which still
+ * satisfies the next cue's `t >= start`, so the hint STICKS. The line with
+ * the gap in it never comes back; the blank, the reveal and the
+ * celebration all render inside the blank's own cue, so all three play to
+ * an empty room.
+ *
+ * 0.12s, not a hair: the re-seat declares convergence within
+ * RESEAT_EPSILON_S (0.05) of pauseAt, so the pad must leave the WHOLE
+ * convergence window strictly inside the cue — 0.12 keeps a converged
+ * clock at least 0.07s clear of the boundary. The cost is holding ~a tenth
+ * of a second before the final word's tail; the pause reaches the player
+ * hundreds of milliseconds late anyway (that is what the clamp exists
+ * for), so the word is always fully heard.
+ */
+export const CUE_END_PAD_S = 0.12;
+
+/**
  * Minimum gap between two bridge actions for the same hold.
  *
  * THE WEB DOES NOT NEED THIS AND WE DO. There, pause() is synchronous — the
@@ -233,7 +262,17 @@ export function buildRecallPlan(
   words: SavedWord[],
   now: number,
   /** The word a targeted review asked for — core places it first. */
-  first?: string | null
+  first?: string | null,
+  /**
+   * Pin the asked-for word's blank to THIS cue instead of the earliest one
+   * locateAsked found. The onboarding walkthrough needs it: its coached word
+   * is also spoken in the fill clip's opening line, before the clip even
+   * opens, so "earliest audible cue" lands the blank somewhere nobody will
+   * ever see. When the pin lands it becomes the WHOLE plan (see below).
+   * Best-effort like everything scripted — if the word is not in this cue,
+   * the plan keeps core's placement rather than losing the blank.
+   */
+  firstCueIndex?: number
 ): BlankEntry[] {
   const entries: BlankEntry[] = [];
   for (const [cueIndex, word] of computeBlankPlan(video, words, now, {
@@ -242,6 +281,46 @@ export function buildRecallPlan(
     const at = locateBlank(video.cues[cueIndex], word.text);
     if (!at) continue;
     entries.push({ kind: 'recall', cueIndex, word, ...at });
+  }
+
+  /**
+   * THE PIN, when a script names the cue — and the pin WINS THE WHOLE CLIP:
+   * the plan collapses to exactly one entry, the asked word at the pinned
+   * cue. Two device-measured lessons are folded into that (2026-09-01):
+   *
+   *   - The pin must EVICT, not yield. The first version kept whatever core
+   *     had already planned on the pinned cue, and on a device with stale
+   *     saved words core routinely puts one there ("como", saved in an
+   *     earlier test run, lands on the very cue "que" is pinned to). The
+   *     asked word then stayed at its earliest cue — BEFORE the
+   *     walkthrough's startAt — and no blank ever appeared at all.
+   *   - The rest of the plan goes with it. A scripted fill beat is ONE
+   *     blank; other due words freezing the clip seconds after the coached
+   *     answer would turn the beat into a quiz.
+   *
+   * Only the onboarding walkthrough passes firstCueIndex, so the real feed
+   * and the Words-tab targeted review (which passes only `first`) never
+   * take this branch. If the word cannot be located in the pinned cue, the
+   * full plan stands untouched — best-effort, like everything scripted.
+   */
+  if (first && firstCueIndex !== undefined) {
+    const key = normalizeAnswer(first);
+    const asked = entries.find((e) => normalizeAnswer(e.word.text) === key);
+    if (asked && asked.kind === 'recall') {
+      const at = locateBlank(video.cues[firstCueIndex], asked.word.text);
+      if (at) {
+        flog(
+          `focus "${first}" pinned to cue ${firstCueIndex}` +
+            (asked.cueIndex !== firstCueIndex
+              ? ` (core placed it at cue ${asked.cueIndex})`
+              : '') +
+            (entries.length > 1
+              ? `, ${entries.length - 1} other planned blank(s) dropped — scripted beat`
+              : '')
+        );
+        return [{ kind: 'recall', cueIndex: firstCueIndex, word: asked.word, ...at }];
+      }
+    }
   }
   return entries;
 }
@@ -260,15 +339,39 @@ export function locateBlank(
 ): { wordIndex: number; pauseAt: number; surface: string } | null {
   if (!cue) return null;
   const target = normalizeAnswer(wordText);
-  const wordIndex = cue.words.findIndex((w) => normalizeAnswer(w.text) === target);
+  /**
+   * PREFER THE OCCURRENCE THE PLANNERS COULD HAVE CHOSEN. Both planners skip
+   * words with no audible span (srs.ts MIN_AUDIBLE_S, levels.ts inline — both
+   * 0.05s), but a cue can hold the same surface twice: an inaudible alignment
+   * artifact at position 0 and the audible occurrence the plan actually meant.
+   * A bare findIndex pinned the blank — and the hold point — on the artifact,
+   * which for a sentence-initial duplicate froze the video at cue.start+pad,
+   * before the line was ever heard. Fall back to the bare match so a cue that
+   * only says the word inaudibly still degrades the way it always did.
+   */
+  const audibleIndex = cue.words.findIndex(
+    (w) => w.end - w.start > 0.05 && normalizeAnswer(w.text) === target
+  );
+  const wordIndex =
+    audibleIndex >= 0
+      ? audibleIndex
+      : cue.words.findIndex((w) => normalizeAnswer(w.text) === target);
   // Both core planners only pick a cue whose words contain the word, so a miss
   // means the cue changed under us. Drop the blank rather than hold at a
   // position that does not exist.
   if (wordIndex < 0) return null;
   const blankWord = cue.words[wordIndex];
+  /**
+   * The ceiling is padded INSIDE the cue's end — see CUE_END_PAD_S for the
+   * last-word boundary failure this prevents. The outer max keeps a
+   * degenerate sub-0.14s cue from inverting the clamp; there the start pad
+   * wins and the hold degrades to the old boundary behaviour rather than to
+   * a position before the cue.
+   */
+  const holdCeiling = Math.max(cue.start + CUE_START_PAD_S, cue.end - CUE_END_PAD_S);
   return {
     wordIndex,
-    pauseAt: Math.min(cue.end, Math.max(blankWord.end, cue.start + CUE_START_PAD_S)),
+    pauseAt: Math.min(holdCeiling, Math.max(blankWord.end, cue.start + CUE_START_PAD_S)),
     surface: blankWord.text,
   };
 }

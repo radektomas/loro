@@ -271,12 +271,6 @@ export const Karaoke = memo(function Karaoke({
 
   return (
     <View style={styles.track}>
-      {/* Loro, absolute at the top of THIS box — which is the band, below the
-          player. Mounted only while celebrating so the hop restarts cleanly on
-          the next correct answer rather than needing a reset. */}
-      {celebrating && blankResult && blankResult !== 'wrong' && (
-        <LoroCelebration variant={blankResult} />
-      )}
       {cue ? (
         <>
           <View style={styles.line}>
@@ -336,6 +330,21 @@ export const Karaoke = memo(function Karaoke({
         // stable frame beats a few pixels of extra player.
         <View style={styles.placeholder} />
       )}
+      {/* Loro, absolute at the top of THIS box — which is the band, below the
+          player. Mounted only while celebrating so the hop restarts cleanly on
+          the next correct answer rather than needing a reset.
+
+          LAST CHILD ON PURPOSE (2026-09-01, Radek on device): RN paints later
+          siblings on top, and as the track's FIRST child the hop lost to any
+          cue tall enough to reach the track's top — a three-line line plus
+          translation fills the 176pt box, and "¡Correcto!" played out behind
+          the words. The reward must win the stack: it is 1.05s long, pointer-
+          transparent, and its pill has a solid ground, so briefly covering a
+          corner of the line is the web's own trade. hopLayer carries a zIndex
+          as the belt to this brace. */}
+      {celebrating && blankResult && blankResult !== 'wrong' && (
+        <LoroCelebration variant={blankResult} />
+      )}
     </View>
   );
 });
@@ -388,9 +397,11 @@ function KaraokeWord({
       pulse.value = 1;
       return;
     }
+    // Floor at 0.55, not 0.35: the ring is the instruction and the video is
+    // paused behind it, so the breath may soften it but never near-hide it.
     pulse.value = withRepeat(
       withSequence(
-        withTiming(0.35, { duration: 620 }),
+        withTiming(0.55, { duration: 620 }),
         withTiming(1, { duration: 620 })
       ),
       -1,
@@ -695,10 +706,21 @@ const styles = StyleSheet.create({
   placeholder: { height: 176 },
   line: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   word: { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  /** Louder than a hairline ON PURPOSE (2026-09-01): the tap is the beat the
+      whole reel hangs on — miss it and the promise clip has nothing to
+      promise — so the ringed word fills and glows like a button rather than
+      whispering. The fill sits BEHIND the text (see the render note) and
+      vanishes under the solid highlight for the instant the karaoke lands on
+      the word, which is fine: the highlight is louder still. */
   spotlightRing: {
+    backgroundColor: 'rgba(94,230,168,0.2)',
     borderColor: '#5ee6a8',
     borderRadius: 8,
-    borderWidth: 2,
+    borderWidth: 3,
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   },
   wordText: { fontSize: 26, fontWeight: '700', lineHeight: 34 },
   blankRow: { alignItems: 'center', flexDirection: 'row', gap: 4 },

@@ -395,7 +395,11 @@ function Feather({
 }
 
 const styles = StyleSheet.create({
-  /** `right`/`top` mirror the web's right-6 top-0, in points. */
+  /** `right`/`top` mirror the web's right-6 top-0, in points. The zIndex
+      backs up the caller's paint-order guarantee (Karaoke mounts this LAST
+      in the track): a tall cue reaches the track's top, and the celebration
+      must draw over the words there, never behind them — it is brief,
+      pointer-transparent, and its pill carries its own ground. */
   hopLayer: {
     alignItems: 'flex-end',
     flexDirection: 'row',
@@ -403,6 +407,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 24,
     top: 0,
+    zIndex: 10,
   },
   /** The bitmap is 375x420, so a 60pt box would letterbox it. Height matches
       the web's size={60} and the width follows the art's own ratio. */
