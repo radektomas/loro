@@ -135,6 +135,25 @@ export type CatalogResolution =
  */
 export const POINTER_PATH = 'catalog/latest.json';
 
+/**
+ * The id list of the current snapshot. NOT part of the client contract — no
+ * device ever fetches this, and nothing in this module reads it.
+ *
+ * It exists for /admin/catalog. loro_catalog_videos is a SUPERSET of what
+ * ships: publish-catalog deliberately leaves rows behind when content is
+ * removed, because loro_saved_words.video_id still references them (there is
+ * no FK, by design). A management view that listed the table would therefore
+ * claim more videos are in the feed than are in it — 446 against 382 the day
+ * this was written.
+ *
+ * The alternative was inferring the live set from updated_at, which does
+ * partition correctly today but only because the publisher happens to upsert
+ * unchanged rows too. That is an implementation detail one refactor away from
+ * silently making the dashboard lie. Publishing the list is a fact instead of
+ * an inference, and it costs ~9KB written once per publish.
+ */
+export const MANIFEST_PATH = 'catalog/manifest.json';
+
 export function snapshotPath(hash: string): string {
   return `catalog/${hash}.json`;
 }

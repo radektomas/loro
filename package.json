@@ -22,6 +22,7 @@
     "report-keywords": "node scripts/report-keyword-matches.mts",
     "audit-on-camera": "node scripts/audit-on-camera.mts",
     "publish-embeds": "node scripts/publish-embeds.mts",
+    "block": "node scripts/block-videos.mts",
     "publish-catalog": "node scripts/publish-catalog.mts",
     "publish-explanations": "node scripts/publish-explanations.mts",
     "explanations-context": "node scripts/explanations-context.mts",

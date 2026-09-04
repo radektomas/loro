@@ -49,6 +49,7 @@ import {
   COMPARED_COLUMNS,
   embedRow,
   findProblem,
+  MANIFEST_PATH,
   POINTER_PATH,
   sameRow,
   seedRow,
@@ -303,6 +304,34 @@ async function uploadSnapshot(
       process.exit(1);
     }
     console.log(`  uploaded   ${objectPath}`);
+  }
+
+  // The manifest goes up BEFORE the pointer, for the same reason the blob
+  // does: whatever the pointer names must already be fully described when a
+  // reader follows it. Nothing on a device reads this — it is the id list
+  // /admin/catalog uses to tell the live catalog apart from the rows left
+  // behind in the table (see MANIFEST_PATH in catalogLoader.ts).
+  //
+  // A failure here is NOT fatal. The manifest is a convenience for one admin
+  // screen; refusing to publish real content because a dashboard aid did not
+  // upload would be the tail wagging the dog.
+  const manifest = {
+    hash: snapshot.hash,
+    count: snapshot.count,
+    generatedAt: new Date().toISOString(),
+    ids: snapshot.ids,
+  };
+  const { error: manifestError } = await supabase.storage
+    .from(SNAPSHOT_BUCKET)
+    .upload(MANIFEST_PATH, Buffer.from(JSON.stringify(manifest), 'utf8'), {
+      contentType: 'application/json',
+      cacheControl: String(POINTER_CACHE_SECONDS),
+      upsert: true,
+    });
+  if (manifestError) {
+    console.warn(`  ! manifest write failed (admin view only): ${manifestError.message}`);
+  } else {
+    console.log(`  manifest   ${MANIFEST_PATH} (${manifest.ids.length} ids)`);
   }
 
   // THE POINTER IS WRITTEN LAST, ALWAYS. Until this succeeds, every client

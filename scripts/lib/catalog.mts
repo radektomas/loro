@@ -343,6 +343,18 @@ export type Snapshot = {
   hash: string;
   count: number;
   byKind: { seed: number; embed: number };
+  /**
+   * Every id in `body`, in the same order. Written to MANIFEST_PATH for
+   * /admin/catalog, which needs to tell the live catalog apart from rows the
+   * table keeps after a removal.
+   *
+   * Carried on the Snapshot rather than recomputed at the upload site so the
+   * manifest and the blob are derived from ONE list. A separately derived id
+   * list is a second source of truth that can disagree with the bytes it
+   * claims to describe, which is exactly the failure the pointer/blob ordering
+   * elsewhere in this file exists to prevent.
+   */
+  ids: readonly string[];
 };
 
 /**
@@ -369,6 +381,7 @@ export function buildSnapshot(rows: readonly CatalogRow[]): Snapshot {
       seed: rows.filter((r) => r.kind === 'seed').length,
       embed: rows.filter((r) => r.kind === 'embed').length,
     },
+    ids: videos.map((v) => v.id),
   };
 }
 
@@ -399,6 +412,7 @@ export const SNAPSHOT_BUCKET = 'loro-catalog';
  * already uses to reach core.
  */
 export {
+  MANIFEST_PATH,
   POINTER_PATH,
   snapshotPath,
 } from '../../packages/core/src/catalogLoader.ts';

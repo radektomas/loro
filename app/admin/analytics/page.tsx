@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { checkAdmin, loadDashboard, type Dashboard } from '@/lib/analytics';
 import { GateMessage, PageHeader, useSupabaseUser } from '@/components/creator/ugc';
@@ -105,7 +106,21 @@ export default function AdminAnalyticsPage() {
 
   return (
     <main className="min-h-[100dvh] bg-background pb-safe">
-      <PageHeader title="Product analytics" backHref="/admin/creators" />
+      {/* The catalog view has no other entrance: /admin redirects here, so a
+          page nothing links to is a page nobody finds — the same way the bare
+          /admin path used to 404. */}
+      <PageHeader
+        title="Product analytics"
+        backHref="/admin/creators"
+        right={
+          <Link
+            href="/admin/catalog"
+            className="rounded-2xl bg-surface px-3 py-2 text-xs font-semibold text-muted transition-colors hover:text-text"
+          >
+            Catalog
+          </Link>
+        }
+      />
 
       <div className="mx-auto max-w-5xl px-4 pb-16">
         {/*
