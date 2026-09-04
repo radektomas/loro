@@ -544,10 +544,19 @@ export function CatalogBrowser({ videos }: { videos: CatalogVideo[] }) {
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
+            {/* This said "It writes the blocklist, refilters and prunes",
+                which was false: the command above has no --apply, so it
+                PREVIEWS and writes nothing. Believing it would mean marking
+                videos, running it, and finding them still in the feed — the
+                worst kind of wrong, because it looks like it worked. */}
             <p className="pb-2 text-[11px] leading-relaxed text-muted/70">
-              Run it in the repo. It writes the blocklist, refilters and prunes —
-              then prints the <code className="font-mono">publish-catalog</code>{' '}
-              command, which is the only step that reaches devices.
+              Send this to Claude, or run it in the repo yourself. As written it
+              only <strong className="font-semibold">previews</strong> — it lists
+              what it would remove and writes nothing. Add{' '}
+              <code className="font-mono">--apply</code> to actually write the
+              blocklist and prune, then{' '}
+              <code className="font-mono">npm run publish-catalog</code> to reach
+              devices.
             </p>
           </div>
         </div>
