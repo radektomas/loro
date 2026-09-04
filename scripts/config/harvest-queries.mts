@@ -762,6 +762,16 @@ export type BlockedChannel = {
 };
 
 export const BLOCKED_CHANNELS: readonly BlockedChannel[] = [
+  {
+    channelId: 'UCZjJ0zjf_6L1uzsX0Ohgmxw',
+    title: 'Suceso Criminal',
+    reason:
+      'True-crime narration over stills — murder and mutilation recounted in ' +
+      'the first person. Both rows seen are of that kind; one had already been ' +
+      'rejected on a keyword and the other had not. Blocked at the channel ' +
+      'level 2026-09-04 rather than word by word, because the genre is the ' +
+      'problem, not any one title.',
+  },
   // Approved 2026-07-21 after reviewing all 172 channels then in the table.
   // Common thread: scripted voiceover over stock/gameplay footage, no person
   // speaking on camera, little or no connected conversational speech.
@@ -1217,6 +1227,14 @@ export const CONTENT_KEYWORDS: readonly ContentKeyword[] = [
   { term: 'carnear', pattern: /\bcarnea(r|d)\w*/ }, // carnear, carneado — NOT bare 'carne'
   { term: 'destazar', pattern: /\bdestaz\w*/ }, // destazar, destazando
   { term: 'destazar', pattern: /\bdestace\w*/ },
+  // True-crime narration, added 2026-09-04. A 'Suceso Criminal' row titled
+  // "DECAPITÉ Y TUVE RELACIONES CON LA CABEZA DE MI MADRE" was sitting
+  // ELIGIBLE in the publishable pool: it is short, Spanish, CC, above the
+  // view floor and names no word this list knew. 'degollar' was here from the
+  // start but 'decapitar' — the commoner word, and the one the genre uses —
+  // was not. The near-miss is the argument for the whole mechanism.
+  { term: 'decapitar', pattern: /\bdecapit\w*/ }, // decapité, decapitado, decapitacion
+  { term: 'asesinar', pattern: /\basesin\w*/ }, // asesino, asesinato, asesinó
   { term: 'muerte', pattern: /\bmuertes?\b/ },
   { term: 'sangre', pattern: /\bsangre\b/ },
   { term: 'sangre', pattern: /\bsangrient\w*/ }, // sangriento/a
