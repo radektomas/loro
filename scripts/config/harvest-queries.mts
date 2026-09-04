@@ -44,7 +44,11 @@ export type TopicSlug =
   | 'personal-story'
   | 'life-lesson'
   | 'vox-pop'
-  | 'local-speech';
+  | 'local-speech'
+  | 'street-money'
+  | 'personal-questions'
+  | 'work-story'
+  | 'everyday-questions';
 
 export type Topic = {
   slug: TopicSlug;
@@ -451,6 +455,155 @@ export const TOPICS: readonly Topic[] = [
       'palabras que usamos los españoles',
     ],
     tags: ['local-speech', 'talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'street-money',
+    label: 'Street money (what people earn and pay)',
+    /**
+     * Added 2026-09-04 — the seventh format-first topic, and the first one
+     * bred from a single measured query rather than a genre hunch.
+     * 'cuanto gana la gente' (vox-pop) is the best query in the whole matrix
+     * at 55.5% eligible, ahead of street-interviews' best at 54.9%. These are
+     * its siblings: same interaction (a stranger stopped and asked a number),
+     * different nouns, so they surface different rows the way every
+     * near-synonym tried so far has.
+     *
+     * Money is also the subject that makes a stranger talk at LENGTH — the
+     * answer to "how much do you earn" is never one word, it is a job, a
+     * city and a complaint. That is exactly the connected speech the feed
+     * wants, and it is why this beat 'quiz on the street' formats, where the
+     * honest answer is "Madrid" and there is no sentence to learn from.
+     *
+     * All six terminate on a noun or adverb, per rule 1. 'cuanto gana un
+     * taxista' is the one deliberately narrow query: the strongest short
+     * talking-heads left in the drained pool of 2026-08-27 were Adrian
+     * G.Martin's '¿Cuánto gana el dueño de un Taxi?' (28s) and '¿Cuánto Gana
+     * un Barbero en España?' (32s), so the "cuanto gana un <oficio>" title
+     * pattern has live evidence behind it and no other query here names a
+     * trade.
+     */
+    queries: [
+      // First-sweep yields, 2026-09-04 (200 seen per query x region unless
+      // noted). 'cuanto ganas al mes' 56.5% is now the best query in the
+      // whole matrix. 'preguntando sueldos en la calle' is a DUD and is kept
+      // only as the recorded negative result: five words was too specific for
+      // the CC branch and it returned 8 rows in total across four regions,
+      // against 200 for every other query here. Prefer three- and four-word
+      // forms; do not add another five-word query without expecting this.
+      'cuanto ganas al mes', //           56.5%
+      'cuanto cuesta vivir aqui', //      42.0%
+      'de que trabaja la gente', //       41.5%
+      'cuanto pagas de alquiler', //      27.0%  (property content, not people)
+      'cuanto gana un taxista', //        11.0%  (the one narrow trade query)
+      'preguntando sueldos en la calle', // 12.5% of 8 seen — dud, see above
+    ],
+    tags: ['street-interviews', 'talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'personal-questions',
+    label: 'Personal questions (strangers and family)',
+    /**
+     * Added 2026-09-04 alongside street-money, from the opposite end of the
+     * same format: not what a stranger earns but what they remember. Love,
+     * family and old age are the three subjects that reliably turn a vox pop
+     * into a story told in the past tense, which is the tense a feed built on
+     * present-tense product demos is shortest of.
+     *
+     * 'entrevista a mi abuela' is here for a second reason: it is the one
+     * query in the file that selects for SMALL channels by construction.
+     * Nobody with a media team films their grandmother, so its rows come from
+     * accounts the feed has never seen — and channel concentration, not
+     * curation, is the ceiling this run is trying to lift (see
+     * [[loro-discovery-pipeline-state]], 2026-08-27 delta).
+     *
+     * All six terminate on a noun or adjective, per rule 1. 'que le dirias a
+     * tu yo joven' is a deliberate near-duplicate of life-lesson's 'consejo
+     * para mi yo del pasado' — same advice format, different words, and
+     * near-synonyms have surfaced substantially different rows every time.
+     */
+    queries: [
+      'como conociste a tu pareja',
+      'preguntas sobre el amor en la calle',
+      'consejos de personas mayores',
+      'que le dirias a tu yo joven',
+      'la gente cuenta su historia',
+      'entrevista a mi abuela',
+    ],
+    tags: ['street-interviews', 'talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'work-story',
+    label: 'Work story (people talking about their job)',
+    /**
+     * Added 2026-09-04. Work is the subject a person can only deliver by
+     * talking — a trade explained to camera by the person who does it, in
+     * the vocabulary they actually use at work. It is also where the feed is
+     * thinnest: the pool's technology and how-to rows are overwhelmingly
+     * screen recordings and hands-over-a-desk, which the vision gate has been
+     * paying to reject one at a time.
+     *
+     * Known failure mode, accepted: 'un dia en mi trabajo' also names the
+     * silent day-in-the-life vlog set to music. Those cost one gate call
+     * ($0.0006) and, having no speech, die at MIN_WORDS before anything
+     * expensive runs — cheaper than narrowing the query and losing the
+     * genuine ones.
+     *
+     * All six terminate on a noun, per rule 1.
+     */
+    queries: [
+      'como empece mi negocio',
+      'lo mejor y lo peor de mi trabajo',
+      'emprendedores que empezaron de cero',
+      'un dia en mi trabajo',
+      'mi primer empleo',
+      'historias de mi oficio',
+    ],
+    tags: ['work', 'talking-head', 'conversation'],
+    regions: GEOGRAPHIC_REGIONS,
+    pages: 1,
+  },
+  {
+    slug: 'everyday-questions',
+    label: 'Everyday questions (ordinary people, ordinary answers)',
+    /**
+     * Added 2026-09-04, hours after street-money and personal-questions, and
+     * shaped by what those two measured rather than by another guess.
+     *
+     * What the first sweep showed: the money axis is the yield king
+     * ('cuanto ganas al mes' 56.5%, now the best query in the matrix, ahead
+     * of vox-pop's 'cuanto gana la gente' at 55.5%), but the QUALITY came
+     * from the questions that ask a person about their own life —
+     * 'como conociste a tu pareja' yielded only 26.1% and produced the best
+     * rows of the day. Yield and quality are different axes, and this topic
+     * buys the second one deliberately: five conversation queries against one
+     * proven money query ('cuanto ahorras al mes', the surviving sibling of
+     * the winner).
+     *
+     * Two failure modes the same sweep priced, and why they are not repeated
+     * here. 'un dia en mi trabajo' cleared 46.0% and was almost entirely
+     * screen recordings and product demos — a high-yield query can be a
+     * quality sink, so nothing here names a WORKDAY. 'entrevista a mi abuela'
+     * cleared 26.0% but returned celebrity-gossip clips about other people's
+     * grandmothers, so 'como se conocieron mis padres' asks for the family
+     * story in the first person, where the teller has to be on camera.
+     *
+     * All six terminate on a noun or adverb, per rule 1.
+     */
+    queries: [
+      'como se conocieron mis padres',
+      'le pregunte a mi vecino',
+      'conversaciones con desconocidos',
+      'que piensan los jovenes de hoy',
+      'preguntas rapidas a la gente',
+      'cuanto ahorras al mes',
+    ],
+    tags: ['street-interviews', 'talking-head', 'conversation'],
     regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
