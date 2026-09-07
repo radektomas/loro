@@ -52,6 +52,67 @@ export function stateForBox(box: number): WordState {
   return 'new';
 }
 
+/**
+ * The box a word enters when a LEVEL blank (a blue practice gap) is typed
+ * correctly on first sight. Box 2: state 'learning', due tomorrow, ONE
+ * correct recall from KNOWN_BOX.
+ *
+ * WHY NOT BOX 4 ANY MORE (2026-09-07). Level fills used to enter at box 4,
+ * state 'known', due in a week — "so obvious words never flood the active
+ * recall queue". The cost of that shortcut turned out to be the whole
+ * Progress page: a user who typed "de" into one blue gap had "de" filed as
+ * a word they had LEARNED, forever, with no review ever asked. Measured on
+ * the newest real user, 43 of their 58 "learned" words were exactly that —
+ * typed once, never seen again — and the top learned word was "de", three
+ * times over. The hero number was counting keystrokes.
+ *
+ * WHY 2 AND NOT 1. Box 1 is ten minutes: a fill would come straight back as
+ * a green blank in the same sitting, and at ~3 blue gaps per video that
+ * turns every later video into a wall of function-word recalls — the flood
+ * the old shortcut was avoiding. Box 2 comes back TOMORROW, which is the
+ * return loop the app is trying to build: the reminder says "5 words
+ * ready", and they are words the user can get right. One more correct
+ * answer, on a different day, and the word crosses into known — which is
+ * the only reading of "learned" that means anything.
+ */
+export const LEVEL_FILL_BOX = 2;
+
+/**
+ * Undo the old shortcut for words already on disk.
+ *
+ * A level fill saved BEFORE LEVEL_FILL_BOX existed sits at box 4, state
+ * 'known', with exactly one correct answer and no learnedAt stamp. That
+ * shape is unambiguous: a word graded up the ladder from a tap reaches box 4
+ * with correct >= 4, and the other direct-to-box path (the starter deck)
+ * writes source 'deck' and never a correct count. lastReviewedAt equal to
+ * savedAt is the final tell — saveLevelWord stamped both with one `now`.
+ *
+ * Demoted to LEVEL_FILL_BOX, state 'learning', SCHEDULE UNTOUCHED: the word
+ * comes due whenever it was already going to, and the next correct answer
+ * earns it properly. Moving dueAt to "tomorrow" would put every legacy fill
+ * on a device due at once on update day, which is the flood again.
+ *
+ * Applied on READ (storage.migrateWord), never as a one-off write: a
+ * signed-in device re-hydrates the box-4 row from Supabase on every open,
+ * and a one-time rewrite would be undone by the first sync. As a read-side
+ * view it holds whatever the row says, and the next graded answer pushes
+ * the honest state up. Idempotent by construction — the output does not
+ * match the input shape.
+ */
+export function demoteLegacyLevelFill(word: SavedWord): SavedWord {
+  const legacy =
+    word.source === 'user' &&
+    word.box === 4 &&
+    word.state === 'known' &&
+    word.correct === 1 &&
+    word.incorrect === 0 &&
+    word.learnedAt === null &&
+    word.lastReviewedAt !== null &&
+    word.lastReviewedAt === word.savedAt;
+  if (!legacy) return word;
+  return { ...word, box: LEVEL_FILL_BOX, state: stateForBox(LEVEL_FILL_BOX) };
+}
+
 /** SRS fields for a freshly saved word. */
 export function initialSrs(now: number = Date.now()) {
   return {

@@ -1,4 +1,7 @@
 import type { SavedWord } from './types.ts';
+import { normalizeAnswer } from './srs.ts';
+import { normalizeSurface } from './dictionary.ts';
+import { isFunctionWord } from './glossary.ts';
 
 /**
  * Progress metrics derived from saved words. Pure functions only — persistence
@@ -10,6 +13,162 @@ import type { SavedWord } from './types.ts';
  * measures the opposite of understanding and punishes fluent users. Progress on
  * this screen is measured by what the user has LEARNED, which only ever grows.
  */
+
+// ---------------------------------------------------------------------------
+// Learned — the one definition every screen must share
+
+/**
+ * Has this word been LEARNED, as opposed to filed as known?
+ *
+ * Two routes in, both earned through the review loop:
+ *   - learnedAt is stamped: the word crossed into known through a graded
+ *     answer on this device (srs.grade). The normal case from 2026-09-07 on.
+ *   - no stamp, but known with at least two correct answers: a word restored
+ *     from Supabase (the stamp does not sync — storage.toRow) or graded
+ *     before the stamp existed. Two corrects is the floor because one is
+ *     what a legacy level fill carried, and that is the exact case this
+ *     definition exists to exclude.
+ *
+ * Deliberately NOT `state === 'known'`. A starter-deck grant is known on
+ * arrival with zero answers, and a legacy level fill was known after one
+ * keystroke; neither was learned in Loro, and counting them is how the
+ * Progress page came to open on "de ×3".
+ */
+export function isLearned(word: SavedWord): boolean {
+  if (word.learnedAt !== null) return true;
+  return word.state === 'known' && word.correct >= 2;
+}
+
+/**
+ * ONE ENTRY PER DISTINCT WORD, the most advanced one.
+ *
+ * Storage keys a word on (text, videoId), so "de" saved from three videos is
+ * three rows, and the old Progress list rendered all three. Folded through
+ * normalizeAnswer — the same identity the blank planner uses when it decides
+ * those rows are one thing to practise (srs.computeBlankPlan). Higher box
+ * wins; on a tie the later stamp, so "learned this week" reads the freshest
+ * crossing.
+ */
+export function distinctWords(words: readonly SavedWord[]): SavedWord[] {
+  const byKey = new Map<string, SavedWord>();
+  for (const w of words) {
+    const key = normalizeAnswer(w.text);
+    if (!key) continue;
+    const held = byKey.get(key);
+    if (
+      !held ||
+      w.box > held.box ||
+      (w.box === held.box && (w.learnedAt ?? 0) > (held.learnedAt ?? 0))
+    ) {
+      byKey.set(key, w);
+    }
+  }
+  return [...byKey.values()];
+}
+
+/** Local day keys of the current Mon..Sun week — the strip's own columns. */
+export function weekKeys(now: number = Date.now()): string[] {
+  return weekStrip([], now).map((d) => d.key);
+}
+
+/**
+ * Words that crossed into known THIS WEEK (local Mon..Sun), one per distinct
+ * word, freshest first. Stamp-only on purpose: a restored word carries no
+ * stamp, and inventing a date for it would put last month's learning in
+ * this week's card.
+ */
+export function learnedThisWeek(
+  words: readonly SavedWord[],
+  now: number = Date.now()
+): SavedWord[] {
+  const week = new Set(weekKeys(now));
+  return distinctWords(
+    words.filter((w) => w.learnedAt !== null && week.has(dayKey(w.learnedAt)))
+  ).sort((a, b) => (b.learnedAt ?? 0) - (a.learnedAt ?? 0));
+}
+
+/**
+ * Content words first, glue collapsed. "de", "que" and "la" are real
+ * answers and real reviews, but as CHIPS on a progress card they read as
+ * padding — so the card names the words worth naming and counts the rest.
+ */
+export function splitFunctionWords<T extends { text: string }>(
+  words: readonly T[]
+): { content: T[]; small: T[] } {
+  const content: T[] = [];
+  const small: T[] = [];
+  for (const w of words) {
+    (isFunctionWord(normalizeSurface(w.text)) ? small : content).push(w);
+  }
+  return { content, small };
+}
+
+/**
+ * Words whose LAST answer was today and correct, one per distinct word,
+ * freshest first — what the day-done card can honestly show as "today's
+ * words". A word answered wrong today is lapsed and excluded; a word
+ * answered right today and then wrong is lapsed too, and excluded, which
+ * is the truthful reading of its day.
+ */
+export function answeredCorrectToday(
+  words: readonly SavedWord[],
+  now: number = Date.now()
+): SavedWord[] {
+  const today = dayKey(now);
+  return distinctWords(
+    words.filter(
+      (w) =>
+        w.correct > 0 &&
+        w.state !== 'lapsed' &&
+        w.lastReviewedAt !== null &&
+        dayKey(w.lastReviewedAt) === today
+    )
+  ).sort((a, b) => (b.lastReviewedAt ?? 0) - (a.lastReviewedAt ?? 0));
+}
+
+// ---------------------------------------------------------------------------
+// Daily counts — how many correct answers each local day carried
+
+/** "YYYY-MM-DD" -> correct answers that day. Stored by storage.ts. */
+export type DailyCounts = Record<string, number>;
+
+/** Keep this many trailing days; older keys are pruned on write. */
+export const DAILY_COUNTS_KEEP_DAYS = 70;
+
+export function countForDay(counts: DailyCounts, day: string): number {
+  const n = counts[day];
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/** Add one correct answer to `day`, pruning keys older than the window. */
+export function bumpDay(
+  counts: DailyCounts,
+  day: string,
+  keepDays: number = DAILY_COUNTS_KEEP_DAYS
+): DailyCounts {
+  const merged: DailyCounts = {};
+  for (const key of Object.keys(counts)) {
+    const n = countForDay(counts, key);
+    if (n > 0) merged[key] = n;
+  }
+  merged[day] = countForDay(merged, day) + 1;
+  // Day keys sort as dates, so the trailing slice is the newest window.
+  const keys = Object.keys(merged).sort();
+  const next: DailyCounts = {};
+  for (const key of keys.slice(Math.max(0, keys.length - keepDays))) {
+    next[key] = merged[key];
+  }
+  return next;
+}
+
+/** How many of `days` reached `goal` correct answers. */
+export function daysMeetingGoal(
+  counts: DailyCounts,
+  days: readonly string[],
+  goal: number
+): number {
+  return days.filter((d) => countForDay(counts, d) >= goal).length;
+}
 
 // ---------------------------------------------------------------------------
 // Due reviews

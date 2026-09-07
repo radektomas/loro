@@ -1,4 +1,5 @@
-import type { Level, Video } from './types.ts';
+import type { Level, SavedWord, Video } from './types.ts';
+import { computeBlankPlan } from './srs.ts';
 
 /**
  * Feed ordering.
@@ -70,4 +71,51 @@ export function orderVideosForLevel(
     }
     return distance(a) - distance(b);
   });
+}
+
+/**
+ * A REVIEW SESSION IS THE TOP OF THE FEED.
+ *
+ * "5 words ready to review" used to land the user on one due word and then
+ * hand them the ordinary shuffle, where the next video almost never spoke
+ * another. Measured on the newest real user: 178 due words, 57 of them
+ * spoken only in videos already watched — which the feed had no reason to
+ * show again. Tapping Review met one word, then nothing.
+ *
+ * So when a review is launched the feed is re-cut: the landing video first,
+ * then up to `max` videos that will actually BLANK a due word right now
+ * (verified through the same computeBlankPlan the slide will run, so a
+ * video is never lifted on the strength of merely speaking a word the caps
+ * would drop), then everything else. Order within each group is the
+ * caller's — pass an already shuffled list and it stays shuffled.
+ *
+ * Bounded on purpose. The lift exists so a review session has a next
+ * video; it is not a return to unseen-first or level ordering, both of
+ * which the mobile feed dropped deliberately (FeedScreen.orderFeed). Past
+ * `max` the feed is the feed.
+ */
+export const REVIEW_LIFT_MAX = 8;
+
+export function liftDueVideos<V extends Video>(
+  videos: readonly V[],
+  words: readonly SavedWord[],
+  options: { landingId?: string | null; now?: number; max?: number } = {}
+): V[] {
+  const { landingId = null, now = Date.now(), max = REVIEW_LIFT_MAX } = options;
+  const landing: V[] = [];
+  const due: V[] = [];
+  const rest: V[] = [];
+  for (const video of videos) {
+    if (landingId !== null && video.id === landingId) {
+      landing.push(video);
+    } else if (
+      due.length < max &&
+      computeBlankPlan(video, words as SavedWord[], now).size > 0
+    ) {
+      due.push(video);
+    } else {
+      rest.push(video);
+    }
+  }
+  return [...landing, ...due, ...rest];
 }

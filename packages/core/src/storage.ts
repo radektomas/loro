@@ -7,8 +7,10 @@ import type {
 } from './types.ts';
 import {
   BOX_INTERVALS_MS,
+  demoteLegacyLevelFill,
   grade,
   initialSrs,
+  LEVEL_FILL_BOX,
   MAX_BOX,
   stateForBox,
 } from './srs.ts';
@@ -20,7 +22,13 @@ import {
   type LevelAnswerResult,
   type LevelState,
 } from './levels.ts';
-import { dayKey, dueCount } from './progress.ts';
+import {
+  bumpDay,
+  countForDay,
+  dayKey,
+  dueCount,
+  type DailyCounts,
+} from './progress.ts';
 import {
   foldDuplicateWords,
   localAhead,
@@ -114,6 +122,10 @@ const KEYS = {
   savedWords: 'loro.savedWords',
   watched: 'loro.watchedVideos',
   recallDays: 'loro.recallDays',
+  // Correct answers per local day — the daily goal's meter. Local-only, like
+  // learnedAt: loro_progress has no column for it, so a reinstall starts the
+  // count afresh. The streak (recallDays) is unaffected and still syncs.
+  dailyCorrect: 'loro.dailyCorrect',
   language: 'loro.language',
   onboarded: 'loro.onboarded', // has the user finished (or skipped) the intro
   level: 'loro.level', // onboarding self-assessment: zero | some | confident
@@ -186,10 +198,12 @@ function wordSourceOf(
   return videoId === STARTER_VIDEO_ID ? 'deck' : 'user';
 }
 
-/** Fill SRS fields for entries saved before the spaced-repetition schema. */
+/** Fill SRS fields for entries saved before the spaced-repetition schema,
+    and demote level fills filed as known before LEVEL_FILL_BOX existed
+    (srs.demoteLegacyLevelFill — a read-side view, so a sync cannot undo it). */
 function migrateWord(raw: Partial<SavedWord>): SavedWord {
   const savedAt = raw.savedAt ?? Date.now();
-  return {
+  return demoteLegacyLevelFill({
     text: raw.text ?? '',
     translation: raw.translation ?? '',
     videoId: raw.videoId ?? '',
@@ -208,7 +222,17 @@ function migrateWord(raw: Partial<SavedWord>): SavedWord {
           learnedAt: raw.learnedAt ?? null,
         }
       : {}),
-  };
+  });
+}
+
+/**
+ * One more correct answer today. Shared by the two grading paths so the
+ * daily goal counts a green recall and a blue fill alike — the same pair the
+ * streak day is logged from.
+ */
+function bumpTodayCorrect(now: number): void {
+  const counts = readJSON<DailyCounts>(KEYS.dailyCorrect, {});
+  writeJSON(KEYS.dailyCorrect, bumpDay(counts, dayKey(now)));
 }
 
 /**
@@ -901,8 +925,9 @@ async function handleSession(userId: string | null): Promise<void> {
     writeProgressSnapshot(EMPTY_PROGRESS);
     // writeProgressSnapshot leaves levelState alone when null — remove the
     // key outright so the new account starts untouched, not at the previous
-    // owner's level.
+    // owner's level. The daily tally is local-only and goes the same way.
     getStorageDriver()?.local.removeItem(KEYS.levelState);
+    getStorageDriver()?.local.removeItem(KEYS.dailyCorrect);
     // Same for the self-assessment: without this, syncSelfLevel would push
     // the PREVIOUS owner's answer up into this account's profile row.
     getStorageDriver()?.local.removeItem(KEYS.level);
@@ -1126,13 +1151,16 @@ export const storage = {
         writeJSON(KEYS.savePrompt, { ...s, sessions: s.sessions + 1 });
       }
     }
-    // The honest streak counts days with a correct recall, so log the day.
+    // The honest streak counts days with a correct recall, so log the day —
+    // and the daily goal counts how many, so bump today's tally.
     if (ok && wasCorrect) {
+      const nowMs = Date.now();
       const days = readJSON<string[]>(KEYS.recallDays, []);
-      const today = dayKey(Date.now());
+      const today = dayKey(nowMs);
       if (!days.includes(today)) {
         writeJSON(KEYS.recallDays, [...days, today].sort());
       }
+      bumpTodayCorrect(nowMs);
     }
     if (ok) {
       emitWordsChanged();
@@ -1180,10 +1208,11 @@ export const storage = {
   /**
    * Save a word the user answered as a LEVEL blank into the SRS, routed by
    * result: a miss enters at the bottom (box 0 — a genuine unknown that comes
-   * back within minutes), a correct fill is filed as already known (box 4,
-   * 7 days) so obvious words never flood the active recall queue. A word
-   * that's already saved just takes a normal review grade instead — one word,
-   * one schedule.
+   * back within minutes), a correct fill enters as LEARNING at LEVEL_FILL_BOX
+   * (box 2, due tomorrow — one correct recall from known; srs.ts carries the
+   * reasoning, and the 2026-09-07 history of why it is no longer box 4).
+   * A word that's already saved just takes a normal review grade instead —
+   * one word, one schedule.
    */
   saveLevelWord(
     word: Pick<SavedWord, 'text' | 'translation' | 'videoId' | 'cueIndex'>,
@@ -1197,7 +1226,6 @@ export const storage = {
       return { ok: storage.gradeWord(word.text, word.videoId, wasCorrect).ok };
     }
 
-    const LEVEL_KNOWN_BOX = 4;
     const now = Date.now();
     // 'user': a level blank is the user typing a word back from memory in the
     // feed. It is behaviour, not a grant, so it counts toward the gates.
@@ -1210,9 +1238,9 @@ export const storage = {
     const entry: SavedWord = wasCorrect
       ? {
           ...base,
-          box: LEVEL_KNOWN_BOX,
-          state: 'known',
-          dueAt: now + BOX_INTERVALS_MS[LEVEL_KNOWN_BOX],
+          box: LEVEL_FILL_BOX,
+          state: stateForBox(LEVEL_FILL_BOX),
+          dueAt: now + BOX_INTERVALS_MS[LEVEL_FILL_BOX],
           correct: 1,
           lastReviewedAt: now,
         }
@@ -1226,13 +1254,14 @@ export const storage = {
         .some((w) => w.text === word.text && w.videoId === word.videoId);
     if (ok) {
       // A correct level fill is a correct typed production — it counts toward
-      // the streak exactly like a correct recall does.
+      // the streak and the daily goal exactly like a correct recall does.
       if (wasCorrect) {
         const days = readJSON<string[]>(KEYS.recallDays, []);
         const today = dayKey(now);
         if (!days.includes(today)) {
           writeJSON(KEYS.recallDays, [...days, today].sort());
         }
+        bumpTodayCorrect(now);
       }
       emitWordsChanged();
       enqueue('upsert', word.text, word.videoId);
@@ -1375,6 +1404,21 @@ export const storage = {
     return all;
   },
 
+  /**
+   * Correct answers per local day — the daily goal's meter. Only counted
+   * from the day this key shipped; days before it read as zero even where
+   * the streak log knows they were practised. Honest, and self-correcting
+   * within a week.
+   */
+  getDailyCorrect(): DailyCounts {
+    return readJSON<DailyCounts>(KEYS.dailyCorrect, {});
+  },
+
+  /** Today's correct answers, for the goal ring and the "day done" moment. */
+  getTodayCorrect(now: number = Date.now()): number {
+    return countForDay(storage.getDailyCorrect(), dayKey(now));
+  },
+
   removeWord(text: string, videoId: string): SavedWord[] {
     const next = storage
       .getSavedWords()
@@ -1397,6 +1441,7 @@ export const storage = {
       KEYS.savedWords,
       KEYS.watched,
       KEYS.recallDays,
+      KEYS.dailyCorrect,
       KEYS.levelState,
     ];
     const offBus = wordsChanged.subscribe(callback);
