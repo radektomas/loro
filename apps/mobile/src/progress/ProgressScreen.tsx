@@ -66,10 +66,10 @@ import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
  *                 The goal comes from the onboarding "how often" answer
  *                 (plan.ts), which the app collected and then never read.
  *   2. THIS WEEK  the streak and the week strip, against the plan's days.
- *   3. LEARNED    the words that crossed into known this week, as chips,
- *                 one per word, glue folded into "+N small words". Learned
- *                 means learned (core/progress.ts isLearned): right on two
- *                 different days, never "typed once".
+ *   3. LEARNED    how many words crossed into known this week, and the
+ *                 words themselves on one line. Learned means learned
+ *                 (core/progress.ts isLearned): right on two different
+ *                 days, never "typed once".
  *   4. REVIEW     what is ready, and a button that asks WHICH word, then
  *                 lands on it (ReviewPicker).
  *   5. LEVEL      one row with the meter; the full ladder on request.
@@ -91,10 +91,8 @@ const STATE_SEGMENTS: { state: WordState; label: string; color: string }[] = [
   { state: 'known', label: 'Known', color: '#5ee6a8' },
 ];
 
-/** Chips before "+N more" — enough to see the week, not the whole record. */
-const CHIP_PREVIEW = 12;
-/** How many of the folded small words to name in their summary line. */
-const SMALL_WORDS_NAMED = 3;
+/** Words named before "+N more" — enough to see the week, not the record. */
+const LEARNED_PREVIEW = 12;
 
 function SectionTitle({
   children,
@@ -308,88 +306,74 @@ function WeekCard({
 }
 
 /**
- * LEARNED THIS WEEK — the words, as chips.
+ * LEARNED THIS WEEK — one number, then the words on one line.
  *
- * One chip per distinct word, content words first, the glue summed into one
- * quiet chip that names a few. This is the replacement for the endless list:
- * bounded by the week, deduplicated by the word, and honest about what
- * "learned" means — a footnote says it, because a user who sees a smaller
- * number than last update deserves to know why it is smaller.
+ * The first version was chips: one pill per word with its gloss inside,
+ * "+N more", and the glue folded into a "+2 small words · aquí, me" pill.
+ * Radek, on device: "super chaotic, I don't read anything from it". He was
+ * right — four kinds of pill and two type sizes for what is a count and a
+ * list. So: the count in the same big figure the Today and Review cards
+ * use, the words as a single sentence in mint, and one quiet all-time line
+ * with two numbers. Content words come first and the glue ("me", "de")
+ * trails, still in the list — it was earned — but not called out.
+ *
+ * "Learned" is still core's isLearned (right on two different days), and
+ * the empty state says so, because a user who sees a smaller number than
+ * last update deserves to know why.
  */
 function LearnedCard({
   week,
   onTheWay,
   allTime,
-  learning,
-  recalls,
 }: {
   week: SavedWord[];
+  /** Saved, not yet learned, not slipped — the pipeline. */
   onTheWay: number;
   allTime: number;
-  learning: number;
-  recalls: number;
 }) {
   const [showAll, setShowAll] = useState(false);
   const { content, small } = splitFunctionWords(week);
-  const shown = showAll ? content : content.slice(0, CHIP_PREVIEW);
-  const hidden = content.length - shown.length;
-  const named = small.slice(0, SMALL_WORDS_NAMED).map((w) => w.text);
+  const ordered = [...content, ...small];
+  const shown = showAll ? ordered : ordered.slice(0, LEARNED_PREVIEW);
+  const hidden = ordered.length - shown.length;
 
   return (
     <View style={styles.card}>
       {week.length === 0 ? (
         <>
-          <Text style={styles.learnedEmptyTitle}>Nothing learned yet this week.</Text>
+          <Text style={styles.learnedEmptyTitle}>Nothing learned yet this week</Text>
           <Text style={styles.cardBody}>
-            {onTheWay > 0
-              ? `${onTheWay} ${onTheWay === 1 ? 'word is' : 'words are'} on the way. `
-              : ''}
-            A word is learned once you get it right on two different days.
+            Get a word right on two different days and it lands here.
+            {onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}
           </Text>
         </>
       ) : (
         <>
-          <View style={styles.chips}>
-            {shown.map((word) => (
-              <View key={`${word.videoId}:${word.text}`} style={styles.chip}>
-                <Text style={styles.chipText}>{word.text}</Text>
-                <Text style={styles.chipGloss} numberOfLines={1}>
-                  {word.translation}
-                </Text>
-              </View>
-            ))}
+          <Text style={styles.bigNumber}>
+            {week.length}
+            <Text style={styles.bigNumberUnit}>
+              {' '}
+              {week.length === 1 ? 'word' : 'words'} learned
+            </Text>
+          </Text>
+          <Text style={styles.learnedWords}>
+            {shown.map((w) => w.text).join(' · ')}
             {hidden > 0 && (
-              <Pressable
+              <Text
+                style={styles.learnedMore}
                 onPress={() => setShowAll(true)}
                 accessibilityRole="button"
-                hitSlop={6}
-                style={({ pressed }) => [styles.chip, styles.chipQuiet, pressed && styles.pressed]}
               >
-                <Text style={[styles.chipText, styles.chipTextQuiet]}>+{hidden} more</Text>
-              </Pressable>
+                {'  '}+{hidden} more
+              </Text>
             )}
-            {small.length > 0 && (
-              <View style={[styles.chip, styles.chipQuiet]}>
-                <Text style={[styles.chipText, styles.chipTextQuiet]}>
-                  +{small.length} small {small.length === 1 ? 'word' : 'words'}
-                </Text>
-                <Text style={styles.chipGloss} numberOfLines={1}>
-                  {named.join(', ')}
-                  {small.length > named.length ? '…' : ''}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.cardFoot}>
-            Right on two different days. {onTheWay > 0 ? `${onTheWay} more on the way.` : ''}
           </Text>
         </>
       )}
       <View style={styles.allTimeRow}>
         <Text style={styles.allTime}>
           All time · <Text style={styles.allTimeStrong}>{allTime}</Text> learned ·{' '}
-          <Text style={styles.allTimeStrong}>{learning}</Text> learning ·{' '}
-          <Text style={styles.allTimeStrong}>{recalls}</Text> times remembered
+          <Text style={styles.allTimeStrong}>{onTheWay}</Text> on the way
         </Text>
       </View>
     </View>
@@ -773,8 +757,9 @@ export function ProgressScreen({
    * The honest totals. `learned` is core's isLearned over DISTINCT words —
    * not `state === 'known'`, which counted starter grants and one-shot
    * fills, and not rows, which counted "de" three times. `learning` is the
-   * pipeline: saved, not yet learned, not slipped. `recalls` is every
-   * correct answer ever, which is the one number that was always honest.
+   * pipeline: saved, not yet learned, not slipped. ("Times remembered",
+   * the sum of every correct answer, used to sit beside them; nobody could
+   * say what it meant, so it went with the chips.)
    */
   const totals = useMemo(() => {
     const distinct = distinctWords(words);
@@ -784,9 +769,7 @@ export function ProgressScreen({
       if (isLearned(w)) learned++;
       else if (w.state === 'learning' || w.state === 'new') learning++;
     }
-    let recalls = 0;
-    for (const w of words) recalls += w.correct;
-    return { learned, learning, recalls };
+    return { learned, learning };
   }, [words]);
 
   const stateCounts = useMemo(() => {
@@ -879,17 +862,11 @@ export function ProgressScreen({
 
             {/* 3 — learned this week: the words, not a list of rows */}
             <View style={styles.section}>
-              <SectionTitle
-                right={learnedWeek.length > 0 ? String(learnedWeek.length) : undefined}
-              >
-                Learned this week
-              </SectionTitle>
+              <SectionTitle>Learned this week</SectionTitle>
               <LearnedCard
                 week={learnedWeek}
                 onTheWay={totals.learning}
                 allTime={totals.learned}
-                learning={totals.learning}
-                recalls={totals.recalls}
               />
             </View>
 
@@ -1194,25 +1171,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 4,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  /** One learned word: the Spanish, its gloss underneath in the same pill.
-      The gloss is what makes the chip a memory rather than a token. */
-  chip: {
-    backgroundColor: 'rgba(94,230,168,0.14)',
-    borderRadius: 12,
-    maxWidth: '100%',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
+  /** The week's words as one mint sentence — a list, not a set of tokens. */
+  learnedWords: {
+    color: '#5ee6a8',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 22,
+    marginTop: 8,
   },
-  chipQuiet: { backgroundColor: 'rgba(242,245,243,0.08)' },
-  chipText: { color: '#5ee6a8', fontSize: 14, fontWeight: '700' },
-  chipTextQuiet: { color: 'rgba(242,245,243,0.6)', fontWeight: '600' },
-  chipGloss: {
-    color: 'rgba(242,245,243,0.5)',
-    fontSize: 11,
-    marginTop: 1,
-    maxWidth: 140,
-  },
+  learnedMore: { color: 'rgba(242,245,243,0.5)', fontWeight: '600' },
   allTimeRow: {
     borderTopColor: 'rgba(242,245,243,0.08)',
     borderTopWidth: 1,
