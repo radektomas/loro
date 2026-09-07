@@ -15,8 +15,21 @@ import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
 import { formatDue } from '@loro/core/srs';
-import { computeStreaks, dueCount, nextDueAt, weekStrip } from '@loro/core/progress';
-import { enableRecallForSession } from '../feed/recall';
+import {
+  computeStreaks,
+  countForDay,
+  dayKey,
+  distinctWords,
+  dueCount,
+  isLearned,
+  learnedThisWeek,
+  nextDueAt,
+  splitFunctionWords,
+  weekStrip,
+  type DailyCounts,
+  type WeekDay,
+} from '@loro/core/progress';
+import { launchReview } from '../feed/launchReview';
 import {
   formatTime,
   getPermissionState,
@@ -33,23 +46,38 @@ import { resetForColdStart } from '../onboarding/flow';
 import { SignInCard } from '../auth/SignInCard';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { LegalLinks } from './LegalLinks';
+import { getPlan, type Plan } from './plan';
 import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
 
 /**
- * PROGRESS — port of the web's app/progress/page.tsx. Read-only throughout.
+ * PROGRESS — redrawn around the week (2026-09-07).
  *
- * Five sections, in the web's order: the headline metrics, the tier ladder,
- * the streak, reviews, and words/videos.
+ * WHAT IT USED TO BE: a port of the web's all-time page. Three totals, the
+ * six-tier ladder, then "Words you got right" as an unbounded list of every
+ * row with a correct answer — which, because a blue blank typed once was
+ * filed as known and the same word from three videos was three rows, opened
+ * on "de ×3, el, en, que" for every real user. Radek's verdict: "an endless
+ * row of words, there has to be a better way". There was, and it was mostly
+ * a data problem (see LEVEL_FILL_BOX in core/srs.ts); this screen is the
+ * other half.
  *
- * EXPECT EMPTY PANELS, AND THAT IS HONEST RATHER THAN BROKEN. Three of the
- * four data sources only fill once other things run:
- *   savedWords   real today — checkpoint E's save works
- *   watchedIds   fills from markWatched on slide activation (added with this
- *                checkpoint; empty until you actually watch something)
- *   recallDays   only once RECALL_ENABLED grading has run
- *   levelState   default 1/0 unless a tier was hand-seeded or LEVELS_ENABLED
- *                grading has run
- * Nothing here fabricates a placeholder to fill the space.
+ * WHAT IT IS NOW, top to bottom — the order is the order of the questions a
+ * returning user asks:
+ *   1. TODAY      how far along today's goal am I, and what do I do next.
+ *                 The goal comes from the onboarding "how often" answer
+ *                 (plan.ts), which the app collected and then never read.
+ *   2. THIS WEEK  the streak and the week strip, against the plan's days.
+ *   3. LEARNED    the words that crossed into known this week, as chips,
+ *                 one per word, glue folded into "+N small words". Learned
+ *                 means learned (core/progress.ts isLearned): right on two
+ *                 different days, never "typed once".
+ *   4. REVIEW     what is ready, and the button that actually lands on it.
+ *   5. LEVEL      one row with the meter; the full ladder on request.
+ *   6. WORDS / VIDEOS / all-time totals — the record, at the bottom.
+ * Then the settings the page has always carried.
+ *
+ * EXPECT EMPTY PANELS, AND THAT IS HONEST RATHER THAN BROKEN. Nothing here
+ * fabricates a placeholder to fill the space; every zero is a real zero.
  */
 
 /** The four word states, as the web's segmented bar orders them. */
@@ -60,38 +88,155 @@ const STATE_SEGMENTS: { state: WordState; label: string; color: string }[] = [
   { state: 'known', label: 'Known', color: '#5ee6a8' },
 ];
 
-/** How many answered words show before "See all". */
-const CORRECT_PREVIEW = 3;
+/** Chips before "+N more" — enough to see the week, not the whole record. */
+const CHIP_PREVIEW = 12;
+/** How many of the folded small words to name in their summary line. */
+const SMALL_WORDS_NAMED = 3;
+
+function SectionTitle({
+  children,
+  right,
+}: {
+  children: string;
+  right?: string;
+}) {
+  return (
+    <View style={styles.sectionHead}>
+      <Text style={styles.sectionTitle}>{children}</Text>
+      {right !== undefined && <Text style={styles.sectionRight}>{right}</Text>}
+    </View>
+  );
+}
 
 /**
- * THE STREAK, MADE VISIBLE.
+ * TODAY — the goal, as dots you fill.
  *
- * It used to be a number and a footnote, which is the one thing a streak must
- * not be: the whole mechanic is "don't break the chain", and a chain you
- * cannot see is not a chain. So the week is drawn — Mon..Sun, filled for days
- * with a correct recall, ringed for today, dimmed ahead — next to the count.
+ * Dots rather than a ring: a ring needs react-native-svg (a native module,
+ * an EAS rebuild) or a stack of clipped Views, and a row of `goal` circles
+ * is the same information at a glance with none of that. It also scales
+ * the right way — a 3-word plan is three big dots, a 10-word plan ten small
+ * ones — so the target is legible as a count, not just a fraction.
  *
- * weekStrip comes from core and has since the web port; nothing had rendered
- * it until now, so the calendar arithmetic (local days, DST-safe, Monday-based)
- * is the tested version rather than a second one invented here.
- *
- * TODAY IS THE CALL TO ACTION. When today is not yet filled the card says so
- * and names the one action that fills it, because that is the moment the user
- * can still act on. Once it is filled the card congratulates and goes quiet.
- *
- * No animation: this screen is a summary the user scrolls, not a moment.
- * Motion here would be decoration, and it would fight the celebration that
- * already fires on the answer itself.
+ * THE BUTTON DOES WHAT THE CARD SAYS. With words ready it launches a review
+ * that lands on one (launchReview, shared with Words and the reminder);
+ * with nothing due it opens the feed, where blue blanks count too. Once the
+ * day is done the button goes quiet — a finished day should not nag.
  */
-function StreakCard({
+function TodayCard({
+  plan,
+  count,
+  due,
+  onReview,
+  onFeed,
+}: {
+  plan: Plan;
+  count: number;
+  due: number;
+  onReview: () => void;
+  onFeed: () => void;
+}) {
+  const goal = plan.wordsPerDay;
+  const done = count >= goal;
+  const remaining = Math.max(0, goal - count);
+  const dots = Array.from({ length: goal }, (_, i) => i < count);
+
+  const body = done
+    ? count > goal
+      ? `${count} right today. Everything past ${goal} is a bonus.`
+      : `${count} right today. Anything more is a bonus.`
+    : due > 0
+      ? `${remaining} more ${remaining === 1 ? 'word' : 'words'} and today is done. ` +
+        `${due} ${due === 1 ? 'is' : 'are'} ready to review.`
+      : `${remaining} more ${remaining === 1 ? 'word' : 'words'} and today is done. ` +
+        'Any blank in any video counts.';
+
+  return (
+    <View style={[styles.card, done ? styles.todayDone : styles.todayOpen]}>
+      <View style={styles.todayHead}>
+        <Text style={[styles.bigNumber, done && styles.bigNumberDone]}>
+          {done ? 'Día hecho ✓' : `${count} of ${goal}`}
+          {!done && <Text style={styles.bigNumberUnit}> words</Text>}
+        </Text>
+        <Text style={styles.planLine}>
+          {plan.paceLabel ? `Your plan: ${plan.paceLabel}` : 'Daily goal'}
+        </Text>
+      </View>
+
+      <View
+        style={styles.dots}
+        accessibilityRole="progressbar"
+        accessibilityLabel={`${count} of ${goal} words today`}
+        accessibilityValue={{ min: 0, max: goal, now: Math.min(count, goal) }}
+      >
+        {dots.map((filled, i) => (
+          <View
+            key={i}
+            style={[
+              styles.dot,
+              goal > 6 && styles.dotSmall,
+              filled && styles.dotOn,
+              done && filled && styles.dotDone,
+            ]}
+          />
+        ))}
+        {count > goal && <Text style={styles.dotsExtra}>+{count - goal}</Text>}
+      </View>
+
+      <Text style={styles.cardBody}>{body}</Text>
+
+      <Pressable
+        onPress={due > 0 ? onReview : onFeed}
+        accessibilityRole="button"
+        accessibilityHint={
+          due > 0
+            ? 'Opens the feed on a word that is ready to review'
+            : 'Opens the feed'
+        }
+        style={({ pressed }) => [
+          done ? styles.ctaQuiet : styles.cta,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Text style={done ? styles.ctaQuietText : styles.ctaText}>
+          {due > 0
+            ? done
+              ? `Review ${due} more`
+              : `Review ${due} ${due === 1 ? 'word' : 'words'}`
+            : done
+              ? 'Keep watching'
+              : 'Open the feed'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * THIS WEEK — the streak and the strip, against the plan.
+ *
+ * The strip is the same one the old Streak card drew (core's weekStrip:
+ * local days, DST-safe, Monday-first — tested). What changed is the line
+ * under it: "4 of 7 days" is the plan's promise read back, which the app
+ * collected in onboarding and then never mentioned again. A plan already
+ * met this week says so rather than reading "5 of 3".
+ *
+ * TODAY IS THE CALL TO ACTION. When today is not yet filled the card says so;
+ * once it is, it goes quiet. No animation: this screen is a summary the user
+ * scrolls, not a moment — the moment is the day-done card in the feed.
+ */
+function WeekCard({
   streaks,
   week,
+  plan,
 }: {
   streaks: { current: number; longest: number };
-  week: { key: string; label: string; active: boolean; isToday: boolean; isFuture: boolean }[];
+  week: WeekDay[];
+  plan: Plan;
 }) {
   const todayDone = week.some((d) => d.isToday && d.active);
   const alive = streaks.current > 0;
+  const practised = week.filter((d) => d.active).length;
+  const planMet = practised >= plan.daysPerWeek;
 
   return (
     <View style={[styles.card, alive && styles.streakCardAlive]}>
@@ -105,9 +250,10 @@ function StreakCard({
             </Text>
           </Text>
           <Text style={styles.cardBody}>
-            {alive ? 'of correct recalls in a row' : 'One correct recall starts a streak.'}
+            {alive ? 'in a row' : 'One correct answer starts a streak.'}
           </Text>
         </View>
+        <Text style={styles.cardFootInline}>Longest {streaks.longest}</Text>
       </View>
 
       <View
@@ -144,8 +290,11 @@ function StreakCard({
       </View>
 
       <View style={styles.streakFootRow}>
-        <Text style={[styles.cardFoot, styles.streakFootReset]}>
-          Longest: {streaks.longest}
+        <Text style={[styles.cardFoot, styles.streakFootReset, planMet && styles.streakTodayDone]}>
+          {planMet
+            ? `${practised} ${practised === 1 ? 'day' : 'days'} · plan done ✓`
+            : `${practised} of ${plan.daysPerWeek} days` +
+              (plan.paceLabel ? ` · ${plan.paceLabel}` : '')}
         </Text>
         <Text style={[styles.streakToday, todayDone && styles.streakTodayDone]}>
           {todayDone ? "Today's done ✓" : 'Today is open'}
@@ -155,8 +304,176 @@ function StreakCard({
   );
 }
 
-function SectionTitle({ children }: { children: string }) {
-  return <Text style={styles.sectionTitle}>{children}</Text>;
+/**
+ * LEARNED THIS WEEK — the words, as chips.
+ *
+ * One chip per distinct word, content words first, the glue summed into one
+ * quiet chip that names a few. This is the replacement for the endless list:
+ * bounded by the week, deduplicated by the word, and honest about what
+ * "learned" means — a footnote says it, because a user who sees a smaller
+ * number than last update deserves to know why it is smaller.
+ */
+function LearnedCard({
+  week,
+  onTheWay,
+  allTime,
+  learning,
+  recalls,
+}: {
+  week: SavedWord[];
+  onTheWay: number;
+  allTime: number;
+  learning: number;
+  recalls: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const { content, small } = splitFunctionWords(week);
+  const shown = showAll ? content : content.slice(0, CHIP_PREVIEW);
+  const hidden = content.length - shown.length;
+  const named = small.slice(0, SMALL_WORDS_NAMED).map((w) => w.text);
+
+  return (
+    <View style={styles.card}>
+      {week.length === 0 ? (
+        <>
+          <Text style={styles.learnedEmptyTitle}>Nothing learned yet this week.</Text>
+          <Text style={styles.cardBody}>
+            {onTheWay > 0
+              ? `${onTheWay} ${onTheWay === 1 ? 'word is' : 'words are'} on the way. `
+              : ''}
+            A word is learned once you get it right on two different days.
+          </Text>
+        </>
+      ) : (
+        <>
+          <View style={styles.chips}>
+            {shown.map((word) => (
+              <View key={`${word.videoId}:${word.text}`} style={styles.chip}>
+                <Text style={styles.chipText}>{word.text}</Text>
+                <Text style={styles.chipGloss} numberOfLines={1}>
+                  {word.translation}
+                </Text>
+              </View>
+            ))}
+            {hidden > 0 && (
+              <Pressable
+                onPress={() => setShowAll(true)}
+                accessibilityRole="button"
+                hitSlop={6}
+                style={({ pressed }) => [styles.chip, styles.chipQuiet, pressed && styles.pressed]}
+              >
+                <Text style={[styles.chipText, styles.chipTextQuiet]}>+{hidden} more</Text>
+              </Pressable>
+            )}
+            {small.length > 0 && (
+              <View style={[styles.chip, styles.chipQuiet]}>
+                <Text style={[styles.chipText, styles.chipTextQuiet]}>
+                  +{small.length} small {small.length === 1 ? 'word' : 'words'}
+                </Text>
+                <Text style={styles.chipGloss} numberOfLines={1}>
+                  {named.join(', ')}
+                  {small.length > named.length ? '…' : ''}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.cardFoot}>
+            Right on two different days. {onTheWay > 0 ? `${onTheWay} more on the way.` : ''}
+          </Text>
+        </>
+      )}
+      <View style={styles.allTimeRow}>
+        <Text style={styles.allTime}>
+          All time · <Text style={styles.allTimeStrong}>{allTime}</Text> learned ·{' '}
+          <Text style={styles.allTimeStrong}>{learning}</Text> learning ·{' '}
+          <Text style={styles.allTimeStrong}>{recalls}</Text> times remembered
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * LEVEL — one row, the ladder on request.
+ *
+ * The six-tier ladder used to take a third of the screen for a number that
+ * both real users maxed inside two weeks. The current tier and its meter
+ * are what a returning user looks for; the whole ladder is a tap away, so
+ * the names (which teach — they are real Spanish) are not lost.
+ */
+function LevelSection({ levelState }: { levelState: LevelState }) {
+  const [showLadder, setShowLadder] = useState(false);
+  const atTop = levelState.level >= TIERS.length;
+  const tier = tierFor(levelState.level);
+
+  return (
+    <View style={styles.section}>
+      <SectionTitle>Level</SectionTitle>
+      <View style={[styles.card, styles.tierCurrent]}>
+        <View style={styles.tierHead}>
+          <View style={[styles.tierBadge, styles.tierBadgeCurrent]}>
+            <Text style={[styles.tierBadgeText, styles.tierBadgeTextCurrent]}>●</Text>
+          </View>
+          <View style={styles.tierText}>
+            <Text style={styles.tierName}>{tier.name}</Text>
+            <Text style={styles.tierMeaning}>“{tier.meaning}”</Text>
+          </View>
+          <Text style={styles.tierHintInline}>
+            {atTop ? 'Top of the ladder' : `${levelState.meter}% → ${tierFor(levelState.level + 1).name}`}
+          </Text>
+        </View>
+        <View style={styles.meterTrack}>
+          <View style={[styles.meterFill, { width: `${levelState.meter}%` }]} />
+        </View>
+        <Pressable
+          onPress={() => setShowLadder((shown) => !shown)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showLadder }}
+          hitSlop={8}
+          style={({ pressed }) => [styles.ladderToggle, pressed && styles.pressed]}
+        >
+          <Text style={styles.ladderToggleText}>
+            {showLadder ? 'Hide the ladder' : 'See all six levels'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {showLadder &&
+        TIERS.map((entry) => {
+          const current = entry.level === levelState.level;
+          const achieved = entry.level < levelState.level;
+          return (
+            <View key={entry.level} style={[styles.tier, current && styles.tierRowCurrent]}>
+              <View style={styles.tierHead}>
+                <View
+                  style={[
+                    styles.tierBadge,
+                    current && styles.tierBadgeCurrent,
+                    achieved && styles.tierBadgeDone,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tierBadgeText,
+                      current && styles.tierBadgeTextCurrent,
+                      achieved && styles.tierBadgeTextDone,
+                    ]}
+                  >
+                    {achieved ? '✓' : current ? '●' : '🔒'}
+                  </Text>
+                </View>
+                <View style={styles.tierText}>
+                  <Text style={[styles.tierName, !current && !achieved && styles.tierLocked]}>
+                    {entry.name}
+                  </Text>
+                  <Text style={styles.tierMeaning}>“{entry.meaning}”</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+    </View>
+  );
 }
 
 /**
@@ -388,23 +705,6 @@ function NotificationsSection() {
   );
 }
 
-function MetricCard({
-  value,
-  label,
-  hero,
-}: {
-  value: number;
-  label: string;
-  hero?: boolean;
-}) {
-  return (
-    <View style={[styles.metric, hero && styles.metricHero]}>
-      <Text style={[styles.metricValue, hero && styles.metricValueHero]}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
-  );
-}
-
 export function ProgressScreen({
   active,
   onGoToFeed,
@@ -420,11 +720,15 @@ export function ProgressScreen({
   const [recallDays, setRecallDays] = useState<string[]>(() =>
     storage.getCorrectRecallDays()
   );
+  const [dailyCounts, setDailyCounts] = useState<DailyCounts>(() =>
+    storage.getDailyCorrect()
+  );
   const [levelState, setLevelState] = useState<LevelState>(() =>
     storage.getLevelState()
   );
-  /** Collapsed to CORRECT_PREVIEW until asked — see the section itself. */
-  const [showAllCorrect, setShowAllCorrect] = useState(false);
+  /** Read on the way in, like everything else: the answer can only change
+      by re-running onboarding, which reloads the app. */
+  const [plan, setPlan] = useState<Plan>(getPlan);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -432,10 +736,13 @@ export function ProgressScreen({
       setWords(storage.getSavedWords());
       setWatchedIds(storage.getWatchedVideoIds());
       setRecallDays(storage.getCorrectRecallDays());
+      setDailyCounts(storage.getDailyCorrect());
       setLevelState(storage.getLevelState());
+      setPlan(getPlan());
     };
-    // onWordsChanged covers saved words, the watch log, recall days and the
-    // level meter — core lists all four as its watched keys (storage.ts).
+    // onWordsChanged covers saved words, the watch log, recall days, the
+    // daily tally and the level meter — core lists all five as its watched
+    // keys (storage.ts).
     const unsub = storage.onWordsChanged(refresh);
     if (!active) return unsub;
     // Re-read on the way IN only. Leaving the tab used to re-read and
@@ -450,16 +757,23 @@ export function ProgressScreen({
     };
   }, [active]);
 
-  // The honest headline numbers — every one only goes up as you learn.
+  /**
+   * The honest totals. `learned` is core's isLearned over DISTINCT words —
+   * not `state === 'known'`, which counted starter grants and one-shot
+   * fills, and not rows, which counted "de" three times. `learning` is the
+   * pipeline: saved, not yet learned, not slipped. `recalls` is every
+   * correct answer ever, which is the one number that was always honest.
+   */
   const totals = useMemo(() => {
+    const distinct = distinctWords(words);
     let learned = 0;
     let learning = 0;
-    let recalls = 0;
-    for (const w of words) {
-      if (w.state === 'known') learned++;
-      else if (w.state === 'learning') learning++;
-      recalls += w.correct;
+    for (const w of distinct) {
+      if (isLearned(w)) learned++;
+      else if (w.state === 'learning' || w.state === 'new') learning++;
     }
+    let recalls = 0;
+    for (const w of words) recalls += w.correct;
     return { learned, learning, recalls };
   }, [words]);
 
@@ -469,37 +783,15 @@ export function ProgressScreen({
     return counts;
   }, [words]);
 
-  /**
-   * The words you have actually answered correctly, freshest first.
-   *
-   * `correct > 0` IS THE WHOLE TEST, and it is deliberately not "came from a
-   * blue blank". A level fill and a green recall review both land in the same
-   * SavedWord with the same counter (storage.saveLevelWord / gradeWord), and
-   * nothing on the row records which flow produced it. Inventing a
-   * distinction the data does not carry would mean guessing from box/state
-   * shape — box 4 + state 'known' + correct 1 is what a correct level fill
-   * looks like, but it is also what a tapped word looks like after it has
-   * been reviewed up the ladder. So this is honestly "words you got right",
-   * which is what it says, rather than a claim it cannot support.
-   *
-   * lastReviewedAt is non-null for anything with correct > 0 — it is written
-   * in the same branch as the counter — but it is typed nullable, so the
-   * coalesce is for the type rather than for a case that occurs.
-   */
-  const correctWords = useMemo(
-    () =>
-      words
-        .filter((w) => w.correct > 0)
-        .sort((a, b) => (b.lastReviewedAt ?? 0) - (a.lastReviewedAt ?? 0)),
-    [words]
-  );
-
   const due = useMemo(() => dueCount(words, now), [words, now]);
   const nextDue = useMemo(() => nextDueAt(words, now), [words, now]);
   const streaks = useMemo(() => computeStreaks(recallDays, now), [recallDays, now]);
-  /** Mon..Sun for the current week, with today and future days marked —
-      core has carried this helper since the web port and nothing rendered it. */
   const week = useMemo(() => weekStrip(recallDays, now), [recallDays, now]);
+  const todayCount = useMemo(
+    () => countForDay(dailyCounts, dayKey(now)),
+    [dailyCounts, now]
+  );
+  const learnedWeek = useMemo(() => learnedThisWeek(words, now), [words, now]);
 
   /**
    * Per video: how many words saved, how many learned, most-engaged first.
@@ -508,14 +800,15 @@ export function ProgressScreen({
    * renders every row, including the 200-odd videos with nothing saved. That is
    * fine for a DOM list on a desktop and is not fine here — 200+ rows with
    * remote thumbnails inside a ScrollView would jank the tab. Only videos the
-   * user has actually engaged with are rendered. The arithmetic is unchanged.
+   * user has actually engaged with are rendered. The arithmetic is unchanged,
+   * except that "learned" now means learned (isLearned).
    */
   const videoRows = useMemo(() => {
     const byVideo = new Map<string, { saved: number; learned: number }>();
     for (const w of words) {
       const e = byVideo.get(w.videoId) ?? { saved: 0, learned: 0 };
       e.saved++;
-      if (w.state === 'known') e.learned++;
+      if (isLearned(w)) e.learned++;
       byVideo.set(w.videoId, e);
     }
     const rows: { video: Video; saved: number; learned: number }[] = [];
@@ -527,15 +820,18 @@ export function ProgressScreen({
     return rows.sort((a, b) => b.saved - a.saved);
   }, [words]);
 
-  /** Same entry point as /vocab's — arms recall, then switches tab. A Review
-      button that only changes screen is the bug this fixes. */
+  /**
+   * THE REVIEW BUTTONS LAND ON A DUE WORD. Both of them — Today's and the
+   * Reviews card's — go through launchReview, the same launcher the Words
+   * tab and the reminder tap use. The old startReview here armed recall and
+   * switched tab, which with RECALL_ENABLED true opened a random video.
+   */
   const startReview = () => {
-    enableRecallForSession();
+    launchReview('progress');
     onGoToFeed();
   };
 
   const empty = words.length === 0 && watchedIds.length === 0;
-  const atTop = levelState.level >= TIERS.length;
 
   return (
     <View style={styles.root}>
@@ -561,157 +857,60 @@ export function ProgressScreen({
           </View>
         ) : (
           <>
-            {/* 1 — the headline numbers */}
-            <View style={styles.metrics}>
-              <MetricCard value={totals.learned} label="Words learned" hero />
-              <MetricCard value={totals.learning} label="Learning" />
-              <MetricCard value={totals.recalls} label="Times remembered" />
+            {/* 1 — today: the goal, and the one thing to do next */}
+            <View style={styles.section}>
+              <SectionTitle>Today</SectionTitle>
+              <TodayCard
+                plan={plan}
+                count={todayCount}
+                due={due}
+                onReview={startReview}
+                onFeed={onGoToFeed}
+              />
             </View>
 
-            {/* 2 — the tier ladder: all six, current highlighted with the meter
-                inside it, achieved below, locked above. Names are Spanish on
-                purpose — the ladder itself teaches. */}
+            {/* 2 — this week: the streak and the strip, against the plan */}
             <View style={styles.section}>
-              <SectionTitle>Level</SectionTitle>
-              {TIERS.map((tier) => {
-                const current = tier.level === levelState.level;
-                const achieved = tier.level < levelState.level;
-                return (
-                  <View
-                    key={tier.level}
-                    style={[styles.tier, current && styles.tierCurrent]}
-                  >
-                    <View style={styles.tierHead}>
-                      <View
-                        style={[
-                          styles.tierBadge,
-                          current && styles.tierBadgeCurrent,
-                          achieved && styles.tierBadgeDone,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.tierBadgeText,
-                            current && styles.tierBadgeTextCurrent,
-                            achieved && styles.tierBadgeTextDone,
-                          ]}
-                        >
-                          {achieved ? '✓' : current ? '●' : '🔒'}
-                        </Text>
-                      </View>
-                      <View style={styles.tierText}>
-                        <Text
-                          style={[styles.tierName, !current && !achieved && styles.tierLocked]}
-                        >
-                          {tier.name}
-                        </Text>
-                        <Text style={styles.tierMeaning}>“{tier.meaning}”</Text>
-                      </View>
-                    </View>
-                    {current && (
-                      <View style={styles.meterTrack}>
-                        <View
-                          style={[styles.meterFill, { width: `${levelState.meter}%` }]}
-                        />
-                      </View>
-                    )}
-                    {current && (
-                      <Text style={styles.tierHint}>
-                        {atTop
-                          ? 'Top of the ladder.'
-                          : `${levelState.meter}% toward ${tierFor(levelState.level + 1).name}`}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
+              <SectionTitle>This week</SectionTitle>
+              <WeekCard streaks={streaks} week={week} plan={plan} />
             </View>
 
-            {/* 2b — what the ladder above was actually built out of.
-                Directly under Level on purpose: the meter is a number you
-                climbed, and this is the evidence. A tier that moved with
-                nothing to show for it reads as a score; the words are what
-                make it a record. */}
-            {correctWords.length > 0 && (
-              <View style={styles.section}>
-                <SectionTitle>Words you got right</SectionTitle>
-                {/*
-                  THREE, THEN THE REST ON REQUEST. The list is unbounded — it
-                  grows with every correct fill and every review — and this
-                  screen is a ScrollView with five other sections under it, so
-                  rendering all of them would push Streak, Reviews, Words and
-                  Videos off the bottom for anyone who has been using the app.
-                  Three is enough to show the shape and recognise the last
-                  thing answered without displacing what follows.
-                */}
-                {(showAllCorrect
-                  ? correctWords
-                  : correctWords.slice(0, CORRECT_PREVIEW)
-                ).map((word) => (
-                  // text+videoId is core's own dedupe key for a saved word
-                  // (storage.saveWord), so it is unique by construction here.
-                  <View key={`${word.videoId}:${word.text}`} style={styles.correctRow}>
-                    <View style={styles.correctCheck}>
-                      <Text style={styles.correctCheckText}>✓</Text>
-                    </View>
-                    <View style={styles.correctText}>
-                      <Text style={styles.correctWord} numberOfLines={1}>
-                        {word.text}
-                      </Text>
-                      <Text style={styles.correctGloss} numberOfLines={1}>
-                        {word.translation}
-                      </Text>
-                    </View>
-                    {/* Only once it means something. "x1" on every row is
-                        noise; a repeat is the interesting case. */}
-                    {word.correct > 1 && (
-                      <Text style={styles.correctCount}>×{word.correct}</Text>
-                    )}
-                  </View>
-                ))}
-                {correctWords.length > CORRECT_PREVIEW && (
-                  <Pressable
-                    onPress={() => setShowAllCorrect((shown) => !shown)}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: showAllCorrect }}
-                    hitSlop={8}
-                    style={({ pressed }) => [
-                      styles.seeAll,
-                      pressed && styles.seeAllPressed,
-                    ]}
-                  >
-                    <Text style={styles.seeAllText}>
-                      {showAllCorrect
-                        ? 'Show fewer'
-                        : `See all ${correctWords.length}`}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-
-            {/* 3 — streak: consecutive days with a correct recall */}
+            {/* 3 — learned this week: the words, not a list of rows */}
             <View style={styles.section}>
-              <SectionTitle>Streak</SectionTitle>
-              <StreakCard streaks={streaks} week={week} />
+              <SectionTitle
+                right={learnedWeek.length > 0 ? String(learnedWeek.length) : undefined}
+              >
+                Learned this week
+              </SectionTitle>
+              <LearnedCard
+                week={learnedWeek}
+                onTheWay={totals.learning}
+                allTime={totals.learned}
+                learning={totals.learning}
+                recalls={totals.recalls}
+              />
             </View>
 
             {/* 4 — reviews */}
             <View style={styles.section}>
-              <SectionTitle>Reviews</SectionTitle>
+              <SectionTitle>Ready to review</SectionTitle>
               <View style={[styles.card, due > 0 && styles.cardAccent]}>
                 {due > 0 ? (
                   <>
                     <Text style={styles.bigNumber}>
-                      {due} <Text style={styles.bigNumberUnit}>{due === 1 ? 'word' : 'words'} due</Text>
+                      {due}{' '}
+                      <Text style={styles.bigNumberUnit}>
+                        {due === 1 ? 'word' : 'words'} ready
+                      </Text>
                     </Text>
                     <Text style={styles.cardBody}>
-                      They&apos;ll appear as blanks while you watch.
+                      Review opens the feed on one of them. The rest follow as
+                      blanks while you watch.
                     </Text>
                     <Pressable
                       onPress={startReview}
                       accessibilityRole="button"
-                      accessibilityHint="Opens the feed with your due words armed as blanks"
+                      accessibilityHint="Opens the feed on a word that is ready to review"
                       style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
                     >
                       <Text style={styles.ctaText}>Review</Text>
@@ -727,7 +926,10 @@ export function ProgressScreen({
               </View>
             </View>
 
-            {/* 5 — words, as a segmented bar by state */}
+            {/* 5 — level: one row, the ladder on request */}
+            <LevelSection levelState={levelState} />
+
+            {/* 6 — words, as a segmented bar by state */}
             <View style={styles.section}>
               <SectionTitle>Words</SectionTitle>
               <View style={styles.card}>
@@ -758,7 +960,7 @@ export function ProgressScreen({
               </View>
             </View>
 
-            {/* 6 — videos: saved vs learned per video, most-engaged first */}
+            {/* 7 — videos: saved vs learned per video, most-engaged first */}
             {videoRows.length > 0 && (
               <View style={styles.section}>
                 <SectionTitle>Videos</SectionTitle>
@@ -853,88 +1055,28 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
-  metrics: { flexDirection: 'row', gap: 8, marginBottom: 22 },
-  metric: {
-    backgroundColor: '#141a17',
-    borderRadius: 16,
-    flex: 1,
-    padding: 14,
-  },
-  metricHero: {
-    backgroundColor: 'rgba(94,230,168,0.12)',
-    borderColor: 'rgba(94,230,168,0.25)',
-    borderWidth: 1,
-  },
-  metricValue: { color: '#f2f5f3', fontSize: 22, fontWeight: '800' },
-  metricValueHero: { color: '#5ee6a8' },
-  metricLabel: {
-    color: 'rgba(242,245,243,0.55)',
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
   signIn: { marginTop: 4 },
   deleteAccount: { marginTop: 12 },
   legal: { marginTop: 20 },
   section: { marginBottom: 22 },
+  sectionHead: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
   sectionTitle: {
     color: 'rgba(242,245,243,0.5)',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.2,
-    marginBottom: 8,
-    paddingHorizontal: 2,
   },
-  /** One answered word. Same 16-radius card family as `tier` above, at row
-      scale, so the two read as one column rather than two treatments. */
-  correctRow: {
-    alignItems: 'center',
-    backgroundColor: '#141a17',
-    borderRadius: 14,
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  correctCheck: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(94,230,168,0.16)',
-    borderRadius: 999,
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
-  },
-  correctCheckText: { color: '#5ee6a8', fontSize: 12, fontWeight: '800' },
-  /** flex:1 is what makes numberOfLines bite — without it the text sizes to
-      content and a long gloss pushes the count off the row instead of
-      ellipsising. */
-  correctText: { flex: 1 },
-  correctWord: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
-  correctGloss: {
-    color: 'rgba(242,245,243,0.55)',
-    fontSize: 12,
-    marginTop: 1,
-  },
-  correctCount: {
-    color: 'rgba(94,230,168,0.8)',
+  sectionRight: {
+    color: '#5ee6a8',
     fontSize: 12,
     fontVariant: ['tabular-nums'],
-    fontWeight: '700',
-  },
-  seeAll: {
-    alignItems: 'center',
-    borderColor: 'rgba(242,245,243,0.14)',
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 2,
-    paddingVertical: 10,
-  },
-  seeAllPressed: { backgroundColor: 'rgba(242,245,243,0.06)' },
-  seeAllText: {
-    color: 'rgba(242,245,243,0.75)',
-    fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   card: { backgroundColor: '#141a17', borderRadius: 18, padding: 16 },
   cardAccent: {
@@ -948,8 +1090,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
   },
+  cardFootInline: {
+    color: 'rgba(242,245,243,0.4)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   bigNumber: { color: '#f2f5f3', fontSize: 24, fontWeight: '800' },
+  bigNumberDone: { color: '#5ee6a8' },
   bigNumberUnit: { fontSize: 15, fontWeight: '700' },
+
+  /** TODAY. Open reads as the page's accent card; done goes calm mint. */
+  todayOpen: {
+    borderColor: 'rgba(94,230,168,0.25)',
+    borderWidth: 1,
+  },
+  todayDone: {
+    backgroundColor: 'rgba(94,230,168,0.10)',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderWidth: 1,
+  },
+  todayHead: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  /** flex:1 with a right alignment so a long pace label wraps under itself
+      instead of shoving the number off the row. */
+  planLine: {
+    color: 'rgba(242,245,243,0.45)',
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+    paddingTop: 6,
+    textAlign: 'right',
+  },
+  dots: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 14,
+  },
+  dot: {
+    backgroundColor: 'rgba(242,245,243,0.10)',
+    borderRadius: 999,
+    height: 18,
+    width: 18,
+  },
+  dotSmall: { height: 13, width: 13 },
+  dotOn: { backgroundColor: '#5ee6a8' },
+  dotDone: { backgroundColor: '#5ee6a8' },
+  dotsExtra: {
+    color: '#5ee6a8',
+    fontSize: 13,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '800',
+    marginLeft: 2,
+  },
+
+  /** THIS WEEK. The old Streak card's styles, kept name for name. */
   streakCardAlive: {
     borderColor: 'rgba(242,193,78,0.35)',
     borderWidth: 1,
@@ -997,14 +1199,61 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   streakTodayDone: { color: '#f2c14e' },
+
+  /** LEARNED THIS WEEK. */
+  learnedEmptyTitle: {
+    color: '#f2f5f3',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  /** One learned word: the Spanish, its gloss underneath in the same pill.
+      The gloss is what makes the chip a memory rather than a token. */
+  chip: {
+    backgroundColor: 'rgba(94,230,168,0.14)',
+    borderRadius: 12,
+    maxWidth: '100%',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  chipQuiet: { backgroundColor: 'rgba(242,245,243,0.08)' },
+  chipText: { color: '#5ee6a8', fontSize: 14, fontWeight: '700' },
+  chipTextQuiet: { color: 'rgba(242,245,243,0.6)', fontWeight: '600' },
+  chipGloss: {
+    color: 'rgba(242,245,243,0.5)',
+    fontSize: 11,
+    marginTop: 1,
+    maxWidth: 140,
+  },
+  allTimeRow: {
+    borderTopColor: 'rgba(242,245,243,0.08)',
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 10,
+  },
+  allTime: {
+    color: 'rgba(242,245,243,0.45)',
+    fontSize: 12,
+    fontVariant: ['tabular-nums'],
+    lineHeight: 17,
+  },
+  allTimeStrong: { color: 'rgba(242,245,243,0.8)', fontWeight: '700' },
+
+  /** LEVEL. */
   tier: {
     backgroundColor: '#141a17',
     borderRadius: 16,
     marginBottom: 6,
+    marginTop: 6,
     padding: 12,
   },
   tierCurrent: {
     backgroundColor: 'rgba(87,179,242,0.12)',
+    borderColor: 'rgba(87,179,242,0.35)',
+    borderWidth: 1,
+  },
+  tierRowCurrent: {
     borderColor: 'rgba(87,179,242,0.35)',
     borderWidth: 1,
   },
@@ -1026,20 +1275,27 @@ const styles = StyleSheet.create({
   tierName: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
   tierLocked: { color: 'rgba(242,245,243,0.4)' },
   tierMeaning: { color: 'rgba(242,245,243,0.45)', fontSize: 12, marginTop: 1 },
+  tierHintInline: {
+    color: 'rgba(87,179,242,0.85)',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
   meterTrack: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 999,
     height: 5,
-    marginTop: 10,
+    marginTop: 12,
     overflow: 'hidden',
   },
   meterFill: { backgroundColor: '#57b3f2', height: '100%' },
-  tierHint: {
-    color: 'rgba(87,179,242,0.85)',
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 6,
+  ladderToggle: { alignSelf: 'flex-start', marginTop: 10 },
+  ladderToggleText: {
+    color: 'rgba(242,245,243,0.55)',
+    fontSize: 12,
+    fontWeight: '700',
   },
+
   bar: { borderRadius: 999, flexDirection: 'row', gap: 1, height: 10, overflow: 'hidden' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
   legendItem: { alignItems: 'center', flexDirection: 'row', gap: 5 },
@@ -1148,5 +1404,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   ctaText: { color: '#06130d', fontSize: 15, fontWeight: '800' },
+  /** The done state's button: present, not pressing. */
+  ctaQuiet: {
+    alignItems: 'center',
+    borderColor: 'rgba(242,245,243,0.16)',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingVertical: 11,
+  },
+  ctaQuietText: { color: 'rgba(242,245,243,0.8)', fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.7 },
 });

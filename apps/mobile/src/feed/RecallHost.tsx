@@ -18,7 +18,9 @@ import { dueCount } from '@loro/core/progress';
 import type { AnswerMatch } from '@loro/core/srs';
 import { usePlayerApi, usePlayerClock, usePlayerStatus } from '../player/PlayerHost';
 import { maybeAskForPermission, noteCorrectRecall } from '../platform/notifications';
+import { track } from '../platform/analytics';
 import { CELEBRATE_MS } from './Celebration';
+import { maybeCelebrateDayDone } from './dayDone';
 import {
   LEVELS_ENABLED,
   buildLevelPlan,
@@ -988,13 +990,22 @@ export function RecallHost({
        * empty the queue. The moment fires whether or not the last answer was
        * correct — a wrong answer still finishes the session.
        *
-       * PRIORITY AT THE SHARED CELEBRATION MOMENT: the save-progress card
-       * wins over the notification explainer. It is the rarer ask (anonymous
-       * only, 7-day snooze, gone forever once the vocab prompts resolve) and
-       * it protects data; the explainer's promptedThisSession is not consumed
-       * when it yields, so its next chance survives.
+       * PRIORITY AT THE SHARED CELEBRATION MOMENT: the day-done card first —
+       * it is the product's own win, the answer that just completed today's
+       * goal, and it is raised at most once a day (dayDone.ts). Then the
+       * save-progress card over the notification explainer: the rarer ask
+       * (anonymous only, 7-day snooze, gone forever once the vocab prompts
+       * resolve), and it protects data. Neither ask's latch is consumed when
+       * it yields, so its next chance survives.
        */
       if (wasCorrect) noteCorrectRecall();
+      // The loop's middle step, in the log: every graded blank, both kinds.
+      track('blank_answered', {
+        kind: entry.kind,
+        match,
+        correct: wasCorrect,
+        band: entry.kind === 'level' ? entry.word.level : undefined,
+      });
       const sessionComplete =
         entry.kind === 'recall' &&
         dueCount(storage.getSavedWords(), Date.now()) === 0;
@@ -1003,6 +1014,7 @@ export function RecallHost({
         askTimer.current = setTimeout(() => {
           askTimer.current = null;
           void (async () => {
+            if (wasCorrect && maybeCelebrateDayDone()) return;
             const raised = sessionComplete && (await maybeAskToSaveProgress());
             if (!raised && wasCorrect) await maybeAskForPermission();
           })();

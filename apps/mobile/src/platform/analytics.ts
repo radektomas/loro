@@ -118,7 +118,18 @@ export type EventName =
   | 'restore_empty'
   | 'restore_failed'
   // the app itself
-  | 'video_watched';
+  | 'video_watched'
+  // THE LOOP (2026-09-07). Until this update the log stopped at
+  // video_watched: nothing recorded a word being saved, a blank being
+  // answered, a review being started or a reminder being tapped, so the
+  // retention question — do people who do the loop come back? — could not
+  // be asked of the data at all. The five below are the loop.
+  | 'word_saved'          // { videoId } — the feed's word sheet wrote a word
+  | 'blank_answered'      // { kind, match, correct, band? } — one graded blank
+  | 'review_started'      // { source, due, landed, willBlank } — a Review door
+  | 'goal_met'            // { goal, count, streak } — today's plan completed
+  | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
+  | 'reminder_permission'; // { state } — iOS's answer, right after the ask
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

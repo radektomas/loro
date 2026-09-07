@@ -2,7 +2,8 @@ import { memo, useCallback, useEffect, useState, type ReactElement } from 'react
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { subscribeToNotificationRoute } from '../platform/notifications';
-import { enableRecallForSession } from '../feed/recall';
+import { track } from '../platform/analytics';
+import { launchReview } from '../feed/launchReview';
 import { FeedScreen } from '../feed/FeedScreen';
 import { VocabScreen } from '../vocab/VocabScreen';
 import { ProgressScreen } from '../progress/ProgressScreen';
@@ -76,18 +77,21 @@ export function Shell() {
   const [tabBarHeight, setTabBarHeight] = useState(0);
   /** Stable, so the memoised screens above can actually skip a render. */
   const goToFeed = useCallback(() => setTab('feed'), []);
+  const goToProgress = useCallback(() => setTab('progress'), []);
 
   /**
-   * A TAPPED NOTIFICATION LANDS IN REVIEW, NOT THE FEED.
+   * A TAPPED NOTIFICATION LANDS ON A DUE WORD, NOT ON THE FEED.
    *
    * This IS the routing layer. There is no navigator to wait on: the app is
-   * three sibling tabs behind a useState, so "route to review" is the same pair
-   * of calls the Review buttons in Progress and Words already make.
+   * three sibling tabs behind a useState, so "route to review" is the same
+   * launch the Review buttons in Progress and Words make, then the tab.
    *
-   * enableRecallForSession is kept as the declared entry point into a review
-   * session. With RECALL_ENABLED now true the arm is a no-op behaviourally
-   * (see the note in recall.ts), but the call stays so this route reads the
-   * same as the Review buttons in Progress and Words.
+   * IT USED TO BE enableRecallForSession() + setTab('feed'), and that was the
+   * broken half of the return loop (2026-09-07): with RECALL_ENABLED true the
+   * arm decided nothing, so the reminder that said "5 words ready" opened a
+   * random video that spoke none of them. launchReview parks the first due
+   * word the catalog will actually blank and re-cuts the feed around it —
+   * see launchReview.ts.
    *
    * COLD START IS HANDLED BY SUBSCRIBING, not by a second code path.
    * subscribeToNotificationRoute drains a route parked before anything mounted,
@@ -97,7 +101,7 @@ export function Shell() {
   useEffect(
     () =>
       subscribeToNotificationRoute(() => {
-        enableRecallForSession();
+        launchReview('notification');
         setTab('feed');
       }),
     []
@@ -112,7 +116,7 @@ export function Shell() {
           would drop that state instead. */}
       <View style={styles.screens}>
         <View style={[styles.screen, tab !== 'feed' && styles.hidden]}>
-          <Feed active={tab === 'feed'} />
+          <Feed active={tab === 'feed'} onGoToProgress={goToProgress} />
         </View>
         <View style={[styles.screen, tab !== 'vocab' && styles.hidden]}>
           <Vocab active={tab === 'vocab'} onGoToFeed={goToFeed} />
@@ -131,7 +135,11 @@ export function Shell() {
           return (
             <Pressable
               key={entry.key}
-              onPress={() => setTab(entry.key)}
+              onPress={() => {
+                // A tap on the tab already showing is not an open.
+                if (entry.key !== tab) track('tab_opened', { tab: entry.key });
+                setTab(entry.key);
+              }}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               accessibilityLabel={entry.label}

@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
+import { liftDueVideos } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import { refreshCatalog } from '../platform/catalog';
 import { trackOnce } from '../platform/analytics';
@@ -34,6 +35,7 @@ import {
 import { setStoredRate } from '../player/rate';
 import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
+import { DayDoneCard } from './DayDoneCard';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
@@ -228,8 +230,12 @@ export function FeedScreen({
   active,
   reel,
   walkthrough,
+  onGoToProgress,
 }: {
   active: boolean;
+  /** The day-done card's "see my progress". Absent during onboarding, where
+      there is no Progress tab to go to. */
+  onGoToProgress?: () => void;
   /**
    * SHOW EXACTLY THESE VIDEOS, IN THIS ORDER — the onboarding taste reel.
    *
@@ -340,6 +346,39 @@ export function FeedScreen({
   );
 
   /**
+   * A REVIEW LAUNCH RE-CUTS THE FEED AROUND ITS LANDING (2026-09-07).
+   *
+   * The settled order is append-only for a user who is scrolling it — but a
+   * review launch arrives from another tab, or from a reminder tap, and the
+   * list is about to be remounted at the landing anyway (FeedBody's jump).
+   * That is the one moment a re-cut costs nothing, and it is the moment the
+   * old feed failed: after the landing's word, the next videos were random
+   * and almost never spoke another due one. liftDueVideos puts the landing
+   * first, then the videos that will actually blank a due word, then the
+   * rest — each group in its existing shuffled order. Core carries the
+   * reasoning and the cap.
+   *
+   * Skipped for a reel (fixed by definition) and for a landing that is not in
+   * this feed (pruned or starter-only — FeedBody logs that case).
+   */
+  useEffect(
+    () =>
+      subscribeToReviewTarget((target) => {
+        setVideos((current) => {
+          if (reelRef.current) return current;
+          if (!current.some((video) => video.id === target.videoId)) return current;
+          const next = liftDueVideos(current, storage.getSavedWords(), {
+            landingId: target.videoId,
+          });
+          orderedRef.current = next;
+          feedLog(`review launch: feed re-cut around "${target.word}"`);
+          return next;
+        });
+      }),
+    []
+  );
+
+  /**
    * WHILE THE LIST IS EMPTY, KEEP ASKING FOR THE CATALOG.
    *
    * An empty list here means the first snapshot download has never landed —
@@ -442,6 +481,7 @@ export function FeedScreen({
       active={active}
       walkthrough={walkthrough}
       onAreaLayout={onAreaLayout}
+      onGoToProgress={onGoToProgress}
     />
   );
 }
@@ -556,6 +596,7 @@ function FeedBody({
   active,
   walkthrough,
   onAreaLayout,
+  onGoToProgress,
 }: {
   videos: EmbedVideo[];
   box: Omit<PlayerBox, 'visible'> | null;
@@ -565,6 +606,7 @@ function FeedBody({
   active: boolean;
   walkthrough?: FeedWalkthrough;
   onAreaLayout: (event: LayoutChangeEvent) => void;
+  onGoToProgress?: () => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   /**
@@ -1014,6 +1056,14 @@ function FeedBody({
                   notification explainer (see RecallHost's priority note). Same
                   obscure contract, same layering reason. */}
               <SessionSavePrompt onObscurePlayer={setPromptObscured} />
+              {/* The win. Raised by RecallHost after the celebration for the
+                  answer that completed today's goal, ahead of both asks
+                  above; once a day at most (dayDone.ts). Same obscure
+                  contract, same layering reason. */}
+              <DayDoneCard
+                onObscurePlayer={setPromptObscured}
+                onGoToProgress={onGoToProgress}
+              />
             </>
           )}
         </View>

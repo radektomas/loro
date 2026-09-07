@@ -11,14 +11,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
-import { formatDue, KNOWN_BOX } from '@loro/core/srs';
+import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
 import { getCatalog } from '@loro/core/catalog';
-import {
-  pickFirstBlankTarget,
-  pickReviewTarget,
-  type WordOccurrence,
-} from '@loro/core/occurrences';
+import { pickReviewTarget, type WordOccurrence } from '@loro/core/occurrences';
 import { enableRecallForSession } from '../feed/recall';
+import { launchReview } from '../feed/launchReview';
 import { requestReviewTarget } from '../feed/reviewTarget';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
@@ -100,6 +97,34 @@ function fold(text: string): string {
 function friendlyDue(word: SavedWord, now: number): string {
   if (word.dueAt <= now) return 'Ready now';
   return `Review ${formatDue(word.dueAt, now)}`;
+}
+
+/**
+ * ONE ROW PER WORD (2026-09-07).
+ *
+ * Storage keys a word on (text, videoId), so "de" saved from three videos is
+ * three entries — and the blank planner already treats them as one thing to
+ * practise (srs.computeBlankPlan folds due words by normalizeAnswer and
+ * asks the most urgent). The list shows what the feed will ask: the most
+ * urgent entry per distinct word, slipped first, then lowest box, then
+ * earliest due. Removing a row removes every entry behind it (handleRemove),
+ * because "remove this word" means the word.
+ */
+function moreUrgent(a: SavedWord, b: SavedWord): boolean {
+  const lapsed = Number(a.state === 'lapsed') - Number(b.state === 'lapsed');
+  if (lapsed !== 0) return lapsed > 0;
+  if (a.box !== b.box) return a.box < b.box;
+  return a.dueAt < b.dueAt;
+}
+
+function oneRowPerWord(words: readonly SavedWord[]): SavedWord[] {
+  const byKey = new Map<string, SavedWord>();
+  for (const w of words) {
+    const key = normalizeAnswer(w.text) || w.text;
+    const held = byKey.get(key);
+    if (!held || moreUrgent(w, held)) byKey.set(key, w);
+  }
+  return [...byKey.values()];
 }
 
 /**
@@ -317,8 +342,9 @@ export function VocabScreen({
 
   const filtered = useMemo(() => {
     const needle = fold(query.trim());
-    if (!needle) return words;
-    return words.filter(
+    const rows = oneRowPerWord(words);
+    if (!needle) return rows;
+    return rows.filter(
       (w) => fold(w.text).includes(needle) || fold(w.translation).includes(needle)
     );
   }, [words, query]);
@@ -370,53 +396,24 @@ export function VocabScreen({
   /**
    * THE "N WORDS READY" CARD. It promises a review, so it MUST point the feed
    * at one — every time, not most times (2026-09-01, on device: "sometimes it
-   * throws me to a stopped video I was watching before").
-   *
-   * The first version tried pickReviewTarget on the five most urgent due
-   * words and gave up, on the theory that the feed-as-parked was an honest
-   * fallback. It was not: on a device with history, the MOST urgent words are
-   * exactly the ones the catalog has lost (saved from pruned videos, spoken
-   * nowhere else), so the very users with the most to review were the ones
-   * the button did nothing for. pickFirstBlankTarget scans EVERY due word in
-   * one catalog fold — most urgent first, slipped before earliest-due — and
-   * returns the first that will actually blank; failing all of them, a
-   * landing where the most urgent word is at least audibly spoken, which
-   * still beats the stale paused video. Only a review with zero findable
-   * words changes nothing, and the log says so.
+   * throws me to a stopped video I was watching before"). The logic that
+   * makes that true used to live here; it is now launchReview, shared with
+   * the Progress tab's button and the reminder tap, which had the same
+   * promise and did not keep it.
    */
   const startReview = () => {
-    const all = storage.getSavedWords();
-    const at = Date.now();
-    const due = all
-      .filter((w) => w.dueAt <= at)
-      .sort(
-        (a, b) =>
-          Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
-          a.dueAt - b.dueAt
-      );
-    const found = pickFirstBlankTarget(getCatalog(), due, all, { now: at });
-    if (found) {
-      requestReviewTarget({
-        videoId: found.landing.videoId,
-        word: found.word.text,
-        startsAt: found.landing.startsAt,
-      });
-      console.log(
-        `[loro:V] review CTA -> "${found.word.text}" in ${found.landing.videoId} ` +
-          `@${found.landing.startsAt.toFixed(1)}s` +
-          (found.landing.willBlank ? '' : ' (SPOKEN ONLY — no due word blanks anywhere)')
-      );
-    } else if (due.length > 0) {
-      console.log(
-        `[loro:V] review CTA: none of ${due.length} due word(s) is spoken in ` +
-          'the catalog — no jump parked'
-      );
-    }
-    goToFeedForReview();
+    launchReview('words');
+    onGoToFeed();
   };
 
+  /** Every entry behind the row — see oneRowPerWord. */
   const handleRemove = (word: SavedWord) => {
-    setWords(storage.removeWord(word.text, word.videoId));
+    const key = normalizeAnswer(word.text) || word.text;
+    let next = storage.getSavedWords();
+    for (const entry of next.filter((w) => (normalizeAnswer(w.text) || w.text) === key)) {
+      next = storage.removeWord(entry.text, entry.videoId);
+    }
+    setWords(next);
   };
 
   const openDetail = (word: SavedWord) => setDetail(word);

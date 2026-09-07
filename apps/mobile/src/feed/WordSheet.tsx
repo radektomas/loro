@@ -21,6 +21,7 @@ import {
 import type { Gloss, Video, Word } from '@loro/core/types';
 import { glossText, lookupGloss, normalizeSurface } from '@loro/core/dictionary';
 import { storage } from '@loro/core/storage';
+import { track } from '../platform/analytics';
 import { usePlayerApi } from '../player/PlayerHost';
 
 /**
@@ -427,6 +428,9 @@ function useWordSheetController(
     // reading the key back. A failed save must look failed.
     if (ok) {
       setSaved(true);
+      // The loop's first step, finally in the log. After the verified write,
+      // never before it: a save that failed is not a word saved.
+      track('word_saved', { videoId: data.video.id });
       return true;
     }
     setFailed(true);

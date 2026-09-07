@@ -2,6 +2,7 @@ import { AppState, Linking } from 'react-native';
 import type * as NotificationsApi from 'expo-notifications';
 import { storage } from '@loro/core/storage';
 import { computeStreaks, dayKey, dueCount } from '@loro/core/progress';
+import { track } from './analytics';
 import { storageDriver } from './storage';
 
 /**
@@ -272,6 +273,10 @@ export async function getPermissionState(): Promise<PermissionState> {
 export async function requestPermission(): Promise<PermissionState> {
   await withSeam('requestPermissionsAsync', (api) => api.requestPermissionsAsync(), null);
   const state = await getPermissionState();
+  // The one iOS answer per install, recorded where it is given. Fire and
+  // forget: analytics never throws, so grading (which reaches this module
+  // through noteCorrectRecall) cannot be hurt by it.
+  track('reminder_permission', { state });
   await reconcile();
   return state;
 }
