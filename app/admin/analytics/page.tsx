@@ -11,6 +11,7 @@ import {
 } from '@/components/admin/AdminPasswordSignIn';
 import {
   DauTile,
+  LoopTable,
   Panel,
   StatTile,
   UsersTable,
@@ -249,6 +250,24 @@ export default function AdminAnalyticsPage() {
                   />
                   <DauTile points={data.dau} today={r.dauToday} />
                 </div>
+
+                {/* THE LOOP — what the app is for, by day. Its own footing:
+                    the report shipped with mobile 1.3.0 (migration
+                    20260907000000), and until that is applied this panel
+                    says so instead of taking the retention tiles down with
+                    it (lib/analytics.ts Dashboard.loop). */}
+                <Panel
+                  title="The loop"
+                  hint="Saved is a word saved from the feed; Answered is every graded blank, green or blue, and Right the share graded correct (near-misses count). Reviews are taps on any Review door — Words, Progress, or the reminder — and Landed the ones the feed could actually open on a due word. Days done is goal_met: a day's plan completed. All from mobile 1.3.0 on; earlier builds wrote none of these."
+                >
+                  {data.loop ? (
+                    <LoopTable days={data.loop} />
+                  ) : (
+                    <p className="text-xs leading-relaxed text-[#f87171]/80">
+                      {data.loopError ?? 'The loop report did not load.'}
+                    </p>
+                  )}
+                </Panel>
 
                 <Panel
                   title="Users"

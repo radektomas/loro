@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { DauPoint, UserRow } from '@/lib/analytics';
+import type { DauPoint, LoopDay, UserRow } from '@/lib/analytics';
 
 /**
  * The dashboard's marks.
@@ -290,6 +290,132 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                   >
                     {row.subStatus}
                   </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------- the loop
+
+/**
+ * The loop, one row per day, newest first, with the window's sum on top.
+ *
+ * A TABLE AND NOT A CHART, on purpose. Eight measures over fourteen days is
+ * a small multiples problem at best and a spaghetti line at worst, and what
+ * the reader actually asks is "did anyone do the loop yesterday, and did
+ * the reminder land anyone" — a number per cell answers that; a line would
+ * make them hover for it. Rates ride beside their counts (correct of
+ * answered, landed of reviews) so a percentage never travels without its n.
+ */
+const pct = (part: number, whole: number): string =>
+  whole > 0 ? `${Math.round((part / whole) * 100)}%` : '—';
+
+export function LoopTable({ days }: { days: LoopDay[] }) {
+  const total = days.reduce<LoopDay>(
+    (acc, d) => ({
+      day: '',
+      active: acc.active + d.active,
+      saved: acc.saved + d.saved,
+      answered: acc.answered + d.answered,
+      correct: acc.correct + d.correct,
+      reviews: acc.reviews + d.reviews,
+      reviewsLanded: acc.reviewsLanded + d.reviewsLanded,
+      reminderTaps: acc.reminderTaps + d.reminderTaps,
+      goalsMet: acc.goalsMet + d.goalsMet,
+      goalInstalls: acc.goalInstalls + d.goalInstalls,
+    }),
+    {
+      day: '',
+      active: 0,
+      saved: 0,
+      answered: 0,
+      correct: 0,
+      reviews: 0,
+      reviewsLanded: 0,
+      reminderTaps: 0,
+      goalsMet: 0,
+      goalInstalls: 0,
+    }
+  );
+  const anything = total.saved + total.answered + total.reviews + total.goalsMet > 0;
+
+  if (!anything) {
+    return (
+      <Empty>
+        Nothing in the loop yet. These events exist from mobile 1.3.0 onward —
+        once a build carrying them is in people&apos;s hands, saves, answers,
+        reviews and finished days appear here by day.
+      </Empty>
+    );
+  }
+
+  const cell = 'py-2 pr-3 tabular-nums text-text';
+  const rate = 'text-muted';
+  const rows = [...days].reverse();
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-left text-xs">
+        <thead>
+          <tr className="text-muted">
+            <th className="pb-2 font-medium">Day</th>
+            <th className="pb-2 font-medium">Active</th>
+            <th className="pb-2 font-medium">Saved</th>
+            <th className="pb-2 font-medium">Answered</th>
+            <th className="pb-2 font-medium">Right</th>
+            <th className="pb-2 font-medium">Reviews</th>
+            <th className="pb-2 font-medium">Landed</th>
+            <th className="pb-2 font-medium">Reminder taps</th>
+            <th className="pb-2 font-medium">Days done</th>
+          </tr>
+        </thead>
+        <tbody className="align-top">
+          <tr className="border-t border-white/10 font-semibold">
+            <td className="py-2 pr-3 whitespace-nowrap text-text">Last {days.length} days</td>
+            {/* Active does not sum across days — the same install on two
+                days is one person — so the window row leaves it blank. */}
+            <td className={cell}>—</td>
+            <td className={cell}>{fmt.format(total.saved)}</td>
+            <td className={cell}>{fmt.format(total.answered)}</td>
+            <td className={cell}>
+              {fmt.format(total.correct)}{' '}
+              <span className={rate}>{pct(total.correct, total.answered)}</span>
+            </td>
+            <td className={cell}>{fmt.format(total.reviews)}</td>
+            <td className={cell}>
+              {fmt.format(total.reviewsLanded)}{' '}
+              <span className={rate}>{pct(total.reviewsLanded, total.reviews)}</span>
+            </td>
+            <td className={cell}>{fmt.format(total.reminderTaps)}</td>
+            <td className={cell}>{fmt.format(total.goalsMet)}</td>
+          </tr>
+          {rows.map((d) => (
+            <tr key={d.day} className="border-t border-white/5">
+              <td className="py-2 pr-3 whitespace-nowrap text-muted tabular-nums">
+                {dateFmt(d.day)}
+              </td>
+              <td className={cell}>{fmt.format(d.active)}</td>
+              <td className={cell}>{fmt.format(d.saved)}</td>
+              <td className={cell}>{fmt.format(d.answered)}</td>
+              <td className={cell}>
+                {fmt.format(d.correct)}{' '}
+                <span className={rate}>{pct(d.correct, d.answered)}</span>
+              </td>
+              <td className={cell}>{fmt.format(d.reviews)}</td>
+              <td className={cell}>
+                {fmt.format(d.reviewsLanded)}{' '}
+                <span className={rate}>{pct(d.reviewsLanded, d.reviews)}</span>
+              </td>
+              <td className={cell}>{fmt.format(d.reminderTaps)}</td>
+              <td className={cell}>
+                {fmt.format(d.goalsMet)}
+                {d.goalInstalls > 0 && d.goalInstalls !== d.goalsMet && (
+                  <span className={rate}> ({d.goalInstalls} people)</span>
                 )}
               </td>
             </tr>

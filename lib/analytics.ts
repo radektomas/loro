@@ -63,10 +63,37 @@ export type Retention = {
 
 export type DauPoint = { day: string; dau: number };
 
+/**
+ * One day of the loop — what the app is FOR, counted. Every column is an
+ * event 1.3.0 started writing (migration 20260907000000 reads them), so a
+ * day before that build is a row of zeros rather than a missing row.
+ */
+export type LoopDay = {
+  day: string;
+  active: number;
+  saved: number;
+  answered: number;
+  correct: number;
+  reviews: number;
+  reviewsLanded: number;
+  reminderTaps: number;
+  goalsMet: number;
+  goalInstalls: number;
+};
+
 export type Dashboard = {
   retention: Retention;
   dau: DauPoint[];
   users: UserRow[];
+  /**
+   * Null when the loop report could not load — and then `loopError` says
+   * why. Tolerated separately from the rest, deliberately: the loop's
+   * function shipped later than the other three, and a dashboard that goes
+   * fully dark until a migration is applied hides the numbers that were
+   * fine a minute ago.
+   */
+  loop: LoopDay[] | null;
+  loopError: string | null;
 };
 
 type Row = Record<string, unknown>;
@@ -94,9 +121,11 @@ async function call(fn: string, args: Record<string, unknown>): Promise<Row[]> {
       throw new Error('This Supabase account is not in loro_admins.');
     }
     if (/could not find the function|does not exist/i.test(error.message)) {
-      throw new Error(
-        `${fn} is missing — apply supabase/migrations/20260830000000_analytics_retention.sql.`
-      );
+      const migration =
+        fn === 'loro_analytics_loop'
+          ? '20260907000000_analytics_loop.sql'
+          : '20260830000000_analytics_retention.sql';
+      throw new Error(`${fn} is missing — apply supabase/migrations/${migration}.`);
     }
     throw new Error(`${fn}: ${error.message}`);
   }
@@ -147,10 +176,33 @@ export async function loadDashboard(
       call('loro_analytics_users', { p_limit: 500, ...args }),
     ]);
 
+    // The loop, on its own footing — see Dashboard.loop.
+    let loop: LoopDay[] | null = null;
+    let loopError: string | null = null;
+    try {
+      const rows = await call('loro_analytics_loop', { p_days: 14, ...args });
+      loop = rows.map((row) => ({
+        day: str(row.day),
+        active: num(row.active),
+        saved: num(row.saved),
+        answered: num(row.answered),
+        correct: num(row.correct),
+        reviews: num(row.reviews),
+        reviewsLanded: num(row.reviews_landed),
+        reminderTaps: num(row.reminder_taps),
+        goalsMet: num(row.goals_met),
+        goalInstalls: num(row.goal_installs),
+      }));
+    } catch (err) {
+      loopError = err instanceof Error ? err.message : String(err);
+    }
+
     const r = retention[0] ?? {};
     return {
       ok: true,
       data: {
+        loop,
+        loopError,
         retention: {
           d1Returned: num(r.d1_returned),
           d1Cohort: num(r.d1_cohort),
