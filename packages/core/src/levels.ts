@@ -43,6 +43,50 @@ export function tierFor(level: number): Tier {
 export const MAX_USER_LEVEL = TIERS.length;
 
 /**
+ * THE LADDER THE USER SEES CLIMBS ON WORDS LEARNED, NOT ON THE METER.
+ *
+ * Radek, 2026-09-07: "instead of correct/false words, learned words amount,
+ * it makes more sense". The numeric level above still exists and still
+ * does its job — it picks which band the feed blanks and which videos come
+ * first (computeLevelBlankPlan, feedOrder) — but as a RANK it was empty:
+ * both real users maxed it inside two weeks. Words learned (progress.ts
+ * isLearned, over distinct words) is the honest count, only ever grows,
+ * and takes weeks to move. So the badge hangs on that, and the engine's
+ * level stays internal.
+ *
+ * Thresholds: learned words needed to HOLD each tier, same order as TIERS.
+ * Roughly doubling, so every step is a real stretch and Nativo is a year
+ * of evenings, not a fortnight.
+ */
+export const TIER_LEARNED: readonly number[] = [0, 25, 75, 150, 300, 600];
+
+export type LearnedTier = {
+  tier: Tier;
+  /** The tier after this one, or null at the top. */
+  next: Tier | null;
+  /** Words learned. */
+  have: number;
+  /** Words learned that reach `next` (the top tier's own floor at the top). */
+  need: number;
+  /** 0-100 through the current step; 100 at the top. */
+  meter: number;
+};
+
+export function tierForLearned(learned: number): LearnedTier {
+  const have = Math.max(0, Math.floor(learned));
+  let i = 0;
+  while (i + 1 < TIER_LEARNED.length && have >= TIER_LEARNED[i + 1]) i++;
+  const tier = TIERS[i];
+  const atTop = i + 1 >= TIERS.length;
+  const floor = TIER_LEARNED[i];
+  const need = atTop ? floor : TIER_LEARNED[i + 1];
+  const meter = atTop
+    ? 100
+    : Math.min(99, Math.floor(((have - floor) / (need - floor)) * 100));
+  return { tier, next: atTop ? null : TIERS[i + 1], have, need, meter };
+}
+
+/**
  * Word difficulty bands stay 1-5 (5 = rare/unlisted) even though the user
  * ladder now tops out at 6 — Nativo is a terminal badge earned by clearing
  * the rare band, not a band with words of its own. Keeping this separate from

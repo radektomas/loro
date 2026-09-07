@@ -47,7 +47,7 @@ import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { LegalLinks } from './LegalLinks';
 import { getPlan, type Plan } from './plan';
 import { ReviewPicker } from './ReviewPicker';
-import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
+import { TIERS, TIER_LEARNED, tierForLearned } from '@loro/core/levels';
 
 /**
  * PROGRESS — redrawn around the week (2026-09-07).
@@ -73,7 +73,10 @@ import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
  *                 days, never "typed once".
  *   4. REVIEW     what is ready, and a button that asks WHICH word, then
  *                 lands on it (ReviewPicker).
- *   5. LEVEL      one row with the meter; the full ladder on request.
+ *   5. LEVEL      one row with the meter; the full ladder on request. The
+ *                 ladder climbs on WORDS LEARNED (core tierForLearned),
+ *                 not on the feed engine's level meter, which stays
+ *                 internal — it picks blanks, it is not a rank.
  * Then the settings the page has always carried. The "Words" state bar that
  * used to close the list (lapsed / new / learning / known, as a segmented
  * bar with a legend) is gone: Radek, 2026-09-07, "I don't read anything
@@ -400,11 +403,18 @@ function LearnedCard({
  * both real users maxed inside two weeks. The current tier and its meter
  * are what a returning user looks for; the whole ladder is a tap away, so
  * the names (which teach — they are real Spanish) are not lost.
+ *
+ * SINCE 2026-09-07 THE LADDER IS WORDS LEARNED. Radek: "instead of
+ * correct/false words, learned words amount, it makes more sense". The
+ * row reads "61 of 75 words → Casi Local", the meter is the way through
+ * that step, and each rung on the ladder names its threshold. `learned`
+ * is the same distinct-word isLearned count the Learned card prints, so
+ * the two never disagree. The feed's own level (storage.getLevelState) is
+ * no longer shown anywhere on this page; it still drives the blanks.
  */
-function LevelSection({ levelState }: { levelState: LevelState }) {
+function LevelSection({ learned }: { learned: number }) {
   const [showLadder, setShowLadder] = useState(false);
-  const atTop = levelState.level >= TIERS.length;
-  const tier = tierFor(levelState.level);
+  const { tier, next, have, need, meter } = tierForLearned(learned);
 
   return (
     <View style={styles.section}>
@@ -419,11 +429,11 @@ function LevelSection({ levelState }: { levelState: LevelState }) {
             <Text style={styles.tierMeaning}>“{tier.meaning}”</Text>
           </View>
           <Text style={styles.tierHintInline}>
-            {atTop ? 'Top of the ladder' : `${levelState.meter}% → ${tierFor(levelState.level + 1).name}`}
+            {next ? `${have} of ${need} words → ${next.name}` : `Top of the ladder · ${have} words`}
           </Text>
         </View>
         <View style={styles.meterTrack}>
-          <View style={[styles.meterFill, { width: `${levelState.meter}%` }]} />
+          <View style={[styles.meterFill, { width: `${meter}%` }]} />
         </View>
         <Pressable
           onPress={() => setShowLadder((shown) => !shown)}
@@ -439,9 +449,10 @@ function LevelSection({ levelState }: { levelState: LevelState }) {
       </View>
 
       {showLadder &&
-        TIERS.map((entry) => {
-          const current = entry.level === levelState.level;
-          const achieved = entry.level < levelState.level;
+        TIERS.map((entry, i) => {
+          const current = entry.level === tier.level;
+          const achieved = entry.level < tier.level;
+          const threshold = TIER_LEARNED[i];
           return (
             <View key={entry.level} style={[styles.tier, current && styles.tierRowCurrent]}>
               <View style={styles.tierHead}>
@@ -468,6 +479,9 @@ function LevelSection({ levelState }: { levelState: LevelState }) {
                   </Text>
                   <Text style={styles.tierMeaning}>“{entry.meaning}”</Text>
                 </View>
+                <Text style={styles.tierHintInline}>
+                  {threshold === 0 ? 'Start' : `${threshold} words`}
+                </Text>
               </View>
             </View>
           );
@@ -723,9 +737,6 @@ export function ProgressScreen({
   const [dailyCounts, setDailyCounts] = useState<DailyCounts>(() =>
     storage.getDailyCorrect()
   );
-  const [levelState, setLevelState] = useState<LevelState>(() =>
-    storage.getLevelState()
-  );
   /** Read on the way in, like everything else: the answer can only change
       by re-running onboarding, which reloads the app. */
   const [plan, setPlan] = useState<Plan>(getPlan);
@@ -740,7 +751,6 @@ export function ProgressScreen({
       setWatchedIds(storage.getWatchedVideoIds());
       setRecallDays(storage.getCorrectRecallDays());
       setDailyCounts(storage.getDailyCorrect());
-      setLevelState(storage.getLevelState());
       setPlan(getPlan());
     };
     // onWordsChanged covers saved words, the watch log, recall days, the
@@ -916,7 +926,7 @@ export function ProgressScreen({
             </View>
 
             {/* 5 — level: one row, the ladder on request */}
-            <LevelSection levelState={levelState} />
+            <LevelSection learned={totals.learned} />
 
             <Text style={styles.footNote}>
               {watchedIds.length} {watchedIds.length === 1 ? 'video' : 'videos'}{' '}

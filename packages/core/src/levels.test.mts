@@ -3,7 +3,10 @@ import { describe, it } from 'node:test';
 import {
   computeLevelBlankPlan,
   MAX_USER_LEVEL,
+  TIER_LEARNED,
+  TIERS,
   applyRecallLevelCredit,
+  tierForLearned,
   wordLevel,
 } from './levels.ts';
 import type { Cue, Gloss, SavedWord, Video } from './types.ts';
@@ -200,5 +203,42 @@ describe('applyRecallLevelCredit', () => {
     assert.equal(r.level, MAX_USER_LEVEL);
     assert.equal(r.meter, 100);
     assert.equal(r.leveledUp, false);
+  });
+});
+
+describe('tierForLearned — the ladder on words learned', () => {
+  it('has one threshold per tier, starting at zero and rising', () => {
+    assert.equal(TIER_LEARNED.length, TIERS.length);
+    assert.equal(TIER_LEARNED[0], 0);
+    for (let i = 1; i < TIER_LEARNED.length; i++) assert.ok(TIER_LEARNED[i] > TIER_LEARNED[i - 1]);
+  });
+
+  it('starts at the bottom with nothing learned', () => {
+    const t = tierForLearned(0);
+    assert.equal(t.tier.name, 'Guiri');
+    assert.equal(t.next?.name, 'Turista');
+    assert.deepEqual([t.have, t.need, t.meter], [0, 25, 0]);
+  });
+
+  it('crosses a threshold exactly at it, and never shows 100% short of the next', () => {
+    assert.equal(tierForLearned(24).tier.name, 'Guiri');
+    assert.equal(tierForLearned(24).meter, 96);
+    assert.equal(tierForLearned(25).tier.name, 'Turista');
+    assert.equal(tierForLearned(25).meter, 0);
+    assert.equal(tierForLearned(74).meter, 98);
+    assert.equal(tierForLearned(149).tier.name, 'Se Defiende');
+  });
+
+  it('tops out at Nativo with a full meter and no next', () => {
+    const t = tierForLearned(600);
+    assert.equal(t.tier.name, 'Nativo');
+    assert.equal(t.next, null);
+    assert.equal(t.meter, 100);
+    assert.equal(tierForLearned(5000).tier.name, 'Nativo');
+  });
+
+  it('tolerates bad input', () => {
+    assert.equal(tierForLearned(-3).tier.name, 'Guiri');
+    assert.equal(tierForLearned(30.7).have, 30);
   });
 });
