@@ -18,6 +18,7 @@ import type {
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { SignInCard } from '../auth/SignInCard';
 import { BRAND } from '../onboarding/brand';
+import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import { track } from '../platform/analytics';
 import {
@@ -123,6 +124,24 @@ function perMonthLabel(product: PurchasesStoreProduct): string | null {
     }).format(value);
   } catch {
     return `${value.toFixed(2)} ${product.currencyCode}`;
+  }
+}
+
+/**
+ * The plan as one line, the way the user would say it. "as much as you can"
+ * is the serious option's label and reads as a shrug here, so that plan is
+ * stated as its numbers, every day — which is what it is.
+ */
+function planLine(plan: Plan): string {
+  const words = `${plan.wordsPerDay} words a day`;
+  switch (plan.pace) {
+    case 'light':
+      return `${words}, a few times a week`;
+    case 'daily':
+    case 'serious':
+      return `${words}, every day`;
+    default:
+      return words;
   }
 }
 
@@ -327,9 +346,20 @@ export function PaywallScreen() {
           style={styles.parrot}
           resizeMode="contain"
         />
-        <Text style={styles.title}>Unlock Loro</Text>
+        {/* THE SALE, in the user's own terms. Two screens ago they watched
+            "Building your customized plan" and answered how often; this
+            says that plan back to them and what Loro does to keep them on
+            it. The old line ("Every video, every word you save, every
+            review — one subscription") listed features; nobody pays for a
+            feature list, they pay for the plan they just made. Every claim
+            below is one onboarding already makes (PLAN_BUILD.clips,
+            PLAN_BUILD.recall) plus the daily goal, which is real since
+            v1.3.0 — nothing here promises an outcome. */}
+        <Text style={styles.title}>Your plan is set</Text>
+        <Text style={styles.planLine}>{planLine(getPlan())}</Text>
         <Text style={styles.subtitle}>
-          Every video, every word you save, every review — one subscription.
+          Loro keeps you on it: real clips at your level, your saved words
+          back right before they slip, and a goal you can finish tonight.
         </Text>
 
         {offer.status === 'loading' && (
@@ -487,6 +517,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
     marginTop: 16,
+    textAlign: 'center',
+  },
+  /** The plan, in the accent: the one line on this screen that is theirs. */
+  planLine: {
+    color: ACCENT,
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 10,
     textAlign: 'center',
   },
   subtitle: {
