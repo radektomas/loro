@@ -21,7 +21,12 @@ import { maybeAskForPermission, noteCorrectRecall } from '../platform/notificati
 import { track } from '../platform/analytics';
 import { CELEBRATE_MS } from './Celebration';
 import { maybeCelebrateDayDone } from './dayDone';
-import { noteReviewAnswer, raiseReviewEnd, reviewSessionActive } from './reviewSession';
+import {
+  noteReviewAnswer,
+  raiseReviewEnd,
+  reviewSessionActive,
+  type ReviewSessionEnd,
+} from './reviewSession';
 import {
   LEVELS_ENABLED,
   buildLevelPlan,
@@ -660,6 +665,8 @@ export function RecallHost({
    * seam importing CELEBRATE_MS would point the dependency the wrong way.
    */
   const askTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** A session end waiting for the celebration to finish — see the grade. */
+  const pendingEndRef = useRef<ReviewSessionEnd | null>(null);
 
   useEffect(
     () => () => {
@@ -1007,19 +1014,25 @@ export function RecallHost({
         correct: wasCorrect,
         band: entry.kind === 'level' ? entry.word.level : undefined,
       });
-      // The review session counts both kinds, right or wrong; when this was
-      // its last answer the end is raised below, after the celebration.
+      // The session counts both kinds, right or wrong; when this was its
+      // last answer the end is PARKED and raised below, after the
+      // celebration. Parked in a ref rather than closed over: the next grade
+      // clears this timer and arms its own, and an end held only by the
+      // cleared closure would never be shown.
       const reviewEnd = noteReviewAnswer(entry.word.text, wasCorrect);
+      if (reviewEnd) pendingEndRef.current = reviewEnd;
       const sessionComplete =
         entry.kind === 'recall' &&
         dueCount(storage.getSavedWords(), Date.now()) === 0;
-      if (!quietRef.current && (reviewEnd || sessionComplete || wasCorrect)) {
+      if (!quietRef.current && (pendingEndRef.current || sessionComplete || wasCorrect)) {
         if (askTimer.current) clearTimeout(askTimer.current);
         askTimer.current = setTimeout(() => {
           askTimer.current = null;
           void (async () => {
-            if (reviewEnd) {
-              raiseReviewEnd(reviewEnd);
+            const end = pendingEndRef.current;
+            if (end) {
+              pendingEndRef.current = null;
+              raiseReviewEnd(end);
               return;
             }
             // Inside a review session the day-done waits for the session's
