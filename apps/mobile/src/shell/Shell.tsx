@@ -9,6 +9,7 @@ import { VocabScreen } from '../vocab/VocabScreen';
 import { ProgressScreen } from '../progress/ProgressScreen';
 import { FeedIcon, ProgressIcon, WordsIcon } from './TabIcons';
 import { TabBarHeightContext } from './tabBar';
+import { useDueCount } from './useDueCount';
 
 /**
  * The app shell: three tabs, hand-rolled.
@@ -78,6 +79,8 @@ export function Shell() {
   /** Stable, so the memoised screens above can actually skip a render. */
   const goToFeed = useCallback(() => setTab('feed'), []);
   const goToProgress = useCallback(() => setTab('progress'), []);
+  /** The bubble on the Words tab — see useDueCount for what it counts. */
+  const due = useDueCount();
 
   /**
    * A TAPPED NOTIFICATION LANDS ON A DUE WORD, NOT ON THE FEED.
@@ -142,13 +145,30 @@ export function Shell() {
               }}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
-              accessibilityLabel={entry.label}
+              accessibilityLabel={
+                entry.key === 'vocab' && due > 0
+                  ? `${entry.label}, ${due} ready to review`
+                  : entry.label
+              }
               style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
             >
               {/* Selected state is carried three ways — colour, stroke weight
                   inside the icon, and label weight — so it survives a
                   colour-blind reading. */}
-              <entry.Icon color={selected ? ACTIVE : INACTIVE} active={selected} />
+              <View>
+                <entry.Icon color={selected ? ACTIVE : INACTIVE} active={selected} />
+                {/* The due bubble, Words tab only. A ring in the bar's own
+                    colour keeps it legible over the mint of a selected icon.
+                    Capped at 99+ so a long-absent user's number still fits. */}
+                {entry.key === 'vocab' && due > 0 && (
+                  <View
+                    style={styles.badge}
+                    accessibilityLabel={`${due} ready to review`}
+                  >
+                    <Text style={styles.badgeText}>{due > 99 ? '99+' : due}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.label, selected && styles.labelOn]}>
                 {entry.label}
               </Text>
@@ -180,5 +200,19 @@ const styles = StyleSheet.create({
   tab: { alignItems: 'center', flex: 1, gap: 4, paddingVertical: 4 },
   tabPressed: { opacity: 0.6 },
   label: { color: INACTIVE, fontSize: 11, fontWeight: '600' },
+  badge: {
+    alignItems: 'center',
+    backgroundColor: ACTIVE,
+    borderColor: '#0d110f',
+    borderRadius: 999,
+    borderWidth: 2,
+    justifyContent: 'center',
+    minWidth: 20,
+    paddingHorizontal: 4,
+    position: 'absolute',
+    right: -14,
+    top: -9,
+  },
+  badgeText: { color: '#06130d', fontSize: 10, fontWeight: '800', lineHeight: 14 },
   labelOn: { color: ACTIVE, fontWeight: '800' },
 });
