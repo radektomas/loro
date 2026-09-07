@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SavedWord, WordState } from '@loro/core/types';
+import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue } from '@loro/core/srs';
 import {
@@ -73,8 +73,13 @@ import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
  *   4. REVIEW     what is ready, and a button that asks WHICH word, then
  *                 lands on it (ReviewPicker).
  *   5. LEVEL      one row with the meter; the full ladder on request.
- *   6. WORDS      the state bar and the all-time totals — the record.
- * Then the settings the page has always carried. The per-video rows that
+ * Then the settings the page has always carried. The "Words" state bar that
+ * used to close the list (lapsed / new / learning / known, as a segmented
+ * bar with a legend) is gone: Radek, 2026-09-07, "I don't read anything
+ * out of it". Everything it said is said better above — learned and on the
+ * way in card 3, ready in card 4 — and its "known" count was the inflated
+ * one (state === 'known' includes one-shot fills), so it also disagreed
+ * with card 3's "learned" a few lines up. The per-video rows that
  * used to close the page are gone (Radek, 2026-09-07: "take out the
  * videos") — they were the web's, and on a phone they were a list of
  * thumbnails nobody scrolled to.
@@ -82,14 +87,6 @@ import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
  * EXPECT EMPTY PANELS, AND THAT IS HONEST RATHER THAN BROKEN. Nothing here
  * fabricates a placeholder to fill the space; every zero is a real zero.
  */
-
-/** The four word states, as the web's segmented bar orders them. */
-const STATE_SEGMENTS: { state: WordState; label: string; color: string }[] = [
-  { state: 'lapsed', label: 'Lapsed', color: '#f87171' },
-  { state: 'new', label: 'New', color: 'rgba(255,255,255,0.25)' },
-  { state: 'learning', label: 'Learning', color: 'rgba(242,245,243,0.55)' },
-  { state: 'known', label: 'Known', color: '#5ee6a8' },
-];
 
 /** Words named before "+N more" — enough to see the week, not the record. */
 const LEARNED_PREVIEW = 12;
@@ -772,12 +769,6 @@ export function ProgressScreen({
     return { learned, learning };
   }, [words]);
 
-  const stateCounts = useMemo(() => {
-    const counts = { lapsed: 0, new: 0, learning: 0, known: 0 };
-    for (const w of words) counts[w.state]++;
-    return counts;
-  }, [words]);
-
   const due = useMemo(() => dueCount(words, now), [words, now]);
   const nextDue = useMemo(() => nextDueAt(words, now), [words, now]);
   const streaks = useMemo(() => computeStreaks(recallDays, now), [recallDays, now]);
@@ -907,37 +898,6 @@ export function ProgressScreen({
 
             {/* 5 — level: one row, the ladder on request */}
             <LevelSection levelState={levelState} />
-
-            {/* 6 — words, as a segmented bar by state */}
-            <View style={styles.section}>
-              <SectionTitle>Words</SectionTitle>
-              <View style={styles.card}>
-                <View style={styles.bar}>
-                  {STATE_SEGMENTS.filter((s) => stateCounts[s.state] > 0).map((s) => (
-                    <View
-                      key={s.state}
-                      style={{
-                        backgroundColor: s.color,
-                        flex: stateCounts[s.state],
-                        height: '100%',
-                      }}
-                    />
-                  ))}
-                </View>
-                <View style={styles.legend}>
-                  {STATE_SEGMENTS.map((s) => (
-                    <View key={s.state} style={styles.legendItem}>
-                      <View
-                        style={[styles.legendDot, { backgroundColor: s.color }]}
-                      />
-                      <Text style={styles.legendText}>
-                        {stateCounts[s.state]} {s.label.toLowerCase()}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </View>
 
             <Text style={styles.footNote}>
               {watchedIds.length} {watchedIds.length === 1 ? 'video' : 'videos'}{' '}
@@ -1250,11 +1210,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  bar: { borderRadius: 999, flexDirection: 'row', gap: 1, height: 10, overflow: 'hidden' },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
-  legendItem: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  legendDot: { borderRadius: 999, height: 7, width: 7 },
-  legendText: { color: 'rgba(242,245,243,0.6)', fontSize: 12 },
   footNote: {
     color: 'rgba(242,245,243,0.35)',
     fontSize: 12,
