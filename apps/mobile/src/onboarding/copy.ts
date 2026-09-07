@@ -269,6 +269,39 @@ export const PLAN_BUILD = {
   cta: 'Continuar',
 };
 
+// -------------------------------------------------------- 11b. plan ready
+
+/**
+ * THE SUMMARY THAT SELLS, one screen after the plan assembles and one screen
+ * before the wall. Radek, 2026-09-07: "congratulations, your plan is
+ * finished (fluency by the date he chose), then a summary of how many
+ * minutes a day, what he's doing it for, and a couple more things that
+ * could convince him to pay".
+ *
+ * SAME RULES AS PLAN_BUILD: every line is the user's own answer read back
+ * (pace, why, level, date) or shipped behaviour (clips at level, recall
+ * before slipping, the daily goal, the weekly freeze). "Fluent by <date>"
+ * is the user's target in the user's word — the goal screen asked "when do
+ * you want to be fluent" — never a promise of outcome. No em dashes.
+ */
+export const PLAN_READY = {
+  title: '¡Enhorabuena!',
+  gloss: 'congratulations',
+  /** Followed by the date. */
+  targetPrefix: 'Your plan is ready, and it points at one date: fluent by ',
+  /** Row 1 body, after the pace line. Prefixed with the plan's number. */
+  goalBody: ' words a day is the goal. The streak keeps score, and one freeze a week means a busy day never costs you.',
+  /** Row 2, when no reason was picked. */
+  whyFallback: 'For you',
+  whyTail: 'Real clips, so what you learn is the Spanish people actually speak.',
+  /** Row 3, after "Starting at <level>". */
+  clips: 'Clips at your level from day one, and the feed moves up as you do.',
+  /** Row 4. */
+  recallHead: 'Nothing you learn slips away',
+  recall: 'Every word you save comes back in a new video right before you would forget it, until it is yours.',
+  cta: '¡Vamos!',
+};
+
 // ---------------------------------------------------------------- taste reel
 
 /**

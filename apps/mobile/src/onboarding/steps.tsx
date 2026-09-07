@@ -45,6 +45,7 @@ import {
   MOTIVATION,
   PAYWALL,
   PLAN_BUILD,
+  PLAN_READY,
   RESULT,
   SELF_LEVEL,
 } from './copy';
@@ -151,6 +152,7 @@ export type StepId =
   | 'frequency'
   | 'fluencyGoal'
   | 'planBuild'
+  | 'planReady'
   | 'handoff'
   | 'taste'
   | 'paywall';
@@ -1036,6 +1038,98 @@ function PlanBuildStep({ state, next, isCurrent }: StepProps) {
   );
 }
 
+// ----------------------------------------------------------- 11b. plan ready
+
+/** "About 10 minutes a day, every day": the frequency card, as a pace line. */
+function paceLine(frequency: string | null): string | null {
+  switch (frequency) {
+    case 'light':
+      return 'About 5 minutes a day, a few times a week';
+    case 'daily':
+      return 'About 10 minutes a day, every day';
+    case 'serious':
+      return '20 minutes or more, every day';
+    default:
+      return null;
+  }
+}
+
+/** The reasons from screen 2, read back in the second person. */
+const WHY_CLAUSE: Record<string, string> = {
+  travel: 'so you can actually talk when you get there',
+  people: 'for the people in your life who speak it',
+  work: 'because your work needs it',
+  culture: 'for the music, the film, the football and the books',
+};
+
+function whyLine(motivation: string[]): { head: string; body: string } {
+  const chosen = MOTIVATION.options.filter((o) => motivation.includes(o.id));
+  if (chosen.length === 0) return { head: PLAN_READY.whyFallback, body: PLAN_READY.whyTail };
+  const names = chosen.map((o) => o.label.toLowerCase());
+  const list =
+    names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const clause = WHY_CLAUSE[chosen[0].id];
+  const lead = clause ? `${clause.charAt(0).toUpperCase()}${clause.slice(1)}. ` : '';
+  return { head: `For ${list}`, body: `${lead}${PLAN_READY.whyTail}` };
+}
+
+/**
+ * The plan, finished, said back as four lines the user can check against
+ * their own answers, and the last thing they read before the wall. It takes
+ * over the handoff's job while the taste reel is benched (see STEPS), which
+ * is why the mascot waves here and the button says ¡Vamos!.
+ */
+function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
+  const leave = isLast ? finish : next;
+  const plan = planFor(state.frequency);
+  const pace = paceLine(state.frequency);
+  const goalDate = targetLabel(state.goalMonths ?? DEFAULT_MONTHS);
+  const level = state.derived ?? 'A1';
+  const why = whyLine(state.motivation);
+  const rows = [
+    {
+      head: pace ?? `${plan.wordsPerDay} words a day`,
+      body: `${plan.wordsPerDay}${PLAN_READY.goalBody}`,
+    },
+    why,
+    { head: `Starting at ${level}`, body: PLAN_READY.clips },
+    { head: PLAN_READY.recallHead, body: PLAN_READY.recall },
+  ];
+
+  return (
+    <Screen footer={<PrimaryButton label={PLAN_READY.cta} onPress={leave} />}>
+      <Image
+        source={BRAND.parrotWaving}
+        style={styles.parrotWaving}
+        resizeMode="contain"
+        accessibilityRole="image"
+        accessibilityLabel="Loro the parrot, waving"
+      />
+      <Title>{PLAN_READY.title}</Title>
+      <Text style={styles.planReadyGloss}>{PLAN_READY.gloss}</Text>
+      <Body>{`${PLAN_READY.targetPrefix}${goalDate}.`}</Body>
+
+      <View style={styles.planLines}>
+        {rows.map((row, i) => (
+          <Reveal key={row.head} active={isCurrent} delay={200 + i * 180}>
+            <View style={styles.planRow}>
+              <View style={styles.planTick}>
+                <Text style={styles.planTickMark}>✓</Text>
+              </View>
+              <View style={styles.planReadyText}>
+                <Text style={styles.planReadyHead}>{row.head}</Text>
+                <Text style={styles.planReadyBody}>{row.body}</Text>
+              </View>
+            </View>
+          </Reveal>
+        ))}
+      </View>
+    </Screen>
+  );
+}
+
 // -------------------------------------------------------------- 12. paywall
 
 /**
@@ -1171,6 +1265,13 @@ export const STEPS: StepDef[] = [
   { id: 'fluencyGoal', Component: FluencyGoalStep },
   { id: 'planBuild', Component: PlanBuildStep },
   /**
+   * THE PLAN, SAID BACK — and the last screen before the wall while the reel
+   * is benched. Congratulations, the date, then four lines: pace and goal,
+   * why, level, recall. PaywallScreen's header ("Your plan is set") is the
+   * next thing they read, so the two are one beat.
+   */
+  { id: 'planReady', Component: PlanReadyStep },
+  /**
    * HANDOFF THEN TASTE THEN THE WALL, and the order is the argument.
    *
    * The taste reel is deliberately the LAST thing before the paywall, because
@@ -1189,7 +1290,13 @@ export const STEPS: StepDef[] = [
    * placement of the real wall are a separate decision — see the conversion
    * audit — and nothing here should be read as having settled it.
    */
-  { id: 'handoff', Component: HandoffStep },
+  /**
+   * SKIPPED WHILE THE REEL IS BENCHED (2026-09-07). Its copy is the reel's
+   * instructions and its promise ("Your feed is ready") is broken by the
+   * wall that actually follows; planReady above now owns the goodbye. Flip
+   * TASTE_BENCHED and it returns as the reel's lead-in, exactly as before.
+   */
+  { id: 'handoff', Component: HandoffStep, skip: () => TASTE_BENCHED },
   {
     id: 'taste',
     Component: TasteStep,
@@ -1373,6 +1480,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   planLines: { gap: 16, marginTop: 26 },
+  planReadyGloss: { color: MUTED, fontSize: 13, fontWeight: '600', marginTop: -6, marginBottom: 10 },
+  planReadyText: { flex: 1, gap: 2 },
+  planReadyHead: { color: TEXT, fontSize: 15, fontWeight: '700', lineHeight: 21 },
+  planReadyBody: { color: MUTED, fontSize: 13, lineHeight: 19 },
   planTotal: { marginTop: 30 },
   planTotalLead: { color: MUTED, fontSize: 13, fontWeight: '600' },
   planTotalValue: {
