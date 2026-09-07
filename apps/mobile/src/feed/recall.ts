@@ -406,6 +406,35 @@ export function mergeBlankPlans(
 }
 
 /**
+ * A CLEAR WAY TO THE ASKED WORD. A review landing opens the clip three
+ * seconds before the chosen word, and computeBlankPlan puts that word first
+ * in PRIORITY — but a level blank, or another due word, can still sit
+ * earlier in TIME inside that lead-in, and then the first thing the user
+ * meets is a blue blank for a word they did not ask for. Radek, on device:
+ * "the user wants to review THAT word … a clear way to the chosen word, and
+ * then after he fills it up the blue and other blanks show up again".
+ *
+ * So everything held before the asked word's pause point goes. Nothing
+ * after it is touched — the rest of the clip is an ordinary feed slide once
+ * the asked word has been answered. If the asked word is not in the plan at
+ * all (spoken but never blanked — pickReviewTarget says so up front), the
+ * plan stands: there is no way to clear.
+ */
+export function clearWayTo(plan: RecallPlan, asked: string): RecallPlan {
+  const key = normalizeAnswer(asked);
+  const target = plan.entries.find((e) => normalizeAnswer(e.word.text) === key);
+  if (!target) return plan;
+  const entries = plan.entries.filter((e) => e === target || e.pauseAt >= target.pauseAt);
+  const dropped = plan.entries.length - entries.length;
+  if (dropped > 0) {
+    flog(
+      `clear way to "${asked}" @${target.pauseAt.toFixed(2)}s: ${dropped} earlier blank(s) dropped`
+    );
+  }
+  return { entries, pauseAts: entries.map((e) => e.pauseAt) };
+}
+
+/**
  * Grade one typed answer — core's matchAnswer: normalizeAnswer on both sides
  * (accent- and case-insensitive, punctuation trimmed) plus the spelling
  * near-miss tier ('almost', Levenshtein <=1 at 4-7 letters, <=2 at 8+). NO

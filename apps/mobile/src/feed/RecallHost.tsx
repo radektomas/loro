@@ -51,6 +51,7 @@ import {
   RESUME_MS_CORRECT,
   RESUME_MS_WRONG,
   SEEK_BACK_PAD_S,
+  clearWayTo,
   type BlankEntry,
 } from './recall';
 
@@ -605,7 +606,13 @@ export function RecallHost({
             .sort((a, b) => a.cueIndex - b.cueIndex)
             .slice(0, Math.max(0, maxLevelBlanks));
 
-    setPlan(mergeBlankPlans(levelEntries, recallEntries));
+    const merged = mergeBlankPlans(levelEntries, recallEntries);
+    // A review landing (focusWord with no pinned cue — the walkthrough always
+    // pins) gets a clear way to its word: no blank of either colour before
+    // it. See clearWayTo.
+    setPlan(
+      focusWord && focusCueIndex === undefined ? clearWayTo(merged, focusWord) : merged
+    );
     // recallOn is listed even though `planned` already folds it in: with
     // LEVELS_ENABLED on, `planned` is true either way, so arming recall
     // mid-session (or the taste reel flipping recallBlanks per slide) would
