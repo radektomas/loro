@@ -396,11 +396,31 @@ const STREAK_BODIES = [
   (n: number) => `${n} days and counting. Nice work. Ready for a few more?`,
 ];
 
+/**
+ * The day after a miss the weekly freeze covered (core computeStreaks). Says
+ * the miss was fine and that today is the one that counts — not a warning,
+ * a reassurance with a small ask attached.
+ */
+const FREEZE_BODIES = [
+  (n: number) =>
+    `Yesterday is covered by your weekly streak freeze. ${n} days still stand, and today keeps them.`,
+  (n: number) =>
+    `Your streak freeze took yesterday. ${n} days safe. A few words today keep it that way.`,
+  (n: number) =>
+    `Missed a day? Your weekly freeze had it. ${n} in a row still count. Today is the one that matters.`,
+];
+
+/** The run ended (two misses, or a second miss inside the freeze's week). */
+const RESET_BODIES = [
+  (n: number) => `The ${n} day run ended, and that is fine. A fresh one starts with a few words today.`,
+  (n: number) => `${n} days was a good run. Day one of the next one is here whenever you are.`,
+];
+
 const AT_RISK_BODIES = [
-  'One correct word is all it takes to count today.',
-  'A single word rounds off the day. That is the whole ask.',
+  'Your daily goal is still open. A few words round off the day.',
+  'A short session rounds off the day. That is the whole ask.',
   'There is still time for a quick one if you fancy it.',
-  'Two minutes is plenty. One word will do it.',
+  'Two minutes is plenty to finish today.',
 ];
 
 /**
@@ -410,15 +430,40 @@ const AT_RISK_BODIES = [
  */
 const STREAK_MENTION_FLOOR = 2;
 
-function buildDailyContent(now: number): NotificationsApi.NotificationContentInput {
+/**
+ * THE REMINDER FOR ONE DAY, WRITTEN AHEAD OF TIME.
+ *
+ * A local notification's body is fixed when it is scheduled; nothing runs at
+ * fire time. Until 2026-09-07 the reminder was one DAILY repeating trigger,
+ * so a user who missed a day got the previous day's body ("5 days in a row
+ * so far") the day after — stale, and silent about the freeze that had
+ * just saved them. So the schedule is now one dated notification per day
+ * for the next REMINDER_HORIZON_DAYS, each written for THAT day under the
+ * one assumption that can be made in advance: nothing happens in between.
+ * The moment something does happen, reconcile rewrites the lot.
+ *
+ * "Nothing happens" is exactly what computeStreaks(days, fireAt) computes:
+ * the same recall-day list, read as of that morning. The day after a miss
+ * it reports the freeze; two days after, the reset.
+ */
+function buildReminderContent(
+  fireAt: number,
+  /** The streak as it stands now — for the reset line, which names it. */
+  streakNow: number
+): NotificationsApi.NotificationContentInput {
   const words = storage.getSavedWords();
-  const due = dueCount(words, now);
-  const streak = computeStreaks(storage.getCorrectRecallDays(), now).current;
+  const due = dueCount(words, fireAt);
+  const then = computeStreaks(storage.getCorrectRecallDays(), fireAt);
+  const yesterday = dayKey(calendarDayBefore(fireAt));
 
   const body =
-    streak >= STREAK_MENTION_FLOOR
-      ? STREAK_BODIES[variantFor(now, STREAK_BODIES.length)](streak)
-      : GENERIC_BODIES[variantFor(now, GENERIC_BODIES.length)];
+    then.frozen.includes(yesterday) && then.current >= 1
+      ? FREEZE_BODIES[variantFor(fireAt, FREEZE_BODIES.length)](then.current)
+      : then.current >= STREAK_MENTION_FLOOR
+        ? STREAK_BODIES[variantFor(fireAt, STREAK_BODIES.length)](then.current)
+        : then.current === 0 && streakNow >= STREAK_MENTION_FLOOR
+          ? RESET_BODIES[variantFor(fireAt, RESET_BODIES.length)](streakNow)
+          : GENERIC_BODIES[variantFor(fireAt, GENERIC_BODIES.length)];
 
   return {
     title:
@@ -428,6 +473,28 @@ function buildDailyContent(now: number): NotificationsApi.NotificationContentInp
     body,
     data: { route: 'review' satisfies NotifRoute },
   };
+}
+
+/** Today's reminder, as it would read right now — the test send uses it. */
+function buildDailyContent(now: number): NotificationsApi.NotificationContentInput {
+  return buildReminderContent(now, computeStreaks(storage.getCorrectRecallDays(), now).current);
+}
+
+/** Local-calendar "the day before", DST-safe (day-of-month maths, not ms). */
+function calendarDayBefore(ms: number): number {
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, 12).getTime();
+}
+
+/** Days of reminders written ahead. Two weeks: a user gone longer than that
+    is not coming back for a lock-screen line, and iOS caps pending
+    notifications at 64 anyway. */
+const REMINDER_HORIZON_DAYS = 14;
+
+/** The reminder time on the day `offset` days from now, local calendar. */
+function reminderAt(now: number, offset: number, hour: number, minute: number): Date {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset, hour, minute, 0, 0);
 }
 
 function buildAtRiskContent(now: number): NotificationsApi.NotificationContentInput {
@@ -504,14 +571,17 @@ async function runReconcile(): Promise<void> {
 
       const now = Date.now();
 
-      await api.scheduleNotificationAsync({
-        content: buildDailyContent(now),
-        trigger: {
-          type: api.SchedulableTriggerInputTypes.DAILY,
-          hour: prefs.hour,
-          minute: prefs.minute,
-        },
-      });
+      // One dated reminder per day, each written for its own day — see
+      // buildReminderContent for why this is not a DAILY repeating trigger.
+      const streakNow = computeStreaks(storage.getCorrectRecallDays(), now).current;
+      for (let offset = 0; offset < REMINDER_HORIZON_DAYS; offset++) {
+        const at = reminderAt(now, offset, prefs.hour, prefs.minute);
+        if (at.getTime() <= now) continue; // today's time has passed
+        await api.scheduleNotificationAsync({
+          content: buildReminderContent(at.getTime(), streakNow),
+          trigger: { type: api.SchedulableTriggerInputTypes.DATE, date: at },
+        });
+      }
 
       await api.scheduleNotificationAsync({
         content: buildAtRiskContent(now),

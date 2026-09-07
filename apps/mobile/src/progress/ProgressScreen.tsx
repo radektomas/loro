@@ -15,6 +15,7 @@ import { storage } from '@loro/core/storage';
 import { formatDue } from '@loro/core/srs';
 import {
   computeStreaks,
+  type Streaks,
   countForDay,
   dayKey,
   distinctWords,
@@ -227,7 +228,7 @@ function WeekCard({
   week,
   plan,
 }: {
-  streaks: { current: number; longest: number };
+  streaks: Streaks;
   week: WeekDay[];
   plan: Plan;
 }) {
@@ -235,6 +236,8 @@ function WeekCard({
   const alive = streaks.current > 0;
   const practised = week.filter((d) => d.active).length;
   const planMet = practised >= plan.daysPerWeek;
+  /** The freeze, said once: spent this week (a ❄ in the strip), or ready. */
+  const frozenThisWeek = week.some((d) => d.frozen);
 
   return (
     <View style={[styles.card, alive && styles.streakCardAlive]}>
@@ -251,7 +254,18 @@ function WeekCard({
             {alive ? 'in a row' : 'Finish a day’s goal to start a streak.'}
           </Text>
         </View>
-        <Text style={styles.cardFootInline}>Longest {streaks.longest}</Text>
+        <View style={styles.streakSide}>
+          <Text style={styles.cardFootInline}>Longest {streaks.longest}</Text>
+          {alive && (
+            <Text style={[styles.freezeNote, streaks.freezeAvailable && styles.freezeNoteReady]}>
+              {frozenThisWeek
+                ? '❄ Freeze used'
+                : streaks.freezeAvailable
+                  ? '❄ Freeze ready'
+                  : '❄ Freeze back next week'}
+            </Text>
+          )}
+        </View>
       </View>
 
       <View
@@ -268,11 +282,13 @@ function WeekCard({
               style={[
                 styles.weekDot,
                 day.active && styles.weekDotOn,
+                day.frozen && styles.weekDotFrozen,
                 day.isToday && styles.weekDotToday,
                 day.isFuture && styles.weekDotFuture,
               ]}
             >
               {day.active && <Text style={styles.weekTick}>✓</Text>}
+              {day.frozen && <Text style={styles.weekIce}>❄</Text>}
             </View>
             <Text
               style={[
@@ -772,7 +788,10 @@ export function ProgressScreen({
   const due = useMemo(() => dueCount(words, now), [words, now]);
   const nextDue = useMemo(() => nextDueAt(words, now), [words, now]);
   const streaks = useMemo(() => computeStreaks(recallDays, now), [recallDays, now]);
-  const week = useMemo(() => weekStrip(recallDays, now), [recallDays, now]);
+  const week = useMemo(
+    () => weekStrip(recallDays, now, streaks.frozen),
+    [recallDays, now, streaks.frozen]
+  );
   const todayCount = useMemo(
     () => countForDay(dailyCounts, dayKey(now)),
     [dailyCounts, now]
@@ -1098,6 +1117,13 @@ const styles = StyleSheet.create({
     width: 30,
   },
   weekDotOn: { backgroundColor: '#f2c14e' },
+  /** A frozen day: the streak survived it, so it is drawn as kept, not
+      missed — ice blue, with the flake. */
+  weekDotFrozen: { backgroundColor: 'rgba(87,179,242,0.25)' },
+  weekIce: { color: '#57b3f2', fontSize: 13, fontWeight: '900' },
+  streakSide: { alignItems: 'flex-end', gap: 4 },
+  freezeNote: { color: 'rgba(242,245,243,0.4)', fontSize: 11, fontWeight: '700' },
+  freezeNoteReady: { color: '#57b3f2' },
   weekDotToday: { borderColor: '#f2f5f3', borderWidth: 2 },
   weekDotFuture: { opacity: 0.35 },
   weekTick: { color: '#2a1f06', fontSize: 14, fontWeight: '900' },

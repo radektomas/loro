@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { dayKey, weekStrip } from './progress.ts';
+import { computeStreaks, dayKey, weekStrip } from './progress.ts';
 
 /**
  * Week-strip tests — run with `npm test`.
@@ -104,5 +104,86 @@ describe('weekStrip', () => {
     const now = at(2026, 7, 23);
     const strip = weekStrip([dayKey(now)], now);
     assert.equal(strip.find((d) => d.isToday)?.active, true);
+  });
+});
+
+describe('computeStreaks with the weekly freeze', () => {
+  // A fixed "now": Thursday 2026-09-10, midday local.
+  const NOW = new Date(2026, 8, 10, 12).getTime();
+  const day = (offset: number) => dayKey(new Date(2026, 8, 10 + offset, 12).getTime());
+  const run = (...offsets: number[]) => offsets.map(day);
+
+  it('counts consecutive days, today included', () => {
+    const s = computeStreaks(run(-2, -1, 0), NOW);
+    assert.equal(s.current, 3);
+    assert.equal(s.longest, 3);
+    assert.deepEqual(s.frozen, []);
+    assert.equal(s.freezeAvailable, true);
+  });
+
+  it('is not broken while today is still open', () => {
+    const s = computeStreaks(run(-3, -2, -1), NOW);
+    assert.equal(s.current, 3);
+    assert.deepEqual(s.frozen, []);
+  });
+
+  it('freezes one missed day and keeps the run alive', () => {
+    // Earned Mon Tue, missed Wed, earned today (Thu).
+    const s = computeStreaks(run(-3, -2, 0), NOW);
+    assert.equal(s.current, 3);
+    assert.deepEqual(s.frozen, [day(-1)]);
+    assert.equal(s.freezeAvailable, false); // spent yesterday
+    assert.equal(s.longest, 3);
+  });
+
+  it('freezes yesterday while today is still open', () => {
+    const s = computeStreaks(run(-4, -3, -2), NOW);
+    assert.equal(s.current, 3);
+    assert.deepEqual(s.frozen, [day(-1)]);
+  });
+
+  it('two missed days in a row end the streak', () => {
+    const s = computeStreaks(run(-5, -4, -3), NOW);
+    assert.equal(s.current, 0);
+    assert.deepEqual(s.frozen, []);
+    assert.equal(s.longest, 3);
+  });
+
+  it('allows only one freeze per seven days', () => {
+    // Missed -1 and -5: two misses inside a week — the older one breaks it.
+    const s = computeStreaks(run(-7, -6, -4, -3, -2, 0), NOW);
+    assert.equal(s.current, 4); // -4, -3, -2, 0 with -1 frozen
+    assert.deepEqual(s.frozen, [day(-1)]);
+    // Missed -1 and -8: a week apart — both frozen.
+    const t = computeStreaks(run(-10, -9, -7, -6, -5, -4, -3, -2, 0), NOW);
+    assert.equal(t.current, 9);
+    assert.deepEqual(t.frozen, [day(-1), day(-8)]);
+  });
+
+  it('the freeze comes back a week after it was spent', () => {
+    const s = computeStreaks(run(-9, -7, -6, -5, -4, -3, -2, -1, 0), NOW);
+    assert.equal(s.current, 9);
+    assert.deepEqual(s.frozen, [day(-8)]);
+    assert.equal(s.freezeAvailable, true); // 8 days ago
+    const t = computeStreaks(run(-8, -6, -5, -4, -3, -2, -1, 0), NOW);
+    assert.deepEqual(t.frozen, [day(-7)]);
+    assert.equal(t.freezeAvailable, true); // exactly a week ago
+    const u = computeStreaks(run(-7, -5, -4, -3, -2, -1, 0), NOW);
+    assert.deepEqual(u.frozen, [day(-6)]);
+    assert.equal(u.freezeAvailable, false);
+  });
+
+  it('longest bridges a single miss with the same rule', () => {
+    assert.equal(computeStreaks(run(-20, -19, -17, -16), NOW).longest, 4);
+    assert.equal(computeStreaks(run(-20, -19, -16, -15), NOW).longest, 2);
+  });
+
+  it('weekStrip marks the frozen day', () => {
+    const days = run(-3, -2, 0);
+    const s = computeStreaks(days, NOW);
+    const strip = weekStrip(days, NOW, s.frozen);
+    const wed = strip.find((d) => d.key === day(-1));
+    assert.ok(wed && wed.frozen && !wed.active);
+    assert.ok(strip.find((d) => d.key === day(0))?.active);
   });
 });

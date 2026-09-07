@@ -213,8 +213,10 @@ export type WeekDay = {
   key: string;
   /** Single-letter column heading, Mon-first */
   label: string;
-  /** Was there a correct recall on this day? */
+  /** Was the day earned (the daily goal met)? */
   active: boolean;
+  /** A missed day the weekly streak freeze covered — see computeStreaks. */
+  frozen: boolean;
   isToday: boolean;
   /** Later this week — rendered as empty, never as a miss. */
   isFuture: boolean;
@@ -232,8 +234,14 @@ const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
  * still has real practice behind it, and the strip is how that stays visible
  * instead of the week reading as a failure.
  */
-export function weekStrip(days: string[], now: number = Date.now()): WeekDay[] {
+export function weekStrip(
+  days: string[],
+  now: number = Date.now(),
+  /** computeStreaks(days, now).frozen — the days the freeze covered. */
+  frozen: readonly string[] = []
+): WeekDay[] {
   const set = new Set(days);
+  const ice = new Set(frozen);
   const today = new Date(now);
   const todayKey = dayKey(now);
   // getDay() is Sunday-based; shift so Monday is 0.
@@ -253,42 +261,104 @@ export function weekStrip(days: string[], now: number = Date.now()): WeekDay[] {
       key,
       label,
       active: set.has(key),
+      frozen: ice.has(key),
       isToday: key === todayKey,
       isFuture: i > offset,
     };
   });
 }
 
-export type Streaks = { current: number; longest: number };
+export type Streaks = {
+  current: number;
+  longest: number;
+  /** Missed days inside the current run that the freeze covered, newest first. */
+  frozen: string[];
+  /** Would a miss right now be covered? False for the week after a freeze. */
+  freezeAvailable: boolean;
+};
+
+/**
+ * ONE STREAK FREEZE A WEEK, FOR EVERYONE, AUTOMATICALLY.
+ *
+ * Radek, 2026-09-07: "one streak freeze per week for every user". A single
+ * missed day does not end the streak if no other miss was forgiven in the
+ * seven days before it. Two missed days in a row always end it — a freeze
+ * covers a day, not a holiday.
+ *
+ * COMPUTED ON READ, NOT STORED. The streak is derived from recallDays, which
+ * syncs; a stored "freeze used on" flag would be one more thing to merge,
+ * and a rule applied to the same list on every device gives the same answer
+ * everywhere for free. It also means the rule is retroactive: a user whose
+ * streak died last month to one missed Tuesday gets it back, which is the
+ * generous reading and the one nobody will complain about.
+ */
+export const FREEZE_EVERY_DAYS = 7;
+
+/** The inverse of dayIndex. */
+function keyOfIndex(index: number): string {
+  const d = new Date(index * 86_400_000);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 /**
  * `current` counts back from today — or from yesterday, so the streak isn't
- * "broken" before the day is over. A gap simply resets it; no drama.
+ * "broken" before the day is over. A single missed day is frozen when the
+ * freeze is available (see FREEZE_EVERY_DAYS); frozen days keep the run
+ * alive but do not add to it. A longer gap simply resets it; no drama.
  */
 export function computeStreaks(
   days: string[],
   now: number = Date.now()
 ): Streaks {
-  const indices = [...new Set(days)].map(dayIndex).sort((a, b) => a - b);
+  const set = new Set(days.map(dayIndex));
+  const sorted = [...set].sort((a, b) => a - b);
 
+  // Longest, forwards, with the same freeze rule: a gap of exactly one day
+  // is bridged when no freeze was spent in the seven days before it.
   let longest = 0;
   let run = 0;
-  for (let i = 0; i < indices.length; i++) {
-    run = i > 0 && indices[i] === indices[i - 1] + 1 ? run + 1 : 1;
+  let lastFreeze = -Infinity;
+  for (let i = 0; i < sorted.length; i++) {
+    const gap = i > 0 ? sorted[i] - sorted[i - 1] : 0;
+    if (i === 0 || gap === 1) {
+      run = i === 0 ? 1 : run + 1;
+    } else if (gap === 2 && sorted[i] - 1 - lastFreeze >= FREEZE_EVERY_DAYS) {
+      lastFreeze = sorted[i] - 1;
+      run++;
+    } else {
+      run = 1;
+    }
     longest = Math.max(longest, run);
   }
 
-  const set = new Set(indices);
+  // Current, backwards from today (or yesterday while today is still open).
   const today = dayIndex(dayKey(now));
-  let cursor: number | null = set.has(today)
-    ? today
-    : set.has(today - 1)
-      ? today - 1
-      : null;
+  let cursor = set.has(today) ? today : today - 1;
   let current = 0;
-  while (cursor !== null && set.has(cursor)) {
-    current++;
+  const frozen: number[] = [];
+  let newestFreeze: number | null = null;
+  for (;;) {
+    if (set.has(cursor)) {
+      current++;
+      cursor--;
+      continue;
+    }
+    // A miss. Only a single one, with an earned day behind it, can be frozen.
+    if (!set.has(cursor - 1)) break;
+    if (newestFreeze !== null && newestFreeze - cursor < FREEZE_EVERY_DAYS) break;
+    frozen.push(cursor);
+    newestFreeze = cursor;
     cursor--;
   }
-  return { current, longest };
+  if (current === 0) frozen.length = 0; // nothing to keep alive
+
+  return {
+    current,
+    longest,
+    frozen: frozen.map(keyOfIndex),
+    freezeAvailable: newestFreeze === null || today - newestFreeze >= FREEZE_EVERY_DAYS,
+  };
 }
