@@ -1,7 +1,7 @@
 // Relative and extension-ed, not '@/lib/…': this module loads under plain node
 // for its test (same rule as savePrompt.ts).
 import { normalizeSurface } from './dictionary.ts';
-import { computeBlankPlan, normalizeAnswer } from './srs.ts';
+import { computeBlankPlan, MIN_AUDIBLE_S, normalizeAnswer } from './srs.ts';
 import { MIN_TARGET_AUDIBLE_S } from './starter/rounds.ts';
 import type { SavedWord, Video } from './types.ts';
 
@@ -11,9 +11,15 @@ import type { SavedWord, Video } from './types.ts';
  *
  * Matched accent-exactly (normalizeSurface), the same rule as the starter
  * deck's targetOccurrences: matching through normalizeAnswer could resolve
- * "él" to a spoken article "el" and time playback to the wrong word. The
- * audibility floor is also the deck's (MIN_TARGET_AUDIBLE_S, 0.2s), because
- * this exists to let the user HEAR the word — a 0.1s mumble is not that.
+ * "él" to a spoken article "el" and time playback to the wrong word.
+ *
+ * TWO AUDIBILITY FLOORS, ON PURPOSE. The default is the deck's
+ * (MIN_TARGET_AUDIBLE_S, 0.2s), because hear-it exists to let the user
+ * LISTEN to the word and a 0.1s mumble is not that. The REVIEW lookups below
+ * pass the planner's floor instead (srs.MIN_AUDIBLE_S, 0.05s): a review lands
+ * on a blank, and the blank planner asks any word it can hold on — so a word
+ * the feed would blank must never be reported as "in no video" by the code
+ * that decides where to land. "dominas" at 0.18s was exactly that gap.
  */
 export type WordOccurrence = {
   videoId: string;
@@ -31,15 +37,17 @@ export type WordOccurrence = {
 /** Every audible occurrence of `text` across `videos`, in catalog order. */
 export function findWordOccurrences(
   videos: readonly Video[],
-  text: string
+  text: string,
+  opts: { minAudibleS?: number } = {}
 ): WordOccurrence[] {
+  const floor = opts.minAudibleS ?? MIN_TARGET_AUDIBLE_S;
   const wanted = normalizeSurface(text);
   if (!wanted) return [];
   const found: WordOccurrence[] = [];
   for (const video of videos) {
     video.cues.forEach((cue, cueIndex) => {
       cue.words.forEach((word, wordIndex) => {
-        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) return;
+        if (word.end - word.start < floor) return;
         if (normalizeSurface(word.text) !== wanted) return;
         found.push({
           videoId: video.id,
@@ -133,9 +141,10 @@ export function pickReviewTarget(
   const wanted = normalizeAnswer(word.text);
   if (!wanted) return null;
 
-  const occurrences = findWordOccurrences(videos, word.text).filter(
-    (o) => o.youtubeId !== null
-  );
+  // The planner's floor, not hear-it's — see findWordOccurrences.
+  const occurrences = findWordOccurrences(videos, word.text, {
+    minAudibleS: MIN_AUDIBLE_S,
+  }).filter((o) => o.youtubeId !== null);
   if (occurrences.length === 0) return null;
 
   const order: string[] = [];
@@ -213,8 +222,8 @@ function planFor(
  * call folds the whole catalog for ONE word; this scans every candidate in
  * ONE fold, so trying all of them costs what trying five used to.
  *
- * The fold mirrors findWordOccurrences' rules exactly (accent-exact match,
- * the audibility floor, embeds only), and each candidate video is verified
+ * The fold mirrors findWordOccurrences' rules (accent-exact match, embeds
+ * only) at the PLANNER's audibility floor, and each candidate video is verified
  * through the same computeBlankPlan-with-`first` check pickReviewTarget
  * runs (planFor, shared). Per word, the saved-from video is tried first,
  * then catalog order, capped — a word whose first few speakers all refuse
@@ -255,7 +264,7 @@ export function pickFirstBlankTarget(
     const seenHere = new Set<string>();
     for (const [cueIndex, cue] of video.cues.entries()) {
       for (const word of cue.words) {
-        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) continue;
+        if (word.end - word.start < MIN_AUDIBLE_S) continue;
         const s = normalizeSurface(word.text);
         if (!surfaces.has(s) || seenHere.has(s)) continue;
         seenHere.add(s);
@@ -305,9 +314,9 @@ export function pickFirstBlankTarget(
  * The picker lists every due word and needs that answer for each of them;
  * findWordOccurrences folds the whole catalog per word, and 178 due words
  * (a real device, 2026-09-07) times 382 videos is a stall on the JS thread
- * for a yes/no. Same rules as findWordOccurrences — accent-exact, the deck's
- * audibility floor, embeds only — so a word this says is spoken is one
- * pickReviewTarget can land on.
+ * for a yes/no. Same rules as pickReviewTarget — accent-exact, the PLANNER's
+ * audibility floor, embeds only — so a word this says is spoken is one the
+ * feed would blank and the landing logic can find.
  */
 export function spokenSurfaces(videos: readonly Video[]): Set<string> {
   const spoken = new Set<string>();
@@ -315,7 +324,7 @@ export function spokenSurfaces(videos: readonly Video[]): Set<string> {
     if (!video.youtubeId) continue;
     for (const cue of video.cues) {
       for (const word of cue.words) {
-        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) continue;
+        if (word.end - word.start < MIN_AUDIBLE_S) continue;
         const s = normalizeSurface(word.text);
         if (s) spoken.add(s);
       }

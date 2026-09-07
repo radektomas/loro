@@ -225,8 +225,18 @@ export function matchAnswer(answer: string, expected: string): AnswerMatch {
   return levenshtein(a, e) <= limit ? 'almost' : 'wrong';
 }
 
-/** A word with no audible span was never heard, so it can't be recalled. */
-const MIN_AUDIBLE_S = 0.05;
+/**
+ * A word with no audible span was never heard, so it can't be recalled.
+ *
+ * Exported because the REVIEW lookups in occurrences.ts must agree with the
+ * planner about which words can be asked. They used the hear-it player's
+ * 0.2s floor (a word you press play to LISTEN to needs to last), and the
+ * gap between the two bit on device (2026-09-07): "dominas", 0.18s on the
+ * timing track, was blanked by the feed whenever its video came up and yet
+ * reported as "not in a video" by the review picker and skipped by "most
+ * urgent" — the planner would ask it, the landing logic could not find it.
+ */
+export const MIN_AUDIBLE_S = 0.05;
 
 /** Pick the more urgent of two saved words: lowest box, then earliest due. */
 function moreUrgent(a: SavedWord, b: SavedWord | undefined): boolean {

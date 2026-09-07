@@ -25,10 +25,13 @@ import { spokenSurfaces } from '@loro/core/occurrences';
  * runs from onDismiss, when the window is provably gone; the timer is the
  * belt to those braces, because onDismiss is iOS-only.
  *
- * WORDS NO VIDEO SPEAKS ARE SHOWN, GREYED, AT THE BOTTOM. Hiding them would
- * make the list disagree with the "N ready" count on the card; greying them
- * says why they cannot be picked. Computed in one catalog pass
- * (spokenSurfaces), not one fold per word.
+ * WORDS NO VIDEO SPEAKS ARE NOT LISTED (Radek, on device: a word the feed
+ * cannot land on "definitely shouldn't be there"). A footnote carries the
+ * count so the list can still be reconciled with the card's "N ready";
+ * those words stay due, and the feed asks them the day a video that says
+ * them arrives. "Spoken" is the PLANNER's definition (spokenSurfaces, one
+ * catalog pass) — the same one the landing logic uses — so a word listed
+ * here is a word the tap can deliver.
  */
 
 /** How long to wait for onDismiss before assuming it is not coming. */
@@ -150,23 +153,11 @@ export function ReviewPicker({
             ))}
 
             {rows.silent.length > 0 && (
-              <>
-                <Text style={styles.silentHead}>Not in a video yet</Text>
-                {rows.silent.map((word) => (
-                  <View
-                    key={`${word.videoId}:${word.text}`}
-                    style={[styles.row, styles.rowSilent]}
-                    accessibilityLabel={`${word.text}, not spoken in any video yet`}
-                  >
-                    <View style={styles.rowText}>
-                      <Text style={[styles.rowWord, styles.rowWordSilent]}>{word.text}</Text>
-                      <Text style={styles.rowGloss} numberOfLines={1}>
-                        {word.translation}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </>
+              <Text style={styles.silentNote}>
+                {rows.silent.length} more{' '}
+                {rows.silent.length === 1 ? 'word is' : 'words are'} ready but not in
+                any video right now. They come back as blanks when a video says them.
+              </Text>
             )}
           </ScrollView>
 
@@ -227,22 +218,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(94,230,168,0.3)',
     borderWidth: 1,
   },
-  rowSilent: { opacity: 0.45 },
   rowText: { flex: 1 },
   rowWord: { color: '#f2f5f3', fontSize: 16, fontWeight: '700' },
-  rowWordSilent: { fontWeight: '600' },
   rowGloss: { color: 'rgba(242,245,243,0.55)', fontSize: 12, marginTop: 1 },
   rowSlipped: { color: '#f87171', fontSize: 12, fontWeight: '700' },
   rowChevron: { color: 'rgba(242,245,243,0.4)', fontSize: 20, fontWeight: '600' },
-  silentHead: {
+  silentNote: {
     color: 'rgba(242,245,243,0.4)',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    marginBottom: 2,
-    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
     paddingHorizontal: 2,
-    textTransform: 'uppercase',
   },
   cancel: { alignItems: 'center', marginTop: 8, paddingVertical: 12 },
   cancelText: { color: 'rgba(242,245,243,0.55)', fontSize: 14, fontWeight: '600' },

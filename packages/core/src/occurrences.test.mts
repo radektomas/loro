@@ -302,12 +302,49 @@ describe('spokenSurfaces', () => {
     assert.equal(spoken.has('canta'), true);
   });
 
-  it('skips hosted clips and inaudible spans', () => {
+  it('skips hosted clips and spans the planner would skip', () => {
     const hosted = video('h', [['nunca']], { youtubeId: undefined });
     const mumble = video('m', [['apenas']]);
-    mumble.cues[0].words[0].end = mumble.cues[0].words[0].start + 0.1;
+    mumble.cues[0].words[0].end = mumble.cues[0].words[0].start + 0.03;
     const spoken = spokenSurfaces([hosted, mumble]);
     assert.equal(spoken.has('nunca'), false);
     assert.equal(spoken.has('apenas'), false);
+  });
+
+  it("uses the PLANNER's floor, not hear-it's — a 0.18s word is reviewable", () => {
+    // "dominas", 2026-09-07: 0.18s on the timing track, blanked by the feed,
+    // reported as "not in a video" by the picker. Under 0.2s but over 0.05s.
+    const brief = video('b', [['dominas', 'el']]);
+    brief.cues[0].words[0].end = brief.cues[0].words[0].start + 0.18;
+    assert.equal(spokenSurfaces([brief]).has('dominas'), true);
+    // ...and hear-it still refuses it, on purpose.
+    assert.equal(findWordOccurrences([brief], 'dominas').length, 0);
+  });
+});
+
+describe('pickReviewTarget — audibility floor', () => {
+  const NOW = 10_000_000;
+  const word: SavedWord = {
+    text: 'dominas',
+    translation: 'you master',
+    videoId: 'b',
+    cueIndex: 0,
+    source: 'user',
+    savedAt: NOW - 60 * 60 * 1000,
+    state: 'learning',
+    box: 1,
+    dueAt: NOW - 60 * 1000,
+    correct: 0,
+    incorrect: 0,
+    lastReviewedAt: null,
+    learnedAt: null,
+  };
+  it('lands on a word the planner would blank even when hear-it would not', () => {
+    const brief = video('b', [['hola', 'dominas'], ['x', 'y']]);
+    brief.cues[0].words[1].end = brief.cues[0].words[1].start + 0.18;
+    const landing = pickReviewTarget([brief], word, [word], { now: NOW });
+    assert.ok(landing, 'a landing exists');
+    assert.equal(landing.videoId, 'b');
+    assert.equal(landing.willBlank, true);
   });
 });
