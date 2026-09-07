@@ -297,3 +297,29 @@ export function pickFirstBlankTarget(
   }
   return fallback;
 }
+
+/**
+ * Every surface the catalog SPEAKS audibly, in one pass — the Progress
+ * review picker's "is this word in a video at all" check.
+ *
+ * The picker lists every due word and needs that answer for each of them;
+ * findWordOccurrences folds the whole catalog per word, and 178 due words
+ * (a real device, 2026-09-07) times 382 videos is a stall on the JS thread
+ * for a yes/no. Same rules as findWordOccurrences — accent-exact, the deck's
+ * audibility floor, embeds only — so a word this says is spoken is one
+ * pickReviewTarget can land on.
+ */
+export function spokenSurfaces(videos: readonly Video[]): Set<string> {
+  const spoken = new Set<string>();
+  for (const video of videos) {
+    if (!video.youtubeId) continue;
+    for (const cue of video.cues) {
+      for (const word of cue.words) {
+        if (word.end - word.start < MIN_TARGET_AUDIBLE_S) continue;
+        const s = normalizeSurface(word.text);
+        if (s) spoken.add(s);
+      }
+    }
+  }
+  return spoken;
+}

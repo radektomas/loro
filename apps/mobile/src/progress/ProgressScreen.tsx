@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AppState,
   DevSettings,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,9 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SavedWord, Video, WordState } from '@loro/core/types';
+import type { SavedWord, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
-import { getCatalog } from '@loro/core/catalog';
 import { formatDue } from '@loro/core/srs';
 import {
   computeStreaks,
@@ -29,7 +27,7 @@ import {
   type DailyCounts,
   type WeekDay,
 } from '@loro/core/progress';
-import { launchReview } from '../feed/launchReview';
+import { launchReview, launchReviewOfWord } from '../feed/launchReview';
 import {
   formatTime,
   getPermissionState,
@@ -47,6 +45,7 @@ import { SignInCard } from '../auth/SignInCard';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { LegalLinks } from './LegalLinks';
 import { getPlan, type Plan } from './plan';
+import { ReviewPicker } from './ReviewPicker';
 import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
 
 /**
@@ -71,10 +70,14 @@ import { TIERS, tierFor, type LevelState } from '@loro/core/levels';
  *                 one per word, glue folded into "+N small words". Learned
  *                 means learned (core/progress.ts isLearned): right on two
  *                 different days, never "typed once".
- *   4. REVIEW     what is ready, and the button that actually lands on it.
+ *   4. REVIEW     what is ready, and a button that asks WHICH word, then
+ *                 lands on it (ReviewPicker).
  *   5. LEVEL      one row with the meter; the full ladder on request.
- *   6. WORDS / VIDEOS / all-time totals — the record, at the bottom.
- * Then the settings the page has always carried.
+ *   6. WORDS      the state bar and the all-time totals — the record.
+ * Then the settings the page has always carried. The per-video rows that
+ * used to close the page are gone (Radek, 2026-09-07: "take out the
+ * videos") — they were the web's, and on a phone they were a list of
+ * thumbnails nobody scrolled to.
  *
  * EXPECT EMPTY PANELS, AND THAT IS HONEST RATHER THAN BROKEN. Nothing here
  * fabricates a placeholder to fill the space; every zero is a real zero.
@@ -730,6 +733,9 @@ export function ProgressScreen({
       by re-running onboarding, which reloads the app. */
   const [plan, setPlan] = useState<Plan>(getPlan);
   const [now, setNow] = useState(() => Date.now());
+  /** The review picker's window — see ReviewPicker for why it is the only
+      thing this screen presents, and why nothing navigates while it is up. */
+  const [picker, setPicker] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -755,6 +761,12 @@ export function ProgressScreen({
       clearInterval(tick);
       unsub();
     };
+  }, [active]);
+
+  // Nothing this screen presents may outlive a tab switch — the same
+  // backstop the Words tab keeps for its window (VocabScreen).
+  useEffect(() => {
+    if (!active) setPicker(false);
   }, [active]);
 
   /**
@@ -794,40 +806,30 @@ export function ProgressScreen({
   const learnedWeek = useMemo(() => learnedThisWeek(words, now), [words, now]);
 
   /**
-   * Per video: how many words saved, how many learned, most-engaged first.
-   *
-   * ONE DELIBERATE DEVIATION FROM THE WEB: it maps the WHOLE catalog and
-   * renders every row, including the 200-odd videos with nothing saved. That is
-   * fine for a DOM list on a desktop and is not fine here — 200+ rows with
-   * remote thumbnails inside a ScrollView would jank the tab. Only videos the
-   * user has actually engaged with are rendered. The arithmetic is unchanged,
-   * except that "learned" now means learned (isLearned).
+   * THE REVIEW BUTTONS ASK WHICH WORD, THEN LAND ON IT. Both of them —
+   * Today's and the Reviews card's — open the picker; the launch runs from
+   * its onLaunch, AFTER the window is gone (never in the same commit as the
+   * tab switch — the frozen-tab lesson from the Words screen). A chosen word
+   * goes through launchReviewOfWord, "most urgent" through launchReview: the
+   * same launchers the Words tab and the reminder tap use. The old
+   * startReview here armed recall and switched tab, which with RECALL_ENABLED
+   * true opened a random video.
    */
-  const videoRows = useMemo(() => {
-    const byVideo = new Map<string, { saved: number; learned: number }>();
-    for (const w of words) {
-      const e = byVideo.get(w.videoId) ?? { saved: 0, learned: 0 };
-      e.saved++;
-      if (isLearned(w)) e.learned++;
-      byVideo.set(w.videoId, e);
-    }
-    const rows: { video: Video; saved: number; learned: number }[] = [];
-    for (const video of getCatalog()) {
-      const e = byVideo.get(video.id);
-      if (!e) continue;
-      rows.push({ video, saved: e.saved, learned: e.learned });
-    }
-    return rows.sort((a, b) => b.saved - a.saved);
-  }, [words]);
-
-  /**
-   * THE REVIEW BUTTONS LAND ON A DUE WORD. Both of them — Today's and the
-   * Reviews card's — go through launchReview, the same launcher the Words
-   * tab and the reminder tap use. The old startReview here armed recall and
-   * switched tab, which with RECALL_ENABLED true opened a random video.
-   */
-  const startReview = () => {
-    launchReview('progress');
+  const startReview = () => setPicker(true);
+  const dueWords = useMemo(
+    () =>
+      words
+        .filter((w) => w.dueAt <= now)
+        .sort(
+          (a, b) =>
+            Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
+            a.dueAt - b.dueAt
+        ),
+    [words, now]
+  );
+  const launch = (word: SavedWord | null) => {
+    if (word) launchReviewOfWord(word, 'progress');
+    else launchReview('progress');
     onGoToFeed();
   };
 
@@ -904,13 +906,13 @@ export function ProgressScreen({
                       </Text>
                     </Text>
                     <Text style={styles.cardBody}>
-                      Review opens the feed on one of them. The rest follow as
-                      blanks while you watch.
+                      Pick one and the feed opens just before it. The rest
+                      follow as blanks while you watch.
                     </Text>
                     <Pressable
                       onPress={startReview}
                       accessibilityRole="button"
-                      accessibilityHint="Opens the feed on a word that is ready to review"
+                      accessibilityHint="Choose a word, then the feed opens on it"
                       style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
                     >
                       <Text style={styles.ctaText}>Review</Text>
@@ -960,31 +962,6 @@ export function ProgressScreen({
               </View>
             </View>
 
-            {/* 7 — videos: saved vs learned per video, most-engaged first */}
-            {videoRows.length > 0 && (
-              <View style={styles.section}>
-                <SectionTitle>Videos</SectionTitle>
-                {videoRows.map(({ video, saved, learned }) => (
-                  <View key={video.id} style={styles.videoRow}>
-                    <Image
-                      source={{ uri: video.poster }}
-                      style={styles.thumb}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.videoText}>
-                      <Text style={styles.videoTitle} numberOfLines={1}>
-                        {video.creator}
-                      </Text>
-                      <Text style={styles.videoMeta}>
-                        {saved} saved · {learned} learned
-                      </Text>
-                    </View>
-                    <Text style={styles.videoLevel}>{video.level}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
             <Text style={styles.footNote}>
               {watchedIds.length} {watchedIds.length === 1 ? 'video' : 'videos'}{' '}
               watched
@@ -1031,6 +1008,16 @@ export function ProgressScreen({
         {__DEV__ && isNotificationSeamAvailable() && <DevNotificationRow />}
         {__DEV__ && <DevResetRow />}
       </ScrollView>
+
+      {/* ONE WINDOW, outside the scroll. Its `open` drops from onLaunch or a
+          dismissal — never from a tap directly — so a review can never fire
+          into a window that is still being torn down. */}
+      <ReviewPicker
+        open={picker}
+        words={dueWords}
+        onClose={() => setPicker(false)}
+        onLaunch={launch}
+      />
     </View>
   );
 }
@@ -1301,29 +1288,6 @@ const styles = StyleSheet.create({
   legendItem: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   legendDot: { borderRadius: 999, height: 7, width: 7 },
   legendText: { color: 'rgba(242,245,243,0.6)', fontSize: 12 },
-  videoRow: {
-    alignItems: 'center',
-    backgroundColor: '#141a17',
-    borderRadius: 14,
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 6,
-    padding: 8,
-  },
-  thumb: { backgroundColor: '#000', borderRadius: 8, height: 44, width: 44 },
-  videoText: { flex: 1 },
-  videoTitle: { color: '#f2f5f3', fontSize: 14, fontWeight: '600' },
-  videoMeta: { color: 'rgba(242,245,243,0.5)', fontSize: 12, marginTop: 1 },
-  videoLevel: {
-    backgroundColor: 'rgba(94,230,168,0.16)',
-    borderRadius: 6,
-    color: '#5ee6a8',
-    fontSize: 11,
-    fontWeight: '700',
-    overflow: 'hidden',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
   footNote: {
     color: 'rgba(242,245,243,0.35)',
     fontSize: 12,

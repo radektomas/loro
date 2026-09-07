@@ -1,6 +1,7 @@
+import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
-import { pickFirstBlankTarget } from '@loro/core/occurrences';
+import { pickFirstBlankTarget, pickReviewTarget } from '@loro/core/occurrences';
 import { track } from '../platform/analytics';
 import { enableRecallForSession } from './recall';
 import { requestReviewTarget } from './reviewTarget';
@@ -89,6 +90,50 @@ export function launchReview(source: ReviewSource): ReviewLaunch {
     due: launch.due,
     landed: launch.landed,
     willBlank: launch.willBlank,
+  });
+  return launch;
+}
+
+/**
+ * REVIEW ONE CHOSEN WORD — the Progress picker's launch.
+ *
+ * The same jump the Words tab's detail sheet makes (VocabScreen.reviewWord),
+ * with the same two conditions or the button lies: the word must be DUE, or
+ * computeBlankPlan will not blank it (reviewNow brings it forward; a no-op
+ * for a word the picker listed as ready), and the feed must land somewhere
+ * the word is genuinely ASKED — pickReviewTarget runs the real plan against
+ * each candidate video and returns the cue and second, so the feed opens
+ * three seconds before the word rather than at the top of a clip. A word no
+ * video speaks falls back to the plain armed feed; the picker greys those
+ * out, so it should not happen from there.
+ */
+export function launchReviewOfWord(word: SavedWord, source: ReviewSource): ReviewLaunch {
+  storage.reviewNow(word.text, word.videoId);
+  const all = storage.getSavedWords();
+  const at = Date.now();
+  const target = pickReviewTarget(getCatalog(), word, all, { now: at });
+  if (target) {
+    requestReviewTarget({ videoId: target.videoId, word: word.text, startsAt: target.startsAt });
+    console.log(
+      `[loro:review] ${source} picked "${word.text}" -> ${target.videoId} ` +
+        `@${target.startsAt.toFixed(1)}s` + (target.willBlank ? '' : ' (SPOKEN ONLY)')
+    );
+  } else {
+    console.log(`[loro:review] ${source} picked "${word.text}": spoken nowhere — plain feed`);
+  }
+  enableRecallForSession();
+  const launch: ReviewLaunch = {
+    due: all.filter((w) => w.dueAt <= at).length,
+    landed: target !== null,
+    willBlank: target?.willBlank ?? false,
+    word: word.text,
+  };
+  track('review_started', {
+    source,
+    due: launch.due,
+    landed: launch.landed,
+    willBlank: launch.willBlank,
+    picked: true,
   });
   return launch;
 }

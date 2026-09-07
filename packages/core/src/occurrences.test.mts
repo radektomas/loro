@@ -5,6 +5,7 @@ import {
   pickFirstBlankTarget,
   pickReplayOccurrence,
   pickReviewTarget,
+  spokenSurfaces,
 } from './occurrences.ts';
 import type { SavedWord, Video } from './types.ts';
 
@@ -285,5 +286,28 @@ describe('pickFirstBlankTarget', () => {
   it('returns null only when no candidate is spoken anywhere', () => {
     assert.equal(pickFirstBlankTarget([clear], ghosts, ghosts, { now: NOW }), null);
     assert.equal(pickFirstBlankTarget([clear], [], [], { now: NOW }), null);
+  });
+});
+
+describe('spokenSurfaces', () => {
+  it('collects every audible surface across embeddable videos, accent-exact', () => {
+    const spoken = spokenSurfaces([
+      video('a', [['Hola', 'qué'], ['tal']]),
+      video('b', [['él', 'canta']]),
+    ]);
+    assert.equal(spoken.has('hola'), true);
+    assert.equal(spoken.has('qué'), true);
+    assert.equal(spoken.has('que'), false); // accent-exact, like findWordOccurrences
+    assert.equal(spoken.has('él'), true);
+    assert.equal(spoken.has('canta'), true);
+  });
+
+  it('skips hosted clips and inaudible spans', () => {
+    const hosted = video('h', [['nunca']], { youtubeId: undefined });
+    const mumble = video('m', [['apenas']]);
+    mumble.cues[0].words[0].end = mumble.cues[0].words[0].start + 0.1;
+    const spoken = spokenSurfaces([hosted, mumble]);
+    assert.equal(spoken.has('nunca'), false);
+    assert.equal(spoken.has('apenas'), false);
   });
 });
