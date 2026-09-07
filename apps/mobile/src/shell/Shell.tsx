@@ -10,6 +10,8 @@ import { ProgressScreen } from '../progress/ProgressScreen';
 import { FeedIcon, ProgressIcon, WordsIcon } from './TabIcons';
 import { TabBarHeightContext } from './tabBar';
 import { useDueCount } from './useDueCount';
+import { storage } from '@loro/core/storage';
+import { getPlan } from '../progress/plan';
 
 /**
  * The app shell: three tabs, hand-rolled.
@@ -81,6 +83,17 @@ export function Shell() {
   const goToProgress = useCallback(() => setTab('progress'), []);
   /** The bubble on the Words tab — see useDueCount for what it counts. */
   const due = useDueCount();
+
+  /**
+   * Core earns the streak day when today's tally reaches the goal (storage
+   * noteCorrectToday), and the goal is the plan's number — which only this
+   * app knows. Written on every mount so an install from before the key
+   * existed, and one whose onboarding answer changed, both grade against
+   * the right number. Onboarding writes it at the answer too (steps.tsx).
+   */
+  useEffect(() => {
+    storage.setDailyGoal(getPlan().wordsPerDay);
+  }, []);
 
   /**
    * A TAPPED NOTIFICATION LANDS ON A DUE WORD, NOT ON THE FEED.

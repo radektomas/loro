@@ -126,6 +126,10 @@ const KEYS = {
   // learnedAt: loro_progress has no column for it, so a reinstall starts the
   // count afresh. The streak (recallDays) is unaffected and still syncs.
   dailyCorrect: 'loro.dailyCorrect',
+  // The daily goal — how many correct answers EARN the day (see
+  // noteCorrectToday). The mobile app writes it from the onboarding plan;
+  // where nothing has, DEFAULT_DAILY_GOAL applies.
+  dailyGoal: 'loro.dailyGoal',
   language: 'loro.language',
   onboarded: 'loro.onboarded', // has the user finished (or skipped) the intro
   level: 'loro.level', // onboarding self-assessment: zero | some | confident
@@ -226,13 +230,37 @@ function migrateWord(raw: Partial<SavedWord>): SavedWord {
 }
 
 /**
- * One more correct answer today. Shared by the two grading paths so the
- * daily goal counts a green recall and a blue fill alike — the same pair the
- * streak day is logged from.
+ * The daily goal when nothing has set one: the "every day" plan's number
+ * (apps/mobile progress/plan.ts), which is also what an unanswered
+ * onboarding gets there. The web has no plan screen and lands here too.
  */
-function bumpTodayCorrect(now: number): void {
-  const counts = readJSON<DailyCounts>(KEYS.dailyCorrect, {});
-  writeJSON(KEYS.dailyCorrect, bumpDay(counts, dayKey(now)));
+export const DEFAULT_DAILY_GOAL = 5;
+
+/**
+ * One more correct answer today, and — when it is the one that reaches the
+ * daily goal — the day itself.
+ *
+ * Shared by the two grading paths so a green recall and a blue level fill
+ * count alike, for the tally and for the streak. UNTIL 2026-09-07 the
+ * streak day was logged on the FIRST correct answer, so the streak and the
+ * daily goal disagreed: a day with one answer showed a flame and an unmet
+ * goal. Radek: "this should be the limit for the streak, the 5 words". So
+ * the day goes into recallDays only once today's tally reaches the goal —
+ * the same moment the day-done card fires — and the week strip, the streak
+ * and the goal are one fact. Days logged under the old rule stay; they were
+ * practised days, and the record does not rewrite itself.
+ *
+ * recallDays SYNCS (loro_progress.recall_days); the tally does not. Earning
+ * the day here rather than read-side is what keeps the streak surviving a
+ * reinstall.
+ */
+function noteCorrectToday(now: number): void {
+  const today = dayKey(now);
+  const counts = bumpDay(readJSON<DailyCounts>(KEYS.dailyCorrect, {}), today);
+  writeJSON(KEYS.dailyCorrect, counts);
+  if (countForDay(counts, today) < storage.getDailyGoal()) return;
+  const days = readJSON<string[]>(KEYS.recallDays, []);
+  if (!days.includes(today)) writeJSON(KEYS.recallDays, [...days, today].sort());
 }
 
 /**
@@ -1151,21 +1179,13 @@ export const storage = {
         writeJSON(KEYS.savePrompt, { ...s, sessions: s.sessions + 1 });
       }
     }
-    // The honest streak counts days with a correct recall, so log the day —
-    // and the daily goal counts how many, so bump today's tally.
-    if (ok && wasCorrect) {
-      const nowMs = Date.now();
-      const days = readJSON<string[]>(KEYS.recallDays, []);
-      const today = dayKey(nowMs);
-      if (!days.includes(today)) {
-        writeJSON(KEYS.recallDays, [...days, today].sort());
-      }
-      bumpTodayCorrect(nowMs);
-    }
+    // One more toward today's goal — and the streak day, when it is the
+    // answer that reaches it (noteCorrectToday).
+    if (ok && wasCorrect) noteCorrectToday(Date.now());
     if (ok) {
       emitWordsChanged();
       enqueue('upsert', text, videoId);
-      scheduleProgressPush(); // a correct recall may have logged a streak day
+      scheduleProgressPush(); // a correct recall may have earned the day
     }
     return { word: graded, ok };
   },
@@ -1254,15 +1274,8 @@ export const storage = {
         .some((w) => w.text === word.text && w.videoId === word.videoId);
     if (ok) {
       // A correct level fill is a correct typed production — it counts toward
-      // the streak and the daily goal exactly like a correct recall does.
-      if (wasCorrect) {
-        const days = readJSON<string[]>(KEYS.recallDays, []);
-        const today = dayKey(now);
-        if (!days.includes(today)) {
-          writeJSON(KEYS.recallDays, [...days, today].sort());
-        }
-        bumpTodayCorrect(now);
-      }
+      // the daily goal, and so the streak, exactly like a correct recall.
+      if (wasCorrect) noteCorrectToday(now);
       emitWordsChanged();
       enqueue('upsert', word.text, word.videoId);
       scheduleProgressPush();
@@ -1417,6 +1430,19 @@ export const storage = {
   /** Today's correct answers, for the goal ring and the "day done" moment. */
   getTodayCorrect(now: number = Date.now()): number {
     return countForDay(storage.getDailyCorrect(), dayKey(now));
+  },
+
+  /** How many correct answers earn the day — see noteCorrectToday. */
+  getDailyGoal(): number {
+    const raw = getStorageDriver()?.local.getItem(KEYS.dailyGoal);
+    const n = raw === null || raw === undefined ? NaN : Number(raw);
+    return Number.isInteger(n) && n > 0 ? n : DEFAULT_DAILY_GOAL;
+  },
+
+  /** Written by the app that knows the plan; core only reads it. */
+  setDailyGoal(n: number): void {
+    if (!Number.isInteger(n) || n <= 0) return;
+    getStorageDriver()?.local.setItem(KEYS.dailyGoal, String(n));
   },
 
   removeWord(text: string, videoId: string): SavedWord[] {

@@ -48,6 +48,7 @@ import {
   RESULT,
   SELF_LEVEL,
 } from './copy';
+import { planFor } from '../progress/plan';
 import { PAYWALL_ENABLED, olog, setFrequency, setMotivation } from './flow';
 import { TasteStep } from './TasteStep';
 import { tasteAvailable } from './taste';
@@ -562,6 +563,8 @@ function FrequencyStep({ state, update, next }: StepProps) {
             selected={state.frequency === option.id}
             onPress={() => {
               setFrequency(option.id);
+              // The number core grades the streak day against (Shell.tsx).
+              storage.setDailyGoal(planFor(option.id).wordsPerDay);
               update({ frequency: option.id });
               next();
             }}

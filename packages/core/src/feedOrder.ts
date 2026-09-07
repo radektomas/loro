@@ -101,6 +101,19 @@ export function liftDueVideos<V extends Video>(
   words: readonly SavedWord[],
   options: { landingId?: string | null; now?: number; max?: number } = {}
 ): V[] {
+  return liftDueBlock(videos, words, options).videos;
+}
+
+/**
+ * liftDueVideos, plus WHICH videos were lifted: the landing and the due
+ * ones, in order — the review session's block. The feed ends a session
+ * when the user swipes past the last of them (apps/mobile reviewSession).
+ */
+export function liftDueBlock<V extends Video>(
+  videos: readonly V[],
+  words: readonly SavedWord[],
+  options: { landingId?: string | null; now?: number; max?: number } = {}
+): { videos: V[]; block: string[] } {
   const { landingId = null, now = Date.now(), max = REVIEW_LIFT_MAX } = options;
   const landing: V[] = [];
   const due: V[] = [];
@@ -117,5 +130,6 @@ export function liftDueVideos<V extends Video>(
       rest.push(video);
     }
   }
-  return [...landing, ...due, ...rest];
+  const lifted = [...landing, ...due];
+  return { videos: [...lifted, ...rest], block: lifted.map((v) => v.id) };
 }

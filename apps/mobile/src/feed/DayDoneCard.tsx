@@ -4,14 +4,24 @@ import { splitFunctionWords } from '@loro/core/progress';
 import { BRAND } from '../onboarding/brand';
 import { usePlayerApi } from '../player/PlayerHost';
 import { subscribeToDayDone, type DayDoneRaise } from './dayDone';
+import { subscribeToReviewEnd, type ReviewSessionEnd } from './reviewSession';
 
 /**
- * THE DAY-DONE CARD — the app's first ending.
+ * THE DAY-DONE CARD — the app's first ending — and, since 2026-09-07, the
+ * review session's too. ONE CARD, TWO FACES, because they are the same
+ * moment ("you're done") with different arithmetic, and because a session
+ * whose last answer also finishes the day must say both on one card, not
+ * stack two.
  *
- * Raised by RecallHost through dayDone.ts after the celebration for the
- * answer that completed today's goal. It says three things and stops: the
- * day is done, what today added up to (answers, streak), and the words that
- * did it. Then one button to carry on and one to go and look.
+ *   day      raised through dayDone.ts after the celebration for the
+ *            answer that completed today's goal: the day is done, what
+ *            today added up to (answers, streak), the words that did it.
+ *   session  raised through reviewSession.ts when the session hit its size
+ *            or the feed ran out of the user's words: N of M right, the
+ *            words with a tick or a cross, and the day-done line when the
+ *            session earned it.
+ *
+ * Then one button to carry on and one to go and look.
  *
  * PRESENTATION IS NotificationPrompt's SHELL — a card over a dimmed backdrop,
  * onObscurePlayer while up (the embed-terms rule: nothing floats over a
@@ -26,6 +36,16 @@ import { subscribeToDayDone, type DayDoneRaise } from './dayDone';
  */
 const MAX_CHIPS = 8;
 
+type Raise =
+  | { kind: 'day'; day: DayDoneRaise }
+  | { kind: 'session'; session: ReviewSessionEnd };
+
+function streakLineFor(streak: number): string {
+  return streak >= 2
+    ? `${streak} days in a row 🔥`
+    : 'Day one of a streak. Tomorrow makes two.';
+}
+
 export function DayDoneCard({
   onObscurePlayer,
   onGoToProgress,
@@ -36,9 +56,13 @@ export function DayDoneCard({
   onGoToProgress?: () => void;
 }) {
   const api = usePlayerApi();
-  const [raise, setRaise] = useState<DayDoneRaise | null>(null);
+  const [raise, setRaise] = useState<Raise | null>(null);
 
-  useEffect(() => subscribeToDayDone(setRaise), []);
+  useEffect(() => subscribeToDayDone((day) => setRaise({ kind: 'day', day })), []);
+  useEffect(
+    () => subscribeToReviewEnd((session) => setRaise({ kind: 'session', session })),
+    []
+  );
 
   const open = raise !== null;
   useEffect(() => {
@@ -49,14 +73,6 @@ export function DayDoneCard({
   }, [open, onObscurePlayer, api]);
 
   if (!raise) return null;
-
-  const { content, small } = splitFunctionWords(raise.words);
-  const chips = content.slice(0, MAX_CHIPS);
-  const moreContent = content.length - chips.length;
-  const streakLine =
-    raise.streak >= 2
-      ? `${raise.streak} days in a row 🔥`
-      : 'Day one of a streak. Tomorrow makes two.';
 
   const keepGoing = () => {
     setRaise(null);
@@ -77,36 +93,7 @@ export function DayDoneCard({
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot, waving"
         />
-        <Text style={styles.title}>¡Día hecho!</Text>
-        <Text style={styles.gloss}>day done</Text>
-        <Text style={styles.body}>
-          {raise.count} {raise.count === 1 ? 'word' : 'words'} right today.{' '}
-          {streakLine}
-        </Text>
-
-        {(chips.length > 0 || small.length > 0) && (
-          <View style={styles.chips} accessibilityLabel="Today's words">
-            {chips.map((word) => (
-              <View key={`${word.videoId}:${word.text}`} style={styles.chip}>
-                <Text style={styles.chipText}>{word.text}</Text>
-              </View>
-            ))}
-            {moreContent > 0 && (
-              <View style={[styles.chip, styles.chipQuiet]}>
-                <Text style={[styles.chipText, styles.chipTextQuiet]}>
-                  +{moreContent} more
-                </Text>
-              </View>
-            )}
-            {small.length > 0 && (
-              <View style={[styles.chip, styles.chipQuiet]}>
-                <Text style={[styles.chipText, styles.chipTextQuiet]}>
-                  +{small.length} small {small.length === 1 ? 'word' : 'words'}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+        {raise.kind === 'day' ? <DayFace raise={raise.day} /> : <SessionFace end={raise.session} />}
 
         <Pressable
           onPress={keepGoing}
@@ -114,7 +101,7 @@ export function DayDoneCard({
           accessibilityLabel="Keep going"
           style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
         >
-          <Text style={styles.ctaText}>Keep going</Text>
+          <Text style={styles.ctaText}>{raise.kind === 'day' ? 'Keep going' : 'Keep watching'}</Text>
         </Pressable>
 
         {onGoToProgress && (
@@ -129,6 +116,94 @@ export function DayDoneCard({
         )}
       </View>
     </View>
+  );
+}
+
+function DayFace({ raise }: { raise: DayDoneRaise }) {
+  const { content, small } = splitFunctionWords(raise.words);
+  const chips = content.slice(0, MAX_CHIPS);
+  const moreContent = content.length - chips.length;
+
+  return (
+    <>
+      <Text style={styles.title}>¡Día hecho!</Text>
+      <Text style={styles.gloss}>day done</Text>
+      <Text style={styles.body}>
+        {raise.count} {raise.count === 1 ? 'word' : 'words'} right today.{' '}
+        {streakLineFor(raise.streak)}
+      </Text>
+
+      {(chips.length > 0 || small.length > 0) && (
+        <View style={styles.chips} accessibilityLabel="Today's words">
+          {chips.map((word) => (
+            <View key={`${word.videoId}:${word.text}`} style={styles.chip}>
+              <Text style={styles.chipText}>{word.text}</Text>
+            </View>
+          ))}
+          {moreContent > 0 && (
+            <View style={[styles.chip, styles.chipQuiet]}>
+              <Text style={[styles.chipText, styles.chipTextQuiet]}>
+                +{moreContent} more
+              </Text>
+            </View>
+          )}
+          {small.length > 0 && (
+            <View style={[styles.chip, styles.chipQuiet]}>
+              <Text style={[styles.chipText, styles.chipTextQuiet]}>
+                +{small.length} small {small.length === 1 ? 'word' : 'words'}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+    </>
+  );
+}
+
+/**
+ * The session face. Every answered word is shown — right in mint, missed
+ * crossed and quiet — because a review's whole point is which ones came
+ * back; there is no "small words" fold here, the user chose to review them.
+ * A session the feed cut short says so, so "3 of 3" under a goal of 5 does
+ * not read as the app giving up early.
+ */
+function SessionFace({ end }: { end: ReviewSessionEnd }) {
+  const shown = end.words.slice(0, MAX_CHIPS);
+  const more = end.words.length - shown.length;
+  const short = end.reason === 'ranOut' && end.answered < end.size;
+
+  return (
+    <>
+      <Text style={styles.title}>¡Sesión hecha!</Text>
+      <Text style={styles.gloss}>session done</Text>
+      <Text style={styles.body}>
+        {end.correct} of {end.answered} right.
+        {short ? ' That was every word of yours in a video right now.' : ''}
+      </Text>
+      {end.dayDone && (
+        <Text style={styles.dayLine}>
+          ¡Día hecho! · {streakLineFor(end.dayDone.streak)}
+        </Text>
+      )}
+
+      <View style={styles.chips} accessibilityLabel="This session's words">
+        {shown.map((word, i) => (
+          <View
+            key={`${i}:${word.text}`}
+            style={[styles.chip, !word.correct && styles.chipMissed]}
+          >
+            <Text style={[styles.chipText, !word.correct && styles.chipTextMissed]}>
+              {word.correct ? '✓' : '✗'} {word.text}
+            </Text>
+          </View>
+        ))}
+        {more > 0 && (
+          <View style={[styles.chip, styles.chipQuiet]}>
+            <Text style={[styles.chipText, styles.chipTextQuiet]}>+{more} more</Text>
+          </View>
+        )}
+      </View>
+    </>
   );
 }
 
@@ -194,8 +269,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   chipQuiet: { backgroundColor: 'rgba(242,245,243,0.08)' },
+  chipMissed: { backgroundColor: 'rgba(248,113,113,0.14)' },
   chipText: { color: '#5ee6a8', fontSize: 14, fontWeight: '700' },
   chipTextQuiet: { color: 'rgba(242,245,243,0.6)', fontWeight: '600' },
+  chipTextMissed: { color: '#f87171' },
+  /** The day, when the session earned it: one mint line under the score. */
+  dayLine: {
+    color: '#5ee6a8',
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 8,
+    textAlign: 'center',
+  },
   cta: {
     alignItems: 'center',
     backgroundColor: '#5ee6a8',

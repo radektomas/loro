@@ -3,7 +3,9 @@ import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
 import { pickFirstBlankTarget, pickReviewTarget } from '@loro/core/occurrences';
 import { track } from '../platform/analytics';
+import { getPlan } from '../progress/plan';
 import { enableRecallForSession } from './recall';
+import { startReviewSession } from './reviewSession';
 import { requestReviewTarget } from './reviewTarget';
 
 /**
@@ -25,7 +27,9 @@ import { requestReviewTarget } from './reviewTarget';
  *      feed so the videos after the landing carry more due words
  *      (FeedScreen listens for the same request);
  *   3. arm recall and report the launch, with whether it landed, so the
- *      dashboard can finally see which door works.
+ *      dashboard can finally see which door works;
+ *   4. start a SESSION sized at the daily goal (reviewSession.ts), so the
+ *      review has an end and a card that says how it went.
  *
  * The caller switches tab afterwards — Shell owns tabs, and the Words tab
  * has its own modal-dismissal dance to run first (VocabScreen).
@@ -63,6 +67,7 @@ export function launchReview(source: ReviewSource): ReviewLaunch {
       word: found.word.text,
       startsAt: found.landing.startsAt,
     });
+    startReviewSession(source, getPlan().wordsPerDay);
     console.log(
       `[loro:review] ${source} -> "${found.word.text}" in ${found.landing.videoId} ` +
         `@${found.landing.startsAt.toFixed(1)}s` +
@@ -121,6 +126,7 @@ export function launchReviewOfWord(
   });
   if (target) {
     requestReviewTarget({ videoId: target.videoId, word: word.text, startsAt: target.startsAt });
+    startReviewSession(source, getPlan().wordsPerDay);
     console.log(
       `[loro:review] ${source} picked "${word.text}" -> ${target.videoId} ` +
         `@${target.startsAt.toFixed(1)}s` + (target.willBlank ? '' : ' (SPOKEN ONLY)')

@@ -128,6 +128,7 @@ export type EventName =
   | 'blank_answered'      // { kind, match, correct, band? } — one graded blank
   | 'review_started'      // { source, due, landed, willBlank } — a Review door
   | 'goal_met'            // { goal, count, streak } — today's plan completed
+  | 'review_ended'        // { source, size, answered, correct, reason, dayDone }
   | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
   | 'reminder_permission'; // { state } — iOS's answer, right after the ask
 

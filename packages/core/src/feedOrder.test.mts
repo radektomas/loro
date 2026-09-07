@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { liftDueVideos, orderVideosForLevel } from './feedOrder.ts';
+import { liftDueBlock, liftDueVideos, orderVideosForLevel } from './feedOrder.ts';
 import type { Level, Video } from './types.ts';
 
 const video = (id: string, level: Level) => ({ id, level, cues: [] }) as unknown as Video;
@@ -169,5 +169,16 @@ describe('liftDueVideos', () => {
   it('changes nothing when no word is due', () => {
     const list = [clip('a', ['vamos']), clip('b', ['hola'])];
     assert.deepEqual(liftDueVideos(list, [], { now: NOW }).map((v) => v.id), ['a', 'b']);
+  });
+
+  it('liftDueBlock names the lifted videos — landing first, capped, in order', () => {
+    const out = liftDueBlock(
+      [clip('a', ['hola']), clip('b', ['vamos']), clip('c', ['hola']), clip('d', ['ahora'])],
+      [due('ahora'), due('vamos')],
+      { landingId: 'c', now: NOW, max: 1 }
+    );
+    assert.deepEqual(out.videos.map((v) => v.id), ['c', 'b', 'a', 'd']);
+    assert.deepEqual(out.block, ['c', 'b']);
+    assert.deepEqual(liftDueBlock(out.videos, [], { now: NOW }).block, []);
   });
 });

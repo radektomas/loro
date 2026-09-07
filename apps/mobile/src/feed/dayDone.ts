@@ -51,26 +51,40 @@ export function subscribeToDayDone(
 }
 
 /**
- * Called by RecallHost after the celebration for a CORRECT answer. Raises
- * the card if this answer completed today's goal and today has not been
- * celebrated yet; returns whether it raised, so the caller can let the two
- * asks that share the moment (save-progress, notifications) have it
- * instead when it did not.
+ * The latch. Consumes today's one raise if this moment completed the goal:
+ * the plumbing shared by the plain celebration below and the review
+ * session's end (reviewSession.ts), which shows the day on its own card
+ * rather than raising a second one.
  */
-export function maybeCelebrateDayDone(now: number = Date.now()): boolean {
+export function claimDayDone(now: number = Date.now()): DayDoneRaise | null {
   const { wordsPerDay } = getPlan();
   const count = storage.getTodayCorrect(now);
-  if (count < wordsPerDay) return false;
+  if (count < wordsPerDay) return null;
 
   const today = dayKey(now);
-  if (storageDriver.local.getItem(SHOWN_FOR_KEY) === today) return false;
+  if (storageDriver.local.getItem(SHOWN_FOR_KEY) === today) return null;
   storageDriver.local.setItem(SHOWN_FOR_KEY, today);
 
+  // Today is in recallDays by now: core logs the day on the answer that
+  // reaches the goal (storage noteCorrectToday), so the streak counts it.
   const streak = computeStreaks(storage.getCorrectRecallDays(), now).current;
   const words = answeredCorrectToday(storage.getSavedWords(), now);
   track('goal_met', { goal: wordsPerDay, count, streak });
   console.log(`[loro:day] goal met: ${count}/${wordsPerDay}, streak ${streak}`);
-  for (const listener of listeners) listener({ goal: wordsPerDay, count, streak, words });
+  return { goal: wordsPerDay, count, streak, words };
+}
+
+/**
+ * Called by RecallHost after the celebration for a CORRECT answer outside
+ * a review session. Raises the card if this answer completed today's goal
+ * and today has not been celebrated yet; returns whether it raised, so the
+ * caller can let the two asks that share the moment (save-progress,
+ * notifications) have it instead when it did not.
+ */
+export function maybeCelebrateDayDone(now: number = Date.now()): boolean {
+  const raise = claimDayDone(now);
+  if (!raise) return false;
+  for (const listener of listeners) listener(raise);
   return true;
 }
 

@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
-import { liftDueVideos } from '@loro/core/feedOrder';
+import { liftDueBlock } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import { refreshCatalog } from '../platform/catalog';
 import { trackOnce } from '../platform/analytics';
@@ -40,6 +40,7 @@ import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
 import { RecallHost, useHeldBlank, useRecallReplay } from './RecallHost';
+import { noteReviewSlide, raiseReviewEnd, setReviewSessionBlock } from './reviewSession';
 import {
   consumeReviewTarget,
   subscribeToReviewTarget,
@@ -367,11 +368,13 @@ export function FeedScreen({
         setVideos((current) => {
           if (reelRef.current) return current;
           if (!current.some((video) => video.id === target.videoId)) return current;
-          const next = liftDueVideos(current, storage.getSavedWords(), {
+          const { videos: next, block } = liftDueBlock(current, storage.getSavedWords(), {
             landingId: target.videoId,
           });
           orderedRef.current = next;
-          feedLog(`review launch: feed re-cut around "${target.word}"`);
+          // The session lives in these; swiping past the last one ends it.
+          setReviewSessionBlock(block);
+          feedLog(`review launch: feed re-cut around "${target.word}" (${block.length} lifted)`);
           return next;
         });
       }),
@@ -786,6 +789,19 @@ function FeedBody({
   const activeVideo = videos[activeIndex] ?? null;
 
   /**
+   * The review session's boundary: a swipe past the last lifted video ends
+   * it (reviewSession.noteReviewSlide), and the card goes up right here —
+   * the player is starting a video with none of the user's words in it,
+   * so pausing it under the card costs nothing.
+   */
+  const activeVideoId = activeVideo?.id ?? null;
+  useEffect(() => {
+    if (activeVideoId === null) return;
+    const end = noteReviewSlide(activeVideoId);
+    if (end) raiseReviewEnd(end);
+  }, [activeVideoId]);
+
+  /**
    * Tell the script where we are. An effect rather than a call inside
    * applyViewableIndex, so it also fires for the FIRST slide — which is never
    * "changed to" and is exactly the one the walkthrough opens on.
@@ -1056,9 +1072,10 @@ function FeedBody({
                   notification explainer (see RecallHost's priority note). Same
                   obscure contract, same layering reason. */}
               <SessionSavePrompt onObscurePlayer={setPromptObscured} />
-              {/* The win. Raised by RecallHost after the celebration for the
-                  answer that completed today's goal, ahead of both asks
-                  above; once a day at most (dayDone.ts). Same obscure
+              {/* The wins: the review session's end (reviewSession.ts) and
+                  the day's goal (dayDone.ts), one card with two faces.
+                  Raised by RecallHost after the celebration, ahead of both
+                  asks above; the day once a day at most. Same obscure
                   contract, same layering reason. */}
               <DayDoneCard
                 onObscurePlayer={setPromptObscured}

@@ -21,6 +21,7 @@ import { maybeAskForPermission, noteCorrectRecall } from '../platform/notificati
 import { track } from '../platform/analytics';
 import { CELEBRATE_MS } from './Celebration';
 import { maybeCelebrateDayDone } from './dayDone';
+import { noteReviewAnswer, raiseReviewEnd, reviewSessionActive } from './reviewSession';
 import {
   LEVELS_ENABLED,
   buildLevelPlan,
@@ -1006,15 +1007,24 @@ export function RecallHost({
         correct: wasCorrect,
         band: entry.kind === 'level' ? entry.word.level : undefined,
       });
+      // The review session counts both kinds, right or wrong; when this was
+      // its last answer the end is raised below, after the celebration.
+      const reviewEnd = noteReviewAnswer(entry.word.text, wasCorrect);
       const sessionComplete =
         entry.kind === 'recall' &&
         dueCount(storage.getSavedWords(), Date.now()) === 0;
-      if (!quietRef.current && (sessionComplete || wasCorrect)) {
+      if (!quietRef.current && (reviewEnd || sessionComplete || wasCorrect)) {
         if (askTimer.current) clearTimeout(askTimer.current);
         askTimer.current = setTimeout(() => {
           askTimer.current = null;
           void (async () => {
-            if (wasCorrect && maybeCelebrateDayDone()) return;
+            if (reviewEnd) {
+              raiseReviewEnd(reviewEnd);
+              return;
+            }
+            // Inside a review session the day-done waits for the session's
+            // card (reviewSession.ts folds it in) — two cards is one too many.
+            if (wasCorrect && !reviewSessionActive() && maybeCelebrateDayDone()) return;
             const raised = sessionComplete && (await maybeAskToSaveProgress());
             if (!raised && wasCorrect) await maybeAskForPermission();
           })();

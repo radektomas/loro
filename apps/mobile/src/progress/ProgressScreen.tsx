@@ -248,7 +248,7 @@ function WeekCard({
             </Text>
           </Text>
           <Text style={styles.cardBody}>
-            {alive ? 'in a row' : 'One correct answer starts a streak.'}
+            {alive ? 'in a row' : 'Finish a day’s goal to start a streak.'}
           </Text>
         </View>
         <Text style={styles.cardFootInline}>Longest {streaks.longest}</Text>
