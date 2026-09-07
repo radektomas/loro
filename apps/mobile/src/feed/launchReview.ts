@@ -107,11 +107,18 @@ export function launchReview(source: ReviewSource): ReviewLaunch {
  * video speaks falls back to the plain armed feed; the picker greys those
  * out, so it should not happen from there.
  */
-export function launchReviewOfWord(word: SavedWord, source: ReviewSource): ReviewLaunch {
+export function launchReviewOfWord(
+  word: SavedWord,
+  source: ReviewSource,
+  opts: { preferVideoId?: string } = {}
+): ReviewLaunch {
   storage.reviewNow(word.text, word.videoId);
   const all = storage.getSavedWords();
   const at = Date.now();
-  const target = pickReviewTarget(getCatalog(), word, all, { now: at });
+  const target = pickReviewTarget(getCatalog(), word, all, {
+    now: at,
+    preferVideoId: opts.preferVideoId,
+  });
   if (target) {
     requestReviewTarget({ videoId: target.videoId, word: word.text, startsAt: target.startsAt });
     console.log(

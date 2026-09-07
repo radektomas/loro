@@ -12,11 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
-import { getCatalog } from '@loro/core/catalog';
-import { pickReviewTarget, type WordOccurrence } from '@loro/core/occurrences';
-import { enableRecallForSession } from '../feed/recall';
-import { launchReview } from '../feed/launchReview';
-import { requestReviewTarget } from '../feed/reviewTarget';
+import type { WordOccurrence } from '@loro/core/occurrences';
+import { launchReview, launchReviewOfWord } from '../feed/launchReview';
+import { ReviewPickerSheet } from '../progress/ReviewPicker';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
 import { WordDetailSheet } from './WordDetailSheet';
@@ -213,6 +211,9 @@ function WordRow({
           >
             {friendlyDue(word, now)}
           </Text>
+          {/* The affordance the row was missing: a row that opens something
+              should look like it opens something. */}
+          <Text style={styles.rowChevron}>›</Text>
         </View>
       </View>
 
@@ -256,6 +257,14 @@ export function VocabScreen({
    */
   const [detail, setDetail] = useState<SavedWord | null>(null);
   /**
+   * THE THIRD FACE: the review picker, raised by the "N words ready" card.
+   * It rides the SAME window as the sheet and the player — see the note
+   * above for why it must not have a Modal of its own. It never shows at
+   * the same time as `detail`: the card is only reachable with the window
+   * down, and afterDismiss clears both.
+   */
+  const [picker, setPicker] = useState(false);
+  /**
    * The video face of the window: the clip that says this word, either to
    * listen to ('listen') or to be quizzed on ('review'). Null means the word
    * sheet is showing.
@@ -286,7 +295,8 @@ export function VocabScreen({
    * worse bug than the one being fixed.
    */
   const pendingReviewRef = useRef<{
-    word: SavedWord;
+    /** Null: the plain armed feed (nothing could land). */
+    word: SavedWord | null;
     preferVideoId?: string;
   } | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -329,6 +339,7 @@ export function VocabScreen({
     if (active) return;
     setDetail(null);
     setPlaying(null);
+    setPicker(false);
     setClosing(false);
   }, [active]);
 
@@ -380,31 +391,23 @@ export function VocabScreen({
   );
 
   /**
-   * ARM RECALL, THEN CHANGE TAB — in that order, always.
-   *
-   * The web needs no equivalent because it never gates recall at all: a due
-   * word blanks in any video that speaks it, always. This port added a
-   * dark-ship flag, and left alone that flag also disabled the one path a user
-   * has into reviewing — the CTA switched tabs into a feed that would never
-   * plan a blank. See isRecallActive.
+   * THE "N WORDS READY" CARD opens the picker — the same sheet the Progress
+   * tab's Review shows (Radek: "you forgot to apply it also to the words
+   * cta") — as a face of this screen's one window. The launch runs from
+   * afterDismiss, like every other review from this tab.
    */
-  const goToFeedForReview = () => {
-    enableRecallForSession();
-    onGoToFeed();
-  };
-
-  /**
-   * THE "N WORDS READY" CARD. It promises a review, so it MUST point the feed
-   * at one — every time, not most times (2026-09-01, on device: "sometimes it
-   * throws me to a stopped video I was watching before"). The logic that
-   * makes that true used to live here; it is now launchReview, shared with
-   * the Progress tab's button and the reminder tap, which had the same
-   * promise and did not keep it.
-   */
-  const startReview = () => {
-    launchReview('words');
-    onGoToFeed();
-  };
+  const startReview = () => setPicker(true);
+  const dueWords = useMemo(
+    () =>
+      words
+        .filter((w) => w.dueAt <= now)
+        .sort(
+          (a, b) =>
+            Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
+            a.dueAt - b.dueAt
+        ),
+    [words, now]
+  );
 
   /** Every entry behind the row — see oneRowPerWord. */
   const handleRemove = (word: SavedWord) => {
@@ -434,20 +437,10 @@ export function VocabScreen({
    * If nothing in the catalog speaks it (a starter-deck word with no clip),
    * this degrades to the old behaviour: arm recall, switch tabs.
    */
-  const reviewWord = (word: SavedWord, preferVideoId?: string) => {
-    storage.reviewNow(word.text, word.videoId);
-    // AFTER reviewNow: the plan check has to see the word as due.
-    const target = pickReviewTarget(getCatalog(), word, storage.getSavedWords(), {
-      preferVideoId,
-    });
-    if (target) {
-      requestReviewTarget({
-        videoId: target.videoId,
-        word: word.text,
-        startsAt: target.startsAt,
-      });
-    }
-    goToFeedForReview();
+  const reviewWord = (word: SavedWord | null, preferVideoId?: string) => {
+    if (word) launchReviewOfWord(word, 'words', { preferVideoId });
+    else launchReview('words');
+    onGoToFeed();
   };
 
   /** The window is provably gone. Safe to reset, and safe to navigate. */
@@ -459,6 +452,7 @@ export function VocabScreen({
     setClosing(false);
     setDetail(null);
     setPlaying(null);
+    setPicker(false);
     const pending = pendingReviewRef.current;
     pendingReviewRef.current = null;
     if (pending) reviewWord(pending.word, pending.preferVideoId);
@@ -468,7 +462,7 @@ export function VocabScreen({
    * Take the window down. Anything that should happen afterwards is parked
    * first and runs from afterDismiss — never from here.
    */
-  const closeWindow = (pending?: { word: SavedWord; preferVideoId?: string }) => {
+  const closeWindow = (pending?: { word: SavedWord | null; preferVideoId?: string }) => {
     pendingReviewRef.current = pending ?? null;
     setClosing(true);
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
@@ -492,6 +486,14 @@ export function VocabScreen({
             style={styles.searchInput}
           />
         </View>
+        {/* Radek, on device: people do not know a word can be reviewed from
+            this list. One line, where every eye passes on the way to the
+            rows. */}
+        {words.length > 0 && (
+          <Text style={styles.headerHint}>
+            Tap a word to hear it, or to review it right here in its video.
+          </Text>
+        )}
       </View>
 
       <ScrollView
@@ -530,7 +532,8 @@ export function VocabScreen({
                   {dueTotal} {dueTotal === 1 ? 'word' : 'words'} ready to review
                 </Text>
                 <Text style={styles.reviewBody}>
-                  Recall them in context — Loro shows them as blanks in the video.
+                  Pick one and the feed opens just before it, as a blank to fill.
+                  Or tap any word below to review it right here.
                 </Text>
                 <Pressable
                   onPress={startReview}
@@ -574,13 +577,21 @@ export function VocabScreen({
           drops before the contents do, so the slide-out has something to draw
           and afterDismiss can be the only thing that resets state. */}
       <Modal
-        visible={detail !== null && !closing}
+        visible={(detail !== null || picker) && !closing}
         transparent
         animationType="slide"
         statusBarTranslucent
         onRequestClose={() => closeWindow()}
         onDismiss={afterDismiss}
       >
+        {picker && detail === null && (
+          <ReviewPickerSheet
+            words={dueWords}
+            onPick={(word) => closeWindow({ word })}
+            onFeed={() => closeWindow({ word: null })}
+            onClose={() => closeWindow()}
+          />
+        )}
         {detail !== null &&
           (playing ? (
             <WordVideoPanel
@@ -642,6 +653,12 @@ const styles = StyleSheet.create({
   },
   searchGlyph: { color: 'rgba(242,245,243,0.4)', fontSize: 16 },
   searchInput: { color: '#f2f5f3', flex: 1, fontSize: 15, paddingVertical: 9 },
+  headerHint: {
+    color: 'rgba(242,245,243,0.45)',
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 8,
+  },
   scroll: { padding: 16, paddingBottom: 32 },
   empty: { alignItems: 'center', gap: 8, paddingTop: 48 },
   emptyTitle: { color: '#f2f5f3', fontSize: 17, fontWeight: '700' },
@@ -726,6 +743,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   due: { fontSize: 12, marginLeft: 'auto' },
+  rowChevron: { color: 'rgba(242,245,243,0.35)', fontSize: 18, fontWeight: '600', marginTop: -2 },
   dueNow: { color: '#5ee6a8', fontWeight: '700' },
   dueLater: { color: 'rgba(242,245,243,0.45)' },
   fillTrack: {

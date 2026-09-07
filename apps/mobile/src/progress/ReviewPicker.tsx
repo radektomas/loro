@@ -13,32 +13,156 @@ import { spokenSurfaces } from '@loro/core/occurrences';
  * choose which word you want to review, the app throws you on a video with
  * that word 3 seconds before it". The jump itself already existed behind
  * the Words tab's detail sheet (launchReviewOfWord, three-second lead-in in
- * FeedScreen's PlayerDriver); this puts a list in front of it. The first
- * row keeps the old behaviour — whatever is most urgent — for the user who
- * does not want to choose.
+ * FeedScreen's PlayerDriver); this puts a list in front of it.
  *
- * ⚠️ NOTHING NAVIGATES WHILE THE WINDOW IS STILL ON SCREEN. An RN <Modal> is
- * a separate native window, and tearing it down in the same commit as the
- * tab switch underneath it is how the Words tab once came back frozen — an
- * invisible window still up, swallowing every touch (VocabScreen carries the
- * full account). So a tap PARKS its choice, drops `visible`, and the choice
- * runs from onDismiss, when the window is provably gone; the timer is the
- * belt to those braces, because onDismiss is iOS-only.
+ * TWO PIECES, ON PURPOSE. ReviewPickerSheet is the CONTENT — a bottom sheet
+ * that assumes it is already inside a window. ReviewPicker wraps it in its
+ * own <Modal> for the Progress tab, which presents nothing else. The Words
+ * tab does NOT use the wrapper: that screen keeps exactly one native window
+ * and swaps faces inside it (VocabScreen's ONE WINDOW note — two Modals on
+ * one screen is how that tab once came back frozen), so it renders the sheet
+ * as another face of the window it already has.
+ *
+ * ⚠️ NOTHING NAVIGATES WHILE THE WINDOW IS STILL ON SCREEN. A tap PARKS its
+ * choice, drops `visible`, and the choice runs from onDismiss, when the
+ * window is provably gone; the timer is the belt to those braces, because
+ * onDismiss is iOS-only. The wrapper does this itself; the Words tab's own
+ * dismissal dance does it there.
  *
  * WORDS NO VIDEO SPEAKS ARE NOT LISTED (Radek, on device: a word the feed
  * cannot land on "definitely shouldn't be there"). A footnote carries the
- * count so the list can still be reconciled with the card's "N ready";
- * those words stay due, and the feed asks them the day a video that says
- * them arrives. "Spoken" is the PLANNER's definition (spokenSurfaces, one
- * catalog pass) — the same one the landing logic uses — so a word listed
- * here is a word the tap can deliver.
+ * count so the list still reconciles with the card's "N ready". "Spoken" is
+ * the PLANNER's definition (spokenSurfaces) — the same one the landing
+ * logic uses — so a word listed here is a word the tap can deliver.
+ *
+ * RANDOM, NOT "MOST URGENT". The first version put a "whatever is most
+ * urgent" row on top and Radek did not like it: the list is the user's own
+ * words and the top row was the app's opinion. So the escape hatch for
+ * someone who cannot be bothered to choose is a Random button at the
+ * bottom, drawn from the words that can actually land.
  */
 
 /** How long to wait for onDismiss before assuming it is not coming. */
 const DISMISS_FALLBACK_MS = 600;
 
-type Choice = { kind: 'urgent' } | { kind: 'word'; word: SavedWord };
+export function ReviewPickerSheet({
+  words,
+  onPick,
+  onFeed,
+  onClose,
+}: {
+  /** Due words, most urgent first — the caller's ordering is kept. */
+  words: SavedWord[];
+  /** A word was chosen (by tap or by Random). The caller parks it and
+      launches AFTER its window is gone. */
+  onPick: (word: SavedWord) => void;
+  /** Nothing can land, but the user still wants the feed. */
+  onFeed: () => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
 
+  /** One catalog pass per mount; the sheet is mounted per opening. */
+  const spoken = useMemo(() => spokenSurfaces(getCatalog()), []);
+  const rows = useMemo(() => {
+    const playable: SavedWord[] = [];
+    let silent = 0;
+    for (const w of words) {
+      if (spoken.has(normalizeSurface(w.text))) playable.push(w);
+      else silent++;
+    }
+    return { playable, silent };
+  }, [words, spoken]);
+
+  const random = () => {
+    const pool = rows.playable;
+    if (pool.length === 0) return;
+    onPick(pool[Math.floor(Math.random() * pool.length)]);
+  };
+
+  return (
+    <View style={styles.backdrop}>
+      {/* The dim above the sheet closes it — the same gesture every sheet
+          in the app answers to. */}
+      <Pressable
+        style={styles.dismissArea}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      />
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={styles.grabber} />
+        <Text style={styles.title}>Which word?</Text>
+        <Text style={styles.subtitle}>
+          {rows.playable.length} ready · most urgent first. The video opens just
+          before the word.
+        </Text>
+
+        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+          {rows.playable.map((word) => (
+            <Pressable
+              key={`${word.videoId}:${word.text}`}
+              onPress={() => onPick(word)}
+              accessibilityRole="button"
+              accessibilityLabel={`Review ${word.text}`}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
+              <View style={styles.rowText}>
+                <Text style={styles.rowWord}>{word.text}</Text>
+                <Text style={styles.rowGloss} numberOfLines={1}>
+                  {word.translation}
+                </Text>
+              </View>
+              {word.state === 'lapsed' && <Text style={styles.rowSlipped}>Slipped</Text>}
+              <Text style={styles.rowChevron}>›</Text>
+            </Pressable>
+          ))}
+
+          {rows.silent > 0 && (
+            <Text style={styles.silentNote}>
+              {rows.playable.length === 0 ? 'Your ' : `${rows.silent} more `}
+              {rows.silent === 1 && rows.playable.length > 0 ? 'word is' : 'words are'}{' '}
+              ready but not in any video right now. They come back as blanks when
+              a video says them.
+            </Text>
+          )}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}
+          >
+            <Text style={styles.cancelText}>Not now</Text>
+          </Pressable>
+          {rows.playable.length > 0 ? (
+            <Pressable
+              onPress={random}
+              accessibilityRole="button"
+              accessibilityLabel="Review a random word"
+              style={({ pressed }) => [styles.random, pressed && styles.pressed]}
+            >
+              <Text style={styles.randomText}>🎲 Random</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={onFeed}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.random, pressed && styles.pressed]}
+            >
+              <Text style={styles.randomText}>Open the feed</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+type Choice = { kind: 'word'; word: SavedWord } | { kind: 'feed' };
+
+/** The Progress tab's window around the sheet. See the header note. */
 export function ReviewPicker({
   open,
   words,
@@ -46,14 +170,12 @@ export function ReviewPicker({
   onLaunch,
 }: {
   open: boolean;
-  /** Due words, most urgent first — the caller's ordering is kept. */
   words: SavedWord[];
   /** The window is gone. Parent drops `open`. */
   onClose: () => void;
-  /** Runs AFTER the window is gone: null means "most urgent", else the word. */
+  /** Runs AFTER the window is gone: the word, or null for the plain feed. */
   onLaunch: (word: SavedWord | null) => void;
 }) {
-  const insets = useSafeAreaInsets();
   const [closing, setClosing] = useState(false);
   const pendingRef = useRef<Choice | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,16 +186,6 @@ export function ReviewPicker({
     },
     []
   );
-
-  /** One catalog pass per opening; the catalog can refresh between them. */
-  const spoken = useMemo(() => (open ? spokenSurfaces(getCatalog()) : null), [open]);
-  const rows = useMemo(() => {
-    if (!spoken) return { playable: [] as SavedWord[], silent: [] as SavedWord[] };
-    const playable: SavedWord[] = [];
-    const silent: SavedWord[] = [];
-    for (const w of words) (spoken.has(normalizeSurface(w.text)) ? playable : silent).push(w);
-    return { playable, silent };
-  }, [words, spoken]);
 
   const afterDismiss = () => {
     if (timerRef.current) {
@@ -103,73 +215,14 @@ export function ReviewPicker({
       onRequestClose={() => closeWindow()}
       onDismiss={afterDismiss}
     >
-      <View style={styles.backdrop}>
-        {/* The dim above the sheet closes it — the same gesture every sheet
-            in the app answers to. */}
-        <Pressable
-          style={styles.dismissArea}
-          onPress={() => closeWindow()}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
+      {open && (
+        <ReviewPickerSheet
+          words={words}
+          onPick={(word) => closeWindow({ kind: 'word', word })}
+          onFeed={() => closeWindow({ kind: 'feed' })}
+          onClose={() => closeWindow()}
         />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
-          <View style={styles.grabber} />
-          <Text style={styles.title}>Which word?</Text>
-          <Text style={styles.subtitle}>
-            {words.length} ready · most urgent first. The video opens just before
-            the word.
-          </Text>
-
-          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-            <Pressable
-              onPress={() => closeWindow({ kind: 'urgent' })}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.row, styles.rowUrgent, pressed && styles.pressed]}
-            >
-              <View style={styles.rowText}>
-                <Text style={styles.rowWord}>Whatever is most urgent</Text>
-                <Text style={styles.rowGloss}>Slipped words first, then the longest waiting</Text>
-              </View>
-              <Text style={styles.rowChevron}>›</Text>
-            </Pressable>
-
-            {rows.playable.map((word) => (
-              <Pressable
-                key={`${word.videoId}:${word.text}`}
-                onPress={() => closeWindow({ kind: 'word', word })}
-                accessibilityRole="button"
-                accessibilityLabel={`Review ${word.text}`}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              >
-                <View style={styles.rowText}>
-                  <Text style={styles.rowWord}>{word.text}</Text>
-                  <Text style={styles.rowGloss} numberOfLines={1}>
-                    {word.translation}
-                  </Text>
-                </View>
-                {word.state === 'lapsed' && <Text style={styles.rowSlipped}>Slipped</Text>}
-                <Text style={styles.rowChevron}>›</Text>
-              </Pressable>
-            ))}
-
-            {rows.silent.length > 0 && (
-              <Text style={styles.silentNote}>
-                {rows.silent.length} more{' '}
-                {rows.silent.length === 1 ? 'word is' : 'words are'} ready but not in
-                any video right now. They come back as blanks when a video says them.
-              </Text>
-            )}
-          </ScrollView>
-
-          <Pressable
-            onPress={() => closeWindow()}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}
-          >
-            <Text style={styles.cancelText}>Not now</Text>
-          </Pressable>
-        </View>
-      </View>
+      )}
     </Modal>
   );
 }
@@ -213,11 +266,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  rowUrgent: {
-    backgroundColor: 'rgba(94,230,168,0.12)',
-    borderColor: 'rgba(94,230,168,0.3)',
-    borderWidth: 1,
-  },
   rowText: { flex: 1 },
   rowWord: { color: '#f2f5f3', fontSize: 16, fontWeight: '700' },
   rowGloss: { color: 'rgba(242,245,243,0.55)', fontSize: 12, marginTop: 1 },
@@ -230,7 +278,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 2,
   },
-  cancel: { alignItems: 'center', marginTop: 8, paddingVertical: 12 },
+  footer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  cancel: { paddingVertical: 12 },
   cancelText: { color: 'rgba(242,245,243,0.55)', fontSize: 14, fontWeight: '600' },
+  /** The lazy path, styled as a real button: it is the one most people will
+      take, and it must not read as a footnote. */
+  random: {
+    backgroundColor: '#5ee6a8',
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  randomText: { color: '#06130d', fontSize: 14, fontWeight: '800' },
   pressed: { opacity: 0.7 },
 });
