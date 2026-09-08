@@ -186,6 +186,12 @@ export type PlayerBox = {
   /** Hidden during a swipe and until playback starts; the slide's poster shows
       through, which is what covers the black frame during a swap. */
   visible: boolean;
+  /**
+   * Points to slide the layer UP from its measured box — how the player
+   * yields to the recall answer bar without being hidden or resized
+   * (recall.ts LIFT_PLAYER_WHILE_TYPING). 0 or absent: in place.
+   */
+  lift?: number;
 };
 
 /**
@@ -222,6 +228,8 @@ export const usePlayerBox = () => useContext(BoxContext);
 
 /** How long the player takes to appear. Hiding is instant — see layerStyle. */
 const PLAYER_FADE_IN_MS = 200;
+/** How long the lift takes, both ways — paced to the keyboard. */
+const PLAYER_LIFT_MS = 240;
 
 export function PlayerHost({ children }: { children: ReactNode }) {
   /**
@@ -428,8 +436,11 @@ export function PlayerHost({ children }: { children: ReactNode }) {
    * no such problem — the list is settled by then — and it is what softens the
    * poster-to-live-video hand-off once the player has something real to show.
    */
+  const lift = box.lift ?? 0;
   const layerStyle = useAnimatedStyle(() => ({
     opacity: box.visible ? withTiming(1, { duration: PLAYER_FADE_IN_MS }) : 0,
+    // The lift rides the keyboard's own animation (~250ms on iOS).
+    transform: [{ translateY: withTiming(-lift, { duration: PLAYER_LIFT_MS }) }],
   }));
 
   const page = useMemo(

@@ -42,7 +42,7 @@ import {
   ms,
   recallHaptic,
   EMPTY_PLAN,
-  HIDE_PLAYER_WHILE_TYPING,
+  LIFT_PLAYER_WHILE_TYPING,
   HOLD_ACTION_DEBOUNCE_MS,
   MAX_RESEATS_PER_BLANK,
   isRecallActive,
@@ -103,6 +103,9 @@ export type RecallSession = {
   entry: BlankEntry | null;
   /** Current software-keyboard height, so the bar can sit on top of it. */
   keyboardHeight: number;
+  /** The bar reports its own height, so the host can say how much of the
+      window's bottom is Loro's while typing (see onYieldPlayer). */
+  setBarHeight: (height: number) => void;
   setAnswer: (text: string) => void;
   submit: () => void;
   skip: () => void;
@@ -115,6 +118,8 @@ export type RecallSession = {
 type RecallGrading = {
   entry: BlankEntry | null;
   keyboardHeight: number;
+  /** The bar's measured height, for the lift — see onYieldPlayer. */
+  setBarHeight: (height: number) => void;
   /**
    * `graded` is the entry the match was computed AGAINST — the one the answer
    * layer's submit closure saw. grade() verifies it is still the held entry
@@ -132,12 +137,14 @@ const AnswerContext = createContext<string>('');
 const GradingContext = createContext<RecallGrading>({
   entry: null,
   keyboardHeight: 0,
+  setBarHeight: () => {},
   grade: () => {},
   replay: () => {},
 });
 const SessionContext = createContext<RecallSession>({
   entry: null,
   keyboardHeight: 0,
+  setBarHeight: () => {},
   setAnswer: () => {},
   submit: () => {},
   skip: () => {},
@@ -202,7 +209,7 @@ export function RecallHost({
   revealBlanksUntilHeld = false,
   onBlankResolved,
   quiet = false,
-  onObscurePlayer,
+  onYieldPlayer,
   children,
 }: {
   /** The ACTIVE slide's video, or null. Not gated on the tab — see `planned`. */
@@ -338,12 +345,12 @@ export function RecallHost({
    */
   quiet?: boolean;
   /**
-   * Raised while the answer bar would otherwise sit over the player area — see
-   * HIDE_PLAYER_WHILE_TYPING for the geometry that forces this. The feed
-   * answers it by fading the player out, which is the same mechanism (and the
-   * same poster underneath) it already uses during a swipe.
+   * How many points of the window, from the bottom, are Loro's while the
+   * user types — the keyboard plus the answer bar — or 0. See
+   * LIFT_PLAYER_WHILE_TYPING for the geometry that forces this. The feed
+   * answers by lifting the player just clear of that line.
    */
-  onObscurePlayer: (obscured: boolean) => void;
+  onYieldPlayer: (coveredFromBottom: number) => void;
   children: ReactNode;
 }) {
   const api = usePlayerApi();
@@ -403,6 +410,7 @@ export function RecallHost({
    * instead of snapping after it; Android only emits `did`.
    */
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [barHeight, setBarHeight] = useState(0);
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -1097,7 +1105,7 @@ export function RecallHost({
      *
      * While a blank is held with the keyboard up, the player is deliberately
      * faded out — the answer bar sits over the player area and Loro may never
-     * draw there (HIDE_PLAYER_WHILE_TYPING). So replaying without dropping the
+     * draw there (LIFT_PLAYER_WHILE_TYPING). So replaying without dropping the
      * keyboard seeks a player nobody can see: the line plays back invisibly and
      * the user is left watching a blank frame, which is exactly how this
      * shipped and exactly what it looked like.
@@ -1186,20 +1194,24 @@ export function RecallHost({
   /**
    * The bar is only ever over the player area when it has been lifted by the
    * keyboard — with the keyboard down it sits in the band, which is Loro's own
-   * region and always fine.
+   * region and always fine. While typing, the keyboard plus the bar is the
+   * part of the window the player must stay clear of.
    */
-  const obscuresPlayer = HIDE_PLAYER_WHILE_TYPING && entry !== null && keyboardHeight > 0;
+  const covered =
+    LIFT_PLAYER_WHILE_TYPING && entry !== null && keyboardHeight > 0
+      ? keyboardHeight + barHeight
+      : 0;
   useEffect(() => {
-    onObscurePlayer(obscuresPlayer);
-    if (obscuresPlayer) flog('player yielded — answer bar is over the player area');
-  }, [obscuresPlayer, onObscurePlayer]);
+    onYieldPlayer(covered);
+    if (covered > 0) flog(`player yields — ${Math.round(covered)}pt of the window is the keyboard and the bar`);
+  }, [covered, onYieldPlayer]);
 
-  // The feed must never be left with a hidden player because recall unmounted
+  // The feed must never be left with a lifted player because recall unmounted
   // mid-answer.
-  useEffect(() => () => onObscurePlayer(false), [onObscurePlayer]);
+  useEffect(() => () => onYieldPlayer(0), [onYieldPlayer]);
 
   const grading = useMemo<RecallGrading>(
-    () => ({ entry, keyboardHeight, grade, replay: replayHeldBlank }),
+    () => ({ entry, keyboardHeight, setBarHeight, grade, replay: replayHeldBlank }),
     [entry, keyboardHeight, grade, replayHeldBlank]
   );
 
@@ -1230,7 +1242,7 @@ export function RecallHost({
  * identity so no Karaoke re-renders either.
  */
 function AnswerLayer({ children }: { children: ReactNode }) {
-  const { entry, keyboardHeight, grade, replay } = useContext(GradingContext);
+  const { entry, keyboardHeight, setBarHeight, grade, replay } = useContext(GradingContext);
   const [answer, setAnswerState] = useState('');
 
   /**
@@ -1262,6 +1274,7 @@ function AnswerLayer({ children }: { children: ReactNode }) {
     () => ({
       entry,
       keyboardHeight,
+      setBarHeight,
       setAnswer,
       submit: () => {
         const typed = answerRef.current;

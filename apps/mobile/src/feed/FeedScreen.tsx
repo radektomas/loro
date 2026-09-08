@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -90,6 +91,10 @@ const PLAYER_ASPECT = 9 / 16;
  * a word arriving cold is a quiz question, a word arriving in a sentence is a
  * memory.
  */
+/** Breathing room between the lifted player's bottom edge and the answer
+    bar's top edge, in points. */
+const PLAYER_LIFT_GAP = 6;
+
 const REVIEW_LEAD_IN_S = 3;
 
 /** How often an EMPTY feed re-asks for the catalog — see the retry effect in
@@ -634,18 +639,20 @@ function FeedBody({
   const [pageHeight, setPageHeight] = useState(0);
 
   /**
-   * CHECKPOINT F. Raised while the recall answer bar has been lifted by the
-   * keyboard into the player's region — see HIDE_PLAYER_WHILE_TYPING in
-   * recall.ts. The player yields exactly the way it already does for a swipe:
-   * the WebView layer fades and the poster underneath carries the frame.
+   * CHECKPOINT F. How many points of the window, from the bottom, the
+   * keyboard and the recall answer bar take while the user types — see
+   * LIFT_PLAYER_WHILE_TYPING in recall.ts. The player yields by sliding UP
+   * just clear of that line (the lift on the box below), so the paused
+   * frame stays on screen instead of the poster.
    */
-  const [playerObscured, setPlayerObscured] = useState(false);
+  const [playerCovered, setPlayerCovered] = useState(0);
+  const { height: windowHeight } = useWindowDimensions();
 
   /**
-   * The same yield, for the notification explainer. HELD SEPARATELY from
-   * playerObscured on purpose: that one is RecallHost's to write, and two
-   * writers on one flag would race, with whichever lowered it last winning
-   * while the other overlay was still up.
+   * The hide, for the cards and the notification explainer. HELD SEPARATELY
+   * from playerCovered on purpose: that one is RecallHost's to write, and
+   * two writers on one flag would race, with whichever lowered it last
+   * winning while the other overlay was still up.
    */
   const [promptObscured, setPromptObscured] = useState(false);
 
@@ -861,21 +868,28 @@ function FeedBody({
    *   dragging      a finger is down; the player does not follow the scroll, so
    *                 leaving it visible parks the outgoing video over the
    *                 incoming slide. The poster underneath covers the gap.
-   *   playerObscured the recall answer bar sits over the player area, which is
-   *                 what keeps "nothing is drawn over the player" true with a
-   *                 keyboard up.
+   * And the LIFT: while the answer bar sits over the player area (keyboard
+   * up), the layer slides up by the overlap between the box's bottom edge
+   * and the bar's top edge, plus a small gap — which is what keeps "nothing
+   * is drawn over the player" true with a keyboard up, without hiding the
+   * frame. Zero when nothing is covered or the box is not measured.
    */
   const setPlayerBox = usePlayerBox();
+  const lift = useMemo(() => {
+    if (!box || playerCovered <= 0 || windowHeight <= 0) return 0;
+    const barTop = windowHeight - playerCovered;
+    return Math.max(0, box.top + box.height + PLAYER_LIFT_GAP - barTop);
+  }, [box, playerCovered, windowHeight]);
   useEffect(() => {
     setPlayerBox({
       top: box?.top ?? 0,
       left: box?.left ?? 0,
       width: box?.width ?? 0,
       height: box?.height ?? 0,
-      visible:
-        Boolean(box) && active && !dragging && !playerObscured && !promptObscured,
+      visible: Boolean(box) && active && !dragging && !promptObscured,
+      lift,
     });
-  }, [box, active, dragging, playerObscured, promptObscured, setPlayerBox]);
+  }, [box, active, dragging, promptObscured, lift, setPlayerBox]);
 
   /**
    * PAUSE ON BLUR, AND STAY PAUSED ON RETURN.
@@ -928,7 +942,7 @@ function FeedBody({
         onBlankResolved={walkthrough?.onBlankResolved}
         // The guided run raises no asks of its own. See RecallHost's `quiet`.
         quiet={Boolean(walkthrough)}
-        onObscurePlayer={setPlayerObscured}
+        onYieldPlayer={setPlayerCovered}
       >
         <View
           style={styles.root}

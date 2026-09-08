@@ -27,7 +27,7 @@ import { useTabBarHeight } from '../shell/tabBar';
  * the band's top edge, i.e. inside the player area. There is no height that is
  * both visible and clear of the player. Lifting the band and shrinking the
  * player were therefore never two independent options — see
- * HIDE_PLAYER_WHILE_TYPING in recall.ts for which way that is resolved and why.
+ * LIFT_PLAYER_WHILE_TYPING in recall.ts for which way that is resolved and why.
  *
  * So the blank stays in the line — it shows what you type, which is the whole
  * "fill in the sentence" payoff — and the keyboard-attached input lives here,
@@ -51,7 +51,7 @@ import { useTabBarHeight } from '../shell/tabBar';
 export function RecallBar() {
   // keyboardHeight is tracked by the host, not here — the same number decides
   // whether the player has to yield, and one source avoids the two disagreeing.
-  const { entry, keyboardHeight, setAnswer, submit, skip, replay } =
+  const { entry, keyboardHeight, setBarHeight, setAnswer, submit, skip, replay } =
     useRecallSession();
   const answer = useRecallAnswer();
   const insets = useSafeAreaInsets();
@@ -74,6 +74,7 @@ export function RecallBar() {
 
   return (
     <View
+      onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
       style={[
         styles.bar,
         {

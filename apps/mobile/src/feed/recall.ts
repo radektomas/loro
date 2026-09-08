@@ -97,7 +97,7 @@ export const AUTO_FOCUS_BLANK = false;
 export const HAPTIC_ON_CORRECT = true;
 
 /**
- * Fade the player out while the keyboard is up. ⚠️ THE ONE JUDGEMENT CALL IN
+ * Lift the player while the keyboard is up. ⚠️ THE ONE JUDGEMENT CALL IN
  * CHECKPOINT F — read this before changing it.
  *
  * "Keep the band still and put the input above the keyboard" cannot be done
@@ -108,22 +108,26 @@ export const HAPTIC_ON_CORRECT = true;
  * player, so "move the player" and "move the input" are not two options: any
  * visible input forces the player to yield.
  *
- * Of the two ways to make it yield, this is the cheaper one. Shrinking the box
- * keeps the video on screen but resizes a WKWebView holding a YouTube iframe,
- * and this file's neighbours are emphatic that the frame must not resize
- * mid-video (Karaoke.tsx's placeholder, SubtitleTrack's min-height note).
- * Hiding reuses the fade that already runs on every swipe (PlayerHost's
- * box.visible, poster underneath) and adds no new geometry at all.
+ * HOW IT YIELDS CHANGED ON 2026-09-07. The first answer was to FADE the
+ * WebView and let the slide's poster show — cheap, reused the swipe fade,
+ * no geometry. On device that read as a bug: "the video pauses and shows
+ * the thumbnail of the short instead of pausing in the frame" (Radek). So
+ * the player now SLIDES UP by exactly the overlap (FeedScreen computes it
+ * from the measured box, the keyboard and the bar), keeping the paused
+ * frame on screen with the top of it under the status bar. A translate is
+ * a layer transform: the WKWebView is never resized, which is the one
+ * thing this file's neighbours forbid mid-video (Karaoke.tsx's placeholder,
+ * SubtitleTrack's min-height note). Loro still draws nothing over the
+ * player — the player moves out from under the bar, not the other way.
  *
- * What the user actually sees, and why this keeps the moment intact: the video
- * pauses ON the word and STAYS VISIBLE — that is the web's moment, unchanged.
- * It only fades once the keyboard comes up to type, and returns as the answer
- * is graded. With AUTO_FOCUS_BLANK false, that is a deliberate tap.
+ * What the user sees: the video pauses ON the word and stays visible — the
+ * web's moment — and when the keyboard comes up the frame glides up to make
+ * room, then settles back as the answer is graded.
  *
  * Set false only alongside a different answer to the geometry above; on its
  * own it reintroduces Loro UI over the player.
  */
-export const HIDE_PLAYER_WHILE_TYPING = true;
+export const LIFT_PLAYER_WHILE_TYPING = true;
 
 /** Resume rhythm, from the web verbatim (Feed.tsx:629-635). */
 export const RESUME_MS_CORRECT = 600;

@@ -48,7 +48,7 @@ import { buildHearItPage } from './hearItPage';
  * THE PLAYER IS GONE WHILE THEY TYPE, and that is deliberate rather than a
  * layout defeat. With a keyboard up there is no room for a 9:16 frame AND a
  * subtitle line AND an input; the feed reaches the same conclusion from the
- * same corner (recall.ts HIDE_PLAYER_WHILE_TYPING). The word has already been
+ * same corner (recall.ts LIFT_PLAYER_WHILE_TYPING, where the feed lifts the frame instead). The word has already been
  * heard by then, so what matters on screen is the sentence with the hole in it.
  * "Play again" brings the player back.
  *
