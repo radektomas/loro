@@ -2,6 +2,7 @@ import type { SavedWord, Video } from './types.ts';
 import { normalizeAnswer } from './srs.ts';
 import { glossText, lookupGloss, normalizeSurface } from './dictionary.ts';
 import { isFunctionWord } from './glossary.ts';
+import { NUMBER_WORDS_BAND_1, NUMBER_WORDS_BAND_2 } from './numerals.ts';
 
 /**
  * Level fill-in mode: every word gets an approximate difficulty level, the
@@ -264,7 +265,10 @@ const LEVEL_4_WORDS = new Set([
 
 function bandOf(surface: string): number | null {
   if (isFunctionWord(surface) || LEVEL_1_EXTRAS.has(surface)) return 1;
-  if (LEVEL_2_WORDS.has(surface)) return 2;
+  // Number words, since captions spell numerals out (numerals.ts): the
+  // units, tens, cien and mil are day-one; hundreds and millón the next.
+  if (NUMBER_WORDS_BAND_1.has(surface)) return 1;
+  if (LEVEL_2_WORDS.has(surface) || NUMBER_WORDS_BAND_2.has(surface)) return 2;
   if (LEVEL_3_WORDS.has(surface)) return 3;
   if (LEVEL_4_WORDS.has(surface)) return 4;
   return null;

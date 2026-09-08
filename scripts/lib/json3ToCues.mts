@@ -1,4 +1,5 @@
 import type { Json3, Json3Event } from './captionFetch.mts';
+import { expandNumeralTokens } from '../../packages/core/src/numerals.ts';
 
 /**
  * YouTube json3 caption payload -> Loro's Cue[]/Word[] shape.
@@ -208,7 +209,10 @@ export function mergeOrphans(cues: CueOut[]): CueOut[] {
 
 /** The full conversion: caption payload in, feed-ready cues out. */
 export function json3ToCues(payload: Json3): CueOut[] {
-  return groupIntoCues(json3ToWords(payload));
+  // Digits become words here — "100" → "cien", "1936" → four words sharing
+  // the span — so every downstream consumer (glossing, levels, the blank
+  // planners, the karaoke) only ever sees Spanish. See core/numerals.ts.
+  return groupIntoCues(expandNumeralTokens(json3ToWords(payload)));
 }
 
 /**
