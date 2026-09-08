@@ -175,6 +175,37 @@ export function numberWordBand(word: string): number | null {
 }
 
 /**
+ * Replace every convertible digit token in a timed word list with its
+ * words, sharing the token's time span across them by letter count. The
+ * next token decides gender (see genderOf). Words that are not numerals
+ * pass through untouched, so this is safe to run twice.
+ */
+export function expandNumeralTokens<T extends { text: string; start: number; end: number }>(
+  words: readonly T[]
+): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const spelled = /\d/.test(word.text) ? numeralToWords(word.text, words[i + 1]?.text) : null;
+    if (spelled === null) {
+      out.push(word);
+      continue;
+    }
+    const parts = spelled.split(' ');
+    const letters = parts.reduce((n, p) => n + p.length, 0);
+    const span = word.end - word.start;
+    let at = word.start;
+    for (let k = 0; k < parts.length; k++) {
+      const share = parts[k].length / letters;
+      const end = k === parts.length - 1 ? word.end : Math.round((at + span * share) * 1000) / 1000;
+      out.push({ ...word, text: parts[k], start: Math.round(at * 1000) / 1000, end });
+      at = end;
+    }
+  }
+  return out;
+}
+
+/**
  * The value a single number word stands for — the gloss a converted word
  * gets in the dictionary ("treinta" → "30"), so a blank prompts with the
  * digits and the learner types the word. Null for words that are not
