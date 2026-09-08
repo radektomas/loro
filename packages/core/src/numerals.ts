@@ -148,47 +148,30 @@ export function numeralToWords(token: string, nextToken?: string | null): string
 }
 
 /**
- * The number words a converted token can produce, for the difficulty
- * bands: everything a learner meets in the first weeks (levels.ts).
+ * The difficulty band of a number word, for the blue blanks (levels.ts
+ * bandOf). Radek, 2026-09-07: "the higher numbers in the higher levels,
+ * the lower numbers to the easier levels". Roughly the order a learner
+ * meets them:
+ *
+ *   1  cero … diez, un / una               the first week
+ *   2  once … veintinueve, the tens, cien, mil   counting, ages, prices, years
+ *   3  the hundreds, veintiún / veintiuna   years read out, apocope forms
+ *   4  millón, coma, por ciento, currency   news and numbers talk
+ *
+ * Null for words that are not number words ("y", "por" alone).
  */
-export const NUMBER_WORDS_BAND_1 = new Set([
-  ...UNITS.filter(Boolean), ...TENS.filter(Boolean), 'cero', 'cien', 'mil', 'un', 'una', 'veintiún', 'veintiuna', 'y',
-]);
-export const NUMBER_WORDS_BAND_2 = new Set([
-  ...HUNDREDS.filter(Boolean),
-  ...HUNDREDS.filter((h) => /os$/.test(h)).map((h) => h.replace(/os$/, 'as')),
-  'millón', 'millones', 'coma', 'por', 'ciento', 'dólar', 'dólares', 'euro', 'euros',
-]);
-
-/**
- * Replace every convertible digit token in a timed word list with its
- * words, sharing the token's time span across them by letter count. The
- * next token decides gender (see genderOf). Words that are not numerals
- * pass through untouched, so this is safe to run twice.
- */
-export function expandNumeralTokens<T extends { text: string; start: number; end: number }>(
-  words: readonly T[]
-): T[] {
-  const out: T[] = [];
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const spelled = /\d/.test(word.text) ? numeralToWords(word.text, words[i + 1]?.text) : null;
-    if (spelled === null) {
-      out.push(word);
-      continue;
-    }
-    const parts = spelled.split(' ');
-    const letters = parts.reduce((n, p) => n + p.length, 0);
-    const span = word.end - word.start;
-    let at = word.start;
-    for (let k = 0; k < parts.length; k++) {
-      const share = parts[k].length / letters;
-      const end = k === parts.length - 1 ? word.end : Math.round((at + span * share) * 1000) / 1000;
-      out.push({ ...word, text: parts[k], start: Math.round(at * 1000) / 1000, end });
-      at = end;
-    }
-  }
-  return out;
+export function numberWordBand(word: string): number | null {
+  const w = word.toLowerCase();
+  if (w === 'cero' || w === 'un' || w === 'una') return 1;
+  if (w === 'veintiún' || w === 'veintiuna') return 3;
+  if (w === 'cien' || w === 'mil') return 2;
+  if (w === 'millón' || w === 'millones' || w === 'coma' || w === 'ciento') return 4;
+  if (w === 'dólar' || w === 'dólares' || w === 'euro' || w === 'euros') return 4;
+  const u = UNITS.indexOf(w);
+  if (u > 0) return u <= 10 ? 1 : 2;
+  if (TENS.indexOf(w) > 0) return 2;
+  if (HUNDREDS.indexOf(w.replace(/as$/, 'os')) > 0) return 3;
+  return null;
 }
 
 /**

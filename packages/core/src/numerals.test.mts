@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { cardinal, expandNumeralTokens, genderOf, numberWordValue, numeralToWords } from './numerals.ts';
+import { cardinal, expandNumeralTokens, genderOf, numberWordBand, numberWordValue, numeralToWords } from './numerals.ts';
 
 describe('cardinal', () => {
   it('units, teens, twenties', () => {
@@ -144,5 +144,26 @@ describe('numberWordValue', () => {
     assert.equal(numberWordValue('millones'), 1_000_000);
     assert.equal(numberWordValue('y'), null);
     assert.equal(numberWordValue('dólares'), null);
+  });
+});
+
+describe('numberWordBand — small numbers low, big numbers high', () => {
+  it('climbs with the number', () => {
+    assert.equal(numberWordBand('dos'), 1);
+    assert.equal(numberWordBand('diez'), 1);
+    assert.equal(numberWordBand('una'), 1);
+    assert.equal(numberWordBand('once'), 2);
+    assert.equal(numberWordBand('veintidós'), 2);
+    assert.equal(numberWordBand('cincuenta'), 2);
+    assert.equal(numberWordBand('cien'), 2);
+    assert.equal(numberWordBand('mil'), 2);
+    assert.equal(numberWordBand('novecientos'), 3);
+    assert.equal(numberWordBand('doscientas'), 3);
+    assert.equal(numberWordBand('veintiún'), 3);
+    assert.equal(numberWordBand('millones'), 4);
+    assert.equal(numberWordBand('ciento'), 4);
+    assert.equal(numberWordBand('dólares'), 4);
+    assert.equal(numberWordBand('y'), null);
+    assert.equal(numberWordBand('casa'), null);
   });
 });
