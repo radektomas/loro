@@ -1,5 +1,4 @@
 import { track } from '../platform/analytics';
-import { getPlan } from '../progress/plan';
 import { claimDayDone, type DayDoneRaise } from './dayDone';
 import type { ReviewSource } from './launchReview';
 
@@ -26,14 +25,15 @@ import type { ReviewSource } from './launchReview';
  * moment. One that goes quiet for half an hour is forgotten, so a card
  * cannot pop up days later on a stray swipe past an old block.
  *
- * THE PLAIN FEED HAS SESSIONS TOO. The first cut started one only from a
- * Review tap; Radek then filled five level words in the ordinary feed and
- * got nothing — "no congratulations that I filled up 5 words". Five
- * answers is the unit he thinks in, wherever they happen. So a graded
- * blank with no session running starts one (source 'feed', no block — it
- * ends by count or by going stale), and every fifth answer in the feed is
- * a card. A Review tap replaces whatever is running with a sized, blocked
- * one.
+ * THE PLAIN FEED HAS NO SESSIONS. For a few hours on 2026-09-07 a graded
+ * blank with no session running started one, so the ordinary feed put up
+ * a card every five answers; Radek: "it should be only after the 5 that
+ * he needs to do, or the 3, or the 10". The plain feed's ending is the
+ * DAILY GOAL (dayDone.ts), sized by the plan, once a day. A session exists
+ * only when a Review door opened it, and its card is that review's end.
+ * (The "five words and no congratulations" report that led to the implicit
+ * session was the day-done latch being burned at grade time — fixed in
+ * raiseReviewEnd — not a missing session.)
  *
  * THE DAY-DONE MOMENT FOLDS IN. While a session is running the goal is
  * usually met by its last answer, and two cards in one sitting is one too
@@ -46,8 +46,8 @@ import type { ReviewSource } from './launchReview';
  */
 export type SessionWord = { text: string; correct: boolean };
 
-/** Where the session came from: a Review door, or just the feed. */
-export type SessionSource = ReviewSource | 'feed';
+/** Where the session came from — always a Review door (see the header). */
+export type SessionSource = ReviewSource;
 
 export type ReviewSessionEnd = {
   source: SessionSource;
@@ -145,12 +145,8 @@ export function noteReviewAnswer(
   correct: boolean,
   now: number = Date.now()
 ): ReviewSessionEnd | null {
-  let s = alive(now);
-  if (!s) {
-    // No door was tapped: the feed itself is the session (header note).
-    startReviewSession('feed', getPlan().wordsPerDay);
-    s = current as Session;
-  }
+  const s = alive(now);
+  if (!s) return null; // no Review door opened this — the day's goal is the ending
   s.lastAt = now;
   s.answered++;
   if (correct) s.correct++;
