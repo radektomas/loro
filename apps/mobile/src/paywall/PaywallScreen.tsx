@@ -173,6 +173,24 @@ function defaultPackage(packages: PurchasesPackage[]): PurchasesPackage {
   );
 }
 
+/**
+ * "Save 50%" on a yearly plan, against the monthly plan paid twelve times.
+ * Computed from the store's own numeric prices in the same currency, never
+ * hardcoded — prices move per territory. Null when there is no monthly to
+ * compare with, when currencies differ, or when the saving is under 10%
+ * (a "Save 4%" chip reads as a joke).
+ */
+function savingLabel(pkg: PurchasesPackage, all: PurchasesPackage[]): string | null {
+  const types = getPackageTypes();
+  if (!types || pkg.packageType !== types.ANNUAL) return null;
+  const monthly = all.find((p) => p.packageType === types.MONTHLY);
+  if (!monthly || monthly.product.currencyCode !== pkg.product.currencyCode) return null;
+  const yearAtMonthly = monthly.product.price * 12;
+  if (yearAtMonthly <= 0) return null;
+  const pct = Math.round((1 - pkg.product.price / yearAtMonthly) * 100);
+  return pct >= 10 ? `Save ${pct}%` : null;
+}
+
 /** "7-day" / "1-week" / "1-month" — the trial's exact store-configured length. */
 function trialLength(product: PurchasesStoreProduct): string | null {
   const intro = product.introPrice;
@@ -410,6 +428,8 @@ export function PaywallScreen() {
               const on = pkg.identifier === selected?.identifier;
               const period = periodLabel(pkg.product.subscriptionPeriod);
               const perMonth = perMonthLabel(pkg.product);
+              const saving = savingLabel(pkg, offer.packages);
+              const trial = trialLength(pkg.product);
               return (
                 <Pressable
                   key={pkg.identifier}
@@ -419,20 +439,42 @@ export function PaywallScreen() {
                   style={[styles.plan, on && styles.planOn]}
                 >
                   <View style={styles.planText}>
-                    <Text style={[styles.planName, on && styles.planNameOn]}>
-                      {planName(pkg)}
-                    </Text>
-                    {perMonth && (
-                      <Text style={styles.planPerMonth}>
-                        {perMonth} per month
+                    <View style={styles.planNameRow}>
+                      <Text style={[styles.planName, on && styles.planNameOn]}>
+                        {planName(pkg)}
+                      </Text>
+                      {saving && (
+                        <View style={styles.saveChip}>
+                          <Text style={styles.saveChipText}>{saving}</Text>
+                        </View>
+                      )}
+                    </View>
+                    {trial && <Text style={styles.planTrial}>{trial} free trial</Text>}
+                  </View>
+                  {/* THE YEARLY PLAN LEADS WITH ITS MONTH. "$5.00 / month,
+                      billed $59.99 a year" is the same fact as "$59.99 per
+                      year" with the deal in front; the old layout put the
+                      big yearly number on the right and the per-month figure
+                      in small grey, and four of five cancels on Apple's sheet
+                      were people looking at that yearly number (2026-09-11).
+                      The billed line stays, so the sheet holds no surprise. */}
+                  <View style={styles.planPriceCol}>
+                    {perMonth ? (
+                      <>
+                        <Text style={styles.planPrice}>
+                          {perMonth}
+                          <Text style={styles.planPeriod}> / month</Text>
+                        </Text>
+                        <Text style={styles.planPeriod}>
+                          billed {pkg.product.priceString} {period === 'per year' ? 'a year' : period ?? ''}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.planPrice}>
+                        {pkg.product.priceString}
+                        {period && <Text style={styles.planPeriod}> {period.replace('per ', '/ ')}</Text>}
                       </Text>
                     )}
-                  </View>
-                  <View style={styles.planPriceCol}>
-                    <Text style={styles.planPrice}>
-                      {pkg.product.priceString}
-                    </Text>
-                    {period && <Text style={styles.planPeriod}>{period}</Text>}
                   </View>
                 </Pressable>
               );
@@ -578,13 +620,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(94,230,168,0.12)',
     borderColor: 'rgba(94,230,168,0.4)',
   },
-  planText: { flexShrink: 1, gap: 2 },
+  planText: { flexShrink: 1, gap: 3 },
+  planNameRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   planName: { color: TEXT, fontSize: 16, fontWeight: '700' },
   planNameOn: { color: ACCENT },
-  planPerMonth: { color: MUTED, fontSize: 13 },
+  planTrial: { color: ACCENT, fontSize: 13, fontWeight: '600' },
+  saveChip: {
+    backgroundColor: ACCENT,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  saveChipText: { color: ON_ACCENT, fontSize: 11, fontWeight: '800' },
   planPriceCol: { alignItems: 'flex-end', gap: 2 },
-  planPrice: { color: TEXT, fontSize: 16, fontWeight: '700' },
-  planPeriod: { color: MUTED, fontSize: 12 },
+  planPrice: { color: TEXT, fontSize: 17, fontWeight: '800' },
+  planPeriod: { color: MUTED, fontSize: 12, fontWeight: '500' },
   disclosure: {
     color: 'rgba(242,245,243,0.5)',
     fontSize: 12,
