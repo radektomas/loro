@@ -481,7 +481,7 @@ export function PaywallScreen() {
             for free. The plan line under it is the user's own onboarding
             answer read back (plan.ts), so the trial is a trial OF something
             they just built. Nothing here promises an outcome. */}
-        <Text style={styles.title}>We want you to try Loro for free</Text>
+        <Text style={styles.title}>Your plan is set</Text>
         <Text style={styles.planLine}>{planLine(getPlan())}</Text>
         <Text style={styles.subtitle}>
           Real clips at your level, your saved words back before they slip,
@@ -541,6 +541,10 @@ export function PaywallScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+        {/* The owner's line, right above the button it belongs to. */}
+        {selected && selectedDays !== null && (
+          <Text style={styles.ctaLead}>We want you to try Loro for free.</Text>
+        )}
         {selected && (
           <Pressable
             onPress={() => void purchase()}
@@ -584,10 +588,10 @@ export function PaywallScreen() {
           >
             <Text style={styles.switchPlanText}>
               {otherDays !== null
-                ? `Back to ${planName(other).toLowerCase()} · ${otherDays} days free, then ` +
-                  (otherPerMonth ? `${otherPerMonth} / month billed yearly` : `${other.product.priceString} ${billedWord(otherPeriod)}`) +
+                ? `${planName(other)} · ${otherDays} days free, then ` +
+                  (otherPerMonth ? `${otherPerMonth} / month` : `${other.product.priceString} ${billedWord(otherPeriod)}`) +
                   (otherSaving ? ` · ${otherSaving}` : '')
-                : `Prefer ${planName(other).toLowerCase()}? ${other.product.priceString} ${billedWord(otherPeriod)}, no free trial`}
+                : `${planName(other)} · ${other.product.priceString} ${billedWord(otherPeriod)}`}
             </Text>
           </Pressable>
         )}
@@ -747,6 +751,13 @@ const styles = StyleSheet.create({
   },
   ctaDim: { opacity: 0.7 },
   ctaText: { color: ON_ACCENT, fontSize: 17, fontWeight: '800' },
+  ctaLead: {
+    color: TEXT,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
   ctaTerms: {
     color: 'rgba(242,245,243,0.75)',
     fontSize: 13,
