@@ -712,13 +712,24 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center',
   },
-  switchPlan: { alignSelf: 'center', marginTop: 12, paddingVertical: 6 },
+  /** The other plan as a second, quiet button under the mint one: same
+      shape, grey, so it reads as a real choice rather than a footnote. */
+  switchPlan: {
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderColor: 'rgba(242,245,243,0.12)',
+    borderRadius: 16,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginTop: 10,
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
   switchPlanText: {
-    color: ACCENT,
+    color: 'rgba(242,245,243,0.8)',
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
-    textDecorationLine: 'underline',
   },
   footerLinks: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 },
   footer: {
