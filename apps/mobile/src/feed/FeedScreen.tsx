@@ -39,7 +39,7 @@ import {
 import { setStoredRate } from '../player/rate';
 import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
-import { CHIP_ROW_H, CollectionChips } from './CollectionChips';
+import { CHIP_ROW_H, CollectionMenu, CollectionPill } from './CollectionChips';
 import { getCollection, setCollection, subscribeToCollection } from './collection';
 import { DayDoneCard } from './DayDoneCard';
 import { Karaoke } from './Karaoke';
@@ -567,9 +567,26 @@ const SLOW_HINT_MS = 6000;
 /** An episode shelf with nothing published on it yet — chips stay usable. */
 function EmptyShelf({ collection, onPick }: { collection: string; onPick: (id: string) => void }) {
   const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
   return (
     <View style={styles.root}>
-      <CollectionChips selected={collection} topInset={insets.top} onSelect={onPick} />
+      <CollectionPill
+        selected={collection}
+        topInset={insets.top}
+        open={open}
+        onPress={() => setOpen((o) => !o)}
+      />
+      {open && (
+        <CollectionMenu
+          selected={collection}
+          topInset={insets.top}
+          onPick={(id) => {
+            setOpen(false);
+            onPick(id);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      )}
       <View style={styles.emptyRoot}>
         <Text style={styles.emptyTitle}>{findCollection(collection).label}</Text>
         <Text style={styles.emptyBody}>Nothing here yet. Episodes are on the way.</Text>
@@ -712,6 +729,12 @@ function FeedBody({
   showChips: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  /** The shelf menu. The player yields while it is up (see CollectionMenu);
+      the obscure effect sits below, after the flag it writes is declared. */
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!active) setMenuOpen(false);
+  }, [active]);
   const [activeIndex, setActiveIndex] = useState(0);
   /**
    * WHERE A FRESH LIST STARTS. FlashList reads `initialScrollIndex` once, at
@@ -764,6 +787,9 @@ function FeedBody({
    * winning while the other overlay was still up.
    */
   const [promptObscured, setPromptObscured] = useState(false);
+  useEffect(() => {
+    setPromptObscured(menuOpen);
+  }, [menuOpen]);
 
   /**
    * The tapped word, or null. Held HERE rather than in the slide because the
@@ -1066,10 +1092,22 @@ function FeedBody({
           }}
         >
           {showChips && (
-            <CollectionChips
+            <CollectionPill
               selected={collection}
               topInset={insets.top}
-              onSelect={setCollection}
+              open={menuOpen}
+              onPress={() => setMenuOpen((o) => !o)}
+            />
+          )}
+          {showChips && menuOpen && (
+            <CollectionMenu
+              selected={collection}
+              topInset={insets.top}
+              onPick={(id) => {
+                setMenuOpen(false);
+                setCollection(id);
+              }}
+              onClose={() => setMenuOpen(false)}
             />
           )}
           {pageHeight > 0 && (
