@@ -25,6 +25,7 @@ import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { liftDueBlock } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import { refreshCatalog } from '../platform/catalog';
+import { subscribeDevVideo } from '../platform/devMenu';
 import { trackOnce } from '../platform/analytics';
 import {
   usePlayerApi,
@@ -1256,6 +1257,12 @@ function PlayerDriver({
   const status = usePlayerStatus();
   const { anchorTime, isPlaying } = usePlayerClock();
   const appliedRef = useRef<ReviewTarget | null>(null);
+
+  // Dev only: the dev menu's "play this id" — see platform/devMenu.ts.
+  useEffect(() => {
+    if (!__DEV__) return;
+    return subscribeDevVideo((id) => api.loadAndPlay(id, 0));
+  }, [api]);
 
   useEffect(() => {
     if (!video || !status.ready) return;

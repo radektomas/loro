@@ -175,6 +175,22 @@ export function installDevMenu(): void {
         DevSettings.reload();
       },
     },
+    /**
+     * PLAY ONE YOUTUBE ID IN THE FEED'S PLAYER, whatever slide is up. The
+     * collections work (2026-09-11) hinges on whether "made for kids"
+     * uploads — Peppa, Masha, Bluey — actually play inside the embedded
+     * player, and this is the hour-long check that answers it before a
+     * harvest. The id is a Peppa episode the caption probe already passed.
+     * Letterboxed in the 9:16 box; that is fine for a playback test.
+     */
+    {
+      name: 'Loro · Play a Peppa episode (kids-embed test)',
+      run: () => requestDevVideo('8EtuM5xgpno'),
+    },
+    {
+      name: 'Loro · Play a telenovela episode (embed test)',
+      run: () => requestDevVideo('FrfN6fMMMZ4'),
+    },
     /** Back to the real verdict from RevenueCat. */
     {
       name: 'Loro · Clear paywall override',
@@ -185,4 +201,22 @@ export function installDevMenu(): void {
       },
     },
   ]);
+}
+
+// ---------------------------------------------------- dev video bus
+
+const devVideoListeners = new Set<(youtubeId: string) => void>();
+
+function requestDevVideo(youtubeId: string): void {
+  console.log(`[loro:dev] loading ${youtubeId} into the feed's player`);
+  if (devVideoListeners.size === 0) {
+    console.log('[loro:dev] no feed player is listening — open the Feed tab first');
+  }
+  for (const l of devVideoListeners) l(youtubeId);
+}
+
+/** The feed's player driver subscribes in __DEV__ only. */
+export function subscribeDevVideo(listener: (youtubeId: string) => void): () => void {
+  devVideoListeners.add(listener);
+  return () => devVideoListeners.delete(listener);
 }
