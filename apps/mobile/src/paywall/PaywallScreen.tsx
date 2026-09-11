@@ -30,6 +30,7 @@ import {
   TEXT,
   TextButton,
 } from '../onboarding/chrome';
+import { noteTrialStarted } from '../platform/notifications';
 import { authEnabled } from '../platform/supabaseInit';
 import { LegalLinks } from '../progress/LegalLinks';
 
@@ -199,6 +200,64 @@ function trialLength(product: PurchasesStoreProduct): string | null {
   return `${intro.periodNumberOfUnits}-${unit}`;
 }
 
+/** The trial in whole days (7 for "1-week"), or null when there is none. */
+function trialDays(product: PurchasesStoreProduct): number | null {
+  const intro = product.introPrice;
+  if (!intro || intro.price !== 0) return null;
+  const n = intro.periodNumberOfUnits;
+  switch (intro.periodUnit.toUpperCase()) {
+    case 'DAY':
+      return n;
+    case 'WEEK':
+      return n * 7;
+    case 'MONTH':
+      return n * 30;
+    case 'YEAR':
+      return n * 365;
+    default:
+      return null;
+  }
+}
+
+/** "$0.00" in the product's own currency — the button's number. */
+function zeroPrice(product: PurchasesStoreProduct): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: product.currencyCode,
+    }).format(0);
+  } catch {
+    return `0.00 ${product.currencyCode}`;
+  }
+}
+
+function TimelineRow({
+  dot,
+  head,
+  body,
+  last = false,
+}: {
+  dot: string;
+  head: string;
+  body: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={styles.tlRow}>
+      <View style={styles.tlRail}>
+        <View style={styles.tlDot}>
+          <Text style={styles.tlDotText}>{dot}</Text>
+        </View>
+        {!last && <View style={styles.tlLine} />}
+      </View>
+      <View style={styles.tlText}>
+        <Text style={styles.tlHead}>{head}</Text>
+        <Text style={styles.tlBody}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
 export function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const [offer, setOffer] = useState<Offer>({ status: 'loading' });
@@ -302,7 +361,11 @@ export function PaywallScreen() {
         productId: selected.product.identifier,
         price: selected.product.price,
         currency: selected.product.currencyCode,
+        trial: trialLength(selected.product),
       });
+      // The timeline's "day 5: we remind you" — made true (notifications.ts).
+      const days = trialDays(selected.product);
+      if (days !== null) noteTrialStarted(days);
     } catch (err) {
       // A cancelled sheet is the user changing their mind, so it stays silent
       // in the UI — but it is emphatically an EVENT: someone who opened the
@@ -373,6 +436,7 @@ export function PaywallScreen() {
   }, [busy]);
 
   const trial = selected ? trialLength(selected.product) : null;
+  const selectedDays = selected ? trialDays(selected.product) : null;
   const selectedPeriod = selected
     ? periodLabel(selected.product.subscriptionPeriod)
     : null;
@@ -419,6 +483,32 @@ export function PaywallScreen() {
               The plans could not be loaded. Please check your connection.
             </Text>
             <TextButton label="Try again" onPress={loadOfferings} />
+          </View>
+        )}
+
+        {/* THE TIMELINE. What the fear at Apple's sheet actually is: "I will
+            forget and get charged". Three lines answer it before the tap —
+            and the middle one is a promise the app keeps (noteTrialStarted).
+            Shown only when the selected plan has a trial; the monthly plan
+            has none by the owner's choice, so it gets the plain cards. */}
+        {offer.status === 'ready' && selected && selectedDays !== null && (
+          <View style={styles.timeline}>
+            <TimelineRow
+              dot="●"
+              head="Today"
+              body="Everything unlocked. Every video, every word, every review."
+            />
+            <TimelineRow
+              dot="🔔"
+              head={`Day ${selectedDays - 2}`}
+              body="We remind you before anything is charged."
+            />
+            <TimelineRow
+              dot="★"
+              head={`Day ${selectedDays}`}
+              body={`Your trial ends. ${selected.product.priceString} ${selectedPeriod ?? ''} from here, unless you cancelled.`}
+              last
+            />
           </View>
         )}
 
@@ -512,10 +602,22 @@ export function PaywallScreen() {
               <ActivityIndicator color={ON_ACCENT} />
             ) : (
               <Text style={styles.ctaText}>
-                {trial ? `Start ${trial} free trial` : 'Subscribe'}
+                {selectedDays !== null
+                  ? `Try ${selectedDays} days for ${zeroPrice(selected.product)}`
+                  : `Subscribe · ${selected.product.priceString} ${selectedPeriod ?? ''}`}
               </Text>
             )}
           </Pressable>
+        )}
+        {/* The terms in READABLE size, right under the button — not the grey
+            footnote the ScrollView carries. The sheet then confirms what was
+            already read. */}
+        {selected && (
+          <Text style={styles.ctaTerms}>
+            {selectedDays !== null
+              ? `then ${selected.product.priceString} ${selectedPeriod === 'per year' ? 'a year' : selectedPeriod ?? ''} · cancel anytime in Settings`
+              : 'Renews automatically · cancel anytime in Settings'}
+          </Text>
         )}
         <TextButton
           label={busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
@@ -605,7 +707,23 @@ const styles = StyleSheet.create({
   },
   stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
   stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
-  plans: { gap: 10, marginTop: 28 },
+  timeline: { marginTop: 26 },
+  tlRow: { flexDirection: 'row', gap: 12 },
+  tlRail: { alignItems: 'center', width: 28 },
+  tlDot: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.16)',
+    borderRadius: 999,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  tlDotText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
+  tlLine: { backgroundColor: 'rgba(94,230,168,0.25)', flex: 1, marginVertical: 3, width: 2 },
+  tlText: { flex: 1, paddingBottom: 14 },
+  tlHead: { color: TEXT, fontSize: 14, fontWeight: '800' },
+  tlBody: { color: MUTED, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  plans: { gap: 10, marginTop: 14 },
   plan: {
     alignItems: 'center',
     backgroundColor: CARD,
@@ -656,6 +774,13 @@ const styles = StyleSheet.create({
   },
   ctaDim: { opacity: 0.7 },
   ctaText: { color: ON_ACCENT, fontSize: 17, fontWeight: '800' },
+  ctaTerms: {
+    color: 'rgba(242,245,243,0.75)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
 
   // ---- account sheet ----
   accountSheet: { backgroundColor: GROUND, flex: 1 },

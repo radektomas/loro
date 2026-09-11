@@ -162,6 +162,9 @@ async function withSeam<T>(label: string, run: (api: Seam) => Promise<T>, fallba
  * the same convention onboarding's MOBILE_KEYS already uses (flow.ts).
  */
 const KEYS = {
+  /** When the free trial ends (ms since epoch), written at purchase — see
+      noteTrialStarted. The trial reminder is scheduled from it. */
+  trialEndsAt: 'loro.mobile.trialEndsAt',
   enabled: 'loro.mobile.notif.enabled',
   hour: 'loro.mobile.notif.hour',
   minute: 'loro.mobile.notif.minute',
@@ -505,6 +508,54 @@ function buildAtRiskContent(now: number): NotificationsApi.NotificationContentIn
   };
 }
 
+// ------------------------------------------------------------ the trial
+
+/**
+ * The paywall's timeline says "Day 5 · we remind you before anything is
+ * charged", and this is what makes that line true. Written at the moment
+ * Apple confirms the purchase (PaywallScreen), read by reconcile, which
+ * schedules one dated notification TRIAL_REMINDER_DAYS_BEFORE days before
+ * the trial ends, at a civil hour. Cleared like every other key when the
+ * user is switched or deleted. A trial the user cancelled in Settings still
+ * gets the reminder; "your trial ends" is true either way, and it says
+ * where to cancel rather than that money is coming.
+ */
+const TRIAL_REMINDER_DAYS_BEFORE = 2;
+const TRIAL_REMINDER_HOUR = 10;
+
+export function noteTrialStarted(trialDays: number, now: number = Date.now()): void {
+  if (!Number.isFinite(trialDays) || trialDays <= TRIAL_REMINDER_DAYS_BEFORE) return;
+  const endsAt = new Date(now);
+  endsAt.setDate(endsAt.getDate() + trialDays);
+  storageDriver.local.setItem(KEYS.trialEndsAt, String(endsAt.getTime()));
+  void reconcile();
+}
+
+function trialReminderAt(now: number): Date | null {
+  const raw = storageDriver.local.getItem(KEYS.trialEndsAt);
+  const endsAt = raw ? Number(raw) : NaN;
+  if (!Number.isFinite(endsAt) || endsAt <= now) return null;
+  const d = new Date(endsAt);
+  const at = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate() - TRIAL_REMINDER_DAYS_BEFORE,
+    TRIAL_REMINDER_HOUR,
+    0,
+    0,
+    0
+  );
+  return at.getTime() > now ? at : null;
+}
+
+function buildTrialReminderContent(): NotificationsApi.NotificationContentInput {
+  return {
+    title: `Your Loro trial ends in ${TRIAL_REMINDER_DAYS_BEFORE} days`,
+    body: 'Keep it and nothing changes. Not for you? Cancel any time in Settings → Subscriptions.',
+    data: { route: 'review' satisfies NotifRoute },
+  };
+}
+
 // -------------------------------------------------------------- scheduling
 
 /**
@@ -565,11 +616,22 @@ async function runReconcile(): Promise<void> {
       // actually clear what is already queued in the OS.
       await api.cancelAllScheduledNotificationsAsync();
 
+      if ((await getPermissionState()) !== 'granted') return;
+      const now = Date.now();
+
+      // THE TRIAL REMINDER, ahead of the preference check: the paywall's
+      // timeline promises "day 5: we remind you", and that promise is not
+      // subject to the daily-reminder toggle. Permission still is.
+      const trialAt = trialReminderAt(now);
+      if (trialAt) {
+        await api.scheduleNotificationAsync({
+          content: buildTrialReminderContent(),
+          trigger: { type: api.SchedulableTriggerInputTypes.DATE, date: trialAt },
+        });
+      }
+
       const prefs = getPrefs();
       if (!prefs.enabled) return;
-      if ((await getPermissionState()) !== 'granted') return;
-
-      const now = Date.now();
 
       // One dated reminder per day, each written for its own day — see
       // buildReminderContent for why this is not a DAILY repeating trigger.
