@@ -145,6 +145,34 @@ function planLine(plan: Plan): string {
   }
 }
 
+/**
+ * WHICH PLAN IS PRE-SELECTED — and so which price the first Apple sheet says.
+ *
+ * Until 2026-09-11 it was the annual plan. Thirty days of purchase events
+ * then read: six taps on Subscribe, five cancelled on Apple's sheet, four of
+ * them looking at the yearly price. A first sheet that says $9.99 is a
+ * smaller thing to say yes to than $59.99, so MONTHLY goes first — but only
+ * when it carries a trial. A sheet that says "$9.99 now" with no trial is
+ * worse than the yearly one with "free for 7 days", so a plan with a trial
+ * always beats one without, and the trial is store configuration
+ * (App Store Connect → Introductory Offers), not code: add it to the
+ * monthly product and monthly becomes the default with no build.
+ *
+ * Order: monthly with trial, then any other plan with a trial (annual),
+ * then monthly without, then whatever is first.
+ */
+function defaultPackage(packages: PurchasesPackage[]): PurchasesPackage {
+  const monthlyType = getPackageTypes()?.MONTHLY;
+  const isMonthly = (p: PurchasesPackage) => p.packageType === monthlyType;
+  const hasTrial = (p: PurchasesPackage) => trialLength(p.product) !== null;
+  return (
+    packages.find((p) => isMonthly(p) && hasTrial(p)) ??
+    packages.find(hasTrial) ??
+    packages.find(isMonthly) ??
+    packages[0]
+  );
+}
+
 /** "7-day" / "1-week" / "1-month" — the trial's exact store-configured length. */
 function trialLength(product: PurchasesStoreProduct): string | null {
   const intro = product.introPrice;
@@ -193,11 +221,7 @@ export function PaywallScreen() {
           return;
         }
         setOffer({ status: 'ready', packages });
-        // Default to the annual plan when there is one — it is the one whose
-        // disclosure (per-month price) benefits most from being read.
-        const annualType = getPackageTypes()?.ANNUAL;
-        const annual = packages.find((p) => p.packageType === annualType);
-        setSelectedId((annual ?? packages[0]).identifier);
+        setSelectedId(defaultPackage(packages).identifier);
       })
       .catch((err) => {
         console.warn('[loro] offerings fetch failed', err);
@@ -238,6 +262,9 @@ export function PaywallScreen() {
       productId: selected.product.identifier,
       price: selected.product.price,
       currency: selected.product.currencyCode,
+      // What Apple's sheet led with: "free for 7 days" or the price itself.
+      // Without this the cancels above could not be told apart.
+      trial: trialLength(selected.product),
     });
     try {
       // Success needs no handling here: the CustomerInfo listener in
