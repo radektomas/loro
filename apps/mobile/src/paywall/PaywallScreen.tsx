@@ -441,34 +441,51 @@ export function PaywallScreen() {
     ? periodLabel(selected.product.subscriptionPeriod)
     : null;
 
+  /**
+   * ONE SCREEN, NO SCROLL, NO PLAN CARDS (Radek, 2026-09-11: "better a
+   * click through than a scroll"). The offer is the trial; the yearly plan
+   * that carries it is implied by the button and spelled out in the line
+   * under it. Monthly — no trial, by the owner's choice — is one tap on a
+   * text link that swaps the button, the terms and the timeline, and the
+   * same link swaps back. Both prices are always on screen (the link names
+   * the one not selected), which is what Apple's 3.1.2 asks for.
+   */
+  const other =
+    offer.status === 'ready' && selected
+      ? offer.packages.find((p) => p.identifier !== selected.identifier) ?? null
+      : null;
+  const otherPeriod = other ? periodLabel(other.product.subscriptionPeriod) : null;
+  const otherDays = other ? trialDays(other.product) : null;
+  const otherPerMonth = other ? perMonthLabel(other.product) : null;
+  const otherSaving =
+    other && offer.status === 'ready' ? savingLabel(other, offer.packages) : null;
+  const billedWord = (period: string | null) =>
+    period === 'per year' ? 'a year' : period === 'per month' ? 'a month' : period ?? '';
+
   return (
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 24, paddingBottom: 24 },
+          { paddingTop: insets.top + 16, paddingBottom: 12 },
         ]}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         <Image
           source={BRAND.parrot}
           style={styles.parrot}
           resizeMode="contain"
         />
-        {/* THE SALE, in the user's own terms. Two screens ago they watched
-            "Building your customized plan" and answered how often; this
-            says that plan back to them and what Loro does to keep them on
-            it. The old line ("Every video, every word you save, every
-            review — one subscription") listed features; nobody pays for a
-            feature list, they pay for the plan they just made. Every claim
-            below is one onboarding already makes (PLAN_BUILD.clips,
-            PLAN_BUILD.recall) plus the daily goal, which is real since
-            v1.3.0 — nothing here promises an outcome. */}
-        <Text style={styles.title}>Your plan is set</Text>
+        {/* THE SALE, said the way the owner says it: we want you to try it,
+            for free. The plan line under it is the user's own onboarding
+            answer read back (plan.ts), so the trial is a trial OF something
+            they just built. Nothing here promises an outcome. */}
+        <Text style={styles.title}>We want you to try Loro for free</Text>
         <Text style={styles.planLine}>{planLine(getPlan())}</Text>
         <Text style={styles.subtitle}>
-          Loro keeps you on it: real clips at your level, your saved words
-          back right before they slip, and a goal you can finish tonight.
+          Real clips at your level, your saved words back before they slip,
+          and a goal you can finish tonight.
         </Text>
 
         {offer.status === 'loading' && (
@@ -489,8 +506,8 @@ export function PaywallScreen() {
         {/* THE TIMELINE. What the fear at Apple's sheet actually is: "I will
             forget and get charged". Three lines answer it before the tap —
             and the middle one is a promise the app keeps (noteTrialStarted).
-            Shown only when the selected plan has a trial; the monthly plan
-            has none by the owner's choice, so it gets the plain cards. */}
+            With monthly selected there is no trial, so it says so in one
+            line instead. */}
         {offer.status === 'ready' && selected && selectedDays !== null && (
           <View style={styles.timeline}>
             <TimelineRow
@@ -506,88 +523,24 @@ export function PaywallScreen() {
             <TimelineRow
               dot="★"
               head={`Day ${selectedDays}`}
-              body={`Your trial ends. ${selected.product.priceString} ${selectedPeriod ?? ''} from here, unless you cancelled.`}
+              body={`Your trial ends. ${selected.product.priceString} ${billedWord(selectedPeriod)} from here, unless you cancelled.`}
               last
             />
           </View>
         )}
-
-        {offer.status === 'ready' && (
-          <View style={styles.plans}>
-            {offer.packages.map((pkg) => {
-              const on = pkg.identifier === selected?.identifier;
-              const period = periodLabel(pkg.product.subscriptionPeriod);
-              const perMonth = perMonthLabel(pkg.product);
-              const saving = savingLabel(pkg, offer.packages);
-              const trial = trialLength(pkg.product);
-              return (
-                <Pressable
-                  key={pkg.identifier}
-                  onPress={() => setSelectedId(pkg.identifier)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: on }}
-                  style={[styles.plan, on && styles.planOn]}
-                >
-                  <View style={styles.planText}>
-                    <View style={styles.planNameRow}>
-                      <Text style={[styles.planName, on && styles.planNameOn]}>
-                        {planName(pkg)}
-                      </Text>
-                      {saving && (
-                        <View style={styles.saveChip}>
-                          <Text style={styles.saveChipText}>{saving}</Text>
-                        </View>
-                      )}
-                    </View>
-                    {trial && <Text style={styles.planTrial}>{trial} free trial</Text>}
-                  </View>
-                  {/* THE YEARLY PLAN LEADS WITH ITS MONTH. "$5.00 / month,
-                      billed $59.99 a year" is the same fact as "$59.99 per
-                      year" with the deal in front; the old layout put the
-                      big yearly number on the right and the per-month figure
-                      in small grey, and four of five cancels on Apple's sheet
-                      were people looking at that yearly number (2026-09-11).
-                      The billed line stays, so the sheet holds no surprise. */}
-                  <View style={styles.planPriceCol}>
-                    {perMonth ? (
-                      <>
-                        <Text style={styles.planPrice}>
-                          {perMonth}
-                          <Text style={styles.planPeriod}> / month</Text>
-                        </Text>
-                        <Text style={styles.planPeriod}>
-                          billed {pkg.product.priceString} {period === 'per year' ? 'a year' : period ?? ''}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={styles.planPrice}>
-                        {pkg.product.priceString}
-                        {period && <Text style={styles.planPeriod}> {period.replace('per ', '/ ')}</Text>}
-                      </Text>
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
+        {offer.status === 'ready' && selected && selectedDays === null && (
+          <View style={styles.timeline}>
+            <TimelineRow
+              dot="●"
+              head="Today"
+              body={`Everything unlocked, ${selected.product.priceString} ${billedWord(selectedPeriod)}. No trial on this plan.`}
+              last
+            />
           </View>
-        )}
-
-        {selected && (
-          <Text style={styles.disclosure}>
-            {trial
-              ? `Your ${trial} free trial converts to a paid subscription at ` +
-                `${selected.product.priceString} ${selectedPeriod ?? ''} unless ` +
-                'you cancel at least 24 hours before it ends. '
-              : ''}
-            The subscription is charged to your Apple ID and renews
-            automatically until cancelled at least 24 hours before the end of
-            the current period. Manage or cancel it in Settings →
-            Subscriptions.
-          </Text>
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
         {selected && (
           <Pressable
             onPress={() => void purchase()}
@@ -604,31 +557,59 @@ export function PaywallScreen() {
               <Text style={styles.ctaText}>
                 {selectedDays !== null
                   ? `Try ${selectedDays} days for ${zeroPrice(selected.product)}`
-                  : `Subscribe · ${selected.product.priceString} ${selectedPeriod ?? ''}`}
+                  : `Subscribe · ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
               </Text>
             )}
           </Pressable>
         )}
-        {/* The terms in READABLE size, right under the button — not the grey
-            footnote the ScrollView carries. The sheet then confirms what was
-            already read. */}
+        {/* The terms in READABLE size, right under the button. The sheet then
+            confirms what was already read. */}
         {selected && (
           <Text style={styles.ctaTerms}>
             {selectedDays !== null
-              ? `then ${selected.product.priceString} ${selectedPeriod === 'per year' ? 'a year' : selectedPeriod ?? ''} · cancel anytime in Settings`
+              ? `then ${selected.product.priceString} ${billedWord(selectedPeriod)}` +
+                (perMonthLabel(selected.product) ? ` (${perMonthLabel(selected.product)} / month)` : '') +
+                ' · cancel anytime in Settings'
               : 'Renews automatically · cancel anytime in Settings'}
           </Text>
         )}
-        <TextButton
-          label={busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
-          onPress={() => void restore()}
-        />
-        {authEnabled && (
-          <TextButton
-            label="Sign in & account"
-            onPress={() => setAccountOpen(true)}
-          />
+        {/* THE OTHER PLAN, one tap away. Names its price and whether it has a
+            trial, so the choice is made here and not discovered on the sheet. */}
+        {other && (
+          <Pressable
+            onPress={() => setSelectedId(other.identifier)}
+            accessibilityRole="button"
+            hitSlop={6}
+            style={({ pressed }) => [styles.switchPlan, pressed && styles.ctaDim]}
+          >
+            <Text style={styles.switchPlanText}>
+              {otherDays !== null
+                ? `Back to ${planName(other).toLowerCase()} · ${otherDays} days free, then ` +
+                  (otherPerMonth ? `${otherPerMonth} / month billed yearly` : `${other.product.priceString} ${billedWord(otherPeriod)}`) +
+                  (otherSaving ? ` · ${otherSaving}` : '')
+                : `Prefer ${planName(other).toLowerCase()}? ${other.product.priceString} ${billedWord(otherPeriod)}, no free trial`}
+            </Text>
+          </Pressable>
         )}
+        {selected && (
+          <Text style={styles.disclosure}>
+            Charged to your Apple ID{selectedDays !== null ? ' when the trial ends' : ''}, renews
+            automatically until cancelled at least 24 hours before the end of the
+            period. Manage it in Settings → Subscriptions.
+          </Text>
+        )}
+        <View style={styles.footerLinks}>
+          <TextButton
+            label={busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
+            onPress={() => void restore()}
+          />
+          {authEnabled && (
+            <TextButton
+              label="Sign in & account"
+              onPress={() => setAccountOpen(true)}
+            />
+          )}
+        </View>
         <LegalLinks />
       </View>
 
@@ -680,14 +661,15 @@ export function PaywallScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: GROUND, flex: 1 },
-  scroll: { paddingHorizontal: 24 },
-  parrot: { alignSelf: 'center', height: 96, width: 64 },
+  scroll: { flexGrow: 1, paddingHorizontal: 24 },
+  parrot: { alignSelf: 'center', height: 72, width: 48 },
   title: {
     color: TEXT,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
-    marginTop: 16,
+    lineHeight: 31,
+    marginTop: 12,
     textAlign: 'center',
   },
   /** The plan, in the accent: the one line on this screen that is theirs. */
@@ -707,7 +689,7 @@ const styles = StyleSheet.create({
   },
   stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
   stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
-  timeline: { marginTop: 26 },
+  timeline: { marginTop: 22 },
   tlRow: { flexDirection: 'row', gap: 12 },
   tlRail: { alignItems: 'center', width: 28 },
   tlDot: {
@@ -723,42 +705,22 @@ const styles = StyleSheet.create({
   tlText: { flex: 1, paddingBottom: 14 },
   tlHead: { color: TEXT, fontSize: 14, fontWeight: '800' },
   tlBody: { color: MUTED, fontSize: 13, lineHeight: 18, marginTop: 1 },
-  plans: { gap: 10, marginTop: 14 },
-  plan: {
-    alignItems: 'center',
-    backgroundColor: CARD,
-    borderColor: 'transparent',
-    borderRadius: 16,
-    borderWidth: 2,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  planOn: {
-    backgroundColor: 'rgba(94,230,168,0.12)',
-    borderColor: 'rgba(94,230,168,0.4)',
-  },
-  planText: { flexShrink: 1, gap: 3 },
-  planNameRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  planName: { color: TEXT, fontSize: 16, fontWeight: '700' },
-  planNameOn: { color: ACCENT },
-  planTrial: { color: ACCENT, fontSize: 13, fontWeight: '600' },
-  saveChip: {
-    backgroundColor: ACCENT,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  saveChipText: { color: ON_ACCENT, fontSize: 11, fontWeight: '800' },
-  planPriceCol: { alignItems: 'flex-end', gap: 2 },
-  planPrice: { color: TEXT, fontSize: 17, fontWeight: '800' },
-  planPeriod: { color: MUTED, fontSize: 12, fontWeight: '500' },
   disclosure: {
-    color: 'rgba(242,245,243,0.5)',
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 20,
+    color: 'rgba(242,245,243,0.45)',
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 10,
+    textAlign: 'center',
   },
+  switchPlan: { alignSelf: 'center', marginTop: 12, paddingVertical: 6 },
+  switchPlanText: {
+    color: ACCENT,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  footerLinks: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 },
   footer: {
     alignItems: 'stretch',
     gap: 10,
