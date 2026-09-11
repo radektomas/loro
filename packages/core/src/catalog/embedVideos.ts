@@ -26,14 +26,17 @@ type EmbedEntry = {
   attribution: VideoAttribution;
   cues: Video['cues'];
   dictionary: Video['dictionary'];
+  /** See core/collections.ts. Absent on every reel. */
+  collection?: string;
 };
 
 const LEVELS: readonly Level[] = ['A1', 'A2', 'B1', 'B2'];
 /** Same reasoning as lib/publishedVideos.ts: ungraded content slots mid-feed. */
 const DEFAULT_LEVEL: Level = 'A2';
 
-export const embedVideos: Video[] = (embedData as unknown as EmbedEntry[]).map(
-  (entry) => ({
+/** One published embed entry → a Video. Shared with the collections file. */
+export function mapEmbedEntries(entries: readonly EmbedEntry[]): Video[] {
+  return entries.map((entry) => ({
     id: entry.id,
     // No file — the slide renders the iframe player. Feed branches on
     // youtubeId before it ever touches src, so this never reaches a <video>.
@@ -51,5 +54,8 @@ export const embedVideos: Video[] = (embedData as unknown as EmbedEntry[]).map(
     // so the compliant attribution line is guaranteed by construction rather
     // than by a null check at render time.
     author: { kind: 'youtube', ...entry.attribution },
-  })
-);
+    ...(entry.collection ? { collection: entry.collection } : {}),
+  }));
+}
+
+export const embedVideos: Video[] = mapEmbedEntries(embedData as unknown as EmbedEntry[]);

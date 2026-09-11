@@ -106,6 +106,12 @@ export type Video = {
   /** Known duration for embeds, so the progress bar works before the player
       boots (the iframe reports duration only once created). */
   durationSeconds?: number;
+  /**
+   * Which shelf the feed shows this under — 'reels' (absent means reels),
+   * 'peppa', 'masha', 'bluey', 'novelas'… See core/collections.ts. Every
+   * collection but reels is landscape and played in episode order.
+   */
+  collection?: string;
 };
 
 /**

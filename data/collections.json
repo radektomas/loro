@@ -1,0 +1,155 @@
+[
+  {
+    "id": "8EtuM5xgpno",
+    "youtubeId": "8EtuM5xgpno",
+    "creator": "Peppa Pig Español - Canal Oficial",
+    "level": "A1",
+    "durationSeconds": 1433,
+    "thumbnailUrl": "https://i.ytimg.com/vi/8EtuM5xgpno/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Peppa Pig Español - Canal Oficial",
+      "channelUrl": "https://www.youtube.com/@PeppaPigEspanol",
+      "videoUrl": "https://www.youtube.com/watch?v=8EtuM5xgpno",
+      "license": "youtube"
+    },
+    "collection": "peppa",
+    "cues": [
+      {
+        "start": 0,
+        "end": 2,
+        "words": [
+          {
+            "text": "peppa",
+            "start": 0.0,
+            "end": 0.4
+          },
+          {
+            "text": "pig",
+            "start": 0.5,
+            "end": 0.9
+          }
+        ],
+        "translations": {
+          "en": "Peppa Pig full episodes (stub, captions pending)"
+        }
+      }
+    ],
+    "dictionary": {}
+  },
+  {
+    "id": "crXLM9Uye_s",
+    "youtubeId": "crXLM9Uye_s",
+    "creator": "Masha y el Oso",
+    "level": "A1",
+    "durationSeconds": 4073,
+    "thumbnailUrl": "https://i.ytimg.com/vi/crXLM9Uye_s/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Masha y el Oso",
+      "channelUrl": "https://www.youtube.com/@MashayelOso",
+      "videoUrl": "https://www.youtube.com/watch?v=crXLM9Uye_s",
+      "license": "youtube"
+    },
+    "collection": "masha",
+    "cues": [
+      {
+        "start": 0,
+        "end": 2,
+        "words": [
+          {
+            "text": "masha",
+            "start": 0.0,
+            "end": 0.4
+          },
+          {
+            "text": "y",
+            "start": 0.5,
+            "end": 0.9
+          },
+          {
+            "text": "el",
+            "start": 1.0,
+            "end": 1.4
+          },
+          {
+            "text": "oso",
+            "start": 1.5,
+            "end": 1.9
+          }
+        ],
+        "translations": {
+          "en": "Masha and the Bear, La Excursión (stub, captions pending)"
+        }
+      }
+    ],
+    "dictionary": {}
+  },
+  {
+    "id": "W34WDGRmblc",
+    "youtubeId": "W34WDGRmblc",
+    "creator": "Bluey - Español Canal Oficial",
+    "level": "A1",
+    "durationSeconds": 2413,
+    "thumbnailUrl": "https://i.ytimg.com/vi/W34WDGRmblc/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Bluey - Español Canal Oficial",
+      "channelUrl": "https://www.youtube.com/@BlueyEspanol",
+      "videoUrl": "https://www.youtube.com/watch?v=W34WDGRmblc",
+      "license": "youtube"
+    },
+    "collection": "bluey",
+    "cues": [
+      {
+        "start": 0,
+        "end": 2,
+        "words": [
+          {
+            "text": "bluey",
+            "start": 0.0,
+            "end": 0.4
+          }
+        ],
+        "translations": {
+          "en": "Bluey season 1 (stub, captions pending)"
+        }
+      }
+    ],
+    "dictionary": {}
+  },
+  {
+    "id": "FrfN6fMMMZ4",
+    "youtubeId": "FrfN6fMMMZ4",
+    "creator": "Las Estrellas",
+    "level": "A1",
+    "durationSeconds": 3096,
+    "thumbnailUrl": "https://i.ytimg.com/vi/FrfN6fMMMZ4/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Las Estrellas",
+      "channelUrl": "https://www.youtube.com/@LasEstrellas",
+      "videoUrl": "https://www.youtube.com/watch?v=FrfN6fMMMZ4",
+      "license": "youtube"
+    },
+    "collection": "novelas",
+    "cues": [
+      {
+        "start": 0,
+        "end": 2,
+        "words": [
+          {
+            "text": "capítulo",
+            "start": 0.0,
+            "end": 0.4
+          },
+          {
+            "text": "uno",
+            "start": 0.5,
+            "end": 0.9
+          }
+        ],
+        "translations": {
+          "en": "El Renacer de Luna, capítulo 1 (stub, captions pending)"
+        }
+      }
+    ],
+    "dictionary": {}
+  }
+]
