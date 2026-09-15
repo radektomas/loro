@@ -37,6 +37,7 @@ import { setStoredRate } from '../player/rate';
 import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
 import { DayDoneCard } from './DayDoneCard';
+import { LevelUpCard } from './LevelUpCard';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
@@ -1092,6 +1093,11 @@ function FeedBody({
                   asks above; the day once a day at most. Same obscure
                   contract, same layering reason. */}
               <DayDoneCard
+                onObscurePlayer={setPromptObscured}
+                onGoToProgress={onGoToProgress}
+              />
+              {/* The ladder climbed — rarest of the cards, raised first. */}
+              <LevelUpCard
                 onObscurePlayer={setPromptObscured}
                 onGoToProgress={onGoToProgress}
               />

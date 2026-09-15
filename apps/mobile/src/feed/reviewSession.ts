@@ -198,3 +198,24 @@ export function subscribeToReviewEnd(listener: (end: ReviewSessionEnd) => void):
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+/** DEV: raise the session card with made-up numbers, no session touched. */
+export function devRaiseReviewEnd(): void {
+  for (const l of listeners) {
+    l({
+      source: 'progress',
+      size: 5,
+      answered: 5,
+      correct: 4,
+      words: [
+        { text: 'ahora', correct: true },
+        { text: 'vamos', correct: true },
+        { text: 'todavía', correct: false },
+        { text: 'quizás', correct: true },
+        { text: 'entonces', correct: true },
+      ],
+      reason: 'size',
+      dayDone: null,
+    });
+  }
+}

@@ -12,6 +12,7 @@ import { TabBarHeightContext } from './tabBar';
 import { useDueCount } from './useDueCount';
 import { storage } from '@loro/core/storage';
 import { getPlan } from '../progress/plan';
+import { initLevelUp } from '../feed/levelUp';
 
 /**
  * The app shell: three tabs, hand-rolled.
@@ -93,6 +94,7 @@ export function Shell() {
    */
   useEffect(() => {
     storage.setDailyGoal(getPlan().wordsPerDay);
+    initLevelUp();
   }, []);
 
   /**

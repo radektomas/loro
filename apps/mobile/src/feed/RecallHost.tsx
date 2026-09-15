@@ -21,6 +21,7 @@ import { maybeAskForPermission, noteCorrectRecall } from '../platform/notificati
 import { track } from '../platform/analytics';
 import { CELEBRATE_MS } from './Celebration';
 import { maybeCelebrateDayDone } from './dayDone';
+import { maybeLevelUp } from './levelUp';
 import {
   noteReviewAnswer,
   raiseReviewEnd,
@@ -1052,6 +1053,9 @@ export function RecallHost({
             }
             // Inside a review session the day-done waits for the session's
             // card (reviewSession.ts folds it in) — two cards is one too many.
+            // A tier crossing is rarer than any of the rest and wins the
+            // moment; a parked session end shows on the next answer.
+            if (wasCorrect && maybeLevelUp()) return;
             if (wasCorrect && !reviewSessionActive() && maybeCelebrateDayDone()) return;
             const raised = sessionComplete && (await maybeAskToSaveProgress());
             if (!raised && wasCorrect) await maybeAskForPermission();
