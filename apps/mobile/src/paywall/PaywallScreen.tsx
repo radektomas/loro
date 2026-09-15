@@ -232,33 +232,14 @@ function zeroPrice(product: PurchasesStoreProduct): string {
 }
 
 /**
- * One stop on the trial timeline. Laid out in a ROW of three (Radek,
- * 2026-09-15: "put today, day 5 and day 7 into a line so you don't have to
- * scroll") — each stop is a column with its dot on top and the line running
- * through the dots, so the whole trial reads left to right in one glance.
+ * One stop on the trial timeline: a column in the sheet, a small mint
+ * label on top and the fact under it. No dots, no icons, no rail — the
+ * same sheet the plan screens use, so the wall reads as the last page of
+ * the plan rather than a different app.
  */
-function TimelineStop({
-  dot,
-  head,
-  body,
-  first = false,
-  last = false,
-}: {
-  dot: string;
-  head: string;
-  body: string;
-  first?: boolean;
-  last?: boolean;
-}) {
+function TimelineStop({ head, body }: { head: string; body: string }) {
   return (
     <View style={styles.tlStop}>
-      <View style={styles.tlRail}>
-        <View style={[styles.tlLine, first && styles.tlLineHidden]} />
-        <View style={styles.tlDot}>
-          <Text style={styles.tlDotText}>{dot}</Text>
-        </View>
-        <View style={[styles.tlLine, last && styles.tlLineHidden]} />
-      </View>
       <Text style={styles.tlHead}>{head}</Text>
       <Text style={styles.tlBody}>{body}</Text>
     </View>
@@ -517,28 +498,21 @@ export function PaywallScreen() {
             line instead. */}
         {offer.status === 'ready' && selected && selectedDays !== null && (
           <View style={styles.timeline}>
-            <TimelineStop dot="●" head="Today" body="Everything unlocked" first />
+            <TimelineStop head="Today" body="Everything unlocked" />
+            <View style={styles.tlDivider} />
+            <TimelineStop head={`Day ${selectedDays - 2}`} body="We remind you" />
+            <View style={styles.tlDivider} />
             <TimelineStop
-              dot="🔔"
-              head={`Day ${selectedDays - 2}`}
-              body="We remind you"
-            />
-            <TimelineStop
-              dot="★"
               head={`Day ${selectedDays}`}
-              body={`Trial ends · ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
-              last
+              body={`Trial ends, ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
             />
           </View>
         )}
         {offer.status === 'ready' && selected && selectedDays === null && (
           <View style={styles.timeline}>
             <TimelineStop
-              dot="●"
               head="Today"
-              body={`Everything unlocked · ${selected.product.priceString} ${billedWord(selectedPeriod)} · no trial`}
-              first
-              last
+              body={`Everything unlocked, ${selected.product.priceString} ${billedWord(selectedPeriod)}. No trial on this plan.`}
             />
           </View>
         )}
@@ -697,22 +671,25 @@ const styles = StyleSheet.create({
   },
   stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
   stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
-  timeline: { flexDirection: 'row', marginTop: 24 },
-  tlStop: { alignItems: 'center', flex: 1, paddingHorizontal: 4 },
-  tlRail: { alignItems: 'center', flexDirection: 'row', marginBottom: 8, width: '100%' },
-  tlLine: { backgroundColor: 'rgba(94,230,168,0.25)', flex: 1, height: 2 },
-  tlLineHidden: { opacity: 0 },
-  tlDot: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(94,230,168,0.16)',
-    borderRadius: 999,
-    height: 30,
-    justifyContent: 'center',
-    width: 30,
+  timeline: {
+    backgroundColor: CARD,
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 24,
+    overflow: 'hidden',
   },
-  tlDotText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
-  tlHead: { color: TEXT, fontSize: 14, fontWeight: '800', textAlign: 'center' },
-  tlBody: { color: MUTED, fontSize: 12, lineHeight: 16, marginTop: 2, textAlign: 'center' },
+  tlStop: { flex: 1, paddingHorizontal: 12, paddingVertical: 14 },
+  tlDivider: { backgroundColor: 'rgba(242,245,243,0.08)', width: 1 },
+  tlHead: {
+    color: ACCENT,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  tlBody: { color: TEXT, fontSize: 14, fontWeight: '600', lineHeight: 19, marginTop: 6 },
   disclosure: {
     color: 'rgba(242,245,243,0.45)',
     fontSize: 11,
