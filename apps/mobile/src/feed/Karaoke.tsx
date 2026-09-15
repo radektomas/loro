@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -73,6 +73,71 @@ function normalizeSpotlight(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9ñ]/g, '');
 }
+
+/**
+ * THE BAND'S HEIGHT IS AN INVARIANT, AND THIS IS WHAT KEEPS IT ONE.
+ *
+ * The player frame is positioned once, from the first slide's layout, on
+ * the assumption that every band is the same height (FeedScreen
+ * onAreaLayout). The track had a MINIMUM height and no maximum, so a long
+ * cue at 26pt wrapped past it, the band grew, and the fixed frame sat over
+ * the seek bar and the top of the words. Measured against the live catalog
+ * on 2026-09-15: 86 of 374 videos had at least one such cue (worst +106pt),
+ * and the spelled-out numerals of 2026-09-07 added several ("mil
+ * novecientos setenta y nueve y mil novecientos noventa y siete"). Radek
+ * saw four to seven of them in one scrolling session.
+ *
+ * So the track is now a FIXED height that clips, and a cue that would not
+ * fit at 26pt is set smaller — the largest of these tiers whose estimated
+ * layout fits the budget. The estimate is a character-width model against
+ * the track's measured width; it errs generous (wider chars than the font
+ * really draws), so it steps down a beat early rather than a beat late.
+ */
+const SIZE_TIERS = [
+  { fontSize: 26, lineHeight: 34 },
+  { fontSize: 22, lineHeight: 30 },
+  { fontSize: 19, lineHeight: 26 },
+  { fontSize: 16, lineHeight: 22 },
+] as const;
+type SizeTier = (typeof SIZE_TIERS)[number];
+/** The track's fixed height — the web's min-h-[11rem], now a max too. */
+const TRACK_H = 176;
+/** Horizontal padding each chip adds around its text (styles.word). */
+const CHIP_PAD_W = 12;
+/** Vertical padding each chip adds (styles.word), so a row is lineHeight + this. */
+const CHIP_PAD_H = 4;
+/** Bold glyph width as a fraction of the font size — generous on purpose. */
+const CHAR_W = 0.56;
+const TRANSLATION_LINE_H = 23;
+const TRANSLATION_CHAR_W = 8;
+const TRANSLATION_MAX_LINES = 2;
+
+function sizeFor(words: readonly { text: string }[], translation: string, innerWidth: number): SizeTier {
+  if (innerWidth <= 0) return SIZE_TIERS[0];
+  const tl = Math.min(
+    TRANSLATION_MAX_LINES,
+    Math.max(1, Math.ceil((translation.length * TRANSLATION_CHAR_W) / innerWidth))
+  );
+  for (const tier of SIZE_TIERS) {
+    let rows = 1;
+    let x = 0;
+    for (const w of words) {
+      const ww = w.text.length * tier.fontSize * CHAR_W + CHIP_PAD_W;
+      if (x > 0 && x + ww > innerWidth) {
+        rows++;
+        x = ww;
+      } else {
+        x += ww;
+      }
+    }
+    const height = rows * (tier.lineHeight + CHIP_PAD_H) + 8 + tl * TRANSLATION_LINE_H;
+    if (height <= TRACK_H) return tier;
+  }
+  return SIZE_TIERS[SIZE_TIERS.length - 1];
+}
+
+/** The cue's size, read by every word chip in the line. */
+const SizeContext = createContext<SizeTier>(SIZE_TIERS[0]);
 
 export const Karaoke = memo(function Karaoke({
   cues,
@@ -269,10 +334,20 @@ export const Karaoke = memo(function Karaoke({
     );
   }, [blank, cue, cueIndex]);
 
+  const [trackWidth, setTrackWidth] = useState(0);
+  const translation = cue ? (cue.translations[language] ?? cue.translations.en ?? '') : '';
+  const size = useMemo(
+    () => (cue ? sizeFor(cue.words, translation, trackWidth - 32) : SIZE_TIERS[0]),
+    [cue, translation, trackWidth]
+  );
+
   return (
-    <View style={styles.track}>
+    <View
+      style={styles.track}
+      onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+    >
       {cue ? (
-        <>
+        <SizeContext.Provider value={size}>
           <View style={styles.line}>
             {cue.words.map((word, index) => {
               if (blank && index === blank.wordIndex) {
@@ -320,10 +395,10 @@ export const Karaoke = memo(function Karaoke({
               );
             })}
           </View>
-          <Text style={styles.translation}>
-            {cue.translations[language] ?? cue.translations.en ?? ''}
+          <Text style={styles.translation} numberOfLines={TRANSLATION_MAX_LINES}>
+            {translation}
           </Text>
-        </>
+        </SizeContext.Provider>
       ) : (
         // Reserve the height so the band — and therefore the player box above
         // it — never resizes mid-playback. The web file's note applies: a
@@ -411,6 +486,7 @@ function KaraokeWord({
   }, [spotlit, reducedMotion, pulse]);
 
   const ringStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  const size = useContext(SizeContext);
 
   /**
    * Pressable OUTSIDE the animated view, so the touch target is the word's own
@@ -432,7 +508,7 @@ function KaraokeWord({
             style={[StyleSheet.absoluteFill, styles.spotlightRing, ringStyle]}
           />
         )}
-        <Animated.Text style={[styles.wordText, textStyle]}>{text}</Animated.Text>
+        <Animated.Text style={[styles.wordText, size, textStyle]}>{text}</Animated.Text>
       </Animated.View>
     </Pressable>
   );
@@ -466,6 +542,7 @@ function BlankSlot({
   tier: string | null;
 }) {
   const answer = useRecallAnswer();
+  const size = useContext(SizeContext);
   const isLevel = kind === 'level';
   const color = isLevel ? LEVEL : ACCENT;
   // The web's own width formula (SubtitleTrack.tsx:358-364), in points rather
@@ -501,7 +578,7 @@ function BlankSlot({
         */}
         {answer.length > 0 ? (
           <Text
-            style={[styles.wordText, styles.blankSlotText, { color }]}
+            style={[styles.wordText, styles.blankSlotText, size, { minHeight: size.lineHeight, color }]}
             numberOfLines={1}
           >
             {answer}
@@ -516,7 +593,11 @@ function BlankSlot({
            * slot rather than as a gap in the sentence.
            */
           <Text
-            style={[styles.blankPrompt, { color: isLevel ? LEVEL_HALF : ACCENT_HALF }]}
+            style={[
+              styles.blankPrompt,
+              { lineHeight: size.lineHeight, minHeight: size.lineHeight },
+              { color: isLevel ? LEVEL_HALF : ACCENT_HALF },
+            ]}
             numberOfLines={1}
           >
             {gloss}
@@ -643,6 +724,7 @@ function RevealedWord({
     transform: [{ scale: scale.value }, { translateX: shift.value }],
   }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const size = useContext(SizeContext);
 
   const tint =
     result === 'wrong'
@@ -673,7 +755,7 @@ function RevealedWord({
           pointerEvents="none"
           style={[styles.revealGlow, { backgroundColor: glowColor }, glowStyle]}
         />
-        <Text style={[styles.wordText, tint]}>{text}</Text>
+        <Text style={[styles.wordText, size, tint]}>{text}</Text>
       </Animated.View>
       {result !== 'wrong' && celebrating && <FeatherBurst variant={result} />}
     </View>
@@ -702,8 +784,11 @@ const RULE_H = 3;
 const styles = StyleSheet.create({
   // Matches the web's min-h-[11rem]: sized for the common worst case (a
   // three-line cue plus a two-line translation), not the average.
-  track: { minHeight: 176, justifyContent: 'flex-end', paddingHorizontal: 16 },
-  placeholder: { height: 176 },
+  /** FIXED, not min — see SIZE_TIERS. Clips at the top (content sits at the
+      foot) in the rare case the smallest tier still does not fit; a clipped
+      first line beats a frame over the seek bar. */
+  track: { height: TRACK_H, overflow: 'hidden', justifyContent: 'flex-end', paddingHorizontal: 16 },
+  placeholder: { height: TRACK_H },
   line: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   word: { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   /** Louder than a hairline ON PURPOSE (2026-09-01): the tap is the beat the

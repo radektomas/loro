@@ -27,7 +27,9 @@ export function AuthorLine({ video }: { video: Video }) {
     return (
       <View style={styles.row}>
         <Pressable onPress={() => void Linking.openURL(author.channelUrl)}>
-          <Text style={styles.channel}>{author.channelTitle}</Text>
+          <Text style={styles.channel} numberOfLines={1}>
+            {author.channelTitle}
+          </Text>
         </Pressable>
         {author.license === 'creativeCommon' && (
           <Pressable
@@ -62,8 +64,12 @@ export function AuthorLine({ video }: { video: Video }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  /** ONE ROW, ALWAYS: the band's height is the player frame's invariant
+      (Karaoke SIZE_TIERS), so a long channel title truncates rather than
+      wrapping the chips to a second line. */
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   channel: {
+    flexShrink: 1,
     color: 'rgba(242,245,243,0.8)',
     fontSize: 14,
     fontWeight: '500',
