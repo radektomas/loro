@@ -231,29 +231,36 @@ function zeroPrice(product: PurchasesStoreProduct): string {
   }
 }
 
-function TimelineRow({
+/**
+ * One stop on the trial timeline. Laid out in a ROW of three (Radek,
+ * 2026-09-15: "put today, day 5 and day 7 into a line so you don't have to
+ * scroll") — each stop is a column with its dot on top and the line running
+ * through the dots, so the whole trial reads left to right in one glance.
+ */
+function TimelineStop({
   dot,
   head,
   body,
+  first = false,
   last = false,
 }: {
   dot: string;
   head: string;
   body: string;
+  first?: boolean;
   last?: boolean;
 }) {
   return (
-    <View style={styles.tlRow}>
+    <View style={styles.tlStop}>
       <View style={styles.tlRail}>
+        <View style={[styles.tlLine, first && styles.tlLineHidden]} />
         <View style={styles.tlDot}>
           <Text style={styles.tlDotText}>{dot}</Text>
         </View>
-        {!last && <View style={styles.tlLine} />}
+        <View style={[styles.tlLine, last && styles.tlLineHidden]} />
       </View>
-      <View style={styles.tlText}>
-        <Text style={styles.tlHead}>{head}</Text>
-        <Text style={styles.tlBody}>{body}</Text>
-      </View>
+      <Text style={styles.tlHead}>{head}</Text>
+      <Text style={styles.tlBody}>{body}</Text>
     </View>
   );
 }
@@ -510,30 +517,27 @@ export function PaywallScreen() {
             line instead. */}
         {offer.status === 'ready' && selected && selectedDays !== null && (
           <View style={styles.timeline}>
-            <TimelineRow
-              dot="●"
-              head="Today"
-              body="Everything unlocked. Every video, every word, every review."
-            />
-            <TimelineRow
+            <TimelineStop dot="●" head="Today" body="Everything unlocked" first />
+            <TimelineStop
               dot="🔔"
               head={`Day ${selectedDays - 2}`}
-              body="We remind you before anything is charged."
+              body="We remind you"
             />
-            <TimelineRow
+            <TimelineStop
               dot="★"
               head={`Day ${selectedDays}`}
-              body={`Your trial ends. ${selected.product.priceString} ${billedWord(selectedPeriod)} from here, unless you cancelled.`}
+              body={`Trial ends · ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
               last
             />
           </View>
         )}
         {offer.status === 'ready' && selected && selectedDays === null && (
           <View style={styles.timeline}>
-            <TimelineRow
+            <TimelineStop
               dot="●"
               head="Today"
-              body={`Everything unlocked, ${selected.product.priceString} ${billedWord(selectedPeriod)}. No trial on this plan.`}
+              body={`Everything unlocked · ${selected.product.priceString} ${billedWord(selectedPeriod)} · no trial`}
+              first
               last
             />
           </View>
@@ -693,22 +697,22 @@ const styles = StyleSheet.create({
   },
   stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
   stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
-  timeline: { marginTop: 22 },
-  tlRow: { flexDirection: 'row', gap: 12 },
-  tlRail: { alignItems: 'center', width: 28 },
+  timeline: { flexDirection: 'row', marginTop: 24 },
+  tlStop: { alignItems: 'center', flex: 1, paddingHorizontal: 4 },
+  tlRail: { alignItems: 'center', flexDirection: 'row', marginBottom: 8, width: '100%' },
+  tlLine: { backgroundColor: 'rgba(94,230,168,0.25)', flex: 1, height: 2 },
+  tlLineHidden: { opacity: 0 },
   tlDot: {
     alignItems: 'center',
     backgroundColor: 'rgba(94,230,168,0.16)',
     borderRadius: 999,
-    height: 28,
+    height: 30,
     justifyContent: 'center',
-    width: 28,
+    width: 30,
   },
   tlDotText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
-  tlLine: { backgroundColor: 'rgba(94,230,168,0.25)', flex: 1, marginVertical: 3, width: 2 },
-  tlText: { flex: 1, paddingBottom: 14 },
-  tlHead: { color: TEXT, fontSize: 14, fontWeight: '800' },
-  tlBody: { color: MUTED, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  tlHead: { color: TEXT, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  tlBody: { color: MUTED, fontSize: 12, lineHeight: 16, marginTop: 2, textAlign: 'center' },
   disclosure: {
     color: 'rgba(242,245,243,0.45)',
     fontSize: 11,

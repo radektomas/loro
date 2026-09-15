@@ -22,6 +22,7 @@ import { storage } from '@loro/core/storage';
 import { buildCalibrationWords, deriveLevel } from '@loro/core/calibration';
 import {
   ACCENT,
+  CARD,
   Body,
   BlankMock,
   ChoiceCard,
@@ -895,11 +896,12 @@ function PlanBuildStep({ state, next, isCurrent }: StepProps) {
   const goalMonths = state.goalMonths ?? DEFAULT_MONTHS;
   const goalDate = targetLabel(goalMonths);
   const lines = [
-    PLAN_BUILD.clips,
-    pace
-      ? `${pace.label} · ${pace.body.replace(/\.$/, '')}`
-      : PLAN_BUILD.paceFallback,
-    PLAN_BUILD.recall,
+    { label: 'Clips', text: PLAN_BUILD.clips },
+    {
+      label: 'Pace',
+      text: pace ? `${pace.label} · ${pace.body.replace(/\.$/, '')}` : PLAN_BUILD.paceFallback,
+    },
+    { label: 'Recall', text: PLAN_BUILD.recall },
   ];
   // The sum line needs a pace to multiply; without one there is no honest
   // number, so the hero simply does not render rather than inventing one.
@@ -992,21 +994,23 @@ function PlanBuildStep({ state, next, isCurrent }: StepProps) {
         </View>
       </View>
 
-      <View style={styles.planLines}>
+      {/* THE PLAN SHEET: one card, hairlines between rows, a small label
+          naming what each row is. No markers — the green tick circles read
+          as generated (Radek, 2026-09-15), and a sheet with labelled rows
+          is what a plan actually looks like. */}
+      <View style={styles.planSheet}>
         {lines.map((line, i) => (
           <Reveal
-            key={line}
+            key={line.label}
             active={isCurrent}
             // Spread across the bar's run, with the last landing before it
             // completes — a line arriving after "100%" would read as an
             // afterthought.
             delay={300 + i * ((PLAN_BUILD_MS - 900) / (lines.length - 1))}
           >
-            <View style={styles.planRow}>
-              <View style={styles.planTick}>
-                <Text style={styles.planTickMark}>✓</Text>
-              </View>
-              <Text style={styles.planText}>{line}</Text>
+            <View style={[styles.planSheetRow, i > 0 && styles.planSheetRowNext]}>
+              <Text style={styles.planLabel}>{line.label}</Text>
+              <Text style={styles.planText}>{line.text}</Text>
             </View>
           </Reveal>
         ))}
@@ -1090,12 +1094,13 @@ function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
   const why = whyLine(state.motivation);
   const rows = [
     {
+      label: 'Pace',
       head: pace ?? `${plan.wordsPerDay} words a day`,
       body: `${plan.wordsPerDay}${PLAN_READY.goalBody}`,
     },
-    why,
-    { head: `Starting at ${level}`, body: PLAN_READY.clips },
-    { head: PLAN_READY.recallHead, body: PLAN_READY.recall },
+    { label: 'Why', ...why },
+    { label: 'Level', head: `Starting at ${level}`, body: PLAN_READY.clips },
+    { label: 'Recall', head: PLAN_READY.recallHead, body: PLAN_READY.recall },
   ];
 
   return (
@@ -1111,13 +1116,11 @@ function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
       <Text style={styles.planReadyGloss}>{PLAN_READY.gloss}</Text>
       <Body>{`${PLAN_READY.targetPrefix}${goalDate}.`}</Body>
 
-      <View style={styles.planLines}>
+      <View style={styles.planSheet}>
         {rows.map((row, i) => (
-          <Reveal key={row.head} active={isCurrent} delay={200 + i * 180}>
-            <View style={styles.planRow}>
-              <View style={styles.planTick}>
-                <Text style={styles.planTickMark}>✓</Text>
-              </View>
+          <Reveal key={row.label} active={isCurrent} delay={200 + i * 180}>
+            <View style={[styles.planSheetRow, i > 0 && styles.planSheetRowNext]}>
+              <Text style={styles.planLabel}>{row.label}</Text>
               <View style={styles.planReadyText}>
                 <Text style={styles.planReadyHead}>{row.head}</Text>
                 <Text style={styles.planReadyBody}>{row.body}</Text>
@@ -1479,7 +1482,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     height: '100%',
   },
-  planLines: { gap: 16, marginTop: 26 },
   planReadyGloss: { color: MUTED, fontSize: 13, fontWeight: '600', marginTop: -6, marginBottom: 10 },
   planReadyText: { flex: 1, gap: 2 },
   planReadyHead: { color: TEXT, fontSize: 15, fontWeight: '700', lineHeight: 21 },
@@ -1502,16 +1504,33 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginTop: 10,
   },
-  planRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 12 },
-  planTick: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(94,230,168,0.15)',
-    borderRadius: 11,
-    height: 22,
-    justifyContent: 'center',
-    width: 22,
+  planSheet: {
+    backgroundColor: CARD,
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 26,
+    overflow: 'hidden',
   },
-  planTickMark: { color: ACCENT, fontSize: 12, fontWeight: '800' },
+  planSheetRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  planSheetRowNext: { borderTopColor: 'rgba(242,245,243,0.08)', borderTopWidth: 1 },
+  /** The row's name, in the accent, small caps, a fixed column so the text
+      lines up down the sheet. */
+  planLabel: {
+    color: ACCENT,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    lineHeight: 21,
+    textTransform: 'uppercase',
+    width: 58,
+  },
   planText: {
     color: TEXT,
     flex: 1,
