@@ -98,8 +98,6 @@ const PLAYER_LIFT_GAP = 6;
 
 const REVIEW_LEAD_IN_S = 3;
 
-/** Show the player anyway if the new video has not reported PLAYING by then. */
-const LANDING_FALLBACK_MS = 1500;
 /** Posters to warm beyond the active slide. */
 const POSTER_PREFETCH_AHEAD = 2;
 
@@ -882,37 +880,6 @@ function FeedBody({
    */
   const setPlayerBox = usePlayerBox();
 
-  /**
-   * THE HANDOFF WAITS FOR THE NEW VIDEO, NOT FOR THE LIST (2026-09-17).
-   *
-   * The fade-in used to fire the moment the list came to rest, and YouTube
-   * takes 300-800ms after a load to reach PLAYING — so most swipes revealed
-   * the player's black boot, or the previous clip's last frame, for a beat
-   * before the new video appeared. That beat was the "not smooth". Now the
-   * poster stays up until the page reports this slide's video PLAYING, and
-   * the live frame fades in over it; a stalled load (autoplay refused, a
-   * slow network) falls back to showing the player after LANDING_FALLBACK_MS
-   * so nothing can sit on a poster forever.
-   */
-  const playerStatus = usePlayerStatus();
-  const activeId = activeVideo?.id ?? null;
-  /** The video id the player has been SEEN playing. Latched per video: a
-      pause afterwards must keep the live frame, not drop back to the poster. */
-  const [landedFor, setLandedFor] = useState<string | null>(null);
-  useEffect(() => {
-    if (activeId !== null && playerStatus.loadedVideoId === activeId && playerStatus.playing) {
-      setLandedFor(activeId);
-    }
-  }, [activeId, playerStatus.loadedVideoId, playerStatus.playing]);
-  const landed = activeId !== null && landedFor === activeId;
-  const [landedFallback, setLandedFallback] = useState(false);
-  useEffect(() => {
-    setLandedFallback(false);
-    if (landed || activeId === null || dragging) return;
-    const t = setTimeout(() => setLandedFallback(true), LANDING_FALLBACK_MS);
-    return () => clearTimeout(t);
-  }, [landed, activeId, dragging]);
-
   const lift = useMemo(() => {
     if (!box || playerCovered <= 0 || windowHeight <= 0) return 0;
     const barTop = windowHeight - playerCovered;
@@ -924,11 +891,10 @@ function FeedBody({
       left: box?.left ?? 0,
       width: box?.width ?? 0,
       height: box?.height ?? 0,
-      visible:
-        Boolean(box) && active && !dragging && !promptObscured && (landed || landedFallback),
+      visible: Boolean(box) && active && !dragging && !promptObscured,
       lift,
     });
-  }, [box, active, dragging, promptObscured, lift, landed, landedFallback, setPlayerBox]);
+  }, [box, active, dragging, promptObscured, lift, setPlayerBox]);
 
   /**
    * POSTERS TWO SLIDES AHEAD. Each poster is a ~100KB network image that
