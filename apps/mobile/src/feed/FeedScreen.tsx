@@ -98,9 +98,6 @@ const PLAYER_LIFT_GAP = 6;
 
 const REVIEW_LEAD_IN_S = 3;
 
-/** Posters to warm beyond the active slide. */
-const POSTER_PREFETCH_AHEAD = 2;
-
 /** How often an EMPTY feed re-asks for the catalog — see the retry effect in
     FeedScreen. */
 const EMPTY_RETRY_MS = 10_000;
@@ -895,19 +892,6 @@ function FeedBody({
       lift,
     });
   }, [box, active, dragging, promptObscured, lift, setPlayerBox]);
-
-  /**
-   * POSTERS TWO SLIDES AHEAD. Each poster is a ~100KB network image that
-   * otherwise starts downloading when its slide mounts, one ahead — so a
-   * quick chain of flicks could land on a blank frame. Prefetching on every
-   * slide change keeps the next two warm in the image cache.
-   */
-  useEffect(() => {
-    for (let i = activeIndex + 1; i <= activeIndex + POSTER_PREFETCH_AHEAD; i++) {
-      const uri = videos[i]?.poster;
-      if (uri) void Image.prefetch(uri).catch(() => {});
-    }
-  }, [activeIndex, videos]);
 
   /**
    * PAUSE ON BLUR, AND STAY PAUSED ON RETURN.
