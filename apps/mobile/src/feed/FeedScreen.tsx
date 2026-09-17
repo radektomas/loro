@@ -800,6 +800,19 @@ function FeedBody({
   const activeVideo = videos[activeIndex] ?? null;
 
   /**
+   * THE NEXT SLIDE IS CUED ON THE PAGE'S STANDBY PLAYER while this one
+   * plays (PlayerHost.precue), so the forward swipe swaps players instead
+   * of cold-loading — see page.ts, TWO PLAYERS. Forward only: that is the
+   * swipe people make; a backwards swipe takes the old path.
+   */
+  const nextVideo = videos[activeIndex + 1] ?? null;
+  const precueApi = usePlayerApi();
+  useEffect(() => {
+    if (!active || !nextVideo) return;
+    precueApi.precue(nextVideo.youtubeId);
+  }, [active, nextVideo, precueApi]);
+
+  /**
    * The review session's boundary: a swipe past the last lifted video ends
    * it (reviewSession.noteReviewSlide), and the card goes up right here —
    * the player is starting a video with none of the user's words in it,

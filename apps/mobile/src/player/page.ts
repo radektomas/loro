@@ -40,8 +40,8 @@ export function buildPlayerPage({ initialVideoId, embedOrigin }: PlayerPageOptio
 
 const PAGE_TEMPLATE = `<!doctype html>
 <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-<style>html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden}#p{width:100%;height:100%}</style>
-</head><body><div id="p"></div>
+<style>html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden}#a,#b{position:absolute;left:0;top:0;width:100%;height:100%}</style>
+</head><body><div id="a"></div><div id="b"></div>
 <script>
 (function () {
   'use strict';
@@ -59,7 +59,31 @@ const PAGE_TEMPLATE = `<!doctype html>
   var PLAY_TIMEOUT_MS = 2500, BOOT_TIMEOUT_MS = 12000;
   var REANCHOR_EPS_S = 0.12, PERIODIC_MS = 5000;
 
-  var player = null, playerReady = false;
+  /**
+   * TWO PLAYERS, ONE MODEL (2026-09-17). 'player' is the ACTIVE one and
+   * every line of the model below reads it exactly as it always did.
+   * 'standby' is the other, invisible, holding the NEXT slide's video cued
+   * (cueVideoById: metadata and player prepared, no media fetched — a cued
+   * hidden player is not a playing hidden one, which is the line the embed
+   * terms draw). A 'load' whose id is the cued one SWAPS the two instead of
+   * cold-loading: the new active starts from cued, which reaches PLAYING
+   * in a fraction of a cold load's 300-800ms. Anything else — a backwards
+   * swipe, a review landing with a start time, a cue that errored — takes
+   * the old path on the active player, unchanged.
+   *
+   * Events are routed by identity: a player's onStateChange feeds the model
+   * only while that player IS 'player'; the standby's are logged and
+   * otherwise ignored, and its errors clear the cue so the load falls back.
+   */
+  var player = null, standby = null;
+  var readyA = false, readyB = false;
+  var playerId = 'a';
+  function playerReadyOf(p) { return p === playerA ? readyA : readyB; }
+  var playerA = null, playerB = null;
+  var playerReady = false;
+  var standbyCued = null;   // youtube id cued on the standby, or null
+  var pendingPrecue = null; // a precue that arrived before the standby was ready
+  var loadStartedAt = 0, loadKind = '';
   var playing = false;
   /**
    * THE SOUND STATE LIVES HERE, not in RN, and that is deliberate.
@@ -293,6 +317,10 @@ const PAGE_TEMPLATE = `<!doctype html>
     if (s === 1) {
       playing = true;
       closeSwapWindow();
+      if (loadStartedAt > 0) {
+        post({ type: 'log', msg: '[loro:swap] PLAYING ' + Math.round(now() - loadStartedAt) + 'ms after ' + loadKind });
+        loadStartedAt = 0;
+      }
       // STAY UNMUTED ACROSS SLIDE CHANGES. A swap should not silently return
       // the feed to muted; if the user has granted sound, re-assert it as each
       // new video reaches PLAYING. Idempotent — isMuted() gates the call — and
@@ -419,8 +447,39 @@ const PAGE_TEMPLATE = `<!doctype html>
       desiredPlay = false;
       settlePlay('AbortError (interrupted by pause)');
       if (playerReady) player.pauseVideo();
+    } else if (c.cmd === 'precue') {
+      // The next slide, into the invisible player. Never the active video,
+      // and never while the standby is not ready (kept for its onReady).
+      if (typeof c.videoId !== 'string' || !c.videoId) return;
+      if (!standby || !playerReadyOf(standby)) { pendingPrecue = c.videoId; return; }
+      if (standbyCued === c.videoId) return;
+      standbyCued = c.videoId;
+      standby.cueVideoById(c.videoId);
+      post({ type: 'log', msg: '[loro:swap] precued ' + c.videoId });
+    } else if (c.cmd === 'load' && c.andPlay && standby && playerReadyOf(standby) && standbyCued === c.videoId && !(typeof c.start === 'number' && c.start > 0)) {
+      // THE SWAP. The old active pauses and becomes the standby; the cued
+      // player becomes active, is shown, and plays from cued.
+      var old = player;
+      try { old.pauseVideo(); } catch (e) {}
+      settlePlay('AbortError (superseded by a swap)');
+      player = standby; standby = old;
+      playerId = (player === playerA) ? 'a' : 'b';
+      playerReady = playerReadyOf(player);
+      standbyCued = null;
+      document.getElementById(playerId === 'a' ? 'b' : 'a').style.visibility = 'hidden';
+      document.getElementById(playerId).style.visibility = 'visible';
+      anchorTime = 0; anchorAt = now(); lastRaw = -1; pendingSeek = null;
+      rateAsserts = 0; playing = false; closeSwapWindow();
+      loadStartedAt = now(); loadKind = 'swap';
+      postAnchor('load');
+      desiredPlay = true;
+      armPlay(c.id, PLAY_TIMEOUT_MS);
+      // Mute and rate re-assert themselves on PLAYING against whichever
+      // player is active — the standby was created muted like the first.
+      player.playVideo();
     } else if (c.cmd === 'load') {
       if (playing) openSwapWindow();
+      loadStartedAt = now(); loadKind = 'cold';
       // Reset the model exactly as the web adapter does: the old video's
       // samples say nothing about the new one, and leaving them would let the
       // outgoing clock drive the incoming slide's highlighting.
@@ -547,8 +606,70 @@ const PAGE_TEMPLATE = `<!doctype html>
 
   // Boot.
   post({ type: 'log', msg: 'page booted, origin=' + location.origin });
+  function stateFor(p) {
+    return function (e) {
+      if (p === player) { onState(e); return; }
+      var st = (e && typeof e.data === 'number') ? e.data : -2;
+      // A standby that reaches CUED is what a precue looks like when it
+      // lands; anything that starts PLAYING while hidden is stopped at once.
+      if (st === 1) { try { p.pauseVideo(); } catch (x) {} post({ type: 'log', msg: '[loro:swap] standby started playing hidden — paused' }); }
+    };
+  }
+  function errorFor(p) {
+    return function (e) {
+      if (p === player) {
+        // 100/101/150 = removed or embed-disabled. Settle the pending play
+        // so the slide falls to its stall path instead of hanging.
+        post({ type: 'error', code: e && e.data });
+        settlePlay('NotAllowedError (player error ' + (e && e.data) + ')');
+        return;
+      }
+      // The cued video cannot play here: forget it so the load falls back
+      // to a cold load on the active player rather than swapping into an error.
+      post({ type: 'log', msg: '[loro:swap] standby error ' + (e && e.data) + ' for ' + standbyCued + ' — cue dropped' });
+      standbyCued = null;
+    };
+  }
+  function makePlayer(id, onReadyFn) {
+    return new YT.Player(id, {
+      videoId: '__INITIAL_VIDEO_ID__',
+      host: 'https://www.youtube-nocookie.com',
+      width: '100%',
+      height: '100%',
+      playerVars: {
+        autoplay: 0, controls: 0, playsinline: 1,
+        mute: 1,
+        rel: 0, fs: 0, disablekb: 1, iv_load_policy: 3,
+        origin: '__EMBED_ORIGIN__',
+      },
+      events: {
+        onReady: onReadyFn,
+        onStateChange: function (e) { stateFor(id === 'a' ? playerA : playerB)(e); },
+        onPlaybackRateChange: function (e) {
+          if ((id === 'a' ? playerA : playerB) !== player) return;
+          applyRate(e && typeof e.data === 'number' ? e.data : 1);
+          postRates();
+          assertDesiredRate('rateChange');
+        },
+        onError: function (e) { errorFor(id === 'a' ? playerA : playerB)(e); },
+      },
+    });
+  }
   window.onYouTubeIframeAPIReady = function () {
-    player = new YT.Player('p', {
+    // The standby, first: invisible, created muted, ready to take a precue.
+    document.getElementById('b').style.visibility = 'hidden';
+    playerB = makePlayer('b', function () {
+      readyB = true;
+      try { playerB.mute(); } catch (e) {}
+      if (standby === playerB && pendingPrecue) {
+        standbyCued = pendingPrecue; pendingPrecue = null;
+        playerB.cueVideoById(standbyCued);
+        post({ type: 'log', msg: '[loro:swap] precued (deferred) ' + standbyCued });
+      }
+      post({ type: 'log', msg: '[loro:swap] standby ready' });
+    });
+    standby = playerB;
+    playerA = player = new YT.Player('a', {
       videoId: '__INITIAL_VIDEO_ID__',
       // Privacy host for the embed; the LOADER script below must stay on
       // www.youtube.com — the nocookie variant 404s (verified in-repo).
@@ -565,6 +686,7 @@ const PAGE_TEMPLATE = `<!doctype html>
       },
       events: {
         onReady: function () {
+          readyA = true;
           playerReady = true;
           player.mute();
           post({ type: 'ready' });
@@ -591,13 +713,14 @@ const PAGE_TEMPLATE = `<!doctype html>
             if (pendingPlay) { clearTimeout(pendingPlay.timer); armPlay(pendingPlay.id, PLAY_TIMEOUT_MS); }
           }
         },
-        onStateChange: onState,
+        onStateChange: function (e) { stateFor(playerA)(e); },
         // The ONLY writer of the rate mirror. Every path that wants a new speed goes
         // through setPlaybackRate and waits to be told — so the clock's
         // multiplier is always something the player confirmed, never something
         // RN asked for. The available list is re-read here too: it is per-video
         // and a swap can change it.
         onPlaybackRateChange: function (e) {
+          if (playerA !== player) return;
           applyRate(e && typeof e.data === 'number' ? e.data : 1);
           postRates();
           // THE TRIGGER THAT ACTUALLY CATCHES A SWAP RESET. loadVideoById
@@ -606,12 +729,7 @@ const PAGE_TEMPLATE = `<!doctype html>
           // announces it, so it is the event that must put the choice back.
           assertDesiredRate('rateChange');
         },
-        onError: function (e) {
-          // 100/101/150 = removed or embed-disabled. Settle the pending play
-          // so the slide falls to its stall path instead of hanging.
-          post({ type: 'error', code: e && e.data });
-          settlePlay('NotAllowedError (player error ' + (e && e.data) + ')');
-        },
+        onError: function (e) { errorFor(playerA)(e); },
       },
     });
   };

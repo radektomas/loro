@@ -92,6 +92,12 @@ export type PlayerApi = {
    * different second" is a real request.
    */
   loadAndPlay(youtubeId: string, startSeconds?: number): void;
+  /**
+   * Cue this video on the page's STANDBY player so the next loadAndPlay of
+   * the same id swaps to it instead of cold-loading (page.ts, TWO PLAYERS).
+   * Idempotent and safe before the page is ready. Never the active video.
+   */
+  precue(youtubeId: string): void;
   play(): void;
   pause(): void;
   togglePlay(): void;
@@ -148,6 +154,7 @@ export type PlayerStatus = {
 
 const NOOP_API: PlayerApi = {
   loadAndPlay: () => {},
+  precue: () => {},
   play: () => {},
   pause: () => {},
   togglePlay: () => {},
@@ -384,6 +391,10 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           availableRates: null,
         }));
         send({ cmd: 'load', videoId: youtubeId, andPlay: true, start });
+      },
+      precue(youtubeId: string) {
+        if (requestedIdRef.current === youtubeId) return;
+        send({ cmd: 'precue', videoId: youtubeId });
       },
       play() {
         send({ cmd: 'play' });
