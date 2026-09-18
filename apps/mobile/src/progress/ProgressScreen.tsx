@@ -20,7 +20,6 @@ import {
   dayKey,
   distinctWords,
   dueCount,
-  isLearned,
   isReady,
   learnedThisWeek,
   nextDueAt,
@@ -31,6 +30,7 @@ import {
 } from '@loro/core/progress';
 import { launchReview, launchReviewOfWord } from '../feed/launchReview';
 import { requestWordsView } from '../vocab/wordsView';
+import { onLearnedFace } from '../feed/wordLearned';
 import {
   formatTime,
   getPermissionState,
@@ -426,8 +426,8 @@ function LearnedCard({
  * correct/false words, learned words amount, it makes more sense". The
  * row reads "61 of 75 words → Casi Local", the meter is the way through
  * that step, and each rung on the ladder names its threshold. `learned`
- * is the same distinct-word isLearned count the Learned card prints, so
- * the two never disagree. The feed's own level (storage.getLevelState) is
+ * is the same distinct-word count the Learned card and the Words tab's
+ * Learned pile print (onLearnedFace), so the three never disagree. The feed's own level (storage.getLevelState) is
  * no longer shown anywhere on this page; it still drives the blanks.
  */
 function LevelSection({ learned }: { learned: number }) {
@@ -798,19 +798,20 @@ export function ProgressScreen({
   }, [active]);
 
   /**
-   * The honest totals. `learned` is core's isLearned over DISTINCT words —
-   * not `state === 'known'`, which counted starter grants and one-shot
-   * fills, and not rows, which counted "de" three times. `learning` is the
-   * pipeline: saved, not yet learned, not slipped. ("Times remembered",
-   * the sum of every correct answer, used to sit beside them; nobody could
-   * say what it meant, so it went with the chips.)
+   * The totals, and they are the Words tab's. `learned` is onLearnedFace
+   * over DISTINCT words — earned from memory OR filed as known, not
+   * slipped — because Radek wants ONE number everywhere (2026-09-18:
+   * "progress words learned need to be definitely unified"; the Learned
+   * pile said 80 while this said 60). One-shot level fills are demoted on
+   * read (core demoteLegacyLevelFill), so they do not creep back in.
+   * `learning` is the pipeline: saved, not yet learned, not slipped.
    */
   const totals = useMemo(() => {
     const distinct = distinctWords(words);
     let learned = 0;
     let learning = 0;
     for (const w of distinct) {
-      if (isLearned(w)) learned++;
+      if (onLearnedFace(w)) learned++;
       else if (w.state === 'learning' || w.state === 'new') learning++;
     }
     return { learned, learning };
