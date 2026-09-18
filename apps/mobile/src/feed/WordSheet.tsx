@@ -23,7 +23,7 @@ import { glossText, lookupGloss, normalizeSurface } from '@loro/core/dictionary'
 import { storage } from '@loro/core/storage';
 import { track } from '../platform/analytics';
 import { usePlayerApi } from '../player/PlayerHost';
-import { SentenceWithHit } from './SentenceWithHit';
+import { SentenceWithHit, TranslationWithHit } from './SentenceWithHit';
 
 /**
  * The tap-a-word save sheet — the RN half of components/WordSheet.tsx.
@@ -673,7 +673,11 @@ function WordSheetText({
           {gloss?.note ? <Text style={styles.note}>{gloss.note}</Text> : null}
           <Text style={styles.context}>In this sentence:</Text>
           {sentence}
-          <Text style={styles.contextBody}>{contextTranslation}</Text>
+          <TranslationWithHit
+            text={contextTranslation}
+            gloss={wordGloss}
+            style={styles.contextBody}
+          />
         </>
       ) : (
         <>

@@ -25,7 +25,7 @@ import {
 import { formatDue, KNOWN_BOX } from '@loro/core/srs';
 import { storage } from '@loro/core/storage';
 import { getExplanations } from '../platform/explanations';
-import { SentenceWithHit } from '../feed/SentenceWithHit';
+import { SentenceWithHit, TranslationWithHit } from '../feed/SentenceWithHit';
 
 /**
  * The word-detail sheet on the Words tab — tap a row, get everything the app
@@ -272,7 +272,11 @@ export function WordDetailSheet({
                       style={styles.exampleEs}
                     />
                     {cueTranslation && (
-                      <Text style={styles.exampleTr}>{cueTranslation}</Text>
+                      <TranslationWithHit
+                        text={cueTranslation}
+                        gloss={word.translation}
+                        style={styles.exampleTr}
+                      />
                     )}
                   </View>
                 );
