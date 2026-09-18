@@ -2,7 +2,8 @@ import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
 import { pickFirstBlankTarget, pickReviewTarget, spokenSurfaces } from '@loro/core/occurrences';
-import { distinctWords, isLearned } from '@loro/core/progress';
+import { distinctWords } from '@loro/core/progress';
+import { onLearnedFace } from './wordLearned';
 import { normalizeSurface } from '@loro/core/dictionary';
 import { track } from '../platform/analytics';
 import { getPlan } from '../progress/plan';
@@ -133,7 +134,7 @@ export function launchPracticeLearned(
   const catalog = getCatalog();
   const spoken = spokenSurfaces(catalog);
   const picked = distinctWords(storage.getSavedWords())
-    .filter((w) => isLearned(w) && spoken.has(normalizeSurface(w.text)))
+    .filter((w) => onLearnedFace(w) && spoken.has(normalizeSurface(w.text)))
     .sort((a, b) => (a.lastReviewedAt ?? 0) - (b.lastReviewedAt ?? 0))
     .slice(0, Math.max(1, size));
   for (const w of picked) storage.reviewNow(w.text, w.videoId);

@@ -18,6 +18,7 @@ import { normalizeSurface } from '@loro/core/dictionary';
 import { getCatalog } from '@loro/core/catalog';
 import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
 import { takeRequestedWordsView, type WordsView } from './wordsView';
+import { onLearnedFace } from '../feed/wordLearned';
 import { ReviewPickerSheet } from '../progress/ReviewPicker';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
@@ -52,10 +53,10 @@ const TONE_COLOR: Record<Tone, string> = {
 
 /** Plain-language status a stranger understands (vocab/page.tsx:73-78). */
 const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
-  lapsed: { human: 'Slipped — review soon', tone: 'red' },
+  lapsed: { human: 'Slipped, review soon', tone: 'red' },
   new: { human: 'Just saved', tone: 'muted' },
   learning: { human: 'Getting it', tone: 'accent' },
-  known: { human: 'Known', tone: 'accent' },
+  known: { human: 'Known ✓', tone: 'accent' },
 };
 
 type SectionKey = 'lapsed' | 'ready' | 'new' | 'learning' | 'known';
@@ -204,9 +205,14 @@ function WordRow({
         <View style={styles.rowHead}>
           <View style={styles.rowHeadText}>
             <Text style={styles.word}>{word.text}</Text>
-            <Text style={styles.translation} numberOfLines={2}>
-              {word.translation}
-            </Text>
+            {/* Radek, 2026-09-18: the Spanish should lead and the meaning
+                should read as the meaning. A quiet box, not a second line
+                of the same grey. */}
+            <View style={styles.meaningBox}>
+              <Text style={styles.translation} numberOfLines={2}>
+                {word.translation}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -381,21 +387,30 @@ export function VocabScreen({
   const learnedAll = useMemo(
     () =>
       distinctWords(words)
-        .filter(isLearned)
+        .filter(onLearnedFace)
         .sort(
           (a, b) =>
+            Number(isLearned(b)) - Number(isLearned(a)) ||
             (b.learnedAt ?? b.lastReviewedAt ?? 0) - (a.learnedAt ?? a.lastReviewedAt ?? 0)
         ),
     [words]
   );
+  const earnedCount = useMemo(() => learnedAll.filter(isLearned).length, [learnedAll]);
   const learnedKeys = useMemo(
     () => new Set(learnedAll.map((w) => normalizeAnswer(w.text) || w.text)),
     [learnedAll]
   );
-  /** The Learning face's rows: everything not yet earned. */
+  /**
+   * The Learning face's rows: everything that needs attention. A learned
+   * word that is DUE stays here too — it is in the do-it-now pile — so it
+   * can appear on both faces for as long as it waits.
+   */
   const learningRows = useMemo(
-    () => oneRowPerWord(words).filter((w) => !learnedKeys.has(normalizeAnswer(w.text) || w.text)),
-    [words, learnedKeys]
+    () =>
+      oneRowPerWord(words).filter(
+        (w) => w.dueAt <= now || !learnedKeys.has(normalizeAnswer(w.text) || w.text)
+      ),
+    [words, learnedKeys, now]
   );
   const filtered = useMemo(() => {
     const needle = fold(query.trim());
@@ -641,8 +656,11 @@ export function VocabScreen({
                   {learnedAll.length} {learnedAll.length === 1 ? 'word' : 'words'} learned
                 </Text>
                 <Text style={styles.reviewBody}>
-                  Right on different days, from memory. They come back now and then
-                  so they stay yours — or bring a few forward now.
+                  {learnedAll.length - earnedCount > 0
+                    ? `${earnedCount} earned from memory, ${learnedAll.length - earnedCount} you already knew. `
+                    : 'Right on different days, from memory. '}
+                  They come back now and then so they stay yours, or bring a few
+                  forward now.
                 </Text>
                 <Pressable
                   onPress={practise}
@@ -907,12 +925,19 @@ const styles = StyleSheet.create({
   rowBody: { paddingBottom: 14, paddingLeft: 16, paddingRight: 10, paddingTop: 12 },
   rowHead: { flexDirection: 'row', gap: 8 },
   rowHeadText: { flex: 1 },
-  word: { color: '#f2f5f3', fontSize: 17, fontWeight: '700' },
+  word: { color: '#f2f5f3', fontSize: 21, fontWeight: '800', letterSpacing: -0.2 },
+  meaningBox: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(242,245,243,0.07)',
+    borderRadius: 8,
+    marginTop: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
   translation: {
-    color: 'rgba(242,245,243,0.6)',
-    fontSize: 13,
+    color: 'rgba(242,245,243,0.85)',
+    fontSize: 14,
     lineHeight: 18,
-    marginTop: 1,
   },
   rowMeta: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 10 },
   stateLabel: { fontSize: 12, fontWeight: '700' },

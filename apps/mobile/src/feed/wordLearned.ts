@@ -28,6 +28,19 @@ export type WordLearnedRaise = {
 
 const listeners = new Set<(raise: WordLearnedRaise) => void>();
 
+/**
+ * BELONGS ON THE LEARNED FACE. Earned (core isLearned) OR filed as known
+ * — a starter-deck word the user said they knew is a word they know, and
+ * Radek wants it with the others, not in the Learning list (2026-09-18:
+ * "some of the known words are still kept in the learning side"). A
+ * slipped word is out until it is earned back, whatever its history: it
+ * belongs under Slipped, where it gets fixed. The Progress hero number
+ * stays core's isLearned — earned only.
+ */
+export function onLearnedFace(word: SavedWord): boolean {
+  return word.state !== 'lapsed' && (isLearned(word) || word.state === 'known');
+}
+
 /** Distinct learned words — the Progress page's own number. */
 export function learnedTotal(words: readonly SavedWord[] = storage.getSavedWords()): number {
   let n = 0;
