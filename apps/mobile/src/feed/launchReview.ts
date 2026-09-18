@@ -1,7 +1,9 @@
 import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
-import { pickFirstBlankTarget, pickReviewTarget } from '@loro/core/occurrences';
+import { pickFirstBlankTarget, pickReviewTarget, spokenSurfaces } from '@loro/core/occurrences';
+import { distinctWords, isLearned } from '@loro/core/progress';
+import { normalizeSurface } from '@loro/core/dictionary';
 import { track } from '../platform/analytics';
 import { getPlan } from '../progress/plan';
 import { enableRecallForSession } from './recall';
@@ -112,6 +114,68 @@ export function launchReview(source: ReviewSource): ReviewLaunch {
  * video speaks falls back to the plain armed feed; the picker greys those
  * out, so it should not happen from there.
  */
+/**
+ * PRACTISE LEARNED WORDS — the Learned face's button.
+ *
+ * A learned word is off the schedule for days or weeks, so "practise them"
+ * has to bring some forward or the feed would blank none of them
+ * (computeBlankPlan only asks due words). Up to a day's goal of them, the
+ * ones unseen longest first, and only words the catalog actually speaks —
+ * a starter-deck word with no clip cannot be practised in a video. Then the
+ * same landing and session every Review door makes, so the run has an end
+ * and a card. Right answers move them further out; a miss lapses the word
+ * honestly, which is what practice is for.
+ */
+export function launchPracticeLearned(
+  source: ReviewSource,
+  size: number = getPlan().wordsPerDay
+): ReviewLaunch & { count: number } {
+  const catalog = getCatalog();
+  const spoken = spokenSurfaces(catalog);
+  const picked = distinctWords(storage.getSavedWords())
+    .filter((w) => isLearned(w) && spoken.has(normalizeSurface(w.text)))
+    .sort((a, b) => (a.lastReviewedAt ?? 0) - (b.lastReviewedAt ?? 0))
+    .slice(0, Math.max(1, size));
+  for (const w of picked) storage.reviewNow(w.text, w.videoId);
+
+  const all = storage.getSavedWords();
+  const at = Date.now();
+  const keys = new Set(picked.map((w) => `${w.text}\u0000${w.videoId}`));
+  const rows = all.filter((w) => keys.has(`${w.text}\u0000${w.videoId}`));
+  const found = rows.length > 0 ? pickFirstBlankTarget(catalog, rows, all, { now: at }) : null;
+  if (found) {
+    requestReviewTarget({
+      videoId: found.landing.videoId,
+      word: found.word.text,
+      startsAt: found.landing.startsAt,
+    });
+    startReviewSession(source, picked.length);
+    console.log(
+      `[loro:review] practise ${picked.length} learned from ${source} -> "${found.word.text}" ` +
+        `in ${found.landing.videoId} @${found.landing.startsAt.toFixed(1)}s`
+    );
+  } else {
+    console.log(`[loro:review] practise from ${source}: nothing to land on (${picked.length} picked)`);
+  }
+  enableRecallForSession();
+  const launch = {
+    due: all.filter((w) => w.dueAt <= at).length,
+    landed: found !== null,
+    willBlank: found?.landing.willBlank ?? false,
+    word: found?.word.text ?? null,
+    count: picked.length,
+  };
+  track('review_started', {
+    source,
+    due: launch.due,
+    landed: launch.landed,
+    willBlank: launch.willBlank,
+    practice: true,
+    size: picked.length,
+  });
+  return launch;
+}
+
 export function launchReviewOfWord(
   word: SavedWord,
   source: ReviewSource,

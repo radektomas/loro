@@ -38,6 +38,7 @@ import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
 import { DayDoneCard } from './DayDoneCard';
 import { LevelUpCard } from './LevelUpCard';
+import { LearnedToast } from './LearnedToast';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
@@ -238,11 +239,14 @@ export function FeedScreen({
   reel,
   walkthrough,
   onGoToProgress,
+  onGoToWords,
 }: {
   active: boolean;
   /** The day-done card's "see my progress". Absent during onboarding, where
       there is no Progress tab to go to. */
   onGoToProgress?: () => void;
+  /** The word-learned toast's tap. Absent during onboarding, like the above. */
+  onGoToWords?: () => void;
   /**
    * SHOW EXACTLY THESE VIDEOS, IN THIS ORDER — the onboarding taste reel.
    *
@@ -491,6 +495,7 @@ export function FeedScreen({
       walkthrough={walkthrough}
       onAreaLayout={onAreaLayout}
       onGoToProgress={onGoToProgress}
+      onGoToWords={onGoToWords}
     />
   );
 }
@@ -606,6 +611,7 @@ function FeedBody({
   walkthrough,
   onAreaLayout,
   onGoToProgress,
+  onGoToWords,
 }: {
   videos: EmbedVideo[];
   box: Omit<PlayerBox, 'visible'> | null;
@@ -616,6 +622,7 @@ function FeedBody({
   walkthrough?: FeedWalkthrough;
   onAreaLayout: (event: LayoutChangeEvent) => void;
   onGoToProgress?: () => void;
+  onGoToWords?: () => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   /**
@@ -1079,6 +1086,10 @@ function FeedBody({
               before the paywall. Not rendering them cannot be defeated. */}
           {!walkthrough && (
             <>
+              {/* A word earned (wordLearned.ts): a toast at the band's foot,
+                  never over the frame. Before the cards in paint order, so
+                  any card raised at the same moment covers it. */}
+              <LearnedToast onGoToWords={onGoToWords} />
               {/* Raised by RecallHost after the first correct answer's
                   celebration, and silent every other time. Last child so it
                   covers the band and the answer bar as well as the slide. */}

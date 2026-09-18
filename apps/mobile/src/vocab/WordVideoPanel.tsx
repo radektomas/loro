@@ -25,6 +25,7 @@ import {
 } from '../feed/Celebration';
 import { gradeAnswer, recallHaptic } from '../feed/recall';
 import { noteCorrectRecall } from '../platform/notifications';
+import { surfaceLearned } from '../feed/wordLearned';
 import { PLAYER_EMBED_ORIGIN } from '../platform/config';
 import { buildHearItPage } from './hearItPage';
 
@@ -93,6 +94,8 @@ export function WordVideoPanel({
   const [phase, setPhase] = useState<Phase>('loading');
   const [answer, setAnswer] = useState('');
   const [result, setResult] = useState<AnswerMatch | null>(null);
+  /** This answer crossed the word into learned — said on the graded face. */
+  const [learnedNow, setLearnedNow] = useState(false);
   /** Raised once the user has committed to answering — 'listen' mode asks. */
   const [reviewing, setReviewing] = useState(mode === 'review');
   /** Bumped to remount the player for "play again". */
@@ -182,7 +185,10 @@ export function WordVideoPanel({
     if (typedNow !== undefined && typedNow !== answer) setAnswer(typedNow);
     const match = gradeAnswer(typed, word);
     const wasCorrect = match !== 'wrong';
+    const wasLearned = surfaceLearned(word.text, storage.getSavedWords());
     storage.gradeWord(word.text, word.videoId, wasCorrect);
+    const earned = !wasLearned && surfaceLearned(word.text, storage.getSavedWords());
+    setLearnedNow(earned);
     if (wasCorrect) {
       storage.applyRecallLevelCredit();
       recallHaptic();
@@ -193,9 +199,10 @@ export function WordVideoPanel({
     // A near-miss counts as correct (core's matchAnswer), so it earns the same
     // exit — only slower, because the corrected spelling is worth reading.
     if (wasCorrect) {
+      // A word just earned gets a beat longer: the line below is worth reading.
       closeTimer.current = setTimeout(
         onDone,
-        match === 'correct' ? CELEBRATE_MS : CELEBRATE_MS + 700
+        (match === 'correct' ? CELEBRATE_MS : CELEBRATE_MS + 700) + (earned ? 900 : 0)
       );
     }
   };
@@ -355,6 +362,11 @@ export function WordVideoPanel({
             It was «{spoken}» — you typed «{answer.trim() || '—'}».
           </Text>
         )}
+        {phase === 'graded' && learnedNow && (
+          <Text style={styles.learnedNote}>
+            ¡Palabra aprendida! Right on different days, from memory — it's yours now.
+          </Text>
+        )}
 
         {/* The other half of the centring — see stageAbove. */}
         {!showPlayer && <View style={styles.stageBelow} />}
@@ -505,6 +517,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 12,
+  },
+  learnedNote: {
+    color: '#5ee6a8',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 12,
+    textAlign: 'center',
   },
   actions: { marginTop: 'auto', paddingTop: 12 },
   actionsTight: { marginTop: 16 },

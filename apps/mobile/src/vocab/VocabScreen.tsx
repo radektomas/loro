@@ -12,8 +12,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
-import type { WordOccurrence } from '@loro/core/occurrences';
-import { launchReview, launchReviewOfWord } from '../feed/launchReview';
+import { spokenSurfaces, type WordOccurrence } from '@loro/core/occurrences';
+import { distinctWords, isLearned } from '@loro/core/progress';
+import { normalizeSurface } from '@loro/core/dictionary';
+import { getCatalog } from '@loro/core/catalog';
+import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
+import { takeRequestedWordsView, type WordsView } from './wordsView';
 import { ReviewPickerSheet } from '../progress/ReviewPicker';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
@@ -51,7 +55,7 @@ const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
   lapsed: { human: 'Slipped — review soon', tone: 'red' },
   new: { human: 'Just saved', tone: 'muted' },
   learning: { human: 'Getting it', tone: 'accent' },
-  known: { human: 'Learned ✓', tone: 'accent' },
+  known: { human: 'Known', tone: 'accent' },
 };
 
 type SectionKey = 'lapsed' | 'ready' | 'new' | 'learning' | 'known';
@@ -61,7 +65,7 @@ const SECTION_META: Record<SectionKey, { label: string; dot: string }> = {
   ready: { label: 'READY', dot: '#5ee6a8' }, //      due now — do these
   new: { label: 'JUST SAVED', dot: 'rgba(242,245,243,0.55)' },
   learning: { label: 'LEARNING', dot: 'rgba(242,245,243,0.55)' },
-  known: { label: 'LEARNED', dot: '#5ee6a8' }, //    accent green — the wins
+  known: { label: 'KNOWN', dot: '#5ee6a8' }, //      known on arrival, never earned
 };
 
 /** Section order = urgency order. Empty sections are dropped before render. */
@@ -115,6 +119,11 @@ function moreUrgent(a: SavedWord, b: SavedWord): boolean {
   return a.dueAt < b.dueAt;
 }
 
+/** Search hit, on the word or its meaning. */
+function matches(w: SavedWord, needle: string): boolean {
+  return fold(w.text).includes(needle) || fold(w.translation).includes(needle);
+}
+
 function oneRowPerWord(words: readonly SavedWord[]): SavedWord[] {
   const byKey = new Map<string, SavedWord>();
   for (const w of words) {
@@ -163,6 +172,9 @@ function WordRow({
   const meta = STATE_META[word.state];
   const isLapsed = word.state === 'lapsed';
   const isKnown = word.state === 'known';
+  // Earned, not merely filed: core's isLearned. A starter-deck grant is
+  // 'known' and says so; only a word the review loop earned says Learned.
+  const human = isLearned(word) ? 'Learned ✓' : meta.human;
   // Felt progress toward LEARNED, not toward the top of the schedule: the
   // bar moves by thirds and hits full exactly when the row flips to
   // "Learned ✓". Measuring against MAX_BOX made a nearly-learned word look
@@ -200,7 +212,7 @@ function WordRow({
 
         <View style={styles.rowMeta}>
           <Text style={[styles.stateLabel, { color: TONE_COLOR[meta.tone] }]}>
-            {meta.human}
+            {human}
           </Text>
           <ProgressCount word={word} />
           <Text
@@ -236,6 +248,14 @@ export function VocabScreen({
   const [words, setWords] = useState<SavedWord[]>(() => storage.getSavedWords());
   const [query, setQuery] = useState('');
   const [now, setNow] = useState(() => Date.now());
+  /**
+   * TWO FACES (Radek, 2026-09-18: the learned words felt "hidden and not
+   * clear"). LEARNING is the urgency list this screen always was, minus the
+   * words already earned; LEARNED is those words, newest first, with the
+   * count up top and a way to practise them. A door elsewhere (the toast,
+   * the Progress card) can ask for a face before switching here.
+   */
+  const [view, setView] = useState<WordsView>('learning');
   /**
    * THE ONE WINDOW, AND WHAT IS INSIDE IT.
    *
@@ -316,6 +336,8 @@ export function VocabScreen({
     // above keeps it current while it is.
     refresh();
     setNow(Date.now());
+    const requested = takeRequestedWordsView();
+    if (requested) setView(requested);
     const tick = setInterval(() => setNow(Date.now()), 60_000);
     return () => {
       clearInterval(tick);
@@ -351,14 +373,52 @@ export function VocabScreen({
     []
   );
 
+  /**
+   * The earned words, one per surface, freshest crossing first — the same
+   * fold the Progress count and the toast use (core distinctWords +
+   * isLearned), so all three say the same number.
+   */
+  const learnedAll = useMemo(
+    () =>
+      distinctWords(words)
+        .filter(isLearned)
+        .sort(
+          (a, b) =>
+            (b.learnedAt ?? b.lastReviewedAt ?? 0) - (a.learnedAt ?? a.lastReviewedAt ?? 0)
+        ),
+    [words]
+  );
+  const learnedKeys = useMemo(
+    () => new Set(learnedAll.map((w) => normalizeAnswer(w.text) || w.text)),
+    [learnedAll]
+  );
+  /** The Learning face's rows: everything not yet earned. */
+  const learningRows = useMemo(
+    () => oneRowPerWord(words).filter((w) => !learnedKeys.has(normalizeAnswer(w.text) || w.text)),
+    [words, learnedKeys]
+  );
   const filtered = useMemo(() => {
     const needle = fold(query.trim());
-    const rows = oneRowPerWord(words);
-    if (!needle) return rows;
-    return rows.filter(
-      (w) => fold(w.text).includes(needle) || fold(w.translation).includes(needle)
-    );
-  }, [words, query]);
+    return needle ? learningRows.filter((w) => matches(w, needle)) : learningRows;
+  }, [learningRows, query]);
+  const learnedFiltered = useMemo(() => {
+    const needle = fold(query.trim());
+    return needle ? learnedAll.filter((w) => matches(w, needle)) : learnedAll;
+  }, [learnedAll, query]);
+  /**
+   * How many learned words a practice run could actually blank — the ones
+   * the catalog speaks (launchPracticeLearned's own test). Folded over the
+   * whole catalog, so only while the face that shows it is up.
+   */
+  const practisable = useMemo(() => {
+    if (view !== 'learned' || learnedAll.length === 0) return 0;
+    const spoken = spokenSurfaces(getCatalog());
+    return learnedAll.filter((w) => spoken.has(normalizeSurface(w.text))).length;
+  }, [view, learnedAll]);
+  const onTheWay = useMemo(
+    () => learningRows.filter((w) => w.state === 'new' || w.state === 'learning').length,
+    [learningRows]
+  );
 
   /**
    * Bucket into urgency sections. A due, non-lapsed word surfaces in READY
@@ -443,6 +503,13 @@ export function VocabScreen({
     onGoToFeed();
   };
 
+  /** The Learned face's button: no window is up, so this can navigate. */
+  const practise = () => {
+    const launch = launchPracticeLearned('words');
+    if (launch.count === 0) return;
+    onGoToFeed();
+  };
+
   /** The window is provably gone. Safe to reset, and safe to navigate. */
   const afterDismiss = () => {
     if (dismissTimerRef.current) {
@@ -473,6 +540,38 @@ export function VocabScreen({
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.title}>Words</Text>
+        {words.length > 0 && (
+          <View style={styles.segments} accessibilityRole="tablist">
+            {(
+              [
+                { key: 'learning', label: 'Learning', count: learningRows.length },
+                { key: 'learned', label: 'Learned', count: learnedAll.length },
+              ] as const
+            ).map((seg) => {
+              const on = view === seg.key;
+              return (
+                <Pressable
+                  key={seg.key}
+                  onPress={() => setView(seg.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  style={({ pressed }) => [
+                    styles.segment,
+                    on && styles.segmentOn,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.segmentText, on && styles.segmentTextOn]}>
+                    {seg.label}
+                    <Text style={[styles.segmentCount, on && styles.segmentCountOn]}>
+                      {'  '}{seg.count}
+                    </Text>
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
         <View style={styles.search}>
           <Text style={styles.searchGlyph}>⌕</Text>
           <TextInput
@@ -491,7 +590,9 @@ export function VocabScreen({
             rows. */}
         {words.length > 0 && (
           <Text style={styles.headerHint}>
-            Tap a word to hear it, or to review it right here in its video.
+            {view === 'learned'
+              ? 'Tap a word to hear it again, or to test yourself on it in its video.'
+              : 'Tap a word to hear it, or to review it right here in its video.'}
           </Text>
         )}
       </View>
@@ -524,6 +625,57 @@ export function VocabScreen({
               <Text style={styles.ctaText}>Go to the feed</Text>
             </Pressable>
           </View>
+        ) : view === 'learned' ? (
+          learnedAll.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>Nothing learned yet</Text>
+              <Text style={styles.emptyBody}>
+                Get a word right on two different days, from memory, and it lands
+                here for good.{onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.learnedCard}>
+                <Text style={styles.reviewCount}>
+                  {learnedAll.length} {learnedAll.length === 1 ? 'word' : 'words'} learned
+                </Text>
+                <Text style={styles.reviewBody}>
+                  Right on different days, from memory. They come back now and then
+                  so they stay yours — or bring a few forward now.
+                </Text>
+                <Pressable
+                  onPress={practise}
+                  disabled={practisable === 0}
+                  accessibilityRole="button"
+                  accessibilityHint="Opens the feed with a few learned words as blanks"
+                  style={({ pressed }) => [
+                    styles.cta,
+                    practisable === 0 && styles.ctaOff,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.ctaText, practisable === 0 && styles.ctaTextOff]}>
+                    {practisable === 0
+                      ? 'None of these is in a video yet'
+                      : 'Practise them in the feed'}
+                  </Text>
+                </Pressable>
+              </View>
+              {learnedFiltered.length === 0 ? (
+                <Text style={styles.noMatch}>No learned words match “{query.trim()}”.</Text>
+              ) : (
+                learnedFiltered.map((word) => (
+                  <WordRow
+                    key={wordKey(word)}
+                    word={word}
+                    now={now}
+                    onOpen={() => openDetail(word)}
+                  />
+                ))
+              )}
+            </>
+          )
         ) : (
           <>
             {dueTotal > 0 && (
@@ -659,6 +811,34 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 8,
   },
+  segments: {
+    backgroundColor: 'rgba(242,245,243,0.07)',
+    borderRadius: 14,
+    flexDirection: 'row',
+    marginBottom: 10,
+    padding: 3,
+  },
+  segment: {
+    alignItems: 'center',
+    borderRadius: 11,
+    flex: 1,
+    paddingVertical: 8,
+  },
+  segmentOn: { backgroundColor: '#5ee6a8' },
+  segmentText: { color: 'rgba(242,245,243,0.7)', fontSize: 14, fontWeight: '700' },
+  segmentTextOn: { color: '#06130d' },
+  segmentCount: { color: 'rgba(242,245,243,0.4)', fontWeight: '600' },
+  segmentCountOn: { color: 'rgba(6,19,13,0.6)' },
+  learnedCard: {
+    backgroundColor: '#141a17',
+    borderColor: 'rgba(94,230,168,0.25)',
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 18,
+    padding: 18,
+  },
+  ctaOff: { backgroundColor: 'rgba(242,245,243,0.12)' },
+  ctaTextOff: { color: 'rgba(242,245,243,0.6)' },
   scroll: { padding: 16, paddingBottom: 32 },
   empty: { alignItems: 'center', gap: 8, paddingTop: 48 },
   emptyTitle: { color: '#f2f5f3', fontSize: 17, fontWeight: '700' },

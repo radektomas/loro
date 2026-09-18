@@ -22,6 +22,7 @@ import { track } from '../platform/analytics';
 import { CELEBRATE_MS } from './Celebration';
 import { maybeCelebrateDayDone } from './dayDone';
 import { maybeLevelUp } from './levelUp';
+import { raiseWordLearned, surfaceLearned } from './wordLearned';
 import {
   noteReviewAnswer,
   raiseReviewEnd,
@@ -918,12 +919,18 @@ export function RecallHost({
       // beat keys on. Via ref so grade() keeps its stable identity.
       onBlankResolvedRef.current?.(entry.kind, entry.cueIndex);
 
+      // The word-learned toast keys on the SURFACE crossing into learned
+      // through this grade (wordLearned.ts) — read before and after.
+      let learnedNow = false;
       if (entry.kind === 'recall') {
+        const wasLearned = surfaceLearned(entry.word.text, storage.getSavedWords());
         const { word } = storage.gradeWord(
           entry.word.text,
           entry.word.videoId,
           wasCorrect
         );
+        learnedNow =
+          word !== null && !wasLearned && surfaceLearned(entry.word.text, storage.getSavedWords());
         flog(
           `grade "${entry.word.text}" ${match.toUpperCase()} -> ` +
             (word
@@ -1035,7 +1042,7 @@ export function RecallHost({
       // celebration. Parked in a ref rather than closed over: the next grade
       // clears this timer and arms its own, and an end held only by the
       // cleared closure would never be shown.
-      const reviewEnd = noteReviewAnswer(entry.word.text, wasCorrect);
+      const reviewEnd = noteReviewAnswer(entry.word.text, wasCorrect, learnedNow);
       if (reviewEnd) pendingEndRef.current = reviewEnd;
       const sessionComplete =
         entry.kind === 'recall' &&
@@ -1057,6 +1064,9 @@ export function RecallHost({
             // moment; a parked session end shows on the next answer.
             if (wasCorrect && maybeLevelUp()) return;
             if (wasCorrect && !reviewSessionActive() && maybeCelebrateDayDone()) return;
+            // The one that happens most: a word earned. A toast, not a
+            // card — it only shows when no card took the moment.
+            if (learnedNow) raiseWordLearned(entry.word);
             const raised = sessionComplete && (await maybeAskToSaveProgress());
             if (!raised && wasCorrect) await maybeAskForPermission();
           })();

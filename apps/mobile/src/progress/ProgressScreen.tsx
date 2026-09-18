@@ -29,6 +29,7 @@ import {
   type WeekDay,
 } from '@loro/core/progress';
 import { launchReview, launchReviewOfWord } from '../feed/launchReview';
+import { requestWordsView } from '../vocab/wordsView';
 import {
   formatTime,
   getPermissionState,
@@ -341,11 +342,14 @@ function LearnedCard({
   week,
   onTheWay,
   allTime,
+  onSeeAll,
 }: {
   week: SavedWord[];
   /** Saved, not yet learned, not slipped — the pipeline. */
   onTheWay: number;
   allTime: number;
+  /** The Words tab's Learned face — every word ever earned, and practice. */
+  onSeeAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const { content, small } = splitFunctionWords(week);
@@ -392,6 +396,19 @@ function LearnedCard({
           <Text style={styles.allTimeStrong}>{onTheWay}</Text> on the way
         </Text>
       </View>
+      {/* Radek, 2026-09-18: the learned words felt "hidden and not clear".
+          The count was here all along; this is the door to the words
+          themselves, and to practising them. */}
+      {onSeeAll && allTime > 0 && (
+        <Pressable
+          onPress={onSeeAll}
+          accessibilityRole="button"
+          accessibilityHint="Opens the Words tab on your learned words"
+          style={({ pressed }) => [styles.seeAll, pressed && styles.pressed]}
+        >
+          <Text style={styles.seeAllText}>See all {allTime} learned words ›</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -722,9 +739,12 @@ function NotificationsSection() {
 export function ProgressScreen({
   active,
   onGoToFeed,
+  onGoToWords,
 }: {
   active: boolean;
   onGoToFeed: () => void;
+  /** The learned card's door to the Words tab's Learned face. */
+  onGoToWords?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [words, setWords] = useState<SavedWord[]>(() => storage.getSavedWords());
@@ -887,6 +907,14 @@ export function ProgressScreen({
                 week={learnedWeek}
                 onTheWay={totals.learning}
                 allTime={totals.learned}
+                onSeeAll={
+                  onGoToWords
+                    ? () => {
+                        requestWordsView('learned');
+                        onGoToWords();
+                      }
+                    : undefined
+                }
               />
             </View>
 
@@ -1189,6 +1217,8 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   allTimeStrong: { color: 'rgba(242,245,243,0.8)', fontWeight: '700' },
+  seeAll: { marginTop: 10 },
+  seeAllText: { color: '#5ee6a8', fontSize: 14, fontWeight: '700' },
 
   /** LEVEL. */
   tier: {

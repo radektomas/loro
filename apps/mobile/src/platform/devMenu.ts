@@ -2,6 +2,7 @@ import { DevSettings } from 'react-native';
 import { devRaiseDayDone } from '../feed/dayDone';
 import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
+import { devRaiseWordLearned } from '../feed/wordLearned';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { storageDriver } from './storage';
 
@@ -191,6 +192,7 @@ export function installDevMenu(): void {
     { name: 'Loro · Card: level up → Nativo', run: () => devRaiseLevelUp(6) },
     { name: 'Loro · Card: day done', run: () => devRaiseDayDone() },
     { name: 'Loro · Card: review session done', run: () => devRaiseReviewEnd() },
+    { name: 'Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     /** Back to the real verdict from RevenueCat. */
     {
       name: 'Loro · Clear paywall override',
