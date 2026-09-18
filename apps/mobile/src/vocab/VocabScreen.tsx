@@ -57,27 +57,20 @@ const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
   known: { human: 'Known ✓', tone: 'accent' },
 };
 
-type SectionKey = 'today' | 'lapsed' | 'ready' | 'new' | 'learning' | 'known';
-
-const SECTION_META: Record<SectionKey, { label: string; dot: string }> = {
-  today: { label: 'TODAY', dot: '#f2f5f3' }, //      answered today — the day's work, kept in view
-  lapsed: { label: 'SLIPPED', dot: '#f87171' }, //   reserved red — most urgent
-  ready: { label: 'READY', dot: '#5ee6a8' }, //      due now — do these
-  new: { label: 'JUST SAVED', dot: 'rgba(242,245,243,0.55)' },
-  learning: { label: 'LEARNING', dot: 'rgba(242,245,243,0.55)' },
-  known: { label: 'KNOWN', dot: '#5ee6a8' }, //      known on arrival, never earned
-};
-
-/** Section order = urgency order, after the day's own log. Empty sections
-    are dropped before render. */
-const SECTION_ORDER: SectionKey[] = ['today', 'lapsed', 'ready', 'new', 'learning', 'known'];
-
-/** Local midnight, for "answered today". */
-function startOfDay(now: number): number {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
+/**
+ * THE FOUR PILES (Radek, 2026-09-18: "saved / in practice / slipped /
+ * learned ... show them based of the time the user saved / practiced /
+ * slipped it"). Every word is in exactly one, and each pile is ordered by
+ * its own moment: Saved by when it was saved, In practice and Slipped by
+ * the last answer, Learned by when it was earned. No urgency sections, no
+ * day log — the review card above the piles is where "ready" lives.
+ */
+const PILES: { key: WordsView; label: string }[] = [
+  { key: 'saved', label: 'Saved' },
+  { key: 'practice', label: 'In practice' },
+  { key: 'slipped', label: 'Slipped' },
+  { key: 'learned', label: 'Learned' },
+];
 
 /**
  * How long to wait for the window's own dismissal callback before assuming it
@@ -268,7 +261,7 @@ export function VocabScreen({
    * count up top and a way to practise them. A door elsewhere (the toast,
    * the Progress card) can ask for a face before switching here.
    */
-  const [view, setView] = useState<WordsView>('learning');
+  const [view, setView] = useState<WordsView>('saved');
   /**
    * THE ONE WINDOW, AND WHAT IS INSIDE IT.
    *
@@ -409,80 +402,30 @@ export function VocabScreen({
     () => new Set(learnedAll.map((w) => normalizeAnswer(w.text) || w.text)),
     [learnedAll]
   );
-  /**
-   * The Learning face's rows: everything not on the Learned face. A learned
-   * word that comes due stays on Learned (its row says "Ready now" and the
-   * picker lists it) — Radek: a word at 3 of 3 has no business here.
-   */
-  const learningRows = useMemo(
+  /** Everything not on the Learned pile, one row per surface. */
+  const rest = useMemo(
     () => oneRowPerWord(words).filter((w) => !learnedKeys.has(normalizeAnswer(w.text) || w.text)),
     [words, learnedKeys]
   );
-  const filtered = useMemo(() => {
-    const needle = fold(query.trim());
-    return needle ? learningRows.filter((w) => matches(w, needle)) : learningRows;
-  }, [learningRows, query]);
-  /**
-   * TODAY — every word answered today, right or wrong, latest first, with
-   * its next date on the row. Radek, 2026-09-18: "I do one word correct and
-   * then it disappears for like a week." It did not disappear; it was
-   * rescheduled, and nothing kept it in view. This does, until midnight.
-   * One row per surface (the row that was answered), and a word learned
-   * today is here too even though it has moved to the Learned face — this
-   * is the day's log, not a state. Excluded from the sections below so
-   * nothing is listed twice.
-   */
-  const todayRows = useMemo(() => {
-    const since = startOfDay(now);
-    const byKey = new Map<string, SavedWord>();
-    for (const w of words) {
-      if (w.lastReviewedAt === null || w.lastReviewedAt < since) continue;
-      const key = normalizeAnswer(w.text) || w.text;
-      const held = byKey.get(key);
-      if (!held || w.lastReviewedAt > (held.lastReviewedAt ?? 0)) byKey.set(key, w);
-    }
-    const needle = fold(query.trim());
-    return [...byKey.values()]
-      .filter((w) => !needle || matches(w, needle))
-      .sort((a, b) => (b.lastReviewedAt ?? 0) - (a.lastReviewedAt ?? 0));
-  }, [words, now, query]);
-  const learnedFiltered = useMemo(() => {
-    const needle = fold(query.trim());
-    return needle ? learnedAll.filter((w) => matches(w, needle)) : learnedAll;
-  }, [learnedAll, query]);
-  const onTheWay = useMemo(
-    () => learningRows.filter((w) => w.state === 'new' || w.state === 'learning').length,
-    [learningRows]
+  const piles = useMemo<Record<WordsView, SavedWord[]>>(
+    () => ({
+      saved: rest.filter((w) => w.state === 'new').sort((a, b) => b.savedAt - a.savedAt),
+      practice: rest
+        .filter((w) => w.state === 'learning' || w.state === 'known')
+        .sort((a, b) => (b.lastReviewedAt ?? b.savedAt) - (a.lastReviewedAt ?? a.savedAt)),
+      slipped: rest
+        .filter((w) => w.state === 'lapsed')
+        .sort((a, b) => (b.lastReviewedAt ?? b.savedAt) - (a.lastReviewedAt ?? a.savedAt)),
+      learned: learnedAll,
+    }),
+    [rest, learnedAll]
   );
-
-  /**
-   * Bucket into urgency sections. A due, non-lapsed word surfaces in READY
-   * instead of its state section, so every word appears exactly once and the
-   * list reads most-urgent → least from top to bottom (vocab/page.tsx:356-378).
-   */
-  const sections = useMemo(() => {
-    const buckets: Record<SectionKey, SavedWord[]> = {
-      today: todayRows,
-      lapsed: [],
-      ready: [],
-      new: [],
-      learning: [],
-      known: [],
-    };
-    const todayKeys = new Set(todayRows.map((w) => normalizeAnswer(w.text) || w.text));
-    for (const w of filtered) {
-      if (todayKeys.has(normalizeAnswer(w.text) || w.text)) continue;
-      if (w.state === 'lapsed') buckets.lapsed.push(w);
-      else if (w.dueAt <= now) buckets.ready.push(w);
-      else buckets[w.state].push(w);
-    }
-    return SECTION_ORDER.map((key) => ({
-      key,
-      ...SECTION_META[key],
-      // Today keeps its own order (latest answer first); the rest by due.
-      words: key === 'today' ? buckets.today : buckets[key].sort((a, b) => a.dueAt - b.dueAt),
-    })).filter((s) => s.words.length > 0);
-  }, [filtered, todayRows, now]);
+  const pileRows = useMemo(() => {
+    const needle = fold(query.trim());
+    const rows = piles[view];
+    return needle ? rows.filter((w) => matches(w, needle)) : rows;
+  }, [piles, view, query]);
+  const onTheWay = piles.saved.length + piles.practice.length;
 
   const dueTotal = useMemo(
     () => words.filter((w) => w.dueAt <= now).length,
@@ -582,38 +525,6 @@ export function VocabScreen({
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.title}>Words</Text>
-        {words.length > 0 && (
-          <View style={styles.segments} accessibilityRole="tablist">
-            {(
-              [
-                { key: 'learning', label: 'Learning', count: learningRows.length },
-                { key: 'learned', label: 'Learned', count: learnedAll.length },
-              ] as const
-            ).map((seg) => {
-              const on = view === seg.key;
-              return (
-                <Pressable
-                  key={seg.key}
-                  onPress={() => setView(seg.key)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: on }}
-                  style={({ pressed }) => [
-                    styles.segment,
-                    on && styles.segmentOn,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={[styles.segmentText, on && styles.segmentTextOn]}>
-                    {seg.label}
-                    <Text style={[styles.segmentCount, on && styles.segmentCountOn]}>
-                      {'  '}{seg.count}
-                    </Text>
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
         <View style={styles.search}>
           <Text style={styles.searchGlyph}>⌕</Text>
           <TextInput
@@ -632,9 +543,7 @@ export function VocabScreen({
             rows. */}
         {words.length > 0 && (
           <Text style={styles.headerHint}>
-            {view === 'learned'
-              ? 'Tap a word to hear it again, or to test yourself on it in its video.'
-              : 'Tap a word to hear it, or to review it right here in its video.'}
+            Tap a word to hear it, or to review it right here in its video.
           </Text>
         )}
       </View>
@@ -667,51 +576,6 @@ export function VocabScreen({
               <Text style={styles.ctaText}>Go to the feed</Text>
             </Pressable>
           </View>
-        ) : view === 'learned' ? (
-          learnedAll.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Nothing learned yet</Text>
-              <Text style={styles.emptyBody}>
-                Get a word right on two different days, from memory, and it lands
-                here for good.{onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.learnedCard}>
-                <Text style={styles.reviewCount}>
-                  {learnedAll.length} {learnedAll.length === 1 ? 'word' : 'words'} learned
-                </Text>
-                <Text style={styles.reviewBody}>
-                  {learnedAll.length - earnedCount > 0
-                    ? `${earnedCount} earned from memory, ${learnedAll.length - earnedCount} you already knew. `
-                    : 'Right on different days, from memory. '}
-                  They come back now and then so they stay yours, or bring a few
-                  forward now.
-                </Text>
-                <Pressable
-                  onPress={practise}
-                  accessibilityRole="button"
-                  accessibilityHint="Choose a learned word, then the feed opens on it"
-                  style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
-                >
-                  <Text style={styles.ctaText}>Practise in the feed</Text>
-                </Pressable>
-              </View>
-              {learnedFiltered.length === 0 ? (
-                <Text style={styles.noMatch}>No learned words match “{query.trim()}”.</Text>
-              ) : (
-                learnedFiltered.map((word) => (
-                  <WordRow
-                    key={wordKey(word)}
-                    word={word}
-                    now={now}
-                    onOpen={() => openDetail(word)}
-                  />
-                ))
-              )}
-            </>
-          )
         ) : (
           <>
             {dueTotal > 0 && (
@@ -734,27 +598,87 @@ export function VocabScreen({
               </View>
             )}
 
-            {sections.length === 0 ? (
-              <Text style={styles.noMatch}>No words match “{query.trim()}”.</Text>
-            ) : (
-              sections.map((section) => (
-                <View key={section.key} style={styles.section}>
-                  <View style={styles.sectionHead}>
-                    <View
-                      style={[styles.sectionDot, { backgroundColor: section.dot }]}
-                    />
-                    <Text style={styles.sectionLabel}>{section.label}</Text>
-                    <Text style={styles.sectionCount}>{section.words.length}</Text>
-                  </View>
-                  {section.words.map((word) => (
-                    <WordRow
-                      key={wordKey(word)}
-                      word={word}
-                      now={now}
-                      onOpen={() => openDetail(word)}
-                    />
-                  ))}
+            {/* The piles, below the review card (Radek: "move them below
+                the modal"). Four across, each its count. */}
+            <View style={styles.segments} accessibilityRole="tablist">
+              {PILES.map((pile) => {
+                const on = view === pile.key;
+                return (
+                  <Pressable
+                    key={pile.key}
+                    onPress={() => setView(pile.key)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={`${pile.label}, ${piles[pile.key].length}`}
+                    style={({ pressed }) => [
+                      styles.segment,
+                      on && styles.segmentOn,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.segmentCount, on && styles.segmentCountOn]}>
+                      {piles[pile.key].length}
+                    </Text>
+                    <Text style={[styles.segmentText, on && styles.segmentTextOn]} numberOfLines={1}>
+                      {pile.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {view === 'learned' && learnedAll.length > 0 && (
+              <View style={styles.learnedCard}>
+                <Text style={styles.reviewCount}>
+                  {learnedAll.length} {learnedAll.length === 1 ? 'word' : 'words'} learned
+                </Text>
+                <Text style={styles.reviewBody}>
+                  {learnedAll.length - earnedCount > 0
+                    ? `${earnedCount} earned from memory, ${learnedAll.length - earnedCount} you already knew. `
+                    : 'Right on different days, from memory. '}
+                  They come back now and then so they stay yours, or bring a few
+                  forward now.
+                </Text>
+                <Pressable
+                  onPress={practise}
+                  accessibilityRole="button"
+                  accessibilityHint="Choose a learned word, then the feed opens on it"
+                  style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+                >
+                  <Text style={styles.ctaText}>Practise in the feed</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {pileRows.length === 0 ? (
+              query.trim() ? (
+                <Text style={styles.noMatch}>No words here match “{query.trim()}”.</Text>
+              ) : (
+                <View style={styles.pileEmpty}>
+                  <Text style={styles.emptyTitle}>
+                    {view === 'saved' && 'Nothing waiting'}
+                    {view === 'practice' && 'Nothing in practice yet'}
+                    {view === 'slipped' && 'Nothing slipped'}
+                    {view === 'learned' && 'Nothing learned yet'}
+                  </Text>
+                  <Text style={styles.emptyBody}>
+                    {view === 'saved' && 'Tap a word in a video to save it.'}
+                    {view === 'practice' &&
+                      'Get a saved word right once, as a blank, and it moves here.'}
+                    {view === 'slipped' && 'A word you get wrong lands here until you get it back.'}
+                    {view === 'learned' &&
+                      `Get a word right on two different days, from memory, and it lands here for good.${onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}`}
+                  </Text>
                 </View>
+              )
+            ) : (
+              pileRows.map((word) => (
+                <WordRow
+                  key={wordKey(word)}
+                  word={word}
+                  now={now}
+                  onOpen={() => openDetail(word)}
+                />
               ))
             )}
           </>
@@ -858,20 +782,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(242,245,243,0.07)',
     borderRadius: 14,
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 16,
     padding: 3,
   },
   segment: {
     alignItems: 'center',
     borderRadius: 11,
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   segmentOn: { backgroundColor: '#5ee6a8' },
-  segmentText: { color: 'rgba(242,245,243,0.7)', fontSize: 14, fontWeight: '700' },
-  segmentTextOn: { color: '#06130d' },
-  segmentCount: { color: 'rgba(242,245,243,0.4)', fontWeight: '600' },
-  segmentCountOn: { color: 'rgba(6,19,13,0.6)' },
+  segmentCount: { color: '#f2f5f3', fontSize: 16, fontWeight: '800' },
+  segmentCountOn: { color: '#06130d' },
+  segmentText: { color: 'rgba(242,245,243,0.55)', fontSize: 11, fontWeight: '700', marginTop: 1 },
+  segmentTextOn: { color: 'rgba(6,19,13,0.75)' },
+  pileEmpty: { alignItems: 'center', gap: 6, paddingTop: 28 },
   learnedCard: {
     backgroundColor: '#141a17',
     borderColor: 'rgba(94,230,168,0.25)',
@@ -915,27 +840,6 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: '#06130d', fontSize: 15, fontWeight: '800' },
   pressed: { opacity: 0.7 },
-  section: { marginBottom: 20 },
-  sectionHead: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 7,
-    marginBottom: 8,
-    paddingHorizontal: 2,
-  },
-  sectionDot: { borderRadius: 999, height: 7, width: 7 },
-  sectionLabel: {
-    color: 'rgba(242,245,243,0.55)',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-  },
-  sectionCount: {
-    color: 'rgba(242,245,243,0.35)',
-    fontSize: 11,
-    fontWeight: '700',
-    marginLeft: 'auto',
-  },
   row: {
     backgroundColor: '#141a17',
     borderRadius: 16,

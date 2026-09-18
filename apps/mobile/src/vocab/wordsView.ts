@@ -4,7 +4,7 @@
  * learned words" is a tab switch plus this. VocabScreen takes the request
  * on the way in and clears it; nothing else reads it.
  */
-export type WordsView = 'learning' | 'learned';
+export type WordsView = 'saved' | 'practice' | 'slipped' | 'learned';
 
 let requested: WordsView | null = null;
 
