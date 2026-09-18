@@ -578,7 +578,7 @@ export function VocabScreen({
                     {dueTotal} {dueTotal === 1 ? 'word' : 'words'} ready
                   </Text>
                   <Text style={styles.readyBody} numberOfLines={1}>
-                    Back on schedule. Pick one, the feed opens on it.
+                    Pick one to review in its video
                   </Text>
                 </View>
                 <Pressable
