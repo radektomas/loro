@@ -54,7 +54,7 @@ const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
   lapsed: { human: 'Missed, review soon', tone: 'red' },
   new: { human: 'Just saved', tone: 'muted' },
   learning: { human: 'Getting it', tone: 'accent' },
-  known: { human: 'Known ✓', tone: 'accent' },
+  known: { human: 'Known', tone: 'accent' },
 };
 
 /**
@@ -136,29 +136,42 @@ function oneRowPerWord(words: readonly SavedWord[]): SavedWord[] {
 }
 
 /**
- * "2 of 3" — how close this word is to Learned, in words a stranger reads on
- * the first pass.
- *
- * THIS REPLACED THE LEITNER DOT METER (2026-09-01, Radek: "we have like the
- * 5 dots but i don't think anybody gets that" — it was six, which is the
- * point). The dots measured box-of-MAX_BOX, so a word ONE correct answer
- * from flipping to Learned showed a third of a meter, and nothing anywhere
- * said what a dot was. Progress here is measured against KNOWN_BOX — the
- * exact threshold stateForBox flips on — so the number, the fill bar and
- * the "Learned ✓" flip all tell one story. Boxes past KNOWN_BOX keep
- * spacing reviews out (that is the schedule's business, shown by the due
- * line); they are not a ladder the user is asked to read.
- *
- * Rendered only for new/learning: a lapsed row already carries the one
- * message that matters ("Slipped"), and a learned row's count is over.
+ * THE ROW — a card that reads top-down: the Spanish word, its meaning, then
+ * one quiet line of status and timing. Radek, 2026-09-18: the old row's
+ * green left edge and bottom fill bar were "super basic, AI tell". Both are
+ * gone. Progress toward Learned is now a tiny three-segment meter in the
+ * corner (the same "of 3" as before, felt not read), a learned word wears a
+ * mint check, a missed word a soft red mark and a warmer card — nothing
+ * striped, nothing bordered.
  */
-function ProgressCount({ word }: { word: SavedWord }) {
+function Meter({ word }: { word: SavedWord }) {
   if (word.state !== 'new' && word.state !== 'learning') return null;
+  const have = Math.min(word.box, KNOWN_BOX);
   return (
-    <Text style={styles.progressCount}>
-      {Math.min(word.box, KNOWN_BOX)} of {KNOWN_BOX}
-    </Text>
+    <View style={styles.meter} accessibilityLabel={`${have} of ${KNOWN_BOX}`}>
+      {Array.from({ length: KNOWN_BOX }, (_, i) => (
+        <View key={i} style={[styles.meterSeg, i < have && styles.meterSegOn]} />
+      ))}
+    </View>
   );
+}
+
+function Badge({ word }: { word: SavedWord }) {
+  if (word.state === 'lapsed') {
+    return (
+      <View style={[styles.badge, styles.badgeMissed]}>
+        <Text style={[styles.badgeText, styles.badgeTextMissed]}>!</Text>
+      </View>
+    );
+  }
+  if (word.state === 'known') {
+    return (
+      <View style={[styles.badge, styles.badgeLearned]}>
+        <Text style={[styles.badgeText, styles.badgeTextLearned]}>✓</Text>
+      </View>
+    );
+  }
+  return <Meter word={word} />;
 }
 
 function WordRow({
@@ -172,17 +185,9 @@ function WordRow({
 }) {
   const meta = STATE_META[word.state];
   const isLapsed = word.state === 'lapsed';
-  const isKnown = word.state === 'known';
   // Earned, not merely filed: core's isLearned. A starter-deck grant is
   // 'known' and says so; only a word the review loop earned says Learned.
-  const human = isLearned(word) ? 'Learned ✓' : meta.human;
-  // Felt progress toward LEARNED, not toward the top of the schedule: the
-  // bar moves by thirds and hits full exactly when the row flips to
-  // "Learned ✓". Measuring against MAX_BOX made a nearly-learned word look
-  // a third done — see ProgressCount for the whole verdict.
-  const fillPct = isKnown ? 100 : (Math.min(word.box, KNOWN_BOX) / KNOWN_BOX) * 100;
-  const edge = isLapsed ? '#f87171' : isKnown ? '#5ee6a8' : 'rgba(94,230,168,0.4)';
-  const fill = isLapsed ? '#f87171' : TONE_COLOR[meta.tone];
+  const human = isLearned(word) ? 'Learned' : meta.human;
 
   // The whole row opens the detail sheet; remove lives in the sheet's footer
   // now, which un-clutters the row and puts a destructive action one
@@ -191,53 +196,25 @@ function WordRow({
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={`${word.text} — details`}
-      style={({ pressed }) => [
-        styles.row,
-        isLapsed && styles.rowLapsed,
-        pressed && styles.rowPressed,
-      ]}
+      accessibilityLabel={`${word.text}, ${word.translation}. ${human}. ${friendlyDue(word, now)}`}
+      style={({ pressed }) => [styles.row, isLapsed && styles.rowMissed, pressed && styles.rowPressed]}
     >
-      {/* left status edge — pulls the eye to lapsed words */}
-      <View style={[styles.edge, { backgroundColor: edge }]} />
-
-      <View style={styles.rowBody}>
-        <View style={styles.rowHead}>
-          <View style={styles.rowHeadText}>
-            <Text style={styles.word}>{word.text}</Text>
-            {/* Radek, 2026-09-18: the Spanish should lead and the meaning
-                should read as the meaning. A quiet box, not a second line
-                of the same grey. */}
-            <View style={styles.meaningBox}>
-              <Text style={styles.translation} numberOfLines={2}>
-                {word.translation}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.rowMeta}>
-          <Text style={[styles.stateLabel, { color: TONE_COLOR[meta.tone] }]}>
-            {human}
+      <View style={styles.rowTop}>
+        <View style={styles.rowText}>
+          <Text style={styles.word}>{word.text}</Text>
+          <Text style={styles.translation} numberOfLines={2}>
+            {word.translation}
           </Text>
-          <ProgressCount word={word} />
-          <Text
-            style={[
-              styles.due,
-              word.dueAt <= now ? styles.dueNow : styles.dueLater,
-            ]}
-          >
-            {friendlyDue(word, now)}
-          </Text>
-          {/* The affordance the row was missing: a row that opens something
-              should look like it opens something. */}
-          <Text style={styles.rowChevron}>›</Text>
         </View>
+        <Badge word={word} />
       </View>
 
-      {/* progress fill — grows toward Learned, felt not just read */}
-      <View style={styles.fillTrack}>
-        <View style={[styles.fillBar, { width: `${fillPct}%`, backgroundColor: fill }]} />
+      <View style={styles.rowMeta}>
+        <Text style={[styles.stateLabel, { color: TONE_COLOR[meta.tone] }]}>{human}</Text>
+        <Text style={styles.metaDot}>·</Text>
+        <Text style={[styles.due, word.dueAt <= now ? styles.dueNow : styles.dueLater]}>
+          {friendlyDue(word, now)}
+        </Text>
       </View>
     </Pressable>
   );
@@ -841,50 +818,44 @@ const styles = StyleSheet.create({
   ctaText: { color: '#06130d', fontSize: 15, fontWeight: '800' },
   pressed: { opacity: 0.7 },
   row: {
-    backgroundColor: '#141a17',
-    borderRadius: 16,
-    marginBottom: 8,
-    overflow: 'hidden',
+    backgroundColor: '#151b18',
+    borderRadius: 18,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  rowLapsed: { borderColor: 'rgba(248,113,113,0.4)', borderWidth: 1 },
-  rowPressed: { opacity: 0.8 },
-  edge: { bottom: 0, left: 0, position: 'absolute', top: 0, width: 3 },
-  rowBody: { paddingBottom: 14, paddingLeft: 16, paddingRight: 10, paddingTop: 12 },
-  rowHead: { flexDirection: 'row', gap: 8 },
-  rowHeadText: { flex: 1 },
+  rowMissed: { backgroundColor: '#1d1717' },
+  rowPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
+  rowTop: { alignItems: 'flex-start', flexDirection: 'row', gap: 12 },
+  rowText: { flex: 1 },
   word: { color: '#f2f5f3', fontSize: 21, fontWeight: '800', letterSpacing: -0.2 },
-  meaningBox: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(242,245,243,0.07)',
-    borderRadius: 8,
-    marginTop: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
   translation: {
-    color: 'rgba(242,245,243,0.85)',
-    fontSize: 14,
-    lineHeight: 18,
+    color: 'rgba(242,245,243,0.62)',
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 2,
   },
-  rowMeta: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 10 },
+  rowMeta: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: 10 },
   stateLabel: { fontSize: 12, fontWeight: '700' },
-  /** Sits where the dot meter used to; muted so the state phrase leads. */
-  progressCount: {
-    color: 'rgba(242,245,243,0.45)',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  due: { fontSize: 12, marginLeft: 'auto' },
-  rowChevron: { color: 'rgba(242,245,243,0.35)', fontSize: 18, fontWeight: '600', marginTop: -2 },
+  metaDot: { color: 'rgba(242,245,243,0.25)', fontSize: 12 },
+  due: { fontSize: 12 },
   dueNow: { color: '#5ee6a8', fontWeight: '700' },
   dueLater: { color: 'rgba(242,245,243,0.45)' },
-  fillTrack: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    bottom: 0,
-    height: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
+  /** Three short segments, the "of 3" felt not read. */
+  meter: { flexDirection: 'row', gap: 3, marginTop: 8 },
+  meterSeg: { backgroundColor: 'rgba(242,245,243,0.12)', borderRadius: 999, height: 4, width: 12 },
+  meterSegOn: { backgroundColor: '#5ee6a8' },
+  badge: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 24,
+    justifyContent: 'center',
+    marginTop: 2,
+    width: 24,
   },
-  fillBar: { height: '100%' },
+  badgeLearned: { backgroundColor: 'rgba(94,230,168,0.16)' },
+  badgeMissed: { backgroundColor: 'rgba(248,113,113,0.16)' },
+  badgeText: { fontSize: 13, fontWeight: '800' },
+  badgeTextLearned: { color: '#5ee6a8' },
+  badgeTextMissed: { color: '#f87171' },
 });
