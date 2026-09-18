@@ -129,6 +129,10 @@ export function installDevMenu(): void {
    * that no longer exists.
    */
   publish([
+    /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
+        "so i can see it right away and not search it like a crazy man").
+        Open the Feed tab, then tap. */
+    { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     /**
      * THE DEFAULT FIRST RUN, AND IT ENDS AT THE WALL.
      *
@@ -192,7 +196,6 @@ export function installDevMenu(): void {
     { name: 'Loro · Card: level up → Nativo', run: () => devRaiseLevelUp(6) },
     { name: 'Loro · Card: day done', run: () => devRaiseDayDone() },
     { name: 'Loro · Card: review session done', run: () => devRaiseReviewEnd() },
-    { name: 'Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     /** Back to the real verdict from RevenueCat. */
     {
       name: 'Loro · Clear paywall override',
