@@ -410,11 +410,22 @@ export function VocabScreen({
     }),
     [rest, learnedAll]
   );
-  const pileRows = useMemo(() => {
+  const pileRows = piles[view];
+  /**
+   * SEARCH CROSSES THE PILES. Radek, 2026-09-18: searching only the open
+   * pile "was a bit confusing" — you type a word you remember saving and
+   * it is not there because it is in another pile. So a query searches all
+   * four and the results come grouped under their pile's name; the pile
+   * row steps aside while you type. Null when not searching.
+   */
+  const searchGroups = useMemo(() => {
     const needle = fold(query.trim());
-    const rows = piles[view];
-    return needle ? rows.filter((w) => matches(w, needle)) : rows;
-  }, [piles, view, query]);
+    if (!needle) return null;
+    return PILES.map((pile) => ({
+      ...pile,
+      rows: piles[pile.key].filter((w) => matches(w, needle)),
+    })).filter((g) => g.rows.length > 0);
+  }, [piles, query]);
   const onTheWay = piles.saved.length + piles.practice.length;
 
   const dueTotal = useMemo(
@@ -592,6 +603,29 @@ export function VocabScreen({
               </View>
             )}
 
+            {searchGroups !== null ? (
+              searchGroups.length === 0 ? (
+                <Text style={styles.noMatch}>No words match “{query.trim()}”.</Text>
+              ) : (
+                searchGroups.map((group) => (
+                  <View key={group.key} style={styles.group}>
+                    <View style={styles.groupHead}>
+                      <Text style={styles.groupLabel}>{group.label}</Text>
+                      <Text style={styles.groupCount}>{group.rows.length}</Text>
+                    </View>
+                    {group.rows.map((word) => (
+                      <WordRow
+                        key={wordKey(word)}
+                        word={word}
+                        now={now}
+                        onOpen={() => openDetail(word)}
+                      />
+                    ))}
+                  </View>
+                ))
+              )
+            ) : (
+            <>
             {/* The piles, below the review card (Radek: "move them below
                 the modal"). Four across, each its count. */}
             <View style={styles.segments} accessibilityRole="tablist">
@@ -645,9 +679,6 @@ export function VocabScreen({
             )}
 
             {pileRows.length === 0 ? (
-              query.trim() ? (
-                <Text style={styles.noMatch}>No words here match “{query.trim()}”.</Text>
-              ) : (
                 <View style={styles.pileEmpty}>
                   <Text style={styles.emptyTitle}>
                     {view === 'saved' && 'Nothing waiting'}
@@ -664,7 +695,6 @@ export function VocabScreen({
                       `Get a word right on two different days, from memory, and it lands here for good.${onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}`}
                   </Text>
                 </View>
-              )
             ) : (
               pileRows.map((word) => (
                 <WordRow
@@ -674,6 +704,8 @@ export function VocabScreen({
                   onOpen={() => openDetail(word)}
                 />
               ))
+            )}
+            </>
             )}
           </>
         )}
@@ -791,6 +823,11 @@ const styles = StyleSheet.create({
   segmentText: { color: 'rgba(242,245,243,0.55)', fontSize: 11, fontWeight: '700', marginTop: 1 },
   segmentTextOn: { color: 'rgba(6,19,13,0.75)' },
   pileEmpty: { alignItems: 'center', gap: 6, paddingTop: 28 },
+  /** Search results, grouped by pile. */
+  group: { marginBottom: 16 },
+  groupHead: { alignItems: 'center', flexDirection: 'row', gap: 8, marginBottom: 8, paddingHorizontal: 2 },
+  groupLabel: { color: 'rgba(242,245,243,0.55)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
+  groupCount: { color: 'rgba(242,245,243,0.35)', fontSize: 11, fontWeight: '700' },
   learnedCard: {
     backgroundColor: '#141a17',
     borderColor: 'rgba(94,230,168,0.25)',
