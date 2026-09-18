@@ -122,7 +122,7 @@ export function ReviewPickerSheet({
                   {word.translation}
                 </Text>
               </View>
-              {word.state === 'lapsed' && <Text style={styles.rowSlipped}>Slipped</Text>}
+              {word.state === 'lapsed' && <Text style={styles.rowSlipped}>Missed</Text>}
               <Text style={styles.rowChevron}>›</Text>
             </Pressable>
           ))}

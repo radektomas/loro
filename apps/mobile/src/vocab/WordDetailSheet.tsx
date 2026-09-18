@@ -192,7 +192,7 @@ export function WordDetailSheet({
   const now = Date.now();
 
   const stateLabel: Record<SavedWord['state'], string> = {
-    lapsed: 'Slipped — review soon',
+    lapsed: 'Missed, review soon',
     new: 'Just saved',
     learning: 'Getting it',
     known: 'Learned ✓',

@@ -51,7 +51,7 @@ const TONE_COLOR: Record<Tone, string> = {
 
 /** Plain-language status a stranger understands (vocab/page.tsx:73-78). */
 const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
-  lapsed: { human: 'Slipped, review soon', tone: 'red' },
+  lapsed: { human: 'Missed, review soon', tone: 'red' },
   new: { human: 'Just saved', tone: 'muted' },
   learning: { human: 'Getting it', tone: 'accent' },
   known: { human: 'Known ✓', tone: 'accent' },
@@ -68,7 +68,7 @@ const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
 const PILES: { key: WordsView; label: string }[] = [
   { key: 'saved', label: 'Saved' },
   { key: 'practice', label: 'In practice' },
-  { key: 'slipped', label: 'Slipped' },
+  { key: 'missed', label: 'Missed' },
   { key: 'learned', label: 'Learned' },
 ];
 
@@ -413,7 +413,7 @@ export function VocabScreen({
       practice: rest
         .filter((w) => w.state === 'learning' || w.state === 'known')
         .sort((a, b) => (b.lastReviewedAt ?? b.savedAt) - (a.lastReviewedAt ?? a.savedAt)),
-      slipped: rest
+      missed: rest
         .filter((w) => w.state === 'lapsed')
         .sort((a, b) => (b.lastReviewedAt ?? b.savedAt) - (a.lastReviewedAt ?? a.savedAt)),
       learned: learnedAll,
@@ -658,14 +658,14 @@ export function VocabScreen({
                   <Text style={styles.emptyTitle}>
                     {view === 'saved' && 'Nothing waiting'}
                     {view === 'practice' && 'Nothing in practice yet'}
-                    {view === 'slipped' && 'Nothing slipped'}
+                    {view === 'missed' && 'Nothing missed'}
                     {view === 'learned' && 'Nothing learned yet'}
                   </Text>
                   <Text style={styles.emptyBody}>
                     {view === 'saved' && 'Tap a word in a video to save it.'}
                     {view === 'practice' &&
                       'Get a saved word right once, as a blank, and it moves here.'}
-                    {view === 'slipped' && 'A word you get wrong lands here until you get it back.'}
+                    {view === 'missed' && 'A word you get wrong lands here until you get it back.'}
                     {view === 'learned' &&
                       `Get a word right on two different days, from memory, and it lands here for good.${onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}`}
                   </Text>
