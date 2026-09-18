@@ -57,9 +57,10 @@ const STATE_META: Record<WordState, { human: string; tone: Tone }> = {
   known: { human: 'Known ✓', tone: 'accent' },
 };
 
-type SectionKey = 'lapsed' | 'ready' | 'new' | 'learning' | 'known';
+type SectionKey = 'today' | 'lapsed' | 'ready' | 'new' | 'learning' | 'known';
 
 const SECTION_META: Record<SectionKey, { label: string; dot: string }> = {
+  today: { label: 'TODAY', dot: '#f2f5f3' }, //      answered today — the day's work, kept in view
   lapsed: { label: 'SLIPPED', dot: '#f87171' }, //   reserved red — most urgent
   ready: { label: 'READY', dot: '#5ee6a8' }, //      due now — do these
   new: { label: 'JUST SAVED', dot: 'rgba(242,245,243,0.55)' },
@@ -67,8 +68,16 @@ const SECTION_META: Record<SectionKey, { label: string; dot: string }> = {
   known: { label: 'KNOWN', dot: '#5ee6a8' }, //      known on arrival, never earned
 };
 
-/** Section order = urgency order. Empty sections are dropped before render. */
-const SECTION_ORDER: SectionKey[] = ['lapsed', 'ready', 'new', 'learning', 'known'];
+/** Section order = urgency order, after the day's own log. Empty sections
+    are dropped before render. */
+const SECTION_ORDER: SectionKey[] = ['today', 'lapsed', 'ready', 'new', 'learning', 'known'];
+
+/** Local midnight, for "answered today". */
+function startOfDay(now: number): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
 
 /**
  * How long to wait for the window's own dismissal callback before assuming it
@@ -413,6 +422,30 @@ export function VocabScreen({
     const needle = fold(query.trim());
     return needle ? learningRows.filter((w) => matches(w, needle)) : learningRows;
   }, [learningRows, query]);
+  /**
+   * TODAY — every word answered today, right or wrong, latest first, with
+   * its next date on the row. Radek, 2026-09-18: "I do one word correct and
+   * then it disappears for like a week." It did not disappear; it was
+   * rescheduled, and nothing kept it in view. This does, until midnight.
+   * One row per surface (the row that was answered), and a word learned
+   * today is here too even though it has moved to the Learned face — this
+   * is the day's log, not a state. Excluded from the sections below so
+   * nothing is listed twice.
+   */
+  const todayRows = useMemo(() => {
+    const since = startOfDay(now);
+    const byKey = new Map<string, SavedWord>();
+    for (const w of words) {
+      if (w.lastReviewedAt === null || w.lastReviewedAt < since) continue;
+      const key = normalizeAnswer(w.text) || w.text;
+      const held = byKey.get(key);
+      if (!held || w.lastReviewedAt > (held.lastReviewedAt ?? 0)) byKey.set(key, w);
+    }
+    const needle = fold(query.trim());
+    return [...byKey.values()]
+      .filter((w) => !needle || matches(w, needle))
+      .sort((a, b) => (b.lastReviewedAt ?? 0) - (a.lastReviewedAt ?? 0));
+  }, [words, now, query]);
   const learnedFiltered = useMemo(() => {
     const needle = fold(query.trim());
     return needle ? learnedAll.filter((w) => matches(w, needle)) : learnedAll;
@@ -429,13 +462,16 @@ export function VocabScreen({
    */
   const sections = useMemo(() => {
     const buckets: Record<SectionKey, SavedWord[]> = {
+      today: todayRows,
       lapsed: [],
       ready: [],
       new: [],
       learning: [],
       known: [],
     };
+    const todayKeys = new Set(todayRows.map((w) => normalizeAnswer(w.text) || w.text));
     for (const w of filtered) {
+      if (todayKeys.has(normalizeAnswer(w.text) || w.text)) continue;
       if (w.state === 'lapsed') buckets.lapsed.push(w);
       else if (w.dueAt <= now) buckets.ready.push(w);
       else buckets[w.state].push(w);
@@ -443,9 +479,10 @@ export function VocabScreen({
     return SECTION_ORDER.map((key) => ({
       key,
       ...SECTION_META[key],
-      words: buckets[key].sort((a, b) => a.dueAt - b.dueAt),
+      // Today keeps its own order (latest answer first); the rest by due.
+      words: key === 'today' ? buckets.today : buckets[key].sort((a, b) => a.dueAt - b.dueAt),
     })).filter((s) => s.words.length > 0);
-  }, [filtered, now]);
+  }, [filtered, todayRows, now]);
 
   const dueTotal = useMemo(
     () => words.filter((w) => w.dueAt <= now).length,
