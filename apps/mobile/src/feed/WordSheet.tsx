@@ -23,6 +23,7 @@ import { glossText, lookupGloss, normalizeSurface } from '@loro/core/dictionary'
 import { storage } from '@loro/core/storage';
 import { track } from '../platform/analytics';
 import { usePlayerApi } from '../player/PlayerHost';
+import { SentenceWithHit } from './SentenceWithHit';
 
 /**
  * The tap-a-word save sheet — the RN half of components/WordSheet.tsx.
@@ -640,6 +641,22 @@ function WordSheetText({
   const wordGloss = gloss ? glossText(gloss, language) : null;
   const surface = normalizeSurface(data.word.text);
   const showLemma = Boolean(gloss && wordGloss && gloss.lemma !== surface);
+  // The tapped word is one object of the cue's; identity first, and the
+  // first surface match as the fallback for a word object built elsewhere.
+  const hitIndex = cue
+    ? (() => {
+        const byIdentity = cue.words.indexOf(data.word);
+        if (byIdentity >= 0) return byIdentity;
+        return cue.words.findIndex((w) => normalizeSurface(w.text) === surface);
+      })()
+    : -1;
+  const sentence = cue && cue.words.length > 0 && (
+    <SentenceWithHit
+      words={cue.words}
+      isHit={(_, i) => i === hitIndex}
+      style={styles.sentence}
+    />
+  );
 
   return (
     <>
@@ -654,13 +671,13 @@ function WordSheetText({
             </Text>
           )}
           {gloss?.note ? <Text style={styles.note}>{gloss.note}</Text> : null}
-          <Text style={styles.context}>
-            In this sentence:{' '}
-            <Text style={styles.contextBody}>{contextTranslation}</Text>
-          </Text>
+          <Text style={styles.context}>In this sentence:</Text>
+          {sentence}
+          <Text style={styles.contextBody}>{contextTranslation}</Text>
         </>
       ) : (
         <>
+          {sentence}
           <Text style={styles.approxBody}>≈ {contextTranslation}</Text>
           <Text style={styles.approxLabel}>
             approximate — whole-sentence translation
@@ -782,7 +799,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   context: { color: 'rgba(242,245,243,0.4)', fontSize: 12, lineHeight: 18, marginTop: 12 },
-  contextBody: { color: 'rgba(242,245,243,0.7)' },
+  /** The Spanish line, the tapped word lit (SentenceWithHit). */
+  sentence: { color: 'rgba(242,245,243,0.85)', fontSize: 16, lineHeight: 23, marginTop: 4 },
+  contextBody: { color: 'rgba(242,245,243,0.6)', fontSize: 13, lineHeight: 19, marginTop: 3 },
   approxBody: { color: 'rgba(242,245,243,0.85)', fontSize: 16, lineHeight: 23, marginTop: 6 },
   approxLabel: { color: 'rgba(251,191,36,0.9)', fontSize: 12, marginTop: 4 },
   saveButton: {
