@@ -1091,7 +1091,11 @@ function FeedBody({
                   like the cards, because nothing is drawn over a playing
                   frame. Before the cards in paint order, so any card raised
                   at the same moment covers it. */}
-              <LearnedToast onObscurePlayer={setPromptObscured} onGoToWords={onGoToWords} />
+              <LearnedToast
+                active={active}
+                onObscurePlayer={setPromptObscured}
+                onGoToWords={onGoToWords}
+              />
               {/* Raised by RecallHost after the first correct answer's
                   celebration, and silent every other time. Last child so it
                   covers the band and the answer bar as well as the slide. */}

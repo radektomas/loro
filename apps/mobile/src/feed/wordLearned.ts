@@ -1,6 +1,6 @@
 import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
-import { distinctWords, isLearned } from '@loro/core/progress';
+import { distinctWords, isLearned, learnedThisWeek } from '@loro/core/progress';
 import { normalizeAnswer } from '@loro/core/srs';
 import { track } from '../platform/analytics';
 
@@ -22,8 +22,11 @@ import { track } from '../platform/analytics';
 export type WordLearnedRaise = {
   text: string;
   translation: string;
-  /** Distinct words learned, this one included. */
+  /** Distinct words on the Learned face, this one included — the Words
+      tab's own total, so Loro and the tab say the same number. */
   learned: number;
+  /** Earned this week (Mon..Sun), this one included. */
+  week: number;
 };
 
 const listeners = new Set<(raise: WordLearnedRaise) => void>();
@@ -41,11 +44,16 @@ export function onLearnedFace(word: SavedWord): boolean {
   return word.state !== 'lapsed' && (isLearned(word) || word.state === 'known');
 }
 
-/** Distinct learned words — the Progress page's own number. */
+/** Distinct words on the Learned face — what the Words tab counts. */
 export function learnedTotal(words: readonly SavedWord[] = storage.getSavedWords()): number {
   let n = 0;
-  for (const w of distinctWords(words)) if (isLearned(w)) n++;
+  for (const w of distinctWords(words)) if (onLearnedFace(w)) n++;
   return n;
+}
+
+/** Earned this week — the Progress page's "learned this week". */
+export function learnedWeek(words: readonly SavedWord[] = storage.getSavedWords()): number {
+  return learnedThisWeek(words, Date.now()).length;
 }
 
 /** Is this SURFACE learned through any of its rows? */
@@ -57,10 +65,12 @@ export function surfaceLearned(text: string, words: readonly SavedWord[]): boole
 
 /** After a grade: raise the toast for a word that just crossed. */
 export function raiseWordLearned(word: Pick<SavedWord, 'text' | 'translation'>): WordLearnedRaise {
+  const words = storage.getSavedWords();
   const raise: WordLearnedRaise = {
     text: word.text,
     translation: word.translation,
-    learned: learnedTotal(),
+    learned: learnedTotal(words),
+    week: learnedWeek(words),
   };
   track('word_learned', { learned: raise.learned });
   console.log(`[loro:learned] "${word.text}" — ${raise.learned} learned`);
@@ -75,7 +85,14 @@ export function subscribeToWordLearned(
   return () => listeners.delete(listener);
 }
 
-/** DEV: show the toast with made-up words. */
+/** DEV: show the moment with a made-up word and the REAL counts. */
 export function devRaiseWordLearned(): void {
-  for (const l of listeners) l({ text: 'mochila', translation: 'backpack', learned: 12 });
+  const words = storage.getSavedWords();
+  const raise = {
+    text: 'mochila',
+    translation: 'backpack',
+    learned: learnedTotal(words) + 1,
+    week: learnedWeek(words) + 1,
+  };
+  for (const l of listeners) l(raise);
 }

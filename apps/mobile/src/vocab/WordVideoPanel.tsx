@@ -25,7 +25,8 @@ import {
 } from '../feed/Celebration';
 import { gradeAnswer, recallHaptic } from '../feed/recall';
 import { noteCorrectRecall } from '../platform/notifications';
-import { surfaceLearned } from '../feed/wordLearned';
+import { learnedTotal, learnedWeek, surfaceLearned, type WordLearnedRaise } from '../feed/wordLearned';
+import { LearnedMomentView } from '../feed/LearnedToast';
 import { PLAYER_EMBED_ORIGIN } from '../platform/config';
 import { buildHearItPage } from './hearItPage';
 
@@ -74,6 +75,7 @@ export function WordVideoPanel({
   mode,
   onClose,
   onDone,
+  onSeeLearned,
 }: {
   /** The saved word — its translation is the prompt, and it is what gets graded. */
   word: SavedWord;
@@ -84,6 +86,8 @@ export function WordVideoPanel({
   mode: PanelMode;
   /** Back to the word sheet — nothing was answered. */
   onClose: () => void;
+  /** The learned moment's bubble was tapped: show the learned words. */
+  onSeeLearned?: () => void;
   /** Answered. The caller closes the window and returns to the list. */
   onDone: () => void;
 }) {
@@ -94,8 +98,9 @@ export function WordVideoPanel({
   const [phase, setPhase] = useState<Phase>('loading');
   const [answer, setAnswer] = useState('');
   const [result, setResult] = useState<AnswerMatch | null>(null);
-  /** This answer crossed the word into learned — said on the graded face. */
-  const [learnedNow, setLearnedNow] = useState(false);
+  /** This answer crossed the word into learned: Loro says so, from the side
+      (LearnedMomentView), and the moment's end closes the panel. */
+  const [learnedNow, setLearnedNow] = useState<WordLearnedRaise | null>(null);
   /** Raised once the user has committed to answering — 'listen' mode asks. */
   const [reviewing, setReviewing] = useState(mode === 'review');
   /** Bumped to remount the player for "play again". */
@@ -188,7 +193,15 @@ export function WordVideoPanel({
     const wasLearned = surfaceLearned(word.text, storage.getSavedWords());
     storage.gradeWord(word.text, word.videoId, wasCorrect);
     const earned = !wasLearned && surfaceLearned(word.text, storage.getSavedWords());
-    setLearnedNow(earned);
+    if (earned) {
+      const all = storage.getSavedWords();
+      setLearnedNow({
+        text: word.text,
+        translation: word.translation,
+        learned: learnedTotal(all),
+        week: learnedWeek(all),
+      });
+    }
     if (wasCorrect) {
       storage.applyRecallLevelCredit();
       recallHaptic();
@@ -198,11 +211,11 @@ export function WordVideoPanel({
     setPhase('graded');
     // A near-miss counts as correct (core's matchAnswer), so it earns the same
     // exit — only slower, because the corrected spelling is worth reading.
-    if (wasCorrect) {
-      // A word just earned gets a beat longer: the line below is worth reading.
+    // A word just earned hands the exit to the moment instead (below).
+    if (wasCorrect && !earned) {
       closeTimer.current = setTimeout(
         onDone,
-        (match === 'correct' ? CELEBRATE_MS : CELEBRATE_MS + 700) + (earned ? 900 : 0)
+        match === 'correct' ? CELEBRATE_MS : CELEBRATE_MS + 700
       );
     }
   };
@@ -362,11 +375,6 @@ export function WordVideoPanel({
             It was «{spoken}» — you typed «{answer.trim() || '—'}».
           </Text>
         )}
-        {phase === 'graded' && learnedNow && (
-          <Text style={styles.learnedNote}>
-            ¡Palabra aprendida! Right on different days, from memory — it's yours now.
-          </Text>
-        )}
 
         {/* The other half of the centring — see stageAbove. */}
         {!showPlayer && <View style={styles.stageBelow} />}
@@ -428,8 +436,13 @@ export function WordVideoPanel({
           the frame is gone and the panel is closing, so the reward is the
           screen — see LoroCelebrationCenter's header for why the feed keeps
           the small one. */}
-      {(result === 'correct' || result === 'almost') && (
+      {(result === 'correct' || result === 'almost') && !learnedNow && (
         <LoroCelebrationCenter variant={result} />
+      )}
+      {/* The word was earned: Loro comes in from the side, as in the feed,
+          and the panel closes when the moment ends. */}
+      {learnedNow && (
+        <LearnedMomentView raise={learnedNow} onDone={onDone} onWords={onSeeLearned ?? onDone} />
       )}
     </View>
   );
@@ -517,14 +530,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 12,
-  },
-  learnedNote: {
-    color: '#5ee6a8',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    marginTop: 12,
-    textAlign: 'center',
   },
   actions: { marginTop: 'auto', paddingTop: 12 },
   actionsTight: { marginTop: 16 },

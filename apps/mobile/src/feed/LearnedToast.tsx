@@ -22,62 +22,51 @@ import { subscribeToWordLearned, type WordLearnedRaise } from './wordLearned';
  * right edge at mid-height with a speech bubble — the word, its meaning,
  * the running count — holds for a couple of seconds and slides back out.
  *
+ * Two hosts, one view. The FEED (LearnedToast) listens to the bus and
+ * yields the player; the Words tab's FLASHCARD (WordVideoPanel) renders
+ * LearnedMomentView directly on its graded face, where the frame is
+ * already gone. "The Loro should pop up from the right side also when
+ * you're on the Words page" — same animation, same bubble, same tap.
+ *
  * THE FRAME IS NOT DRAWN OVER. Nothing may be painted on a playing YouTube
  * player (the embed's terms, see the layout note in PlayerHost), which is
- * why the cards pause and hide it while they are up. This does the same,
- * for a shorter time and behind a lighter dim: onObscurePlayer hides the
- * player (the slide's poster shows through), the clip pauses, and play
+ * why the cards pause and hide it while they are up. The feed host does the
+ * same, for a shorter time and behind a lighter dim: onObscurePlayer hides
+ * the player (the slide's poster shows through), the clip pauses, and play
  * resumes the instant the moment ends. A tap on the bubble opens the Words
  * tab on the Learned face; a tap anywhere else ends the moment early.
  */
-const HOLD_MS = 2600;
+export const LEARNED_MOMENT_MS = 2600;
 const OUT_MS = 260;
 
-export function LearnedToast({
-  onObscurePlayer,
-  onGoToWords,
+type Leave = 'done' | 'words';
+
+/** The moment itself: animation, hold, and the two taps. Host-agnostic. */
+export function LearnedMomentView({
+  raise,
+  onDone,
+  onWords,
 }: {
-  onObscurePlayer: (obscured: boolean) => void;
-  onGoToWords?: () => void;
+  raise: WordLearnedRaise;
+  /** The moment ended on its own or by a tap on the dim: carry on. */
+  onDone: () => void;
+  /** The bubble was tapped: show the learned words. Absent = same as done. */
+  onWords?: () => void;
 }) {
-  const api = usePlayerApi();
-  const [raise, setRaise] = useState<WordLearnedRaise | null>(null);
   const slide = useSharedValue(0); // 0 = off the right edge, 1 = in
   const bubble = useSharedValue(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const leavingRef = useRef<'resume' | 'words' | null>(null);
-
-  useEffect(
-    () =>
-      subscribeToWordLearned((next) => {
-        if (timer.current) clearTimeout(timer.current);
-        leavingRef.current = null;
-        setRaise(next);
-      }),
-    []
-  );
-
-  const open = raise !== null;
-  useEffect(() => {
-    onObscurePlayer(open);
-    if (open) api.pause();
-    return () => onObscurePlayer(false);
-  }, [open, onObscurePlayer, api]);
+  const leavingRef = useRef<Leave | null>(null);
 
   const finish = useCallback(() => {
-    const how = leavingRef.current ?? 'resume';
+    const how = leavingRef.current ?? 'done';
     leavingRef.current = null;
-    setRaise(null);
-    if (how === 'words' && onGoToWords) {
-      requestWordsView('learned');
-      onGoToWords();
-    } else {
-      api.play();
-    }
-  }, [api, onGoToWords]);
+    if (how === 'words' && onWords) onWords();
+    else onDone();
+  }, [onDone, onWords]);
 
   const leave = useCallback(
-    (how: 'resume' | 'words') => {
+    (how: Leave) => {
       if (leavingRef.current) return;
       leavingRef.current = how;
       if (timer.current) clearTimeout(timer.current);
@@ -91,12 +80,12 @@ export function LearnedToast({
   );
 
   useEffect(() => {
-    if (!raise) return;
+    leavingRef.current = null;
     slide.value = 0;
     bubble.value = 0;
     slide.value = withSpring(1, { damping: 16, stiffness: 170 });
     bubble.value = withDelay(120, withSpring(1, { damping: 14, stiffness: 200 }));
-    timer.current = setTimeout(() => leave('resume'), HOLD_MS);
+    timer.current = setTimeout(() => leave('done'), LEARNED_MOMENT_MS);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -111,12 +100,10 @@ export function LearnedToast({
     transform: [{ scale: 0.85 + bubble.value * 0.15 }, { translateX: (1 - bubble.value) * 24 }],
   }));
 
-  if (!raise) return null;
-
   return (
     <View style={styles.layer}>
-      {/* A tap anywhere ends the moment and the clip carries on. */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={() => leave('resume')} accessibilityLabel="Continue">
+      {/* A tap anywhere ends the moment and whatever was happening carries on. */}
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => leave('done')} accessibilityLabel="Continue">
         <Animated.View style={[StyleSheet.absoluteFill, styles.dim, dimStyle]} />
       </Pressable>
 
@@ -134,7 +121,8 @@ export function LearnedToast({
               {raise.translation}
             </Text>
             <Text style={styles.count}>
-              {raise.learned} {raise.learned === 1 ? 'word' : 'words'} learned · tap to see them
+              {raise.learned} learned
+              {raise.week > 1 ? ` · ${raise.week} this week` : ''} · tap to see them
             </Text>
           </Pressable>
           <View style={styles.tail} />
@@ -154,10 +142,61 @@ export function LearnedToast({
   );
 }
 
+/** The feed's host: the bus, the tab gate, and the player yield. */
+export function LearnedToast({
+  active,
+  onObscurePlayer,
+  onGoToWords,
+}: {
+  /** Only the visible feed shows it — the Words tab's flashcard has its
+      own host, and a raise from there must not pause and replay a hidden
+      feed player. */
+  active: boolean;
+  onObscurePlayer: (obscured: boolean) => void;
+  onGoToWords?: () => void;
+}) {
+  const api = usePlayerApi();
+  const [raise, setRaise] = useState<WordLearnedRaise | null>(null);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+
+  useEffect(
+    () =>
+      subscribeToWordLearned((next) => {
+        if (activeRef.current) setRaise(next);
+      }),
+    []
+  );
+
+  const open = raise !== null;
+  useEffect(() => {
+    onObscurePlayer(open);
+    if (open) api.pause();
+    return () => onObscurePlayer(false);
+  }, [open, onObscurePlayer, api]);
+
+  const done = useCallback(() => {
+    setRaise(null);
+    api.play();
+  }, [api]);
+  const words = useCallback(() => {
+    setRaise(null);
+    if (onGoToWords) {
+      requestWordsView('learned');
+      onGoToWords();
+    } else {
+      api.play();
+    }
+  }, [api, onGoToWords]);
+
+  if (!raise) return null;
+  return <LearnedMomentView raise={raise} onDone={done} onWords={words} />;
+}
+
 const styles = StyleSheet.create({
   layer: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
   dim: { backgroundColor: '#0a0d0b' },
-  /** Mid-height of the feed area, which is where the frame is. */
+  /** Mid-height of the area, which is where the frame is. */
   stage: {
     alignItems: 'center',
     flexDirection: 'row',

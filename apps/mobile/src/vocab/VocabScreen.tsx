@@ -12,10 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
-import { spokenSurfaces, type WordOccurrence } from '@loro/core/occurrences';
+import type { WordOccurrence } from '@loro/core/occurrences';
 import { distinctWords, isLearned } from '@loro/core/progress';
-import { normalizeSurface } from '@loro/core/dictionary';
-import { getCatalog } from '@loro/core/catalog';
 import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
 import { takeRequestedWordsView, type WordsView } from './wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
@@ -289,7 +287,7 @@ export function VocabScreen({
    * the same time as `detail`: the card is only reachable with the window
    * down, and afterDismiss clears both.
    */
-  const [picker, setPicker] = useState(false);
+  const [picker, setPicker] = useState<false | 'due' | 'learned'>(false);
   /**
    * The video face of the window: the clip that says this word, either to
    * listen to ('listen') or to be quizzed on ('review'). Null means the word
@@ -324,6 +322,8 @@ export function VocabScreen({
     /** Null: the plain armed feed (nothing could land). */
     word: SavedWord | null;
     preferVideoId?: string;
+    /** No word chosen from the LEARNED picker: practise a handful instead. */
+    practice?: boolean;
   } | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -401,16 +401,13 @@ export function VocabScreen({
     [learnedAll]
   );
   /**
-   * The Learning face's rows: everything that needs attention. A learned
-   * word that is DUE stays here too — it is in the do-it-now pile — so it
-   * can appear on both faces for as long as it waits.
+   * The Learning face's rows: everything not on the Learned face. A learned
+   * word that comes due stays on Learned (its row says "Ready now" and the
+   * picker lists it) — Radek: a word at 3 of 3 has no business here.
    */
   const learningRows = useMemo(
-    () =>
-      oneRowPerWord(words).filter(
-        (w) => w.dueAt <= now || !learnedKeys.has(normalizeAnswer(w.text) || w.text)
-      ),
-    [words, learnedKeys, now]
+    () => oneRowPerWord(words).filter((w) => !learnedKeys.has(normalizeAnswer(w.text) || w.text)),
+    [words, learnedKeys]
   );
   const filtered = useMemo(() => {
     const needle = fold(query.trim());
@@ -420,16 +417,6 @@ export function VocabScreen({
     const needle = fold(query.trim());
     return needle ? learnedAll.filter((w) => matches(w, needle)) : learnedAll;
   }, [learnedAll, query]);
-  /**
-   * How many learned words a practice run could actually blank — the ones
-   * the catalog speaks (launchPracticeLearned's own test). Folded over the
-   * whole catalog, so only while the face that shows it is up.
-   */
-  const practisable = useMemo(() => {
-    if (view !== 'learned' || learnedAll.length === 0) return 0;
-    const spoken = spokenSurfaces(getCatalog());
-    return learnedAll.filter((w) => spoken.has(normalizeSurface(w.text))).length;
-  }, [view, learnedAll]);
   const onTheWay = useMemo(
     () => learningRows.filter((w) => w.state === 'new' || w.state === 'learning').length,
     [learningRows]
@@ -471,7 +458,7 @@ export function VocabScreen({
    * cta") — as a face of this screen's one window. The launch runs from
    * afterDismiss, like every other review from this tab.
    */
-  const startReview = () => setPicker(true);
+  const startReview = () => setPicker('due');
   const dueWords = useMemo(
     () =>
       words
@@ -512,18 +499,21 @@ export function VocabScreen({
    * If nothing in the catalog speaks it (a starter-deck word with no clip),
    * this degrades to the old behaviour: arm recall, switch tabs.
    */
-  const reviewWord = (word: SavedWord | null, preferVideoId?: string) => {
+  const reviewWord = (word: SavedWord | null, preferVideoId?: string, practice = false) => {
     if (word) launchReviewOfWord(word, 'words', { preferVideoId });
+    else if (practice) launchPracticeLearned('words');
     else launchReview('words');
     onGoToFeed();
   };
 
-  /** The Learned face's button: no window is up, so this can navigate. */
-  const practise = () => {
-    const launch = launchPracticeLearned('words');
-    if (launch.count === 0) return;
-    onGoToFeed();
-  };
+  /**
+   * The Learned face's button opens the picker over EVERY learned word
+   * (Radek: "all of the learned words should come up and you choose"). A
+   * chosen word goes through launchReviewOfWord, which brings it forward
+   * and lands on it; "Open the feed" with nothing chosen practises a
+   * handful (launchPracticeLearned).
+   */
+  const practise = () => setPicker('learned');
 
   /** The window is provably gone. Safe to reset, and safe to navigate. */
   const afterDismiss = () => {
@@ -537,14 +527,14 @@ export function VocabScreen({
     setPicker(false);
     const pending = pendingReviewRef.current;
     pendingReviewRef.current = null;
-    if (pending) reviewWord(pending.word, pending.preferVideoId);
+    if (pending) reviewWord(pending.word, pending.preferVideoId, pending.practice);
   };
 
   /**
    * Take the window down. Anything that should happen afterwards is parked
    * first and runs from afterDismiss — never from here.
    */
-  const closeWindow = (pending?: { word: SavedWord | null; preferVideoId?: string }) => {
+  const closeWindow = (pending?: { word: SavedWord | null; preferVideoId?: string; practice?: boolean }) => {
     pendingReviewRef.current = pending ?? null;
     setClosing(true);
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
@@ -664,20 +654,11 @@ export function VocabScreen({
                 </Text>
                 <Pressable
                   onPress={practise}
-                  disabled={practisable === 0}
                   accessibilityRole="button"
-                  accessibilityHint="Opens the feed with a few learned words as blanks"
-                  style={({ pressed }) => [
-                    styles.cta,
-                    practisable === 0 && styles.ctaOff,
-                    pressed && styles.pressed,
-                  ]}
+                  accessibilityHint="Choose a learned word, then the feed opens on it"
+                  style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
                 >
-                  <Text style={[styles.ctaText, practisable === 0 && styles.ctaTextOff]}>
-                    {practisable === 0
-                      ? 'None of these is in a video yet'
-                      : 'Practise them in the feed'}
-                  </Text>
+                  <Text style={styles.ctaText}>Practise in the feed</Text>
                 </Pressable>
               </View>
               {learnedFiltered.length === 0 ? (
@@ -756,9 +737,10 @@ export function VocabScreen({
       >
         {picker && detail === null && (
           <ReviewPickerSheet
-            words={dueWords}
+            kind={picker}
+            words={picker === 'learned' ? learnedAll : dueWords}
             onPick={(word) => closeWindow({ word })}
-            onFeed={() => closeWindow({ word: null })}
+            onFeed={() => closeWindow({ word: null, practice: picker === 'learned' })}
             onClose={() => closeWindow()}
           />
         )}
@@ -773,6 +755,12 @@ export function VocabScreen({
               // Answered. Back to the list they were reading, which is still
               // scrolled exactly where they left it.
               onDone={() => closeWindow()}
+              // The learned moment's bubble: the window goes down and the
+              // list behind it shows the Learned face.
+              onSeeLearned={() => {
+                setView('learned');
+                closeWindow();
+              }}
             />
           ) : (
             <WordDetailSheet
@@ -855,8 +843,6 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     padding: 18,
   },
-  ctaOff: { backgroundColor: 'rgba(242,245,243,0.12)' },
-  ctaTextOff: { color: 'rgba(242,245,243,0.6)' },
   scroll: { padding: 16, paddingBottom: 32 },
   empty: { alignItems: 'center', gap: 8, paddingTop: 48 },
   emptyTitle: { color: '#f2f5f3', fontSize: 17, fontWeight: '700' },
