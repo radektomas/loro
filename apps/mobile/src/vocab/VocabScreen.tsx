@@ -25,11 +25,11 @@ import { WordDetailSheet } from './WordDetailSheet';
 /**
  * VOCAB — port of the web's app/vocab/page.tsx.
  *
- * The organising idea is the web's and is worth restating because it is why
- * there are no filter chips: the list is bucketed into URGENCY SECTIONS that
- * read top-to-bottom — problems first, then the do-it-now pile, then the
- * pipeline, then the wins. "The section carries the organisation — no filter
- * controls required" (vocab/page.tsx:95-97).
+ * The web bucketed the list into urgency sections with no filter controls.
+ * This screen moved on (2026-09-18, Radek: 300 words "is such a chaos"): the
+ * review card up top is where "ready" lives, and under it FOUR PILES the
+ * user switches between — Saved, In practice, Slipped, Learned — each in
+ * its own time order. See PILES.
  *
  * WHAT IS DELIBERATELY LEFT OUT, and it is not an oversight: the web's
  * per-word replay link and its "Review now" deep link both target
