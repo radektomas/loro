@@ -4,125 +4,199 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { BRAND } from '../onboarding/brand';
+import { usePlayerApi } from '../player/PlayerHost';
 import { requestWordsView } from '../vocab/wordsView';
 import { subscribeToWordLearned, type WordLearnedRaise } from './wordLearned';
 
 /**
- * THE WORD-LEARNED TOAST. Not a card: nothing dims, nothing pauses, the
- * clip carries on. A pill rises from the bottom of the feed for a few
- * seconds — the word, its meaning, how many are learned now — and a tap
- * opens the Words tab on the Learned face. Raised by RecallHost after the
- * celebration for the grade that crossed the word (wordLearned.ts), and
- * only when no card took that moment.
+ * THE WORD-LEARNED MOMENT — Loro comes in from the side and says it.
  *
- * WHERE IT SITS. The bottom of the feed area is the karaoke band's lower
- * edge and the author line — never the player, which is measured into a
- * box higher up. Loro's rule that nothing is drawn over the frame holds.
+ * Radek, 2026-09-18: not in the subtitles; "somewhere like from the side of
+ * the screen as Loro is saying it, we have the full screen above with the
+ * video". So this is over the frame area: the parrot slides in from the
+ * right edge at mid-height with a speech bubble — the word, its meaning,
+ * the running count — holds for a couple of seconds and slides back out.
+ *
+ * THE FRAME IS NOT DRAWN OVER. Nothing may be painted on a playing YouTube
+ * player (the embed's terms, see the layout note in PlayerHost), which is
+ * why the cards pause and hide it while they are up. This does the same,
+ * for a shorter time and behind a lighter dim: onObscurePlayer hides the
+ * player (the slide's poster shows through), the clip pauses, and play
+ * resumes the instant the moment ends. A tap on the bubble opens the Words
+ * tab on the Learned face; a tap anywhere else ends the moment early.
  */
-const TOAST_MS = 3200;
+const HOLD_MS = 2600;
+const OUT_MS = 260;
 
-export function LearnedToast({ onGoToWords }: { onGoToWords?: () => void }) {
+export function LearnedToast({
+  onObscurePlayer,
+  onGoToWords,
+}: {
+  onObscurePlayer: (obscured: boolean) => void;
+  onGoToWords?: () => void;
+}) {
+  const api = usePlayerApi();
   const [raise, setRaise] = useState<WordLearnedRaise | null>(null);
-  const progress = useSharedValue(0);
+  const slide = useSharedValue(0); // 0 = off the right edge, 1 = in
+  const bubble = useSharedValue(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clear = useCallback(() => setRaise(null), []);
-  const hide = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    progress.value = withTiming(0, { duration: 220 }, (done) => {
-      if (done) runOnJS(clear)();
-    });
-  }, [progress, clear]);
+  const leavingRef = useRef<'resume' | 'words' | null>(null);
 
   useEffect(
     () =>
       subscribeToWordLearned((next) => {
         if (timer.current) clearTimeout(timer.current);
+        leavingRef.current = null;
         setRaise(next);
       }),
     []
   );
 
+  const open = raise !== null;
+  useEffect(() => {
+    onObscurePlayer(open);
+    if (open) api.pause();
+    return () => onObscurePlayer(false);
+  }, [open, onObscurePlayer, api]);
+
+  const finish = useCallback(() => {
+    const how = leavingRef.current ?? 'resume';
+    leavingRef.current = null;
+    setRaise(null);
+    if (how === 'words' && onGoToWords) {
+      requestWordsView('learned');
+      onGoToWords();
+    } else {
+      api.play();
+    }
+  }, [api, onGoToWords]);
+
+  const leave = useCallback(
+    (how: 'resume' | 'words') => {
+      if (leavingRef.current) return;
+      leavingRef.current = how;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      bubble.value = withTiming(0, { duration: OUT_MS * 0.6 });
+      slide.value = withTiming(0, { duration: OUT_MS }, (done) => {
+        if (done) runOnJS(finish)();
+      });
+    },
+    [bubble, slide, finish]
+  );
+
   useEffect(() => {
     if (!raise) return;
-    progress.value = withSpring(1, { damping: 18, stiffness: 190 });
-    timer.current = setTimeout(hide, TOAST_MS);
+    slide.value = 0;
+    bubble.value = 0;
+    slide.value = withSpring(1, { damping: 16, stiffness: 170 });
+    bubble.value = withDelay(120, withSpring(1, { damping: 14, stiffness: 200 }));
+    timer.current = setTimeout(() => leave('resume'), HOLD_MS);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [raise, progress, hide]);
+  }, [raise, slide, bubble, leave]);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * 28 }],
+  const dimStyle = useAnimatedStyle(() => ({ opacity: slide.value * 0.55 }));
+  const parrotStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (1 - slide.value) * 180 }, { rotate: `${(1 - slide.value) * -8}deg` }],
+  }));
+  const bubbleStyle = useAnimatedStyle(() => ({
+    opacity: bubble.value,
+    transform: [{ scale: 0.85 + bubble.value * 0.15 }, { translateX: (1 - bubble.value) * 24 }],
   }));
 
   if (!raise) return null;
 
   return (
-    <Animated.View style={[styles.wrap, style]} pointerEvents="box-none">
-      <Pressable
-        onPress={() => {
-          hide();
-          if (onGoToWords) {
-            requestWordsView('learned');
-            onGoToWords();
-          }
-        }}
-        accessibilityRole="button"
-        accessibilityLabel={`${raise.text} learned. ${raise.learned} words learned. Opens your learned words.`}
-        style={({ pressed }) => [styles.toast, pressed && styles.pressed]}
-      >
-        <Image source={BRAND.parrot} style={styles.art} resizeMode="contain" />
-        <View style={styles.text}>
-          <Text style={styles.eyebrow}>¡Palabra aprendida!</Text>
-          <Text style={styles.word} numberOfLines={1}>
-            <Text style={styles.wordStrong}>{raise.text}</Text>
-            <Text style={styles.wordMeaning}> · {raise.translation}</Text>
-          </Text>
-          <Text style={styles.body} numberOfLines={1}>
-            {raise.learned} {raise.learned === 1 ? 'word' : 'words'} learned · tap to see them
-          </Text>
-        </View>
+    <View style={styles.layer}>
+      {/* A tap anywhere ends the moment and the clip carries on. */}
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => leave('resume')} accessibilityLabel="Continue">
+        <Animated.View style={[StyleSheet.absoluteFill, styles.dim, dimStyle]} />
       </Pressable>
-    </Animated.View>
+
+      <View style={styles.stage} pointerEvents="box-none">
+        <Animated.View style={[styles.bubbleWrap, bubbleStyle]}>
+          <Pressable
+            onPress={() => leave('words')}
+            accessibilityRole="button"
+            accessibilityLabel={`${raise.text} learned. ${raise.learned} words learned. Opens your learned words.`}
+            style={({ pressed }) => [styles.bubble, pressed && styles.pressed]}
+          >
+            <Text style={styles.eyebrow}>¡Palabra aprendida!</Text>
+            <Text style={styles.word}>{raise.text}</Text>
+            <Text style={styles.meaning} numberOfLines={2}>
+              {raise.translation}
+            </Text>
+            <Text style={styles.count}>
+              {raise.learned} {raise.learned === 1 ? 'word' : 'words'} learned · tap to see them
+            </Text>
+          </Pressable>
+          <View style={styles.tail} />
+        </Animated.View>
+
+        <Animated.View style={[styles.parrotWrap, parrotStyle]} pointerEvents="none">
+          <Image
+            source={BRAND.parrot}
+            style={styles.parrot}
+            resizeMode="contain"
+            accessibilityRole="image"
+            accessibilityLabel="Loro the parrot"
+          />
+        </Animated.View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { bottom: 14, left: 16, position: 'absolute', right: 16 },
-  toast: {
+  layer: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
+  dim: { backgroundColor: '#0a0d0b' },
+  /** Mid-height of the feed area, which is where the frame is. */
+  stage: {
     alignItems: 'center',
-    backgroundColor: '#17201b',
-    borderColor: 'rgba(94,230,168,0.45)',
-    borderRadius: 18,
-    borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { height: 6, width: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    justifyContent: 'flex-end',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: '34%',
   },
-  pressed: { opacity: 0.85 },
-  art: { height: 46, width: 32 },
-  text: { flex: 1 },
+  bubbleWrap: { alignItems: 'flex-end', flexDirection: 'row', flexShrink: 1, marginLeft: 20 },
+  bubble: {
+    backgroundColor: '#f2f5f3',
+    borderRadius: 20,
+    maxWidth: 250,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  pressed: { opacity: 0.9 },
+  /** The bubble's tail, pointing at the parrot. */
+  tail: {
+    backgroundColor: '#f2f5f3',
+    height: 14,
+    marginBottom: 26,
+    marginLeft: -7,
+    transform: [{ rotate: '45deg' }],
+    width: 14,
+  },
   eyebrow: {
-    color: '#5ee6a8',
+    color: '#1d9a63',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  word: { color: '#f2f5f3', fontSize: 16, marginTop: 1 },
-  wordStrong: { fontWeight: '800' },
-  wordMeaning: { color: 'rgba(242,245,243,0.7)', fontSize: 14 },
-  body: { color: 'rgba(242,245,243,0.55)', fontSize: 12, marginTop: 2 },
+  word: { color: '#06130d', fontSize: 24, fontWeight: '800', marginTop: 2 },
+  meaning: { color: 'rgba(6,19,13,0.7)', fontSize: 15, marginTop: 1 },
+  count: { color: 'rgba(6,19,13,0.55)', fontSize: 12, fontWeight: '600', marginTop: 8 },
+  /** The parrot is 282x420; 150 tall keeps its ratio at ~100 wide. It
+      starts past the right edge and settles with its back to it. */
+  parrotWrap: { marginLeft: 6, marginRight: -18 },
+  parrot: { height: 150, width: 100 },
 });
