@@ -13,7 +13,7 @@ import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
 import type { WordOccurrence } from '@loro/core/occurrences';
-import { distinctWords, isLearned } from '@loro/core/progress';
+import { distinctWords, isLearned, isReady } from '@loro/core/progress';
 import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
 import { takeRequestedWordsView, type WordsView } from './wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
@@ -96,10 +96,23 @@ function fold(text: string): string {
     .toLowerCase();
 }
 
-/** "Ready now" / "Review in 10 min" / "Review in 2 days". */
+/** "Saved 2 days ago" / "Ready now" / "Review in 10 min" / "Review in 2 days". */
 function friendlyDue(word: SavedWord, now: number): string {
+  // A fresh save is not "ready" (core isReady): it is waiting for a video
+  // to say it. Its own moment is when it was saved.
+  if (word.state === 'new') return `Saved ${ago(word.savedAt, now)}`;
   if (word.dueAt <= now) return 'Ready now';
   return `Review ${formatDue(word.dueAt, now)}`;
+}
+
+function ago(at: number, now: number): string {
+  const min = Math.max(0, Math.round((now - at) / 60_000));
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} ${h === 1 ? 'hour' : 'hours'} ago`;
+  const d = Math.round(h / 24);
+  return `${d} ${d === 1 ? 'day' : 'days'} ago`;
 }
 
 /**
@@ -405,7 +418,7 @@ export function VocabScreen({
   const onTheWay = piles.saved.length + piles.practice.length;
 
   const dueTotal = useMemo(
-    () => words.filter((w) => w.dueAt <= now).length,
+    () => words.filter((w) => isReady(w, now)).length,
     [words, now]
   );
 
@@ -419,7 +432,7 @@ export function VocabScreen({
   const dueWords = useMemo(
     () =>
       words
-        .filter((w) => w.dueAt <= now)
+        .filter((w) => isReady(w, now))
         .sort(
           (a, b) =>
             Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
@@ -555,22 +568,26 @@ export function VocabScreen({
           </View>
         ) : (
           <>
+            {/* One line, not a billboard (Radek, 2026-09-18): the count is
+                the schedule's returns only (core isReady), so it is small
+                enough to clear, and the button is the whole call to action. */}
             {dueTotal > 0 && (
-              <View style={styles.reviewCard}>
-                <Text style={styles.reviewCount}>
-                  {dueTotal} {dueTotal === 1 ? 'word' : 'words'} ready to review
-                </Text>
-                <Text style={styles.reviewBody}>
-                  Pick one and the feed opens just before it, as a blank to fill.
-                  Or tap any word below to review it right here.
-                </Text>
+              <View style={styles.readyStrip}>
+                <View style={styles.readyText}>
+                  <Text style={styles.readyCount}>
+                    {dueTotal} {dueTotal === 1 ? 'word' : 'words'} ready
+                  </Text>
+                  <Text style={styles.readyBody} numberOfLines={1}>
+                    Back on schedule. Pick one, the feed opens on it.
+                  </Text>
+                </View>
                 <Pressable
                   onPress={startReview}
                   accessibilityRole="button"
-                  accessibilityHint="Opens the feed with your due words armed as blanks"
-                  style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+                  accessibilityHint="Choose a word, then the feed opens on it"
+                  style={({ pressed }) => [styles.readyCta, pressed && styles.pressed]}
                 >
-                  <Text style={styles.ctaText}>Review in the feed</Text>
+                  <Text style={styles.ctaText}>Review</Text>
                 </Pressable>
               </View>
             )}
@@ -793,13 +810,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   noMatch: { color: 'rgba(242,245,243,0.55)', fontSize: 14, paddingTop: 24 },
-  reviewCard: {
+  readyStrip: {
+    alignItems: 'center',
     backgroundColor: 'rgba(94,230,168,0.12)',
-    borderColor: 'rgba(94,230,168,0.25)',
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 18,
-    padding: 18,
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 8,
+  },
+  readyText: { flex: 1 },
+  readyCount: { color: '#f2f5f3', fontSize: 15, fontWeight: '800' },
+  readyBody: { color: 'rgba(242,245,243,0.6)', fontSize: 12, marginTop: 1 },
+  readyCta: {
+    alignItems: 'center',
+    backgroundColor: '#5ee6a8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
   reviewCount: { color: '#f2f5f3', fontSize: 20, fontWeight: '800' },
   reviewBody: {

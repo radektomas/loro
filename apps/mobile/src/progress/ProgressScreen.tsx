@@ -21,6 +21,7 @@ import {
   distinctWords,
   dueCount,
   isLearned,
+  isReady,
   learnedThisWeek,
   nextDueAt,
   splitFunctionWords,
@@ -842,7 +843,7 @@ export function ProgressScreen({
   const dueWords = useMemo(
     () =>
       words
-        .filter((w) => w.dueAt <= now)
+        .filter((w) => isReady(w, now))
         .sort(
           (a, b) =>
             Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||

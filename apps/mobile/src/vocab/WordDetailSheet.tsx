@@ -226,7 +226,11 @@ export function WordDetailSheet({
               </Text>
             )}
             <Text style={styles.srsDue}>
-              {word.dueAt <= now ? 'Ready now' : `Review ${formatDue(word.dueAt, now)}`}
+              {word.state === 'new'
+                ? 'Comes up as a blank when a video says it'
+                : word.dueAt <= now
+                  ? 'Ready now'
+                  : `Review ${formatDue(word.dueAt, now)}`}
             </Text>
           </View>
 
