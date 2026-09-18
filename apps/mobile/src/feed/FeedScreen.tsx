@@ -39,6 +39,7 @@ import { AuthorLine } from './AuthorLine';
 import { DayDoneCard } from './DayDoneCard';
 import { LevelUpCard } from './LevelUpCard';
 import { LearnedToast } from './LearnedToast';
+import { SoundIcon } from './SoundIcon';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
@@ -1702,7 +1703,7 @@ function SoundControl() {
           pressed && styles.soundPressed,
         ]}
       >
-        <Text style={styles.soundToggleText}>🔊</Text>
+        <SoundIcon on color="rgba(242,245,243,0.9)" size={14} />
       </Pressable>
     );
   }
@@ -1717,7 +1718,8 @@ function SoundControl() {
         accessibilityHint="Plays this video with sound"
         style={({ pressed }) => [styles.soundPrompt, pressed && styles.soundPressed]}
       >
-        <Text style={styles.soundPromptText}>🔇 Tap for sound</Text>
+        <SoundIcon on={false} color="#06130d" size={14} />
+        <Text style={styles.soundPromptText}>Tap for sound</Text>
       </Pressable>
     </Animated.View>
   );
@@ -1968,12 +1970,19 @@ const styles = StyleSheet.create({
    * it stops existing the moment sound is on, so it can afford to shout.
    */
   soundPrompt: {
+    alignItems: 'center',
     backgroundColor: '#5ee6a8',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    flexDirection: 'row',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
-  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800' },
+  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800', letterSpacing: 0.2 },
   /**
    * Sound is already on, so this is not a prompt — it is the way back to
    * muted, and nothing more. Quiet by design; minWidth keeps a lone glyph from
@@ -1983,12 +1992,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.10)',
     borderRadius: 999,
+    height: 30,
     justifyContent: 'center',
-    minWidth: 40,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    width: 34,
   },
-  soundToggleText: { fontSize: 13 },
   soundPressed: { opacity: 0.7 },
   /** Quiet, like soundToggle — replay is a convenience, not a call to action. */
   replayCue: {
