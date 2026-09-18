@@ -1,5 +1,6 @@
 import { storage } from '@loro/core/storage';
-import { distinctWords, isLearned } from '@loro/core/progress';
+import { distinctWords } from '@loro/core/progress';
+import { onLearnedFace } from './wordLearned';
 import { TIER_LEARNED, TIERS, tierForLearned, type LearnedTier } from '@loro/core/levels';
 import { track } from '../platform/analytics';
 import { storageDriver } from '../platform/storage';
@@ -26,7 +27,7 @@ const listeners = new Set<(raise: LevelUpRaise) => void>();
 
 function learnedCount(): number {
   let n = 0;
-  for (const w of distinctWords(storage.getSavedWords())) if (isLearned(w)) n++;
+  for (const w of distinctWords(storage.getSavedWords())) if (onLearnedFace(w)) n++;
   return n;
 }
 
@@ -36,10 +37,18 @@ function seenTier(): number | null {
   return Number.isInteger(n) ? n : null;
 }
 
-/** Shell mount: silently adopt the current tier if none was ever recorded. */
+/**
+ * Shell mount: silently adopt the current tier when it is above the one
+ * recorded. A crossing can only be celebrated at the answer that made it;
+ * a difference found at mount came from elsewhere — a sync, or the count's
+ * rule changing (2026-09-18: known words joined the count, which lifts
+ * anyone with starter-deck words) — and a card for that would be a
+ * surprise about nothing the user just did.
+ */
 export function initLevelUp(): void {
-  if (seenTier() !== null) return;
-  storageDriver.local.setItem(SEEN_KEY, String(tierForLearned(learnedCount()).tier.level));
+  const now = tierForLearned(learnedCount()).tier.level;
+  const seen = seenTier();
+  if (seen === null || now > seen) storageDriver.local.setItem(SEEN_KEY, String(now));
 }
 
 /** After a grade. Raises the card if the ladder was climbed; returns whether. */

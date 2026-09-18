@@ -44,7 +44,7 @@ import type { ReviewSource } from './launchReview';
  * the answers happen in RecallHost, the swipes in FeedScreen, and none of
  * them share a parent that should re-render for this.
  */
-export type SessionWord = { text: string; correct: boolean };
+export type SessionWord = { text: string; correct: boolean; learned?: boolean };
 
 /** Where the session came from — always a Review door (see the header). */
 export type SessionSource = ReviewSource;
@@ -143,6 +143,7 @@ function finish(s: Session, reason: ReviewSessionEnd['reason']): ReviewSessionEn
 export function noteReviewAnswer(
   text: string,
   correct: boolean,
+  learned: boolean = false,
   now: number = Date.now()
 ): ReviewSessionEnd | null {
   const s = alive(now);
@@ -150,7 +151,7 @@ export function noteReviewAnswer(
   s.lastAt = now;
   s.answered++;
   if (correct) s.correct++;
-  s.words.push({ text, correct });
+  s.words.push({ text, correct, learned });
   if (s.answered < s.size) return null;
   return finish(s, 'size');
 }

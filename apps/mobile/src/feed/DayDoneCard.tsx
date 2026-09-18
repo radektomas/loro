@@ -171,6 +171,7 @@ function SessionFace({ end }: { end: ReviewSessionEnd }) {
   const shown = end.words.slice(0, MAX_CHIPS);
   const more = end.words.length - shown.length;
   const short = end.reason === 'ranOut' && end.answered < end.size;
+  const learned = end.words.filter((w) => w.learned).length;
 
   return (
     <>
@@ -178,6 +179,7 @@ function SessionFace({ end }: { end: ReviewSessionEnd }) {
       <Text style={styles.gloss}>session done</Text>
       <Text style={styles.body}>
         {end.correct} of {end.answered} right.
+        {learned > 0 ? ` ${learned} ${learned === 1 ? 'word' : 'words'} learned — starred below.` : ''}
         {short ? ' That was every word of yours in a video right now.' : ''}
       </Text>
       {end.dayDone && (
@@ -193,7 +195,7 @@ function SessionFace({ end }: { end: ReviewSessionEnd }) {
             style={[styles.chip, !word.correct && styles.chipMissed]}
           >
             <Text style={[styles.chipText, !word.correct && styles.chipTextMissed]}>
-              {word.correct ? '✓' : '✗'} {word.text}
+              {word.learned ? '★' : word.correct ? '✓' : '✗'} {word.text}
             </Text>
           </View>
         ))}

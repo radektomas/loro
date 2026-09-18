@@ -82,6 +82,7 @@ export function Shell() {
   /** Stable, so the memoised screens above can actually skip a render. */
   const goToFeed = useCallback(() => setTab('feed'), []);
   const goToProgress = useCallback(() => setTab('progress'), []);
+  const goToWords = useCallback(() => setTab('vocab'), []);
   /** The bubble on the Words tab — see useDueCount for what it counts. */
   const due = useDueCount();
 
@@ -134,13 +135,13 @@ export function Shell() {
           would drop that state instead. */}
       <View style={styles.screens}>
         <View style={[styles.screen, tab !== 'feed' && styles.hidden]}>
-          <Feed active={tab === 'feed'} onGoToProgress={goToProgress} />
+          <Feed active={tab === 'feed'} onGoToProgress={goToProgress} onGoToWords={goToWords} />
         </View>
         <View style={[styles.screen, tab !== 'vocab' && styles.hidden]}>
           <Vocab active={tab === 'vocab'} onGoToFeed={goToFeed} />
         </View>
         <View style={[styles.screen, tab !== 'progress' && styles.hidden]}>
-          <Progress active={tab === 'progress'} onGoToFeed={goToFeed} />
+          <Progress active={tab === 'progress'} onGoToFeed={goToFeed} onGoToWords={goToWords} />
         </View>
       </View>
 

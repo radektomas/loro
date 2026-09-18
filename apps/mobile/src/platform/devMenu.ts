@@ -2,6 +2,7 @@ import { DevSettings } from 'react-native';
 import { devRaiseDayDone } from '../feed/dayDone';
 import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
+import { devRaiseWordLearned } from '../feed/wordLearned';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { storageDriver } from './storage';
 
@@ -128,6 +129,10 @@ export function installDevMenu(): void {
    * that no longer exists.
    */
   publish([
+    /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
+        "so i can see it right away and not search it like a crazy man").
+        Open the Feed tab, then tap. */
+    { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     /**
      * THE DEFAULT FIRST RUN, AND IT ENDS AT THE WALL.
      *

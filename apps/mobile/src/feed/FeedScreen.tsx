@@ -38,6 +38,8 @@ import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
 import { DayDoneCard } from './DayDoneCard';
 import { LevelUpCard } from './LevelUpCard';
+import { LearnedToast } from './LearnedToast';
+import { SoundIcon } from './SoundIcon';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
 import { RecallBar } from './RecallBar';
@@ -238,11 +240,14 @@ export function FeedScreen({
   reel,
   walkthrough,
   onGoToProgress,
+  onGoToWords,
 }: {
   active: boolean;
   /** The day-done card's "see my progress". Absent during onboarding, where
       there is no Progress tab to go to. */
   onGoToProgress?: () => void;
+  /** The word-learned toast's tap. Absent during onboarding, like the above. */
+  onGoToWords?: () => void;
   /**
    * SHOW EXACTLY THESE VIDEOS, IN THIS ORDER — the onboarding taste reel.
    *
@@ -491,6 +496,7 @@ export function FeedScreen({
       walkthrough={walkthrough}
       onAreaLayout={onAreaLayout}
       onGoToProgress={onGoToProgress}
+      onGoToWords={onGoToWords}
     />
   );
 }
@@ -606,6 +612,7 @@ function FeedBody({
   walkthrough,
   onAreaLayout,
   onGoToProgress,
+  onGoToWords,
 }: {
   videos: EmbedVideo[];
   box: Omit<PlayerBox, 'visible'> | null;
@@ -616,6 +623,7 @@ function FeedBody({
   walkthrough?: FeedWalkthrough;
   onAreaLayout: (event: LayoutChangeEvent) => void;
   onGoToProgress?: () => void;
+  onGoToWords?: () => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   /**
@@ -1079,6 +1087,16 @@ function FeedBody({
               before the paywall. Not rendering them cannot be defeated. */}
           {!walkthrough && (
             <>
+              {/* A word earned (wordLearned.ts): Loro in from the side over
+                  the frame area — the player yielded and paused underneath,
+                  like the cards, because nothing is drawn over a playing
+                  frame. Before the cards in paint order, so any card raised
+                  at the same moment covers it. */}
+              <LearnedToast
+                active={active}
+                onObscurePlayer={setPromptObscured}
+                onGoToWords={onGoToWords}
+              />
               {/* Raised by RecallHost after the first correct answer's
                   celebration, and silent every other time. Last child so it
                   covers the band and the answer bar as well as the slide. */}
@@ -1685,7 +1703,7 @@ function SoundControl() {
           pressed && styles.soundPressed,
         ]}
       >
-        <Text style={styles.soundToggleText}>🔊</Text>
+        <SoundIcon on color="rgba(242,245,243,0.9)" size={14} />
       </Pressable>
     );
   }
@@ -1700,7 +1718,8 @@ function SoundControl() {
         accessibilityHint="Plays this video with sound"
         style={({ pressed }) => [styles.soundPrompt, pressed && styles.soundPressed]}
       >
-        <Text style={styles.soundPromptText}>🔇 Tap for sound</Text>
+        <SoundIcon on={false} color="#06130d" size={14} />
+        <Text style={styles.soundPromptText}>Tap for sound</Text>
       </Pressable>
     </Animated.View>
   );
@@ -1951,12 +1970,19 @@ const styles = StyleSheet.create({
    * it stops existing the moment sound is on, so it can afford to shout.
    */
   soundPrompt: {
+    alignItems: 'center',
     backgroundColor: '#5ee6a8',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    flexDirection: 'row',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
-  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800' },
+  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800', letterSpacing: 0.2 },
   /**
    * Sound is already on, so this is not a prompt — it is the way back to
    * muted, and nothing more. Quiet by design; minWidth keeps a lone glyph from
@@ -1966,12 +1992,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.10)',
     borderRadius: 999,
+    height: 30,
     justifyContent: 'center',
-    minWidth: 40,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    width: 34,
   },
-  soundToggleText: { fontSize: 13 },
   soundPressed: { opacity: 0.7 },
   /** Quiet, like soundToggle — replay is a convenience, not a call to action. */
   replayCue: {

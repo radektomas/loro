@@ -173,17 +173,35 @@ export function daysMeetingGoal(
 // ---------------------------------------------------------------------------
 // Due reviews
 
-export function dueCount(words: SavedWord[], now: number = Date.now()): number {
-  return words.filter((w) => w.dueAt <= now).length;
+/**
+ * READY TO REVIEW — the schedule brought this word back.
+ *
+ * Due AND answered before. A fresh save is due one minute after saving
+ * (initialSrs), so counting every due row made "ready" mean "everything
+ * you ever saved": a real device read 329, of which ~300 had never been
+ * asked once (2026-09-18). Those are NEW, and they get their first blank
+ * whenever a video speaks them (the planner keeps its own rule — this
+ * changes what the app CALLS ready, not what it asks). A word answered
+ * wrong is 'lapsed', not 'new', so it counts; so does a learned word whose
+ * interval ran out — that is the schedule working.
+ */
+export function isReady(word: SavedWord, now: number = Date.now()): boolean {
+  return word.state !== 'new' && word.dueAt <= now;
 }
 
-/** Earliest upcoming dueAt strictly in the future; null if none. */
+export function dueCount(words: SavedWord[], now: number = Date.now()): number {
+  return words.filter((w) => isReady(w, now)).length;
+}
+
+/** Earliest upcoming return strictly in the future; null if none. New
+    words are not returns (see isReady). */
 export function nextDueAt(
   words: SavedWord[],
   now: number = Date.now()
 ): number | null {
   let next: number | null = null;
   for (const w of words) {
+    if (w.state === 'new') continue;
     if (w.dueAt > now && (next === null || w.dueAt < next)) next = w.dueAt;
   }
   return next;
