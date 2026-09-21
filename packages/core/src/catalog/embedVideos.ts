@@ -28,6 +28,8 @@ type EmbedEntry = {
   dictionary: Video['dictionary'];
   /** See core/collections.ts. Absent on every reel. */
   collection?: string;
+  /** Episodes only — see Video.title. */
+  title?: string;
 };
 
 const LEVELS: readonly Level[] = ['A1', 'A2', 'B1', 'B2'];
@@ -55,6 +57,7 @@ export function mapEmbedEntries(entries: readonly EmbedEntry[]): Video[] {
     // than by a null check at render time.
     author: { kind: 'youtube', ...entry.attribution },
     ...(entry.collection ? { collection: entry.collection } : {}),
+    ...(entry.title ? { title: entry.title } : {}),
   }));
 }
 

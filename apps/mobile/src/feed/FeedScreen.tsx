@@ -1104,6 +1104,7 @@ function FeedBody({
           {showChips && (
             <CollectionPill
               selected={collection}
+              detail={episodes && videos.length > 0 ? `${activeIndex + 1}/${videos.length}` : undefined}
               topInset={insets.top}
               open={menuOpen}
               onPress={() => setMenuOpen((o) => !o)}
@@ -1113,11 +1114,32 @@ function FeedBody({
             <CollectionMenu
               selected={collection}
               topInset={insets.top}
+              // An episode shelf keeps the menu up so its episodes can be
+              // picked; the reels shelf closes it, there is nothing to pick.
               onPick={(id) => {
-                setMenuOpen(false);
+                if (!isEpisodes(id)) setMenuOpen(false);
                 setCollection(id);
               }}
               onClose={() => setMenuOpen(false)}
+              episodes={
+                episodes
+                  ? videos.map((v) => ({
+                      id: v.id,
+                      youtubeId: v.youtubeId,
+                      title: v.title ?? v.creator,
+                      durationSeconds: v.durationSeconds,
+                    }))
+                  : null
+              }
+              activeIndex={activeIndex}
+              // The review jump's own mechanism: a remount at the index.
+              onPickEpisode={(index) => {
+                setMenuOpen(false);
+                if (index === activeIndex) return;
+                jumpTargetRef.current = index;
+                setActiveIndex(index);
+                setListGeneration((g) => g + 1);
+              }}
             />
           )}
           {pageHeight > 0 && (
@@ -1136,6 +1158,9 @@ function FeedBody({
               data={videos}
               keyExtractor={(video) => video.id}
               extraData={activeIndex}
+              // Episodes are chosen from the menu, not swiped to (Radek:
+              // "it doesn't make sense the scrolling here").
+              scrollEnabled={!episodes}
               renderItem={({ item, index }) => (
                 <Slide
                   video={item}

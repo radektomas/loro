@@ -112,6 +112,9 @@ export type Video = {
    * collection but reels is landscape and played in episode order.
    */
   collection?: string;
+  /** An episode's own name ("El loro Polly"), for the episode picker. Reels
+      have none — the author line is their label. */
+  title?: string;
 };
 
 /**

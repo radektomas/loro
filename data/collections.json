@@ -3975,7 +3975,8 @@
         }
       }
     },
-    "collection": "peppa"
+    "collection": "peppa",
+    "title": "Charcos de barro"
   },
   {
     "id": "77W8yxN_b94",
@@ -7506,7 +7507,8 @@
         }
       }
     },
-    "collection": "peppa"
+    "collection": "peppa",
+    "title": "El loro Polly"
   },
   {
     "id": "d4cOEmYJZn8",
@@ -12162,7 +12164,8 @@
         }
       }
     },
-    "collection": "peppa"
+    "collection": "peppa",
+    "title": "El señor Dinosaurio se ha perdido"
   },
   {
     "id": "K_92cr4xhsc",
@@ -16078,7 +16081,8 @@
         }
       }
     },
-    "collection": "peppa"
+    "collection": "peppa",
+    "title": "El escondite"
   },
   {
     "id": "UFV7XljO82s",
@@ -20581,6 +20585,7 @@
         }
       }
     },
-    "collection": "peppa"
+    "collection": "peppa",
+    "title": "La mejor amiga"
   }
 ]

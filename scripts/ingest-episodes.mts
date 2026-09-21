@@ -212,6 +212,20 @@ function saveRepair(id: string, words: readonly CueWord[], result: RepairResult)
  *  built against. The first real episode of a collection retires them. */
 const isStub = (e: EpisodeEntry): boolean => Object.keys(e.dictionary ?? {}).length === 0;
 
+/**
+ * The episode's own name out of the upload's title: "Peppa Pig - El loro
+ * Polly (episodio completo)" → "El loro Polly". Channel prefixes before a
+ * dash or pipe and bracketed suffixes are the two things every kids
+ * channel adds; whatever is left is the name the picker shows.
+ */
+export function episodeTitle(raw: string): string {
+  let t = raw.trim();
+  t = t.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*$/g, '').trim();
+  const cut = t.split(/\s+[-–—|]\s+/);
+  if (cut.length > 1) t = cut.slice(1).join(' - ').trim();
+  return t || raw.trim();
+}
+
 // ── Subtitle audit ──────────────────────────────────────────────────────────
 
 type Audit = {
@@ -468,6 +482,7 @@ async function main(): Promise<void> {
       const entry: EpisodeEntry = {
         id,
         youtubeId: id,
+        title: episodeTitle(title),
         creator: channelTitle,
         level: estimateLevel(cues),
         durationSeconds: duration,

@@ -1,15 +1,19 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { COLLECTIONS, findCollection } from '@loro/core/collections';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { COLLECTIONS, findCollection, isEpisodes } from '@loro/core/collections';
 
 /**
  * THE SHELF PILL — one centred pill in the strip between the status bar and
- * the video, saying where you are ("Reels ▾"). Tap it and a small menu
- * lists the shelves; pick one and the feed under it swaps.
+ * the video, saying where you are ("Reels ▾", "Peppa · 2/5 ▾"). Tap it and
+ * a menu opens: the shelves as a row of chips, and, for an episode shelf,
+ * the shelf's episodes underneath — thumbnail, name, length — to pick from.
  *
  * The first cut was a row of chips, always on. Radek: "a user will not
  * want to see those chips all the time — one big chip in the middle saying
- * the current position, tap it to open a simple menu". So: one pill, and
- * the list only on request.
+ * the current position, tap it to open a simple menu". Then, with Peppa
+ * playing (2026-09-21): "if you can choose episodes — it doesn't make
+ * sense the scrolling here". So episodes are CHOSEN, not swiped to: the
+ * feed turns paging off for an episode shelf and this list is the way
+ * between episodes.
  *
  * THE MENU DRAWS OVER THE PLAYER, so the player yields while it is open —
  * FeedBody raises the same obscure flag the day-done card and the
@@ -20,32 +24,51 @@ import { COLLECTIONS, findCollection } from '@loro/core/collections';
  */
 export const CHIP_ROW_H = 44;
 
+export type EpisodeItem = {
+  id: string;
+  youtubeId?: string;
+  title: string;
+  durationSeconds?: number;
+};
+
 export function CollectionPill({
   selected,
+  detail,
   topInset,
   open,
   onPress,
 }: {
   selected: string;
+  /** "2/5" on an episode shelf — where you are in the list. */
+  detail?: string;
   topInset: number;
   open: boolean;
   onPress: () => void;
 }) {
+  const label = findCollection(selected).label;
   return (
     <View style={[styles.strip, { paddingTop: topInset, height: topInset + CHIP_ROW_H }]}>
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`Watching ${findCollection(selected).label}. Change what to watch`}
+        accessibilityLabel={`Watching ${label}${detail ? `, episode ${detail}` : ''}. Change what to watch`}
         accessibilityState={{ expanded: open }}
         hitSlop={8}
         style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
       >
-        <Text style={styles.pillText}>{findCollection(selected).label}</Text>
+        <Text style={styles.pillText}>{label}</Text>
+        {detail && <Text style={styles.pillDetail}>· {detail}</Text>}
         <Text style={styles.pillChevron}>{open ? '▴' : '▾'}</Text>
       </Pressable>
     </View>
   );
+}
+
+function clock(seconds: number | undefined): string | null {
+  if (!seconds || seconds <= 0) return null;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 export function CollectionMenu({
@@ -53,33 +76,92 @@ export function CollectionMenu({
   topInset,
   onPick,
   onClose,
+  episodes,
+  activeIndex,
+  onPickEpisode,
 }: {
   selected: string;
   topInset: number;
   onPick: (id: string) => void;
   onClose: () => void;
+  /** The selected shelf's episodes, in order — null on the reels shelf,
+      absent where there is no list to pick from (EmptyShelf). */
+  episodes?: EpisodeItem[] | null;
+  activeIndex?: number;
+  onPickEpisode?: (index: number) => void;
 }) {
+  const { height } = useWindowDimensions();
+  const listMax = Math.max(200, height * 0.5);
   return (
     <View style={styles.backdrop}>
       {/* The dim closes it — the same gesture every sheet answers to. */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.menu, { top: topInset + CHIP_ROW_H + 4 }]}>
         <Text style={styles.menuTitle}>What to watch</Text>
-        {COLLECTIONS.map((c) => {
-          const on = c.id === selected;
-          return (
-            <Pressable
-              key={c.id}
-              onPress={() => onPick(c.id)}
-              accessibilityRole="menuitem"
-              accessibilityState={{ selected: on }}
-              style={({ pressed }) => [styles.item, pressed && styles.pressed]}
-            >
-              <Text style={[styles.itemText, on && styles.itemTextOn]}>{c.label}</Text>
-              {on && <Text style={styles.itemTick}>✓</Text>}
-            </Pressable>
-          );
-        })}
+        <View style={styles.shelves}>
+          {COLLECTIONS.map((c) => {
+            const on = c.id === selected;
+            return (
+              <Pressable
+                key={c.id}
+                onPress={() => onPick(c.id)}
+                accessibilityRole="menuitem"
+                accessibilityState={{ selected: on }}
+                style={({ pressed }) => [styles.shelf, on && styles.shelfOn, pressed && styles.pressed]}
+              >
+                <Text style={[styles.shelfText, on && styles.shelfTextOn]}>{c.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {isEpisodes(selected) && (
+          <>
+            <Text style={[styles.menuTitle, styles.episodesTitle]}>
+              Episodes{episodes && episodes.length > 0 ? ` · ${episodes.length}` : ''}
+            </Text>
+            {!episodes || episodes.length === 0 ? (
+              <Text style={styles.none}>Nothing on this shelf yet.</Text>
+            ) : (
+              <ScrollView style={{ maxHeight: listMax }} contentContainerStyle={styles.list}>
+                {episodes.map((ep, i) => {
+                  const on = i === activeIndex;
+                  const len = clock(ep.durationSeconds);
+                  return (
+                    <Pressable
+                      key={ep.id}
+                      onPress={() => onPickEpisode?.(i)}
+                      accessibilityRole="menuitem"
+                      accessibilityState={{ selected: on }}
+                      accessibilityLabel={`Episode ${i + 1}, ${ep.title}${len ? `, ${len}` : ''}`}
+                      style={({ pressed }) => [styles.episode, on && styles.episodeOn, pressed && styles.pressed]}
+                    >
+                      {ep.youtubeId ? (
+                        <Image
+                          source={{ uri: `https://i.ytimg.com/vi/${ep.youtubeId}/mqdefault.jpg` }}
+                          style={styles.thumb}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.thumb} />
+                      )}
+                      <View style={styles.episodeText}>
+                        <Text style={[styles.episodeTitle, on && styles.episodeTitleOn]} numberOfLines={2}>
+                          {ep.title}
+                        </Text>
+                        <Text style={styles.episodeMeta}>
+                          {i + 1}
+                          {len ? ` · ${len}` : ''}
+                          {on ? ' · playing' : ''}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </>
+        )}
       </View>
     </View>
   );
@@ -108,6 +190,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   pillText: { color: '#f2f5f3', fontSize: 14, fontWeight: '800' },
+  pillDetail: { color: 'rgba(242,245,243,0.6)', fontSize: 13, fontWeight: '700' },
   pillChevron: { color: 'rgba(242,245,243,0.6)', fontSize: 12, fontWeight: '700' },
   pressed: { opacity: 0.7 },
   backdrop: {
@@ -125,10 +208,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(242,245,243,0.1)',
     borderRadius: 18,
     borderWidth: 1,
-    minWidth: 240,
+    maxWidth: 420,
     paddingHorizontal: 8,
     paddingVertical: 8,
     position: 'absolute',
+    width: '92%',
   },
   menuTitle: {
     color: 'rgba(242,245,243,0.45)',
@@ -139,15 +223,36 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     textTransform: 'uppercase',
   },
-  item: {
+  episodesTitle: {
+    borderTopColor: 'rgba(242,245,243,0.08)',
+    borderTopWidth: 1,
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  shelves: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingVertical: 4 },
+  shelf: {
+    backgroundColor: 'rgba(242,245,243,0.07)',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+  },
+  shelfOn: { backgroundColor: '#5ee6a8' },
+  shelfText: { color: 'rgba(242,245,243,0.85)', fontSize: 14, fontWeight: '700' },
+  shelfTextOn: { color: '#06130d', fontWeight: '800' },
+  none: { color: 'rgba(242,245,243,0.5)', fontSize: 14, paddingHorizontal: 12, paddingBottom: 10 },
+  list: { paddingBottom: 4 },
+  episode: {
     alignItems: 'center',
     borderRadius: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    gap: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
   },
-  itemText: { color: 'rgba(242,245,243,0.85)', fontSize: 16, fontWeight: '600' },
-  itemTextOn: { color: '#5ee6a8', fontWeight: '800' },
-  itemTick: { color: '#5ee6a8', fontSize: 16, fontWeight: '800' },
+  episodeOn: { backgroundColor: 'rgba(94,230,168,0.1)' },
+  thumb: { backgroundColor: 'rgba(242,245,243,0.06)', borderRadius: 8, height: 50, width: 89 },
+  episodeText: { flex: 1 },
+  episodeTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
+  episodeTitleOn: { color: '#5ee6a8' },
+  episodeMeta: { color: 'rgba(242,245,243,0.5)', fontSize: 12, marginTop: 2 },
 });
