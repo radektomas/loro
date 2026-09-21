@@ -20471,5 +20471,8002 @@
     },
     "collection": "peppa",
     "title": "La mejor amiga"
+  },
+  {
+    "id": "BaRAStI3QD4",
+    "youtubeId": "BaRAStI3QD4",
+    "title": "Una nueva decoración en la casa de Peppa",
+    "creator": "Discovery Kids",
+    "level": "A2",
+    "durationSeconds": 191,
+    "thumbnailUrl": "https://i.ytimg.com/vi/BaRAStI3QD4/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Discovery Kids",
+      "channelUrl": "https://www.youtube.com/channel/UC9PIfDp0yx6QRTMVMltMZyA",
+      "videoUrl": "https://www.youtube.com/watch?v=BaRAStI3QD4",
+      "license": "youtube"
+    },
+    "cues": [
+      {
+        "start": 0.64,
+        "end": 6.68,
+        "words": [
+          {
+            "text": "Esto",
+            "start": 0.64,
+            "end": 0.919
+          },
+          {
+            "text": "es",
+            "start": 0.919,
+            "end": 1.28
+          },
+          {
+            "text": "Discovery",
+            "start": 1.28,
+            "end": 1.88
+          },
+          {
+            "text": "Kids.",
+            "start": 1.88,
+            "end": 2.48
+          },
+          {
+            "text": "Comenzamos",
+            "start": 2.52,
+            "end": 3.12
+          },
+          {
+            "text": "decorando.",
+            "start": 6.08,
+            "end": 6.68
+          }
+        ],
+        "translations": {
+          "en": "This is Discovery Kids. Let's start decorating.",
+          "cs": "Tohle je Discovery Kids. Jdeme zdobit.",
+          "de": "Das ist Discovery Kids. Fangen wir an zu dekorieren.",
+          "fr": "C'est Discovery Kids. On commence à décorer."
+        }
+      },
+      {
+        "start": 8.16,
+        "end": 11.679,
+        "words": [
+          {
+            "text": "Las",
+            "start": 8.16,
+            "end": 8.48
+          },
+          {
+            "text": "renovaciones",
+            "start": 8.48,
+            "end": 9.08
+          },
+          {
+            "text": "de",
+            "start": 9.36,
+            "end": 9.519
+          },
+          {
+            "text": "la",
+            "start": 9.519,
+            "end": 9.76
+          },
+          {
+            "text": "casa",
+            "start": 9.76,
+            "end": 10.16
+          },
+          {
+            "text": "se",
+            "start": 10.16,
+            "end": 10.32
+          },
+          {
+            "text": "han",
+            "start": 10.32,
+            "end": 10.639
+          },
+          {
+            "text": "completado",
+            "start": 10.639,
+            "end": 11.239
+          },
+          {
+            "text": "para",
+            "start": 11.44,
+            "end": 11.679
+          }
+        ],
+        "translations": {
+          "en": "The house renovations are done for",
+          "cs": "Renovace domu jsou dokončeny pro",
+          "de": "Die Hausrenovierungen sind abgeschlossen für",
+          "fr": "Les rénovations de la maison sont terminées pour"
+        }
+      },
+      {
+        "start": 11.679,
+        "end": 13.76,
+        "words": [
+          {
+            "text": "la",
+            "start": 11.679,
+            "end": 11.84
+          },
+          {
+            "text": "llegada",
+            "start": 11.84,
+            "end": 12.36
+          },
+          {
+            "text": "del",
+            "start": 12.36,
+            "end": 12.679
+          },
+          {
+            "text": "nuevo",
+            "start": 12.679,
+            "end": 13.16
+          },
+          {
+            "text": "bebé.",
+            "start": 13.16,
+            "end": 13.76
+          }
+        ],
+        "translations": {
+          "en": "the arrival of the new baby.",
+          "cs": "příchod nového miminka.",
+          "de": "die Ankunft des neuen Babys.",
+          "fr": "l'arrivée du nouveau bébé."
+        }
+      },
+      {
+        "start": 14.28,
+        "end": 15.639,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 14.28,
+            "end": 14.719
+          },
+          {
+            "text": "eso",
+            "start": 14.719,
+            "end": 14.92
+          },
+          {
+            "text": "es",
+            "start": 14.92,
+            "end": 15.12
+          },
+          {
+            "text": "todo.",
+            "start": 15.12,
+            "end": 15.639
+          }
+        ],
+        "translations": {
+          "en": "Well, that's it.",
+          "cs": "No, to je vše.",
+          "de": "Na, das war's.",
+          "fr": "Bon, c'est tout."
+        }
+      },
+      {
+        "start": 15.639,
+        "end": 19.24,
+        "words": [
+          {
+            "text": "Los",
+            "start": 15.639,
+            "end": 15.799
+          },
+          {
+            "text": "muebles",
+            "start": 15.799,
+            "end": 16.24
+          },
+          {
+            "text": "están",
+            "start": 16.24,
+            "end": 16.52
+          },
+          {
+            "text": "listos",
+            "start": 16.52,
+            "end": 17.039
+          },
+          {
+            "text": "y",
+            "start": 17.039,
+            "end": 17.199
+          },
+          {
+            "text": "la",
+            "start": 17.199,
+            "end": 17.359
+          },
+          {
+            "text": "pintura",
+            "start": 17.359,
+            "end": 17.72
+          },
+          {
+            "text": "está",
+            "start": 17.72,
+            "end": 17.92
+          },
+          {
+            "text": "fresca",
+            "start": 17.92,
+            "end": 18.4
+          },
+          {
+            "text": "como",
+            "start": 18.4,
+            "end": 18.64
+          },
+          {
+            "text": "lechuga.",
+            "start": 18.64,
+            "end": 19.24
+          }
+        ],
+        "translations": {
+          "en": "The furniture is ready, and the paint's fresh as lettuce.",
+          "cs": "Nábytek je připraven a barva je čerstvá jako salát.",
+          "de": "Die Möbel sind bereit und die Farbe ist frisch wie Salat.",
+          "fr": "Les meubles sont prêts et la peinture est fraîche comme de la laitue."
+        }
+      },
+      {
+        "start": 19.56,
+        "end": 22.039,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 19.56,
+            "end": 20.16
+          },
+          {
+            "text": "¿probaste",
+            "start": 20.519,
+            "end": 21.119
+          },
+          {
+            "text": "la",
+            "start": 21.16,
+            "end": 21.439
+          },
+          {
+            "text": "pintura?",
+            "start": 21.439,
+            "end": 22.039
+          }
+        ],
+        "translations": {
+          "en": "Ah, did you taste the paint?",
+          "cs": "Ah, ochutnala jsi tu barvu?",
+          "de": "Ah, hast du die Farbe probiert?",
+          "fr": "Ah, tu as goûté la peinture?"
+        }
+      },
+      {
+        "start": 22.32,
+        "end": 24.92,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 22.32,
+            "end": 22.64
+          },
+          {
+            "text": "no,",
+            "start": 22.64,
+            "end": 23.039
+          },
+          {
+            "text": "no",
+            "start": 23.039,
+            "end": 23.24
+          },
+          {
+            "text": "se",
+            "start": 23.24,
+            "end": 23.439
+          },
+          {
+            "text": "refiere",
+            "start": 23.439,
+            "end": 23.76
+          },
+          {
+            "text": "a",
+            "start": 23.76,
+            "end": 23.96
+          },
+          {
+            "text": "eso,",
+            "start": 23.96,
+            "end": 24.32
+          },
+          {
+            "text": "Peppa.",
+            "start": 24.32,
+            "end": 24.92
+          }
+        ],
+        "translations": {
+          "en": "Oh no, that's not what it means, Peppa.",
+          "cs": "Oh ne, to tak neznamená, Peppo.",
+          "de": "Oh nein, das meint er nicht, Peppa.",
+          "fr": "Oh non, ce n'est pas ce que ça veut dire, Peppa."
+        }
+      },
+      {
+        "start": 25.199,
+        "end": 28.44,
+        "words": [
+          {
+            "text": "Gracias",
+            "start": 25.199,
+            "end": 25.64
+          },
+          {
+            "text": "por",
+            "start": 25.64,
+            "end": 25.88
+          },
+          {
+            "text": "todo,",
+            "start": 25.88,
+            "end": 26.279
+          },
+          {
+            "text": "señor",
+            "start": 26.279,
+            "end": 26.599
+          },
+          {
+            "text": "Toribio,",
+            "start": 26.599,
+            "end": 27.199
+          },
+          {
+            "text": "fue",
+            "start": 27.199,
+            "end": 27.56
+          },
+          {
+            "text": "un",
+            "start": 27.56,
+            "end": 27.84
+          },
+          {
+            "text": "placer.",
+            "start": 27.84,
+            "end": 28.44
+          }
+        ],
+        "translations": {
+          "en": "Thanks for everything, Mr. Toribio, it was a pleasure.",
+          "cs": "Díky za všechno, pane Toribio, bylo to potěšení.",
+          "de": "Danke für alles, Herr Toribio, es war ein Vergnügen.",
+          "fr": "Merci pour tout, monsieur Toribio, ce fut un plaisir."
+        }
+      },
+      {
+        "start": 28.56,
+        "end": 31.84,
+        "words": [
+          {
+            "text": "Me",
+            "start": 28.56,
+            "end": 28.76
+          },
+          {
+            "text": "encanta",
+            "start": 28.76,
+            "end": 29.119
+          },
+          {
+            "text": "mi",
+            "start": 29.119,
+            "end": 29.4
+          },
+          {
+            "text": "trabajo",
+            "start": 29.4,
+            "end": 30
+          },
+          {
+            "text": "a",
+            "start": 30.56,
+            "end": 30.8
+          },
+          {
+            "text": "casa,",
+            "start": 30.8,
+            "end": 31.24
+          },
+          {
+            "text": "equipo.",
+            "start": 31.24,
+            "end": 31.84
+          }
+        ],
+        "translations": {
+          "en": "I love working from home, team.",
+          "cs": "Miluji práci z domova, týme.",
+          "de": "Ich liebe die Heimarbeit, Team.",
+          "fr": "J'adore travailler à la maison, équipe."
+        }
+      },
+      {
+        "start": 33.399,
+        "end": 35.92,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 33.399,
+            "end": 33.92
+          },
+          {
+            "text": "¿qué",
+            "start": 33.92,
+            "end": 34.16
+          },
+          {
+            "text": "estamos",
+            "start": 34.16,
+            "end": 34.559
+          },
+          {
+            "text": "esperando",
+            "start": 34.559,
+            "end": 35.04
+          },
+          {
+            "text": "para",
+            "start": 35.04,
+            "end": 35.32
+          },
+          {
+            "text": "entrar?",
+            "start": 35.32,
+            "end": 35.92
+          }
+        ],
+        "translations": {
+          "en": "Well, what are we waiting for? Let's go in.",
+          "cs": "No, na co čekáme? Vejděme.",
+          "de": "Na, worauf warten wir? Lass uns reingehen.",
+          "fr": "Bon, qu'est-ce qu'on attend pour entrer ?"
+        }
+      },
+      {
+        "start": 39.16,
+        "end": 40.96,
+        "words": [
+          {
+            "text": "Es",
+            "start": 39.16,
+            "end": 39.399
+          },
+          {
+            "text": "encantador,",
+            "start": 39.399,
+            "end": 39.999
+          },
+          {
+            "text": "¿no",
+            "start": 40.16,
+            "end": 40.36
+          },
+          {
+            "text": "lo",
+            "start": 40.36,
+            "end": 40.52
+          },
+          {
+            "text": "creen?",
+            "start": 40.52,
+            "end": 40.96
+          }
+        ],
+        "translations": {
+          "en": "It's lovely, isn't it?",
+          "cs": "To je krásné, není to?",
+          "de": "Es ist bezaubernd, oder?",
+          "fr": "C'est charmant, non?"
+        }
+      },
+      {
+        "start": 40.96,
+        "end": 43.159,
+        "words": [
+          {
+            "text": "Les",
+            "start": 40.96,
+            "end": 41.12
+          },
+          {
+            "text": "dije",
+            "start": 41.12,
+            "end": 41.36
+          },
+          {
+            "text": "que",
+            "start": 41.36,
+            "end": 41.48
+          },
+          {
+            "text": "el",
+            "start": 41.48,
+            "end": 41.64
+          },
+          {
+            "text": "verde",
+            "start": 41.64,
+            "end": 42
+          },
+          {
+            "text": "todavía",
+            "start": 42,
+            "end": 42.559
+          },
+          {
+            "text": "funciona.",
+            "start": 42.559,
+            "end": 43.159
+          }
+        ],
+        "translations": {
+          "en": "I told you green still works.",
+          "cs": "Říkal jsem, že zelená stále funguje.",
+          "de": "Ich hab doch gesagt, Grün funktioniert noch.",
+          "fr": "Je vous avais dit que le vert fonctionne toujours."
+        }
+      },
+      {
+        "start": 43.36,
+        "end": 45.72,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 43.36,
+            "end": 43.879
+          },
+          {
+            "text": "mira",
+            "start": 43.879,
+            "end": 44.2
+          },
+          {
+            "text": "la",
+            "start": 44.2,
+            "end": 44.399
+          },
+          {
+            "text": "televisión,",
+            "start": 44.399,
+            "end": 44.999
+          },
+          {
+            "text": "George.",
+            "start": 45.12,
+            "end": 45.72
+          }
+        ],
+        "translations": {
+          "en": "Ah, look at the TV, George.",
+          "cs": "Ah, podívej se na televizi, Georgi.",
+          "de": "Ah, schau den Fernseher, George.",
+          "fr": "Ah, regarde la télé, George."
+        }
+      },
+      {
+        "start": 45.84,
+        "end": 49.36,
+        "words": [
+          {
+            "text": "Wow,",
+            "start": 45.84,
+            "end": 46.44
+          },
+          {
+            "text": "el",
+            "start": 48.44,
+            "end": 48.76
+          },
+          {
+            "text": "auto.",
+            "start": 48.76,
+            "end": 49.36
+          }
+        ],
+        "translations": {
+          "en": "Wow, the car.",
+          "cs": "Wow, to auto.",
+          "de": "Wow, das Auto.",
+          "fr": "Wow, la voiture."
+        }
+      },
+      {
+        "start": 52.16,
+        "end": 55.4,
+        "words": [
+          {
+            "text": "Ajá,",
+            "start": 52.16,
+            "end": 52.76
+          },
+          {
+            "text": "qué",
+            "start": 54.399,
+            "end": 54.8
+          },
+          {
+            "text": "belleza.",
+            "start": 54.8,
+            "end": 55.4
+          }
+        ],
+        "translations": {
+          "en": "Aha, what a beauty.",
+          "cs": "Aha, jaká krása.",
+          "de": "Aha, was für eine Schönheit.",
+          "fr": "Ah, quelle beauté."
+        }
+      },
+      {
+        "start": 57.6,
+        "end": 60.2,
+        "words": [
+          {
+            "text": "Vean",
+            "start": 57.6,
+            "end": 58.039
+          },
+          {
+            "text": "qué",
+            "start": 58.039,
+            "end": 58.32
+          },
+          {
+            "text": "lindo",
+            "start": 58.32,
+            "end": 58.8
+          },
+          {
+            "text": "lugar.",
+            "start": 58.8,
+            "end": 59.4
+          },
+          {
+            "text": "Uh.",
+            "start": 59.6,
+            "end": 60.2
+          }
+        ],
+        "translations": {
+          "en": "Look what a lovely place. Uh.",
+          "cs": "Podívejte, jak krásné místo. Uh.",
+          "de": "Schaut, was für ein schöner Ort. Uh.",
+          "fr": "Regardez quel bel endroit. Uh."
+        }
+      },
+      {
+        "start": 62,
+        "end": 64.36,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 62,
+            "end": 62.44
+          },
+          {
+            "text": "esta",
+            "start": 62.44,
+            "end": 62.68
+          },
+          {
+            "text": "es",
+            "start": 62.68,
+            "end": 62.8
+          },
+          {
+            "text": "la",
+            "start": 62.8,
+            "end": 62.92
+          },
+          {
+            "text": "habitación",
+            "start": 62.92,
+            "end": 63.48
+          },
+          {
+            "text": "del",
+            "start": 63.48,
+            "end": 63.76
+          },
+          {
+            "text": "bebé.",
+            "start": 63.76,
+            "end": 64.36
+          }
+        ],
+        "translations": {
+          "en": "Ah, this is the baby's room.",
+          "cs": "Ah, to je pokoj pro dítě.",
+          "de": "Ah, das ist das Babyzimmer.",
+          "fr": "Ah, c'est la chambre du bébé."
+        }
+      },
+      {
+        "start": 64.799,
+        "end": 67.039,
+        "words": [
+          {
+            "text": "Es",
+            "start": 64.799,
+            "end": 64.96
+          },
+          {
+            "text": "muy",
+            "start": 64.96,
+            "end": 65.32
+          },
+          {
+            "text": "hermosa.",
+            "start": 65.32,
+            "end": 65.92
+          },
+          {
+            "text": "Me",
+            "start": 66.24,
+            "end": 66.439
+          },
+          {
+            "text": "encanta.",
+            "start": 66.439,
+            "end": 67.039
+          }
+        ],
+        "translations": {
+          "en": "It's very beautiful. I love it.",
+          "cs": "Je velmi krásný. Miluji to.",
+          "de": "Es ist sehr schön. Ich liebe es.",
+          "fr": "Elle est très belle. J'adore."
+        }
+      },
+      {
+        "start": 69.36,
+        "end": 72.2,
+        "words": [
+          {
+            "text": "Wow,",
+            "start": 69.36,
+            "end": 69.96
+          },
+          {
+            "text": "vean",
+            "start": 70.32,
+            "end": 70.72
+          },
+          {
+            "text": "esta",
+            "start": 70.72,
+            "end": 71
+          },
+          {
+            "text": "sala",
+            "start": 71,
+            "end": 71.36
+          },
+          {
+            "text": "de",
+            "start": 71.36,
+            "end": 71.6
+          },
+          {
+            "text": "juegoses.",
+            "start": 71.6,
+            "end": 72.2
+          }
+        ],
+        "translations": {
+          "en": "Wow, look at this playroom.",
+          "cs": "Wow, podívej na tu hernu.",
+          "de": "Wow, schaut euch dieses Spielzimmer an.",
+          "fr": "Wow, regardez cette salle de jeux."
+        }
+      },
+      {
+        "start": 74.479,
+        "end": 78.6,
+        "words": [
+          {
+            "text": "¿Te",
+            "start": 74.479,
+            "end": 74.68
+          },
+          {
+            "text": "gusta",
+            "start": 74.68,
+            "end": 75.04
+          },
+          {
+            "text": "tu",
+            "start": 75.04,
+            "end": 75.28
+          },
+          {
+            "text": "nuevo",
+            "start": 75.28,
+            "end": 75.64
+          },
+          {
+            "text": "hogar,",
+            "start": 75.64,
+            "end": 76.2
+          },
+          {
+            "text": "Goldi?",
+            "start": 76.2,
+            "end": 76.8
+          },
+          {
+            "text": "Excelente.",
+            "start": 78,
+            "end": 78.6
+          }
+        ],
+        "translations": {
+          "en": "Do you like your new home, Goldi? Great.",
+          "cs": "Líbí se ti tvůj nový domov, Goldi? Skvělé.",
+          "de": "Gefällt dir dein neues Zuhause, Goldi? Super.",
+          "fr": "Tu aimes ta nouvelle maison, Goldi ? Génial."
+        }
+      },
+      {
+        "start": 79.92,
+        "end": 82.92,
+        "words": [
+          {
+            "text": "Y",
+            "start": 79.92,
+            "end": 80.24
+          },
+          {
+            "text": "todavía",
+            "start": 80.24,
+            "end": 80.84
+          },
+          {
+            "text": "no",
+            "start": 80.92,
+            "end": 81.119
+          },
+          {
+            "text": "han",
+            "start": 81.119,
+            "end": 81.32
+          },
+          {
+            "text": "visto",
+            "start": 81.32,
+            "end": 81.68
+          },
+          {
+            "text": "la",
+            "start": 81.68,
+            "end": 81.92
+          },
+          {
+            "text": "mejor",
+            "start": 81.92,
+            "end": 82.32
+          },
+          {
+            "text": "parte.",
+            "start": 82.32,
+            "end": 82.92
+          }
+        ],
+        "translations": {
+          "en": "And you haven't seen the best part yet.",
+          "cs": "A ještě jste neviděli to nejlepší.",
+          "de": "Und ihr habt den besten Teil noch nicht gesehen.",
+          "fr": "Et vous n'avez pas encore vu le meilleur."
+        }
+      },
+      {
+        "start": 83.479,
+        "end": 87.6,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 83.479,
+            "end": 84.079
+          },
+          {
+            "text": "Peppa,",
+            "start": 85.759,
+            "end": 86.359
+          },
+          {
+            "text": "George,",
+            "start": 87,
+            "end": 87.6
+          }
+        ],
+        "translations": {
+          "en": "Ah, Peppa, George,",
+          "cs": "Ah, Peppa, George,",
+          "de": "Ah, Peppa, George,",
+          "fr": "Ah, Peppa, George,"
+        }
+      },
+      {
+        "start": 88.32,
+        "end": 94.56,
+        "words": [
+          {
+            "text": "sus",
+            "start": 88.32,
+            "end": 88.68
+          },
+          {
+            "text": "nuevas",
+            "start": 88.68,
+            "end": 89.2
+          },
+          {
+            "text": "habitaciones.",
+            "start": 89.2,
+            "end": 89.8
+          },
+          {
+            "text": "¿Qué?",
+            "start": 91.56,
+            "end": 92.16
+          },
+          {
+            "text": "¿Qué?",
+            "start": 93.96,
+            "end": 94.56
+          }
+        ],
+        "translations": {
+          "en": "your new rooms. What? What?",
+          "cs": "vaše nové pokoje. Co? Co?",
+          "de": "eure neuen Zimmer. Was? Was?",
+          "fr": "vos nouvelles chambres. Quoi? Quoi?"
+        }
+      },
+      {
+        "start": 96.52,
+        "end": 98.32,
+        "words": [
+          {
+            "text": "Mamá,",
+            "start": 96.52,
+            "end": 97
+          },
+          {
+            "text": "papá,",
+            "start": 97,
+            "end": 97.439
+          },
+          {
+            "text": "no",
+            "start": 97.439,
+            "end": 97.72
+          },
+          {
+            "text": "entiendo.",
+            "start": 97.72,
+            "end": 98.32
+          }
+        ],
+        "translations": {
+          "en": "Mom, dad, I don't get it.",
+          "cs": "Mami, tati, nerozumím.",
+          "de": "Mama, Papa, ich verstehe nicht.",
+          "fr": "Maman, papa, je ne comprends pas."
+        }
+      },
+      {
+        "start": 98.68,
+        "end": 100.039,
+        "words": [
+          {
+            "text": "Dejamos",
+            "start": 98.68,
+            "end": 99.159
+          },
+          {
+            "text": "sus",
+            "start": 99.159,
+            "end": 99.439
+          },
+          {
+            "text": "habitaciones",
+            "start": 99.439,
+            "end": 100.039
+          }
+        ],
+        "translations": {
+          "en": "We left your rooms",
+          "cs": "Nechali jsme vaše pokoje",
+          "de": "Wir haben eure Zimmer",
+          "fr": "On a laissé vos chambres"
+        }
+      },
+      {
+        "start": 100.56,
+        "end": 106.719,
+        "words": [
+          {
+            "text": "sin",
+            "start": 100.56,
+            "end": 100.88
+          },
+          {
+            "text": "decoraciones",
+            "start": 100.88,
+            "end": 101.48
+          },
+          {
+            "text": "para",
+            "start": 102,
+            "end": 102.2
+          },
+          {
+            "text": "que",
+            "start": 102.2,
+            "end": 102.36
+          },
+          {
+            "text": "las",
+            "start": 102.36,
+            "end": 102.6
+          },
+          {
+            "text": "puedan",
+            "start": 102.6,
+            "end": 102.96
+          },
+          {
+            "text": "decorar",
+            "start": 102.96,
+            "end": 103.56
+          },
+          {
+            "text": "como",
+            "start": 103.64,
+            "end": 104
+          },
+          {
+            "text": "ustedes",
+            "start": 104,
+            "end": 104.6
+          },
+          {
+            "text": "quieran.",
+            "start": 104.6,
+            "end": 105.2
+          },
+          {
+            "text": "Urra,",
+            "start": 106.119,
+            "end": 106.719
+          }
+        ],
+        "translations": {
+          "en": "without decor so you can do it your way. Hooray,",
+          "cs": "bez dekorací, abyste si je mohli vyzdobit po svém. Hurá,",
+          "de": "ohne Deko gelassen, damit ihr es selbst machen könnt. Hurra,",
+          "fr": "sans déco pour que vous puissiez les décorer vous-mêmes. Hourra,"
+        }
+      },
+      {
+        "start": 111.799,
+        "end": 112.68,
+        "words": [
+          {
+            "text": "y",
+            "start": 111.799,
+            "end": 111.92
+          },
+          {
+            "text": "su",
+            "start": 111.92,
+            "end": 112.119
+          },
+          {
+            "text": "familia.",
+            "start": 112.119,
+            "end": 112.68
+          }
+        ],
+        "translations": {
+          "en": "and your family.",
+          "cs": "a vaše rodina.",
+          "de": "und eure Familie.",
+          "fr": "et votre famille."
+        }
+      },
+      {
+        "start": 112.68,
+        "end": 116.8,
+        "words": [
+          {
+            "text": "Visitan",
+            "start": 112.68,
+            "end": 113.04
+          },
+          {
+            "text": "la",
+            "start": 113.04,
+            "end": 113.24
+          },
+          {
+            "text": "enorme",
+            "start": 113.24,
+            "end": 113.68
+          },
+          {
+            "text": "tienda",
+            "start": 113.68,
+            "end": 114.079
+          },
+          {
+            "text": "para",
+            "start": 114.079,
+            "end": 114.32
+          },
+          {
+            "text": "comprar",
+            "start": 114.32,
+            "end": 114.759
+          },
+          {
+            "text": "cosas",
+            "start": 114.759,
+            "end": 115.24
+          },
+          {
+            "text": "para",
+            "start": 115.24,
+            "end": 115.52
+          },
+          {
+            "text": "sus",
+            "start": 115.52,
+            "end": 115.759
+          },
+          {
+            "text": "nuevas",
+            "start": 115.759,
+            "end": 116.2
+          },
+          {
+            "text": "habitaciones.",
+            "start": 116.2,
+            "end": 116.8
+          }
+        ],
+        "translations": {
+          "en": "Visit the huge store to shop for your new rooms.",
+          "cs": "Navštívíte obrovský obchod, abyste si koupili věci do nových pokojů.",
+          "de": "Besucht das riesige Geschäft für eure neuen Zimmer.",
+          "fr": "Visitez le grand magasin pour acheter des choses pour vos nouvelles chambres."
+        }
+      },
+      {
+        "start": 119.039,
+        "end": 121.639,
+        "words": [
+          {
+            "text": "¿No",
+            "start": 119.039,
+            "end": 119.2
+          },
+          {
+            "text": "les",
+            "start": 119.2,
+            "end": 119.52
+          },
+          {
+            "text": "encanta",
+            "start": 119.52,
+            "end": 120.12
+          },
+          {
+            "text": "venir",
+            "start": 120.2,
+            "end": 120.52
+          },
+          {
+            "text": "a",
+            "start": 120.52,
+            "end": 120.719
+          },
+          {
+            "text": "estos",
+            "start": 120.719,
+            "end": 121.039
+          },
+          {
+            "text": "lugares?",
+            "start": 121.039,
+            "end": 121.639
+          }
+        ],
+        "translations": {
+          "en": "Don't you just love coming to these places?",
+          "cs": "Netěší vás příchod na tato místa?",
+          "de": "Liebst du es nicht, an diese Orte zu kommen?",
+          "fr": "Vous adorez venir dans ces endroits, non?"
+        }
+      },
+      {
+        "start": 122,
+        "end": 123.36,
+        "words": [
+          {
+            "text": "No,",
+            "start": 122,
+            "end": 122.2
+          },
+          {
+            "text": "la",
+            "start": 122.2,
+            "end": 122.439
+          },
+          {
+            "text": "verdad",
+            "start": 122.439,
+            "end": 122.68
+          },
+          {
+            "text": "es",
+            "start": 122.68,
+            "end": 122.84
+          },
+          {
+            "text": "que",
+            "start": 122.84,
+            "end": 123
+          },
+          {
+            "text": "no.",
+            "start": 123,
+            "end": 123.36
+          }
+        ],
+        "translations": {
+          "en": "No, honestly, not really.",
+          "cs": "Ne, upřímně řečeno, ne.",
+          "de": "Nein, ehrlich gesagt, nicht wirklich.",
+          "fr": "Non, pas vraiment, à vrai dire."
+        }
+      },
+      {
+        "start": 123.36,
+        "end": 126.44,
+        "words": [
+          {
+            "text": "Son",
+            "start": 123.36,
+            "end": 123.52
+          },
+          {
+            "text": "tan",
+            "start": 123.52,
+            "end": 123.759
+          },
+          {
+            "text": "grandes",
+            "start": 123.759,
+            "end": 124.079
+          },
+          {
+            "text": "que",
+            "start": 124.079,
+            "end": 124.24
+          },
+          {
+            "text": "terminas",
+            "start": 124.24,
+            "end": 124.68
+          },
+          {
+            "text": "comprando",
+            "start": 124.68,
+            "end": 125.159
+          },
+          {
+            "text": "cosas",
+            "start": 125.159,
+            "end": 125.439
+          },
+          {
+            "text": "que",
+            "start": 125.439,
+            "end": 125.6
+          },
+          {
+            "text": "no",
+            "start": 125.6,
+            "end": 125.84
+          },
+          {
+            "text": "necesitas.",
+            "start": 125.84,
+            "end": 126.44
+          }
+        ],
+        "translations": {
+          "en": "They're so big, you end up buying things you don't need.",
+          "cs": "Jsou tak velké, že nakonec kupujete věci, které nepotřebujete.",
+          "de": "Die sind so groß, man kauft Dinge, die man nicht braucht.",
+          "fr": "Ils sont tellement grands qu'on finit par acheter des trucs inutiles."
+        }
+      },
+      {
+        "start": 127.079,
+        "end": 132.16,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 127.079,
+            "end": 127.679
+          },
+          {
+            "text": "no",
+            "start": 128.399,
+            "end": 128.64
+          },
+          {
+            "text": "es",
+            "start": 128.64,
+            "end": 128.84
+          },
+          {
+            "text": "este",
+            "start": 128.84,
+            "end": 129.119
+          },
+          {
+            "text": "lugar",
+            "start": 129.119,
+            "end": 129.56
+          },
+          {
+            "text": "asombroso.",
+            "start": 129.56,
+            "end": 130.16
+          },
+          {
+            "text": "Wow.",
+            "start": 131.56,
+            "end": 132.16
+          }
+        ],
+        "translations": {
+          "en": "Oh, isn't this place amazing? Wow.",
+          "cs": "Oh, není toto místo úžasné? Wow.",
+          "de": "Oh, ist dieser Ort nicht unglaublich? Wow.",
+          "fr": "Oh, cet endroit n'est-il pas incroyable? Wow."
+        }
+      },
+      {
+        "start": 134,
+        "end": 137.64,
+        "words": [
+          {
+            "text": "Echen",
+            "start": 134,
+            "end": 134.319
+          },
+          {
+            "text": "un",
+            "start": 134.319,
+            "end": 134.44
+          },
+          {
+            "text": "vistazo",
+            "start": 134.44,
+            "end": 134.959
+          },
+          {
+            "text": "y",
+            "start": 134.959,
+            "end": 135.16
+          },
+          {
+            "text": "vean",
+            "start": 135.16,
+            "end": 135.4
+          },
+          {
+            "text": "si",
+            "start": 135.4,
+            "end": 135.56
+          },
+          {
+            "text": "hay",
+            "start": 135.56,
+            "end": 135.72
+          },
+          {
+            "text": "algo",
+            "start": 135.72,
+            "end": 135.959
+          },
+          {
+            "text": "que",
+            "start": 135.959,
+            "end": 136.12
+          },
+          {
+            "text": "les",
+            "start": 136.12,
+            "end": 136.36
+          },
+          {
+            "text": "guste.",
+            "start": 136.36,
+            "end": 136.96
+          },
+          {
+            "text": "Dinosaurio.",
+            "start": 137.04,
+            "end": 137.64
+          }
+        ],
+        "translations": {
+          "en": "Take a look and see if there's something you like. Dinosaur.",
+          "cs": "Podívejte se, jestli je tu něco, co se vám líbí. Dinosaurus.",
+          "de": "Schaut, ob euch etwas gefällt. Dinosaurier.",
+          "fr": "Jetez un œil et voyez s'il y a quelque chose qui vous plaît. Dinosaure."
+        }
+      },
+      {
+        "start": 137.8,
+        "end": 141.56,
+        "words": [
+          {
+            "text": "Dinosaurio.",
+            "start": 137.8,
+            "end": 138.4
+          },
+          {
+            "text": "Okay,",
+            "start": 139.04,
+            "end": 139.64
+          },
+          {
+            "text": "creo",
+            "start": 139.8,
+            "end": 140.08
+          },
+          {
+            "text": "que",
+            "start": 140.08,
+            "end": 140.28
+          },
+          {
+            "text": "iremos",
+            "start": 140.28,
+            "end": 140.72
+          },
+          {
+            "text": "por",
+            "start": 140.72,
+            "end": 141
+          },
+          {
+            "text": "aquí.",
+            "start": 141,
+            "end": 141.56
+          }
+        ],
+        "translations": {
+          "en": "Dinosaur. Okay, I think we'll go this way.",
+          "cs": "Dinosaurus. Dobře, myslím, že půjdeme tudy.",
+          "de": "Dinosaurier. Okay, ich denke, wir gehen hier lang.",
+          "fr": "Dinosaure. D'accord, je pense qu'on va par là."
+        }
+      },
+      {
+        "start": 141.56,
+        "end": 143.199,
+        "words": [
+          {
+            "text": "Adiós,",
+            "start": 141.56,
+            "end": 142.16
+          },
+          {
+            "text": "que",
+            "start": 142.239,
+            "end": 142.44
+          },
+          {
+            "text": "se",
+            "start": 142.44,
+            "end": 142.599
+          },
+          {
+            "text": "diviertan.",
+            "start": 142.599,
+            "end": 143.199
+          }
+        ],
+        "translations": {
+          "en": "Bye, have fun.",
+          "cs": "Sbohem, bavte se.",
+          "de": "Tschüss, viel Spaß.",
+          "fr": "Au revoir, amusez-vous bien."
+        }
+      },
+      {
+        "start": 145.12,
+        "end": 148.479,
+        "words": [
+          {
+            "text": "Dinosaurios.",
+            "start": 145.12,
+            "end": 145.72
+          },
+          {
+            "text": "Dinosaurios.",
+            "start": 146.64,
+            "end": 147.24
+          },
+          {
+            "text": "Dinosaurios.",
+            "start": 147.879,
+            "end": 148.479
+          }
+        ],
+        "translations": {
+          "en": "Dinosaurs. Dinosaurs. Dinosaurs.",
+          "cs": "Dinosauři. Dinosauři. Dinosauři.",
+          "de": "Dinosaurier. Dinosaurier. Dinosaurier.",
+          "fr": "Dinosaures. Dinosaures. Dinosaures."
+        }
+      },
+      {
+        "start": 151,
+        "end": 153.839,
+        "words": [
+          {
+            "text": "Mamá,",
+            "start": 151,
+            "end": 151.6
+          },
+          {
+            "text": "a",
+            "start": 151.8,
+            "end": 152.04
+          },
+          {
+            "text": "George",
+            "start": 152.04,
+            "end": 152.4
+          },
+          {
+            "text": "le",
+            "start": 152.4,
+            "end": 152.64
+          },
+          {
+            "text": "gustan",
+            "start": 152.64,
+            "end": 153.04
+          },
+          {
+            "text": "los",
+            "start": 153.04,
+            "end": 153.239
+          },
+          {
+            "text": "dinosaurios,",
+            "start": 153.239,
+            "end": 153.839
+          }
+        ],
+        "translations": {
+          "en": "Mom, George likes dinosaurs,",
+          "cs": "Mami, Georgovi se líbí dinosauři,",
+          "de": "Mama, George mag Dinosaurier,",
+          "fr": "Maman, George aime les dinosaures,"
+        }
+      },
+      {
+        "start": 154.239,
+        "end": 156.16,
+        "words": [
+          {
+            "text": "pero",
+            "start": 154.239,
+            "end": 154.839
+          },
+          {
+            "text": "¿qué",
+            "start": 154.92,
+            "end": 155.12
+          },
+          {
+            "text": "es",
+            "start": 155.12,
+            "end": 155.319
+          },
+          {
+            "text": "lo",
+            "start": 155.319,
+            "end": 155.56
+          },
+          {
+            "text": "mío?",
+            "start": 155.56,
+            "end": 156.16
+          }
+        ],
+        "translations": {
+          "en": "but what's my thing?",
+          "cs": "ale co je moje věc?",
+          "de": "aber was ist meins?",
+          "fr": "mais c'est quoi moi?"
+        }
+      },
+      {
+        "start": 156.519,
+        "end": 158.959,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 156.519,
+            "end": 156.84
+          },
+          {
+            "text": "supongo",
+            "start": 156.84,
+            "end": 157.28
+          },
+          {
+            "text": "que",
+            "start": 157.28,
+            "end": 157.56
+          },
+          {
+            "text": "eso",
+            "start": 157.56,
+            "end": 157.8
+          },
+          {
+            "text": "te",
+            "start": 157.8,
+            "end": 158
+          },
+          {
+            "text": "corresponde",
+            "start": 158,
+            "end": 158.56
+          },
+          {
+            "text": "a",
+            "start": 158.56,
+            "end": 158.72
+          },
+          {
+            "text": "ti,",
+            "start": 158.72,
+            "end": 158.959
+          }
+        ],
+        "translations": {
+          "en": "Well, I guess that's up to you,",
+          "cs": "No, myslím, že to záleží na tobě,",
+          "de": "Na, das liegt wohl an dir,",
+          "fr": "Eh bien, je suppose que c'est à toi de voir,"
+        }
+      },
+      {
+        "start": 158.959,
+        "end": 163.32,
+        "words": [
+          {
+            "text": "descubrirlo",
+            "start": 158.959,
+            "end": 159.559
+          },
+          {
+            "text": "y",
+            "start": 159.68,
+            "end": 159.879
+          },
+          {
+            "text": "quizá",
+            "start": 159.879,
+            "end": 160.239
+          },
+          {
+            "text": "lo",
+            "start": 160.239,
+            "end": 160.48
+          },
+          {
+            "text": "hagas",
+            "start": 160.48,
+            "end": 160.92
+          },
+          {
+            "text": "aquí.",
+            "start": 160.92,
+            "end": 161.519
+          },
+          {
+            "text": "Mm.",
+            "start": 161.519,
+            "end": 162.119
+          },
+          {
+            "text": "Sí.",
+            "start": 162.72,
+            "end": 163.32
+          }
+        ],
+        "translations": {
+          "en": "to find out, maybe here. Mm. Yeah.",
+          "cs": "zjistit a možná tady. Mm. Jo.",
+          "de": "es herauszufinden, vielleicht hier. Mm. Ja.",
+          "fr": "à découvrir, peut-être ici. Mm. Oui."
+        }
+      },
+      {
+        "start": 165.44,
+        "end": 168.04,
+        "words": [
+          {
+            "text": "Ya",
+            "start": 165.44,
+            "end": 165.68
+          },
+          {
+            "text": "viene",
+            "start": 165.68,
+            "end": 166.04
+          },
+          {
+            "text": "siendo",
+            "start": 166.04,
+            "end": 166.44
+          },
+          {
+            "text": "hora",
+            "start": 166.44,
+            "end": 166.8
+          },
+          {
+            "text": "de",
+            "start": 166.8,
+            "end": 167.04
+          },
+          {
+            "text": "ir",
+            "start": 167.04,
+            "end": 167.239
+          },
+          {
+            "text": "a",
+            "start": 167.239,
+            "end": 167.44
+          },
+          {
+            "text": "dormir.",
+            "start": 167.44,
+            "end": 168.04
+          }
+        ],
+        "translations": {
+          "en": "It's about time for bed.",
+          "cs": "Je čas jít spát.",
+          "de": "Es ist Zeit zum Schlafengehen.",
+          "fr": "Il est temps d'aller se coucher."
+        }
+      },
+      {
+        "start": 168.72,
+        "end": 171.44,
+        "words": [
+          {
+            "text": "Buenas",
+            "start": 168.72,
+            "end": 169.12
+          },
+          {
+            "text": "noches,",
+            "start": 169.12,
+            "end": 169.72
+          },
+          {
+            "text": "payasos.",
+            "start": 170.84,
+            "end": 171.44
+          }
+        ],
+        "translations": {
+          "en": "Good night, clowns.",
+          "cs": "Dobrou noc, klauni.",
+          "de": "Gute Nacht, Clowns.",
+          "fr": "Bonne nuit, clowns."
+        }
+      },
+      {
+        "start": 171.44,
+        "end": 172.92,
+        "words": [
+          {
+            "text": "Payasos",
+            "start": 171.44,
+            "end": 171.92
+          },
+          {
+            "text": "por",
+            "start": 171.92,
+            "end": 172.08
+          },
+          {
+            "text": "todas",
+            "start": 172.08,
+            "end": 172.44
+          },
+          {
+            "text": "partes.",
+            "start": 172.44,
+            "end": 172.92
+          }
+        ],
+        "translations": {
+          "en": "Clowns everywhere.",
+          "cs": "Klauni všude.",
+          "de": "Clowns überall.",
+          "fr": "Des clowns partout."
+        }
+      },
+      {
+        "start": 172.92,
+        "end": 174.4,
+        "words": [
+          {
+            "text": "Payasos",
+            "start": 172.92,
+            "end": 173.52
+          },
+          {
+            "text": "por",
+            "start": 173.92,
+            "end": 174.04
+          },
+          {
+            "text": "aquí.",
+            "start": 174.04,
+            "end": 174.4
+          }
+        ],
+        "translations": {
+          "en": "Clowns here.",
+          "cs": "Klauni tady.",
+          "de": "Clowns hier.",
+          "fr": "Des clowns par ici."
+        }
+      },
+      {
+        "start": 174.4,
+        "end": 177,
+        "words": [
+          {
+            "text": "Nadie",
+            "start": 174.4,
+            "end": 175
+          },
+          {
+            "text": "en",
+            "start": 175.2,
+            "end": 175.319
+          },
+          {
+            "text": "una",
+            "start": 175.319,
+            "end": 175.44
+          },
+          {
+            "text": "habitación",
+            "start": 175.44,
+            "end": 176.04
+          },
+          {
+            "text": "como",
+            "start": 176.159,
+            "end": 176.4
+          },
+          {
+            "text": "esa.",
+            "start": 176.4,
+            "end": 177
+          }
+        ],
+        "translations": {
+          "en": "Nobody would want a room like that.",
+          "cs": "Nikdo by nechtěl takový pokoj.",
+          "de": "Niemand will ein Zimmer wie das.",
+          "fr": "Personne ne veut d'une chambre comme ça."
+        }
+      },
+      {
+        "start": 179.68,
+        "end": 184.44,
+        "words": [
+          {
+            "text": "Es",
+            "start": 179.68,
+            "end": 180.12
+          },
+          {
+            "text": "hora",
+            "start": 180.12,
+            "end": 180.72
+          },
+          {
+            "text": "de",
+            "start": 180.72,
+            "end": 181.319
+          },
+          {
+            "text": "descansar.",
+            "start": 181.319,
+            "end": 181.919
+          },
+          {
+            "text": "Adiós.",
+            "start": 182.92,
+            "end": 183.52
+          },
+          {
+            "text": "Adiós.",
+            "start": 183.84,
+            "end": 184.44
+          }
+        ],
+        "translations": {
+          "en": "It's time to rest. Bye. Bye.",
+          "cs": "Je čas na odpočinek. Ahoj. Ahoj.",
+          "de": "Es ist Zeit zu ruhen. Tschüss. Tschüss.",
+          "fr": "Il est temps de se reposer. Au revoir. Au revoir."
+        }
+      },
+      {
+        "start": 185.519,
+        "end": 186.68,
+        "words": [
+          {
+            "text": "Moto",
+            "start": 185.519,
+            "end": 185.799
+          },
+          {
+            "text": "Kids",
+            "start": 185.799,
+            "end": 186.08
+          },
+          {
+            "text": "activado.",
+            "start": 186.08,
+            "end": 186.68
+          }
+        ],
+        "translations": {
+          "en": "Moto Kids activated.",
+          "cs": "Moto Kids aktivováno.",
+          "de": "Moto Kids aktiviert.",
+          "fr": "Moto Kids activé."
+        }
+      }
+    ],
+    "dictionary": {
+      "esto": {
+        "lemma": "este",
+        "pos": "det",
+        "note": null,
+        "glosses": {
+          "en": "this",
+          "cs": "toto",
+          "de": "dies",
+          "fr": "ceci"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "discovery": {
+        "lemma": "discovery",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Discovery",
+          "cs": "Discovery",
+          "de": "Discovery",
+          "fr": "Discovery"
+        }
+      },
+      "kids": {
+        "lemma": "kids",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Kids",
+          "cs": "Kids",
+          "de": "Kids",
+          "fr": "Kids"
+        }
+      },
+      "comenzamos": {
+        "lemma": "comenzar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "let's start",
+          "cs": "začneme",
+          "de": "beginnen wir",
+          "fr": "commençons"
+        }
+      },
+      "decorando": {
+        "lemma": "decorar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "decorating",
+          "cs": "zdobení",
+          "de": "dekoriere",
+          "fr": "décoration"
+        }
+      },
+      "las": {
+        "lemma": "las",
+        "pos": "det",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ty",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "renovaciones": {
+        "lemma": "renovación",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "renovations",
+          "cs": "renovace",
+          "de": "Renovierungen",
+          "fr": "rénovations"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "la": {
+        "lemma": "la",
+        "pos": "det",
+        "note": "feminine singular",
+        "glosses": {
+          "en": "the",
+          "cs": "ta",
+          "de": "die",
+          "fr": "la"
+        }
+      },
+      "casa": {
+        "lemma": "casa",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "house",
+          "cs": "dům",
+          "de": "Haus",
+          "fr": "maison"
+        }
+      },
+      "se": {
+        "lemma": "se",
+        "pos": "pron",
+        "note": "reflexive pronoun",
+        "glosses": {
+          "en": "oneself",
+          "cs": "se",
+          "de": "sich",
+          "fr": "se"
+        }
+      },
+      "han": {
+        "lemma": "haber",
+        "pos": "verb",
+        "note": "auxiliary verb",
+        "glosses": {
+          "en": "have",
+          "cs": "mají",
+          "de": "haben",
+          "fr": "ont"
+        }
+      },
+      "completado": {
+        "lemma": "completar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "completed",
+          "cs": "dokončené",
+          "de": "abgeschlossen",
+          "fr": "complété"
+        }
+      },
+      "para": {
+        "lemma": "para",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "for",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "llegada": {
+        "lemma": "llegada",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "arrival",
+          "cs": "příjezd",
+          "de": "Ankunft",
+          "fr": "arrivée"
+        }
+      },
+      "del": {
+        "lemma": "del",
+        "pos": "prep",
+        "note": "contraction of de + el",
+        "glosses": {
+          "en": "of the",
+          "cs": "z",
+          "de": "des",
+          "fr": "du"
+        }
+      },
+      "nuevo": {
+        "lemma": "nuevo",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "new",
+          "cs": "nový",
+          "de": "neu",
+          "fr": "nouveau"
+        }
+      },
+      "bebé": {
+        "lemma": "bebé",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "baby",
+          "cs": "děťátko",
+          "de": "Baby",
+          "fr": "bébé"
+        }
+      },
+      "bueno": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "well",
+          "cs": "dobře",
+          "de": "gut",
+          "fr": "bien"
+        }
+      },
+      "eso": {
+        "lemma": "ese",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "to",
+          "de": "das",
+          "fr": "cela"
+        }
+      },
+      "todo": {
+        "lemma": "todo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "all",
+          "cs": "všechno",
+          "de": "alles",
+          "fr": "tout"
+        }
+      },
+      "los": {
+        "lemma": "los",
+        "pos": "det",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ti",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "muebles": {
+        "lemma": "mueble",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "furniture",
+          "cs": "nábytek",
+          "de": "Möbel",
+          "fr": "meubles"
+        }
+      },
+      "están": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "are",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "listos": {
+        "lemma": "listo",
+        "pos": "adj",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "ready",
+          "cs": "hotoví",
+          "de": "bereit",
+          "fr": "prêts"
+        }
+      },
+      "y": {
+        "lemma": "y",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "and",
+          "cs": "a",
+          "de": "und",
+          "fr": "et"
+        }
+      },
+      "pintura": {
+        "lemma": "pintura",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "paint",
+          "cs": "nátěr",
+          "de": "Farbe",
+          "fr": "peinture"
+        }
+      },
+      "está": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "fresca": {
+        "lemma": "fresco",
+        "pos": "adj",
+        "note": "feminine singular",
+        "glosses": {
+          "en": "fresh",
+          "cs": "čerstvá",
+          "de": "frisch",
+          "fr": "fraîche"
+        }
+      },
+      "como": {
+        "lemma": "como",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "as",
+          "cs": "jako",
+          "de": "wie",
+          "fr": "comme"
+        }
+      },
+      "lechuga": {
+        "lemma": "lechuga",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "lettuce",
+          "cs": "salát",
+          "de": "Salat",
+          "fr": "laitue"
+        }
+      },
+      "ah": {
+        "lemma": "ah",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "ah",
+          "cs": "ah",
+          "de": "ach",
+          "fr": "ah"
+        }
+      },
+      "probaste": {
+        "lemma": "probar",
+        "pos": "verb",
+        "note": "preterite version",
+        "glosses": {
+          "en": "did you taste",
+          "cs": "ochutnal jsi",
+          "de": "hast du probiert",
+          "fr": "as-tu goûté"
+        }
+      },
+      "oh": {
+        "lemma": "oh",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "oh",
+          "cs": "oh",
+          "de": "oh",
+          "fr": "oh"
+        }
+      },
+      "no": {
+        "lemma": "no",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "no",
+          "cs": "ne",
+          "de": "nein",
+          "fr": "non"
+        }
+      },
+      "refiere": {
+        "lemma": "referir",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "means",
+          "cs": "vztahuje se",
+          "de": "bezieht",
+          "fr": "signifie"
+        }
+      },
+      "a": {
+        "lemma": "a",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "na",
+          "de": "zu",
+          "fr": "à"
+        }
+      },
+      "peppa": {
+        "lemma": "peppa",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Peppa",
+          "cs": "Peppa",
+          "de": "Peppa",
+          "fr": "Peppa"
+        }
+      },
+      "gracias": {
+        "lemma": "gracias",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "thanks",
+          "cs": "díky",
+          "de": "danke",
+          "fr": "merci"
+        }
+      },
+      "por": {
+        "lemma": "por",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "for",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "señor": {
+        "lemma": "señor",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "Mr.",
+          "cs": "pan",
+          "de": "Herr",
+          "fr": "monsieur"
+        }
+      },
+      "toribio": {
+        "lemma": "toribio",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Toribio",
+          "cs": "Toribio",
+          "de": "Toribio",
+          "fr": "Toribio"
+        }
+      },
+      "fue": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "preterite version",
+        "glosses": {
+          "en": "was",
+          "cs": "byl",
+          "de": "war",
+          "fr": "était"
+        }
+      },
+      "un": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "a",
+          "cs": "než",
+          "de": "ein",
+          "fr": "un"
+        }
+      },
+      "placer": {
+        "lemma": "placer",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "pleasure",
+          "cs": "potěšení",
+          "de": "Vergnügen",
+          "fr": "plaisir"
+        }
+      },
+      "me": {
+        "lemma": "me",
+        "pos": "pron",
+        "note": "reflexive pronoun",
+        "glosses": {
+          "en": "I",
+          "cs": "mě",
+          "de": "mich",
+          "fr": "je"
+        }
+      },
+      "encanta": {
+        "lemma": "encantar",
+        "pos": "verb",
+        "note": "gustar-type verb",
+        "glosses": {
+          "en": "I love",
+          "cs": "milujem",
+          "de": "ich liebe",
+          "fr": "j'adore"
+        }
+      },
+      "mi": {
+        "lemma": "mi",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "my",
+          "cs": "můj",
+          "de": "mein",
+          "fr": "mon"
+        }
+      },
+      "trabajo": {
+        "lemma": "trabajo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "work",
+          "cs": "práce",
+          "de": "Arbeit",
+          "fr": "travail"
+        }
+      },
+      "equipo": {
+        "lemma": "equipo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "team",
+          "cs": "tým",
+          "de": "Team",
+          "fr": "équipe"
+        }
+      },
+      "qué": {
+        "lemma": "qué",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "what",
+          "cs": "co",
+          "de": "was",
+          "fr": "quoi"
+        }
+      },
+      "estamos": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "are we",
+          "cs": "jsme",
+          "de": "wir sind",
+          "fr": "nous sommes"
+        }
+      },
+      "esperando": {
+        "lemma": "esperar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "waiting",
+          "cs": "čekáme",
+          "de": "warten",
+          "fr": "attendre"
+        }
+      },
+      "entrar": {
+        "lemma": "entrar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to enter",
+          "cs": "vstupovat",
+          "de": "eintreten",
+          "fr": "entrer"
+        }
+      },
+      "encantador": {
+        "lemma": "encantador",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "lovely",
+          "cs": "okouzlující",
+          "de": "schön",
+          "fr": "charmant"
+        }
+      },
+      "lo": {
+        "lemma": "lo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "it",
+          "cs": "to",
+          "de": "es",
+          "fr": "le"
+        }
+      },
+      "creen": {
+        "lemma": "creer",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "believe",
+          "cs": "věří",
+          "de": "glauben",
+          "fr": "croient"
+        }
+      },
+      "les": {
+        "lemma": "les",
+        "pos": "pron",
+        "note": "dative pronoun",
+        "glosses": {
+          "en": "you",
+          "cs": "vám",
+          "de": "ihnen",
+          "fr": "vous"
+        }
+      },
+      "dije": {
+        "lemma": "decir",
+        "pos": "verb",
+        "note": "preterite version",
+        "glosses": {
+          "en": "I told",
+          "cs": "řekl jsem",
+          "de": "ich sagte",
+          "fr": "j'ai dit"
+        }
+      },
+      "que": {
+        "lemma": "que",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "že",
+          "de": "dass",
+          "fr": "que"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "verde": {
+        "lemma": "verde",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "green",
+          "cs": "zelený",
+          "de": "grün",
+          "fr": "vert"
+        }
+      },
+      "todavía": {
+        "lemma": "todavía",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "still",
+          "cs": "ještě",
+          "de": "noch",
+          "fr": "encore"
+        }
+      },
+      "funciona": {
+        "lemma": "funcionar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "works",
+          "cs": "funguje",
+          "de": "funktioniert",
+          "fr": "fonctionne"
+        }
+      },
+      "mira": {
+        "lemma": "mirar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "look",
+          "cs": "podívej",
+          "de": "schau",
+          "fr": "regarde"
+        }
+      },
+      "televisión": {
+        "lemma": "televisión",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "TV",
+          "cs": "televize",
+          "de": "Fernsehen",
+          "fr": "télévision"
+        }
+      },
+      "george": {
+        "lemma": "george",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "George",
+          "cs": "George",
+          "de": "George",
+          "fr": "George"
+        }
+      },
+      "wow": {
+        "lemma": "wow",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "wow",
+          "cs": "wow",
+          "de": "wow",
+          "fr": "wow"
+        }
+      },
+      "auto": {
+        "lemma": "auto",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "car",
+          "cs": "auto",
+          "de": "Auto",
+          "fr": "voiture"
+        }
+      },
+      "ajá": {
+        "lemma": "ajá",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "aha",
+          "cs": "aha",
+          "de": "aha",
+          "fr": "ahah"
+        }
+      },
+      "belleza": {
+        "lemma": "belleza",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "beauty",
+          "cs": "krása",
+          "de": "Schönheit",
+          "fr": "beauté"
+        }
+      },
+      "vean": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": "imperative form",
+        "glosses": {
+          "en": "look",
+          "cs": "podívejte se",
+          "de": "sehen Sie",
+          "fr": "regardez"
+        }
+      },
+      "lindo": {
+        "lemma": "lindo",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "lovely",
+          "cs": "pěkný",
+          "de": "schön",
+          "fr": "joli"
+        }
+      },
+      "lugar": {
+        "lemma": "lugar",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "place",
+          "cs": "místo",
+          "de": "Ort",
+          "fr": "endroit"
+        }
+      },
+      "uh": {
+        "lemma": "uh",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "uh",
+          "cs": "uh",
+          "de": "uh",
+          "fr": "euh"
+        }
+      },
+      "esta": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "feminine singular",
+        "glosses": {
+          "en": "this",
+          "cs": "tato",
+          "de": "diese",
+          "fr": "cette"
+        }
+      },
+      "habitación": {
+        "lemma": "habitación",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "room",
+          "cs": "pokoj",
+          "de": "Zimmer",
+          "fr": "chambre"
+        }
+      },
+      "muy": {
+        "lemma": "muy",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "very",
+          "cs": "velmi",
+          "de": "sehr",
+          "fr": "très"
+        }
+      },
+      "hermosa": {
+        "lemma": "hermoso",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "beautiful",
+          "cs": "krásná",
+          "de": "schön",
+          "fr": "belle"
+        }
+      },
+      "sala": {
+        "lemma": "sala",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "room",
+          "cs": "místnost",
+          "de": "Raum",
+          "fr": "salle"
+        }
+      },
+      "juegoses": {
+        "lemma": "juego",
+        "pos": "noun",
+        "note": "typographical error",
+        "glosses": {
+          "en": "playroom",
+          "cs": "herna",
+          "de": "Spielzimmer",
+          "fr": "salle de jeux"
+        }
+      },
+      "te": {
+        "lemma": "te",
+        "pos": "pron",
+        "note": "object pronoun",
+        "glosses": {
+          "en": "you",
+          "cs": "tě",
+          "de": "dich",
+          "fr": "te"
+        }
+      },
+      "gusta": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": "gustar-type verb",
+        "glosses": {
+          "en": "do you like",
+          "cs": "líbí se ti",
+          "de": "gefällt dir",
+          "fr": "aimes-tu"
+        }
+      },
+      "tu": {
+        "lemma": "tu",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "your",
+          "cs": "tvůj",
+          "de": "dein",
+          "fr": "ton"
+        }
+      },
+      "hogar": {
+        "lemma": "hogar",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "home",
+          "cs": "domov",
+          "de": "Zuhause",
+          "fr": "foyer"
+        }
+      },
+      "goldi": {
+        "lemma": "goldi",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Goldi",
+          "cs": "Goldi",
+          "de": "Goldi",
+          "fr": "Goldi"
+        }
+      },
+      "excelente": {
+        "lemma": "excelente",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "great",
+          "cs": "vynikající",
+          "de": "ausgezeichnet",
+          "fr": "excellent"
+        }
+      },
+      "visto": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": "past participle",
+        "glosses": {
+          "en": "seen",
+          "cs": "viděl",
+          "de": "gesehen",
+          "fr": "vu"
+        }
+      },
+      "mejor": {
+        "lemma": "mejor",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "best",
+          "cs": "nejlepší",
+          "de": "beste",
+          "fr": "meilleur"
+        }
+      },
+      "parte": {
+        "lemma": "parte",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "part",
+          "cs": "část",
+          "de": "Teil",
+          "fr": "partie"
+        }
+      },
+      "sus": {
+        "lemma": "su",
+        "pos": "pron",
+        "note": "plural form",
+        "glosses": {
+          "en": "your",
+          "cs": "jejich",
+          "de": "ihre",
+          "fr": "vos"
+        }
+      },
+      "nuevas": {
+        "lemma": "nuevo",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "new",
+          "cs": "nové",
+          "de": "neue",
+          "fr": "nouvelles"
+        }
+      },
+      "habitaciones": {
+        "lemma": "habitación",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "rooms",
+          "cs": "pokoje",
+          "de": "Zimmer",
+          "fr": "chambres"
+        }
+      },
+      "mamá": {
+        "lemma": "mamá",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "mom",
+          "cs": "máma",
+          "de": "Mama",
+          "fr": "maman"
+        }
+      },
+      "papá": {
+        "lemma": "papá",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "dad",
+          "cs": "táta",
+          "de": "Papa",
+          "fr": "papa"
+        }
+      },
+      "entiendo": {
+        "lemma": "entender",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "I don't get it",
+          "cs": "nerozumím",
+          "de": "ich verstehe",
+          "fr": "je ne comprends"
+        }
+      },
+      "dejamos": {
+        "lemma": "dejar",
+        "pos": "verb",
+        "note": "preterite version",
+        "glosses": {
+          "en": "we left",
+          "cs": "nechali jsme",
+          "de": "wir ließen",
+          "fr": "nous avons laissé"
+        }
+      },
+      "sin": {
+        "lemma": "sin",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "without",
+          "cs": "bez",
+          "de": "ohne",
+          "fr": "sans"
+        }
+      },
+      "decoraciones": {
+        "lemma": "decoración",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "decor",
+          "cs": "dekorace",
+          "de": "Dekorationen",
+          "fr": "décorations"
+        }
+      },
+      "puedan": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "you can",
+          "cs": "mohou",
+          "de": "ihr könnt",
+          "fr": "vous puissiez"
+        }
+      },
+      "decorar": {
+        "lemma": "decorar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to decorate",
+          "cs": "zdobit",
+          "de": "dekorieren",
+          "fr": "décorer"
+        }
+      },
+      "ustedes": {
+        "lemma": "ustedes",
+        "pos": "pron",
+        "note": "formal plural",
+        "glosses": {
+          "en": "you",
+          "cs": "vy",
+          "de": "Sie",
+          "fr": "vous"
+        }
+      },
+      "quieran": {
+        "lemma": "querer",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "you want",
+          "cs": "chcete",
+          "de": "wollt ihr",
+          "fr": "vous voulez"
+        }
+      },
+      "urra": {
+        "lemma": "hurra",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "hooray",
+          "cs": "hurá",
+          "de": "hurra",
+          "fr": "hourra"
+        }
+      },
+      "su": {
+        "lemma": "su",
+        "pos": "pron",
+        "note": "singular/plural distinction",
+        "glosses": {
+          "en": "your",
+          "cs": "jeho",
+          "de": "sein",
+          "fr": "votre"
+        }
+      },
+      "familia": {
+        "lemma": "familia",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "family",
+          "cs": "rodina",
+          "de": "Familie",
+          "fr": "famille"
+        }
+      },
+      "visitan": {
+        "lemma": "visitar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "visit",
+          "cs": "navštěvují",
+          "de": "besuchen",
+          "fr": "visitent"
+        }
+      },
+      "enorme": {
+        "lemma": "enorme",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "huge",
+          "cs": "obrovský",
+          "de": "riesig",
+          "fr": "énorme"
+        }
+      },
+      "tienda": {
+        "lemma": "tienda",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "store",
+          "cs": "obchod",
+          "de": "Laden",
+          "fr": "magasin"
+        }
+      },
+      "comprar": {
+        "lemma": "comprar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to shop",
+          "cs": "nakupovat",
+          "de": "kaufen",
+          "fr": "acheter"
+        }
+      },
+      "cosas": {
+        "lemma": "cosa",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "things",
+          "cs": "věci",
+          "de": "Sachen",
+          "fr": "choses"
+        }
+      },
+      "venir": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "coming",
+          "cs": "přicházet",
+          "de": "kommen",
+          "fr": "venir"
+        }
+      },
+      "estos": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "these",
+          "cs": "tito",
+          "de": "diese",
+          "fr": "ces"
+        }
+      },
+      "lugares": {
+        "lemma": "lugar",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "places",
+          "cs": "místa",
+          "de": "Orte",
+          "fr": "endroits"
+        }
+      },
+      "verdad": {
+        "lemma": "verdad",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "truth",
+          "cs": "pravda",
+          "de": "Wahrheit",
+          "fr": "vérité"
+        }
+      },
+      "son": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "are",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "tan": {
+        "lemma": "tan",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "so",
+          "cs": "tak",
+          "de": "so",
+          "fr": "tellement"
+        }
+      },
+      "grandes": {
+        "lemma": "grande",
+        "pos": "adj",
+        "note": "plural form",
+        "glosses": {
+          "en": "big",
+          "cs": "velké",
+          "de": "groß",
+          "fr": "grands"
+        }
+      },
+      "terminas": {
+        "lemma": "terminar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "you end up",
+          "cs": "končíš",
+          "de": "du endest",
+          "fr": "tu finis"
+        }
+      },
+      "comprando": {
+        "lemma": "comprar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "buying",
+          "cs": "kupovat",
+          "de": "kaufen",
+          "fr": "achetant"
+        }
+      },
+      "necesitas": {
+        "lemma": "necesitar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "you need",
+          "cs": "potřebuješ",
+          "de": "du brauchst",
+          "fr": "tu as besoin"
+        }
+      },
+      "este": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "this",
+          "cs": "tento",
+          "de": "dieser",
+          "fr": "ce"
+        }
+      },
+      "asombroso": {
+        "lemma": "asombroso",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "amazing",
+          "cs": "úžasný",
+          "de": "erstaunlich",
+          "fr": "étonnant"
+        }
+      },
+      "echen": {
+        "lemma": "echar",
+        "pos": "verb",
+        "note": "imperative form",
+        "glosses": {
+          "en": "take",
+          "cs": "vrhněte",
+          "de": "werfen Sie",
+          "fr": "jetez"
+        }
+      },
+      "vistazo": {
+        "lemma": "vistazo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "look",
+          "cs": "pohled",
+          "de": "Blick",
+          "fr": "coup d'œil"
+        }
+      },
+      "si": {
+        "lemma": "si",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "if",
+          "cs": "pokud",
+          "de": "wenn",
+          "fr": "si"
+        }
+      },
+      "hay": {
+        "lemma": "haber",
+        "pos": "verb",
+        "note": "impersonal form",
+        "glosses": {
+          "en": "there is",
+          "cs": "je",
+          "de": "es gibt",
+          "fr": "il y a"
+        }
+      },
+      "algo": {
+        "lemma": "algo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "something",
+          "cs": "něco",
+          "de": "etwas",
+          "fr": "quelque chose"
+        }
+      },
+      "guste": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "like",
+          "cs": "líbí",
+          "de": "gefällt",
+          "fr": "plaît"
+        }
+      },
+      "dinosaurio": {
+        "lemma": "dinosaurio",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "dinosaur",
+          "cs": "dinosaurus",
+          "de": "Dinosaurier",
+          "fr": "dinosaure"
+        }
+      },
+      "okay": {
+        "lemma": "okay",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "okay",
+          "cs": "ok",
+          "de": "okay",
+          "fr": "ok"
+        }
+      },
+      "creo": {
+        "lemma": "creer",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "I think",
+          "cs": "myslím",
+          "de": "ich glaube",
+          "fr": "je crois"
+        }
+      },
+      "iremos": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": "future tense",
+        "glosses": {
+          "en": "we'll go",
+          "cs": "půjdeme",
+          "de": "wir werden gehen",
+          "fr": "nous irons"
+        }
+      },
+      "aquí": {
+        "lemma": "aquí",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "here",
+          "cs": "zde",
+          "de": "hier",
+          "fr": "ici"
+        }
+      },
+      "adiós": {
+        "lemma": "adiós",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "bye",
+          "cs": "sbohem",
+          "de": "auf Wiedersehen",
+          "fr": "au revoir"
+        }
+      },
+      "diviertan": {
+        "lemma": "divertir",
+        "pos": "verb",
+        "note": "imperative form",
+        "glosses": {
+          "en": "have fun",
+          "cs": "bavíte se",
+          "de": "habt Spaß",
+          "fr": "amusez-vous"
+        }
+      },
+      "dinosaurios": {
+        "lemma": "dinosaurio",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "dinosaurs",
+          "cs": "dinosauři",
+          "de": "Dinosaurier",
+          "fr": "dinosaures"
+        }
+      },
+      "le": {
+        "lemma": "le",
+        "pos": "pron",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "him",
+          "cs": "jemu",
+          "de": "ihm",
+          "fr": "le"
+        }
+      },
+      "gustan": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": "gustar-type verb",
+        "glosses": {
+          "en": "likes",
+          "cs": "mají rádi",
+          "de": "gefallen",
+          "fr": "aiment"
+        }
+      },
+      "pero": {
+        "lemma": "pero",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "but",
+          "cs": "ale",
+          "de": "aber",
+          "fr": "mais"
+        }
+      },
+      "mío": {
+        "lemma": "mío",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "mine",
+          "cs": "můj",
+          "de": "meins",
+          "fr": "mien"
+        }
+      },
+      "supongo": {
+        "lemma": "suponer",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "suppose",
+          "cs": "předpokládám",
+          "de": "nehme an",
+          "fr": "suppose"
+        }
+      },
+      "corresponde": {
+        "lemma": "corresponder",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "is up",
+          "cs": "odpovídá",
+          "de": "ist zuständig",
+          "fr": "correspond"
+        }
+      },
+      "ti": {
+        "lemma": "ti",
+        "pos": "pron",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "you",
+          "cs": "ti",
+          "de": "dir",
+          "fr": "toi"
+        }
+      },
+      "descubrirlo": {
+        "lemma": "descubrir",
+        "pos": "verb",
+        "note": "infinitive form",
+        "glosses": {
+          "en": "to find out",
+          "cs": "zjistit to",
+          "de": "herausfinden",
+          "fr": "le découvrir"
+        }
+      },
+      "quizá": {
+        "lemma": "quizá",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "maybe",
+          "cs": "možná",
+          "de": "vielleicht",
+          "fr": "peut-être"
+        }
+      },
+      "hagas": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "you do",
+          "cs": "děláš",
+          "de": "machst",
+          "fr": "tu fais"
+        }
+      },
+      "mm": {
+        "lemma": "mm",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "mm",
+          "cs": "mm",
+          "de": "mm",
+          "fr": "mm"
+        }
+      },
+      "sí": {
+        "lemma": "sí",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "yes",
+          "cs": "ano",
+          "de": "ja",
+          "fr": "oui"
+        }
+      },
+      "ya": {
+        "lemma": "ya",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "already",
+          "cs": "již",
+          "de": "schon",
+          "fr": "déjà"
+        }
+      },
+      "viene": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "is coming",
+          "cs": "přichází",
+          "de": "kommt",
+          "fr": "vient"
+        }
+      },
+      "siendo": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "gerund form",
+        "glosses": {
+          "en": "being",
+          "cs": "je",
+          "de": "ist",
+          "fr": "étant"
+        }
+      },
+      "hora": {
+        "lemma": "hora",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "time",
+          "cs": "čas",
+          "de": "Zeit",
+          "fr": "heure"
+        }
+      },
+      "ir": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to go",
+          "cs": "jít",
+          "de": "gehen",
+          "fr": "aller"
+        }
+      },
+      "dormir": {
+        "lemma": "dormir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to sleep",
+          "cs": "spát",
+          "de": "schlafen",
+          "fr": "dormir"
+        }
+      },
+      "buenas": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "good",
+          "cs": "dobré",
+          "de": "gute",
+          "fr": "bonnes"
+        }
+      },
+      "noches": {
+        "lemma": "noche",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "night",
+          "cs": "noci",
+          "de": "Nächte",
+          "fr": "nuits"
+        }
+      },
+      "payasos": {
+        "lemma": "payaso",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "clowns",
+          "cs": "klauni",
+          "de": "Clowns",
+          "fr": "clowns"
+        }
+      },
+      "todas": {
+        "lemma": "todo",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "all",
+          "cs": "všechny",
+          "de": "alle",
+          "fr": "toutes"
+        }
+      },
+      "partes": {
+        "lemma": "parte",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "parts",
+          "cs": "části",
+          "de": "Teile",
+          "fr": "parties"
+        }
+      },
+      "nadie": {
+        "lemma": "nadie",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "nobody",
+          "cs": "nikdo",
+          "de": "niemand",
+          "fr": "personne"
+        }
+      },
+      "en": {
+        "lemma": "en",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "in",
+          "cs": "v",
+          "de": "in",
+          "fr": "en"
+        }
+      },
+      "una": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "feminine singular",
+        "glosses": {
+          "en": "a",
+          "cs": "než",
+          "de": "eine",
+          "fr": "une"
+        }
+      },
+      "esa": {
+        "lemma": "ese",
+        "pos": "det",
+        "note": "feminine singular",
+        "glosses": {
+          "en": "that",
+          "cs": "tento",
+          "de": "dieser",
+          "fr": "cette"
+        }
+      },
+      "descansar": {
+        "lemma": "descansar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to rest",
+          "cs": "odpočívat",
+          "de": "ausruhen",
+          "fr": "se reposer"
+        }
+      },
+      "moto": {
+        "lemma": "moto",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "motorbike",
+          "cs": "motorka",
+          "de": "Motorrad",
+          "fr": "moto"
+        }
+      },
+      "activado": {
+        "lemma": "activar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "activated",
+          "cs": "aktivován",
+          "de": "aktiviert",
+          "fr": "activé"
+        }
+      }
+    },
+    "collection": "peppa"
+  },
+  {
+    "id": "08r6KYlawVU",
+    "youtubeId": "08r6KYlawVU",
+    "title": "Los padres de Peppa buscan una nueva casa",
+    "creator": "Discovery Kids",
+    "level": "A2",
+    "durationSeconds": 181,
+    "thumbnailUrl": "https://i.ytimg.com/vi/08r6KYlawVU/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Discovery Kids",
+      "channelUrl": "https://www.youtube.com/channel/UC9PIfDp0yx6QRTMVMltMZyA",
+      "videoUrl": "https://www.youtube.com/watch?v=08r6KYlawVU",
+      "license": "youtube"
+    },
+    "cues": [
+      {
+        "start": 0.64,
+        "end": 3.12,
+        "words": [
+          {
+            "text": "Esto",
+            "start": 0.64,
+            "end": 0.919
+          },
+          {
+            "text": "es",
+            "start": 0.919,
+            "end": 1.28
+          },
+          {
+            "text": "Discovery",
+            "start": 1.28,
+            "end": 1.88
+          },
+          {
+            "text": "Kids.",
+            "start": 1.88,
+            "end": 2.48
+          },
+          {
+            "text": "Comenzamos.",
+            "start": 2.52,
+            "end": 3.12
+          }
+        ],
+        "translations": {
+          "en": "This is Discovery Kids. Here we go.",
+          "cs": "Toto je Discovery Kids. Začínáme.",
+          "de": "Das ist Discovery Kids. Los geht's.",
+          "fr": "C'est Discovery Kids. C'est parti."
+        }
+      },
+      {
+        "start": 6.44,
+        "end": 7.999,
+        "words": [
+          {
+            "text": "Una",
+            "start": 6.44,
+            "end": 6.72
+          },
+          {
+            "text": "casa",
+            "start": 6.72,
+            "end": 7.08
+          },
+          {
+            "text": "más",
+            "start": 7.08,
+            "end": 7.399
+          },
+          {
+            "text": "grande.",
+            "start": 7.399,
+            "end": 7.999
+          }
+        ],
+        "translations": {
+          "en": "A bigger house.",
+          "cs": "Větší dům.",
+          "de": "Ein größeres Haus.",
+          "fr": "Une maison plus grande."
+        }
+      },
+      {
+        "start": 8.2,
+        "end": 12.239,
+        "words": [
+          {
+            "text": "Peppa",
+            "start": 8.2,
+            "end": 8.519
+          },
+          {
+            "text": "y",
+            "start": 8.519,
+            "end": 8.679
+          },
+          {
+            "text": "George",
+            "start": 8.679,
+            "end": 9.279
+          },
+          {
+            "text": "están",
+            "start": 9.44,
+            "end": 9.719
+          },
+          {
+            "text": "jugando",
+            "start": 9.719,
+            "end": 10.16
+          },
+          {
+            "text": "en",
+            "start": 10.16,
+            "end": 10.36
+          },
+          {
+            "text": "su",
+            "start": 10.36,
+            "end": 10.519
+          },
+          {
+            "text": "habitación",
+            "start": 10.519,
+            "end": 11.119
+          },
+          {
+            "text": "y",
+            "start": 11.28,
+            "end": 11.48
+          },
+          {
+            "text": "se",
+            "start": 11.48,
+            "end": 11.639
+          },
+          {
+            "text": "divierten",
+            "start": 11.639,
+            "end": 12.239
+          }
+        ],
+        "translations": {
+          "en": "Peppa and George are playing in their room and having fun",
+          "cs": "Peppa a George si hrají ve svém pokoji a baví se",
+          "de": "Peppa und George spielen in ihrem Zimmer und haben Spaß",
+          "fr": "Peppa et George jouent dans leur chambre et s'amusent"
+        }
+      },
+      {
+        "start": 14.559,
+        "end": 16.76,
+        "words": [
+          {
+            "text": "o",
+            "start": 14.559,
+            "end": 14.92
+          },
+          {
+            "text": "discuten",
+            "start": 14.92,
+            "end": 15.52
+          },
+          {
+            "text": "por",
+            "start": 15.679,
+            "end": 15.879
+          },
+          {
+            "text": "lo",
+            "start": 15.879,
+            "end": 16
+          },
+          {
+            "text": "que",
+            "start": 16,
+            "end": 16.16
+          },
+          {
+            "text": "parece.",
+            "start": 16.16,
+            "end": 16.76
+          }
+        ],
+        "translations": {
+          "en": "or arguing, it seems.",
+          "cs": "nebo se hádají, jak to vypadá.",
+          "de": "oder streiten sich, wie es scheint.",
+          "fr": "ou se disputent, on dirait."
+        }
+      },
+      {
+        "start": 17.16,
+        "end": 18.92,
+        "words": [
+          {
+            "text": "No",
+            "start": 17.16,
+            "end": 17.279
+          },
+          {
+            "text": "se",
+            "start": 17.279,
+            "end": 17.56
+          },
+          {
+            "text": "permiten.",
+            "start": 17.56,
+            "end": 18.16
+          },
+          {
+            "text": "Dinosaurios.",
+            "start": 18.32,
+            "end": 18.92
+          }
+        ],
+        "translations": {
+          "en": "No dinosaurs allowed.",
+          "cs": "Žádní dinosauři nejsou povolení.",
+          "de": "Keine Dinosaurier erlaubt.",
+          "fr": "Pas de dinosaures autorisés."
+        }
+      },
+      {
+        "start": 20.88,
+        "end": 21.959,
+        "words": [
+          {
+            "text": "¿Qué",
+            "start": 20.88,
+            "end": 21.119
+          },
+          {
+            "text": "está",
+            "start": 21.119,
+            "end": 21.359
+          },
+          {
+            "text": "pasando?",
+            "start": 21.359,
+            "end": 21.959
+          }
+        ],
+        "translations": {
+          "en": "What's going on?",
+          "cs": "Co se děje?",
+          "de": "Was ist los?",
+          "fr": "Que se passe-t-il ?"
+        }
+      },
+      {
+        "start": 22.24,
+        "end": 26.119,
+        "words": [
+          {
+            "text": "Mamá,",
+            "start": 22.24,
+            "end": 22.84
+          },
+          {
+            "text": "papá,",
+            "start": 23.199,
+            "end": 23.799
+          },
+          {
+            "text": "¿puedo",
+            "start": 24.16,
+            "end": 24.56
+          },
+          {
+            "text": "tener",
+            "start": 24.56,
+            "end": 24.88
+          },
+          {
+            "text": "mi",
+            "start": 24.88,
+            "end": 25.16
+          },
+          {
+            "text": "propia",
+            "start": 25.16,
+            "end": 25.519
+          },
+          {
+            "text": "habitación?",
+            "start": 25.519,
+            "end": 26.119
+          }
+        ],
+        "translations": {
+          "en": "Mom, Dad, can I have my own room?",
+          "cs": "Mami, tati, můžu mít vlastní pokoj?",
+          "de": "Mama, Papa, kann ich mein eigenes Zimmer haben?",
+          "fr": "Maman, papa, je peux avoir ma propre chambre ?"
+        }
+      },
+      {
+        "start": 26.64,
+        "end": 29.639,
+        "words": [
+          {
+            "text": "Dinosaurio,",
+            "start": 26.64,
+            "end": 27.24
+          },
+          {
+            "text": "dinosaurio,",
+            "start": 27.24,
+            "end": 27.84
+          },
+          {
+            "text": "dinosaurio.",
+            "start": 27.88,
+            "end": 28.48
+          },
+          {
+            "text": "Ah.",
+            "start": 29.039,
+            "end": 29.639
+          }
+        ],
+        "translations": {
+          "en": "Dinosaur, dinosaur, dinosaur. Ah.",
+          "cs": "Dinosaurus, dinosaurus, dinosaurus. Ah.",
+          "de": "Dinosaurier, Dinosaurier, Dinosaurier. Ah.",
+          "fr": "Dinosaure, dinosaure, dinosaure. Ah."
+        }
+      },
+      {
+        "start": 30.32,
+        "end": 34.479,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 30.32,
+            "end": 30.92
+          },
+          {
+            "text": "supongo",
+            "start": 31.08,
+            "end": 31.64
+          },
+          {
+            "text": "que",
+            "start": 31.64,
+            "end": 31.84
+          },
+          {
+            "text": "este",
+            "start": 31.84,
+            "end": 32.04
+          },
+          {
+            "text": "es",
+            "start": 32.04,
+            "end": 32.2
+          },
+          {
+            "text": "un",
+            "start": 32.2,
+            "end": 32.32
+          },
+          {
+            "text": "buen",
+            "start": 32.32,
+            "end": 32.52
+          },
+          {
+            "text": "momento",
+            "start": 32.52,
+            "end": 32.96
+          },
+          {
+            "text": "para",
+            "start": 32.96,
+            "end": 33.32
+          },
+          {
+            "text": "decirles",
+            "start": 33.32,
+            "end": 33.879
+          },
+          {
+            "text": "algo.",
+            "start": 33.879,
+            "end": 34.479
+          }
+        ],
+        "translations": {
+          "en": "Well, I guess this is a good time to tell you something.",
+          "cs": "No, myslím, že teď je dobrý čas vám něco říct.",
+          "de": "Nun, ich denke, es ist ein guter Moment, euch etwas zu sagen.",
+          "fr": "Bon, je suppose que c'est le bon moment pour vous dire quelque chose."
+        }
+      },
+      {
+        "start": 34.52,
+        "end": 40.839,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 34.52,
+            "end": 34.84
+          },
+          {
+            "text": "cierto,",
+            "start": 34.84,
+            "end": 35.44
+          },
+          {
+            "text": "para",
+            "start": 35.719,
+            "end": 36
+          },
+          {
+            "text": "hacerle",
+            "start": 36,
+            "end": 36.44
+          },
+          {
+            "text": "más",
+            "start": 36.44,
+            "end": 36.8
+          },
+          {
+            "text": "espacio",
+            "start": 36.8,
+            "end": 37.2
+          },
+          {
+            "text": "al",
+            "start": 37.2,
+            "end": 37.399
+          },
+          {
+            "text": "bebé",
+            "start": 37.399,
+            "end": 37.999
+          },
+          {
+            "text": "tenemos",
+            "start": 38.48,
+            "end": 38.96
+          },
+          {
+            "text": "que",
+            "start": 38.96,
+            "end": 39.16
+          },
+          {
+            "text": "mudarnos.",
+            "start": 39.16,
+            "end": 39.76
+          },
+          {
+            "text": "¿Qué?",
+            "start": 40.239,
+            "end": 40.839
+          }
+        ],
+        "translations": {
+          "en": "Ah, right, to make room for the baby we have to move. What?",
+          "cs": "Ah, správně, abychom udělali místo pro miminko, musíme se přestěhovat. Co?",
+          "de": "Ah, richtig, um Platz fürs Baby zu machen, müssen wir umziehen. Was?",
+          "fr": "Ah, oui, pour faire de la place pour le bébé, on doit déménager. Quoi ?"
+        }
+      },
+      {
+        "start": 42.12,
+        "end": 44.4,
+        "words": [
+          {
+            "text": "Puede",
+            "start": 42.12,
+            "end": 42.399
+          },
+          {
+            "text": "que",
+            "start": 42.399,
+            "end": 42.6
+          },
+          {
+            "text": "cada",
+            "start": 42.6,
+            "end": 42.92
+          },
+          {
+            "text": "uno",
+            "start": 42.92,
+            "end": 43.239
+          },
+          {
+            "text": "tenga",
+            "start": 43.239,
+            "end": 43.6
+          },
+          {
+            "text": "una",
+            "start": 43.6,
+            "end": 43.8
+          },
+          {
+            "text": "habitación.",
+            "start": 43.8,
+            "end": 44.4
+          }
+        ],
+        "translations": {
+          "en": "You might each get a room.",
+          "cs": "Možná budete mít každý svůj pokoj.",
+          "de": "Ihr könntet jeder ein Zimmer bekommen.",
+          "fr": "Vous pourriez chacun avoir votre chambre."
+        }
+      },
+      {
+        "start": 47.079,
+        "end": 49.72,
+        "words": [
+          {
+            "text": "¿Están",
+            "start": 47.079,
+            "end": 47.559
+          },
+          {
+            "text": "bien?",
+            "start": 47.559,
+            "end": 48.159
+          },
+          {
+            "text": "Sí.",
+            "start": 49.12,
+            "end": 49.72
+          }
+        ],
+        "translations": {
+          "en": "Are you okay? Yeah.",
+          "cs": "Jste v pořádku? Jo.",
+          "de": "Geht's euch gut? Ja.",
+          "fr": "Ça va bien ? Oui."
+        }
+      },
+      {
+        "start": 50.68,
+        "end": 52.08,
+        "words": [
+          {
+            "text": "Entre",
+            "start": 50.68,
+            "end": 50.92
+          },
+          {
+            "text": "mi",
+            "start": 50.92,
+            "end": 51.16
+          },
+          {
+            "text": "propia",
+            "start": 51.16,
+            "end": 51.48
+          },
+          {
+            "text": "habitación.",
+            "start": 51.48,
+            "end": 52.08
+          }
+        ],
+        "translations": {
+          "en": "Into my own room.",
+          "cs": "Do mého vlastního pokoje.",
+          "de": "In mein eigenes Zimmer.",
+          "fr": "Dans ma propre chambre."
+        }
+      },
+      {
+        "start": 55.92,
+        "end": 58.719,
+        "words": [
+          {
+            "text": "Peppa",
+            "start": 55.92,
+            "end": 56.28
+          },
+          {
+            "text": "y",
+            "start": 56.28,
+            "end": 56.44
+          },
+          {
+            "text": "su",
+            "start": 56.44,
+            "end": 56.64
+          },
+          {
+            "text": "familia",
+            "start": 56.64,
+            "end": 57.12
+          },
+          {
+            "text": "fueron",
+            "start": 57.12,
+            "end": 57.48
+          },
+          {
+            "text": "a",
+            "start": 57.48,
+            "end": 57.6
+          },
+          {
+            "text": "ver",
+            "start": 57.6,
+            "end": 57.8
+          },
+          {
+            "text": "algunas",
+            "start": 57.8,
+            "end": 58.32
+          },
+          {
+            "text": "casas",
+            "start": 58.32,
+            "end": 58.719
+          }
+        ],
+        "translations": {
+          "en": "Peppa and her family went to see some houses",
+          "cs": "Peppa a její rodina šli podívat na nějaké domy",
+          "de": "Peppa und ihre Familie gingen sich einige Häuser ansehen",
+          "fr": "Peppa et sa famille sont allés voir quelques maisons"
+        }
+      },
+      {
+        "start": 58.719,
+        "end": 60.72,
+        "words": [
+          {
+            "text": "nuevas",
+            "start": 58.719,
+            "end": 59.199
+          },
+          {
+            "text": "con",
+            "start": 59.199,
+            "end": 59.399
+          },
+          {
+            "text": "la",
+            "start": 59.399,
+            "end": 59.559
+          },
+          {
+            "text": "señorita",
+            "start": 59.559,
+            "end": 60.12
+          },
+          {
+            "text": "Liebre.",
+            "start": 60.12,
+            "end": 60.72
+          }
+        ],
+        "translations": {
+          "en": "new ones with Miss Rabbit.",
+          "cs": "nové s paní Králíkovou.",
+          "de": "neue mit Frau Kaninchen.",
+          "fr": "nouvelles avec Madame Lapin."
+        }
+      },
+      {
+        "start": 61.239,
+        "end": 64.24,
+        "words": [
+          {
+            "text": "Hola.",
+            "start": 61.239,
+            "end": 61.68
+          },
+          {
+            "text": "Hola.",
+            "start": 61.68,
+            "end": 62.28
+          },
+          {
+            "text": "Vengan",
+            "start": 62.68,
+            "end": 63.039
+          },
+          {
+            "text": "a",
+            "start": 63.039,
+            "end": 63.16
+          },
+          {
+            "text": "ver",
+            "start": 63.16,
+            "end": 63.32
+          },
+          {
+            "text": "esta",
+            "start": 63.32,
+            "end": 63.64
+          },
+          {
+            "text": "casa.",
+            "start": 63.64,
+            "end": 64.24
+          }
+        ],
+        "translations": {
+          "en": "Hello. Hi. Come see this house.",
+          "cs": "Ahoj. Ahoj. Pojďte se podívat na tenhle dům.",
+          "de": "Hallo. Hallo. Kommt, seht euch dieses Haus an.",
+          "fr": "Bonjour. Salut. Venez voir cette maison."
+        }
+      },
+      {
+        "start": 64.519,
+        "end": 66.119,
+        "words": [
+          {
+            "text": "Es",
+            "start": 64.519,
+            "end": 64.6
+          },
+          {
+            "text": "una",
+            "start": 64.6,
+            "end": 64.799
+          },
+          {
+            "text": "auténtica",
+            "start": 64.799,
+            "end": 65.399
+          },
+          {
+            "text": "joya.",
+            "start": 65.519,
+            "end": 66.119
+          }
+        ],
+        "translations": {
+          "en": "It’s a real gem.",
+          "cs": "Je to opravdový klenot.",
+          "de": "Es ist ein echter Schatz.",
+          "fr": "C'est un vrai bijou."
+        }
+      },
+      {
+        "start": 66.6,
+        "end": 68.28,
+        "words": [
+          {
+            "text": "Parece",
+            "start": 66.6,
+            "end": 67.04
+          },
+          {
+            "text": "un",
+            "start": 67.04,
+            "end": 67.28
+          },
+          {
+            "text": "poco",
+            "start": 67.28,
+            "end": 67.68
+          },
+          {
+            "text": "pequeña.",
+            "start": 67.68,
+            "end": 68.28
+          }
+        ],
+        "translations": {
+          "en": "Looks a bit small.",
+          "cs": "Vypadá trochu malý.",
+          "de": "Sieht ein bisschen klein aus.",
+          "fr": "Ça a l'air un peu petit."
+        }
+      },
+      {
+        "start": 69.72,
+        "end": 71.96,
+        "words": [
+          {
+            "text": "Entonces,",
+            "start": 69.72,
+            "end": 70.28
+          },
+          {
+            "text": "¿qué",
+            "start": 70.28,
+            "end": 70.479
+          },
+          {
+            "text": "habitación",
+            "start": 70.479,
+            "end": 71.04
+          },
+          {
+            "text": "es",
+            "start": 71.04,
+            "end": 71.36
+          },
+          {
+            "text": "esta?",
+            "start": 71.36,
+            "end": 71.96
+          }
+        ],
+        "translations": {
+          "en": "So, what room is this?",
+          "cs": "Takže, jaká je tohle místnost?",
+          "de": "Also, welches Zimmer ist das?",
+          "fr": "Alors, quelle pièce est-ce ?"
+        }
+      },
+      {
+        "start": 72.2,
+        "end": 74.56,
+        "words": [
+          {
+            "text": "Esta",
+            "start": 72.2,
+            "end": 72.32
+          },
+          {
+            "text": "es",
+            "start": 72.32,
+            "end": 72.479
+          },
+          {
+            "text": "la",
+            "start": 72.479,
+            "end": 72.64
+          },
+          {
+            "text": "sala",
+            "start": 72.64,
+            "end": 72.88
+          },
+          {
+            "text": "de",
+            "start": 72.88,
+            "end": 73.08
+          },
+          {
+            "text": "estar,",
+            "start": 73.08,
+            "end": 73.439
+          },
+          {
+            "text": "la",
+            "start": 73.439,
+            "end": 73.64
+          },
+          {
+            "text": "cocina",
+            "start": 73.64,
+            "end": 74.04
+          },
+          {
+            "text": "comedor,",
+            "start": 74.04,
+            "end": 74.56
+          }
+        ],
+        "translations": {
+          "en": "This is the living room, dining kitchen,",
+          "cs": "Toto je obývací pokoj, kuchyně s jídelnou,",
+          "de": "Das ist das Wohnzimmer, die Essküche,",
+          "fr": "C'est le salon, la cuisine-salle à manger,"
+        }
+      },
+      {
+        "start": 74.56,
+        "end": 76.32,
+        "words": [
+          {
+            "text": "la",
+            "start": 74.56,
+            "end": 74.72
+          },
+          {
+            "text": "oficina",
+            "start": 74.72,
+            "end": 75.2
+          },
+          {
+            "text": "y",
+            "start": 75.2,
+            "end": 75.4
+          },
+          {
+            "text": "también",
+            "start": 75.4,
+            "end": 75.6
+          },
+          {
+            "text": "la",
+            "start": 75.6,
+            "end": 75.72
+          },
+          {
+            "text": "habitación.",
+            "start": 75.72,
+            "end": 76.32
+          }
+        ],
+        "translations": {
+          "en": "office and also the bedroom.",
+          "cs": "kancelář a také ložnice.",
+          "de": "Büro und auch das Schlafzimmer.",
+          "fr": "le bureau et aussi la chambre."
+        }
+      },
+      {
+        "start": 78.08,
+        "end": 79.8,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 78.08,
+            "end": 78.24
+          },
+          {
+            "text": "oh,",
+            "start": 78.24,
+            "end": 78.439
+          },
+          {
+            "text": "oh.",
+            "start": 78.439,
+            "end": 78.88
+          },
+          {
+            "text": "Eso",
+            "start": 78.88,
+            "end": 79.04
+          },
+          {
+            "text": "es",
+            "start": 79.04,
+            "end": 79.2
+          },
+          {
+            "text": "seguro",
+            "start": 79.2,
+            "end": 79.8
+          }
+        ],
+        "translations": {
+          "en": "Oh, oh, oh. That's for sure",
+          "cs": "Oh, oh, oh. To je jisté",
+          "de": "Oh, oh, oh. Das ist sicher",
+          "fr": "Oh, oh, oh. Ça, c'est sûr"
+        }
+      },
+      {
+        "start": 80.759,
+        "end": 84.64,
+        "words": [
+          {
+            "text": "No,",
+            "start": 80.759,
+            "end": 81.24
+          },
+          {
+            "text": "pero",
+            "start": 81.24,
+            "end": 81.439
+          },
+          {
+            "text": "es",
+            "start": 81.439,
+            "end": 81.64
+          },
+          {
+            "text": "un",
+            "start": 81.64,
+            "end": 81.84
+          },
+          {
+            "text": "excelente",
+            "start": 81.84,
+            "end": 82.4
+          },
+          {
+            "text": "uso",
+            "start": 82.4,
+            "end": 82.68
+          },
+          {
+            "text": "del",
+            "start": 82.68,
+            "end": 82.96
+          },
+          {
+            "text": "espacio.",
+            "start": 82.96,
+            "end": 83.56
+          },
+          {
+            "text": "La",
+            "start": 83.88,
+            "end": 84.04
+          },
+          {
+            "text": "compraremos.",
+            "start": 84.04,
+            "end": 84.64
+          }
+        ],
+        "translations": {
+          "en": "No, but it’s an excellent use of space. We'll take it.",
+          "cs": "Ne, ale to je skvělé využití prostoru. Koupíme to.",
+          "de": "Nein, aber es ist eine exzellente Raumnutzung. Wir kaufen es.",
+          "fr": "Non, mais c'est un excellent usage de l'espace. On l'achète."
+        }
+      },
+      {
+        "start": 85.24,
+        "end": 88.04,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 85.24,
+            "end": 85.84
+          },
+          {
+            "text": "creo",
+            "start": 86.079,
+            "end": 86.4
+          },
+          {
+            "text": "que",
+            "start": 86.4,
+            "end": 86.56
+          },
+          {
+            "text": "no",
+            "start": 86.56,
+            "end": 86.72
+          },
+          {
+            "text": "lo",
+            "start": 86.72,
+            "end": 86.88
+          },
+          {
+            "text": "haremos,",
+            "start": 86.88,
+            "end": 87.479
+          },
+          {
+            "text": "Peppa.",
+            "start": 87.479,
+            "end": 88.04
+          }
+        ],
+        "translations": {
+          "en": "Oh, I think we won't, Peppa.",
+          "cs": "Oh, myslím, že ne, Peppo.",
+          "de": "Oh, ich glaube, wir werden nicht, Peppa.",
+          "fr": "Oh, je crois qu'on ne va pas le faire, Peppa."
+        }
+      },
+      {
+        "start": 88.04,
+        "end": 90.88,
+        "words": [
+          {
+            "text": "Necesitamos",
+            "start": 88.04,
+            "end": 88.64
+          },
+          {
+            "text": "más",
+            "start": 88.72,
+            "end": 89.04
+          },
+          {
+            "text": "espacio,",
+            "start": 89.04,
+            "end": 89.64
+          },
+          {
+            "text": "no",
+            "start": 90,
+            "end": 90.28
+          },
+          {
+            "text": "menos.",
+            "start": 90.28,
+            "end": 90.88
+          }
+        ],
+        "translations": {
+          "en": "We need more space, not less.",
+          "cs": "Potřebujeme více prostoru, ne méně.",
+          "de": "Wir brauchen mehr Platz, nicht weniger.",
+          "fr": "On a besoin de plus d'espace, pas moins."
+        }
+      },
+      {
+        "start": 91.24,
+        "end": 94.64,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 91.24,
+            "end": 91.68
+          },
+          {
+            "text": "no",
+            "start": 91.68,
+            "end": 91.92
+          },
+          {
+            "text": "se",
+            "start": 91.92,
+            "end": 92.119
+          },
+          {
+            "text": "preocupen,",
+            "start": 92.119,
+            "end": 92.719
+          },
+          {
+            "text": "hay",
+            "start": 92.88,
+            "end": 93.2
+          },
+          {
+            "text": "muchas",
+            "start": 93.2,
+            "end": 93.52
+          },
+          {
+            "text": "más",
+            "start": 93.52,
+            "end": 93.799
+          },
+          {
+            "text": "por",
+            "start": 93.799,
+            "end": 94.04
+          },
+          {
+            "text": "ver.",
+            "start": 94.04,
+            "end": 94.64
+          }
+        ],
+        "translations": {
+          "en": "Ah, don't worry, there are plenty more to see.",
+          "cs": "Ach, nebojte se, je jich mnohem víc k vidění.",
+          "de": "Ach, keine Sorge, es gibt noch viele mehr zu sehen.",
+          "fr": "Ah, ne vous inquiétez pas, il y en a beaucoup d'autres à voir."
+        }
+      },
+      {
+        "start": 99.759,
+        "end": 101.64,
+        "words": [
+          {
+            "text": "¿Y",
+            "start": 99.759,
+            "end": 100.04
+          },
+          {
+            "text": "qué",
+            "start": 100.04,
+            "end": 100.2
+          },
+          {
+            "text": "opinan",
+            "start": 100.2,
+            "end": 100.72
+          },
+          {
+            "text": "de",
+            "start": 100.72,
+            "end": 101.04
+          },
+          {
+            "text": "esta?",
+            "start": 101.04,
+            "end": 101.64
+          }
+        ],
+        "translations": {
+          "en": "And what do you think of this one?",
+          "cs": "A co říkáte na tento?",
+          "de": "Und was haltet ihr von diesem?",
+          "fr": "Et que pensez-vous de celui-ci ?"
+        }
+      },
+      {
+        "start": 102.92,
+        "end": 104.719,
+        "words": [
+          {
+            "text": "Wow.",
+            "start": 102.92,
+            "end": 103.36
+          },
+          {
+            "text": "Wow.",
+            "start": 103.36,
+            "end": 103.96
+          },
+          {
+            "text": "Wow.",
+            "start": 104.119,
+            "end": 104.719
+          }
+        ],
+        "translations": {
+          "en": "Wow. Wow. Wow.",
+          "cs": "Páni. Páni. Páni.",
+          "de": "Wow. Wow. Wow.",
+          "fr": "Wow. Wow. Wow."
+        }
+      },
+      {
+        "start": 104.719,
+        "end": 106.6,
+        "words": [
+          {
+            "text": "Si",
+            "start": 104.719,
+            "end": 104.92
+          },
+          {
+            "text": "lo",
+            "start": 104.92,
+            "end": 105.079
+          },
+          {
+            "text": "que",
+            "start": 105.079,
+            "end": 105.2
+          },
+          {
+            "text": "buscan",
+            "start": 105.2,
+            "end": 105.6
+          },
+          {
+            "text": "son",
+            "start": 105.6,
+            "end": 105.799
+          },
+          {
+            "text": "más",
+            "start": 105.799,
+            "end": 106
+          },
+          {
+            "text": "habitaciones,",
+            "start": 106,
+            "end": 106.6
+          }
+        ],
+        "translations": {
+          "en": "If you're looking for more rooms,",
+          "cs": "Pokud hledáte více pokojů,",
+          "de": "Wenn ihr nach mehr Zimmern sucht,",
+          "fr": "Si vous cherchez plus de chambres,"
+        }
+      },
+      {
+        "start": 107,
+        "end": 108.52,
+        "words": [
+          {
+            "text": "esta",
+            "start": 107,
+            "end": 107.32
+          },
+          {
+            "text": "casa",
+            "start": 107.32,
+            "end": 107.64
+          },
+          {
+            "text": "las",
+            "start": 107.64,
+            "end": 107.92
+          },
+          {
+            "text": "tiene.",
+            "start": 107.92,
+            "end": 108.52
+          }
+        ],
+        "translations": {
+          "en": "this house has them.",
+          "cs": "tento dům je má.",
+          "de": "dieses Haus hat sie.",
+          "fr": "cette maison les a."
+        }
+      },
+      {
+        "start": 108.52,
+        "end": 110.56,
+        "words": [
+          {
+            "text": "Esta",
+            "start": 108.52,
+            "end": 108.799
+          },
+          {
+            "text": "casa",
+            "start": 108.799,
+            "end": 109.2
+          },
+          {
+            "text": "sí",
+            "start": 109.2,
+            "end": 109.439
+          },
+          {
+            "text": "que",
+            "start": 109.439,
+            "end": 109.68
+          },
+          {
+            "text": "es",
+            "start": 109.68,
+            "end": 109.96
+          },
+          {
+            "text": "enorme.",
+            "start": 109.96,
+            "end": 110.56
+          }
+        ],
+        "translations": {
+          "en": "This house is really huge.",
+          "cs": "Tento dům je opravdu obrovský.",
+          "de": "Dieses Haus ist wirklich riesig.",
+          "fr": "Cette maison est vraiment immense."
+        }
+      },
+      {
+        "start": 111,
+        "end": 115.2,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 111,
+            "end": 111.6
+          },
+          {
+            "text": "sí.",
+            "start": 111.64,
+            "end": 112.24
+          },
+          {
+            "text": "¿Y",
+            "start": 112.52,
+            "end": 112.84
+          },
+          {
+            "text": "cuántas",
+            "start": 112.84,
+            "end": 113.2
+          },
+          {
+            "text": "habitaciones",
+            "start": 113.2,
+            "end": 113.8
+          },
+          {
+            "text": "tiene?",
+            "start": 114,
+            "end": 114.6
+          },
+          {
+            "text": "sesenta",
+            "start": 114.6,
+            "end": 114.923
+          },
+          {
+            "text": "y",
+            "start": 114.923,
+            "end": 114.969
+          },
+          {
+            "text": "ocho.",
+            "start": 114.969,
+            "end": 115.2
+          }
+        ],
+        "translations": {
+          "en": "Oh, yes. And how many rooms does it have? Sixty-eight.",
+          "cs": "Oh, ano. A kolik má pokojů? Šedesát osm.",
+          "de": "Oh, ja. Und wie viele Zimmer hat es? Achtundsechzig.",
+          "fr": "Oh, oui. Et combien de chambres a-t-elle ? Soixante-huit."
+        }
+      },
+      {
+        "start": 115.88,
+        "end": 118.56,
+        "words": [
+          {
+            "text": "Así",
+            "start": 115.88,
+            "end": 116.119
+          },
+          {
+            "text": "nunca",
+            "start": 116.119,
+            "end": 116.52
+          },
+          {
+            "text": "se",
+            "start": 116.52,
+            "end": 116.759
+          },
+          {
+            "text": "tendrían",
+            "start": 116.759,
+            "end": 117.28
+          },
+          {
+            "text": "que",
+            "start": 117.28,
+            "end": 117.479
+          },
+          {
+            "text": "volver",
+            "start": 117.479,
+            "end": 117.759
+          },
+          {
+            "text": "a",
+            "start": 117.759,
+            "end": 117.96
+          },
+          {
+            "text": "ver.",
+            "start": 117.96,
+            "end": 118.56
+          }
+        ],
+        "translations": {
+          "en": "You'd never have to see each other again.",
+          "cs": "Už byste se nikdy nemuseli vidět.",
+          "de": "Ihr müsstet euch nie wieder sehen.",
+          "fr": "Vous ne devriez plus jamais vous revoir."
+        }
+      },
+      {
+        "start": 118.6,
+        "end": 121.039,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 118.6,
+            "end": 119.2
+          },
+          {
+            "text": "bien.",
+            "start": 119.24,
+            "end": 119.759
+          },
+          {
+            "text": "Creo",
+            "start": 119.759,
+            "end": 120
+          },
+          {
+            "text": "que",
+            "start": 120,
+            "end": 120.24
+          },
+          {
+            "text": "no",
+            "start": 120.24,
+            "end": 120.439
+          },
+          {
+            "text": "aceptamos.",
+            "start": 120.439,
+            "end": 121.039
+          }
+        ],
+        "translations": {
+          "en": "Ah, well. I think we're gonna pass.",
+          "cs": "Ach, dobře. Myslím, že odmítneme.",
+          "de": "Ach, gut. Ich glaube, wir werden ablehnen.",
+          "fr": "Ah, bien. Je crois qu'on va refuser."
+        }
+      },
+      {
+        "start": 121.479,
+        "end": 122.88,
+        "words": [
+          {
+            "text": "Lo",
+            "start": 121.479,
+            "end": 121.6
+          },
+          {
+            "text": "siento.",
+            "start": 121.6,
+            "end": 122.2
+          },
+          {
+            "text": "Mm.",
+            "start": 122.28,
+            "end": 122.88
+          }
+        ],
+        "translations": {
+          "en": "Sorry. Mm.",
+          "cs": "Promiňte. Mm.",
+          "de": "Entschuldigung. Mm.",
+          "fr": "Désolé. Mm."
+        }
+      },
+      {
+        "start": 122.92,
+        "end": 125.399,
+        "words": [
+          {
+            "text": "Muy",
+            "start": 122.92,
+            "end": 123.2
+          },
+          {
+            "text": "pequeña",
+            "start": 123.2,
+            "end": 123.8
+          },
+          {
+            "text": "y",
+            "start": 124.039,
+            "end": 124.24
+          },
+          {
+            "text": "ahora",
+            "start": 124.24,
+            "end": 124.52
+          },
+          {
+            "text": "muy",
+            "start": 124.52,
+            "end": 124.799
+          },
+          {
+            "text": "grande.",
+            "start": 124.799,
+            "end": 125.399
+          }
+        ],
+        "translations": {
+          "en": "Very small and now way too big.",
+          "cs": "Velmi malý a teď příliš velký.",
+          "de": "Sehr klein und jetzt viel zu groß.",
+          "fr": "Trop petit et maintenant trop grand."
+        }
+      },
+      {
+        "start": 127,
+        "end": 128.759,
+        "words": [
+          {
+            "text": "Y",
+            "start": 127,
+            "end": 127.2
+          },
+          {
+            "text": "ahora",
+            "start": 127.2,
+            "end": 127.759
+          },
+          {
+            "text": "veamos",
+            "start": 127.759,
+            "end": 128.28
+          },
+          {
+            "text": "esta",
+            "start": 128.28,
+            "end": 128.56
+          },
+          {
+            "text": "casa.",
+            "start": 128.56,
+            "end": 128.759
+          }
+        ],
+        "translations": {
+          "en": "And now let’s see this house.",
+          "cs": "A teď se podívejme na tento dům.",
+          "de": "Und jetzt lasst uns dieses Haus ansehen.",
+          "fr": "Et maintenant, voyons cette maison."
+        }
+      },
+      {
+        "start": 128.759,
+        "end": 131.28,
+        "words": [
+          {
+            "text": "Esta",
+            "start": 128.759,
+            "end": 129.28
+          },
+          {
+            "text": "casa",
+            "start": 129.28,
+            "end": 129.88
+          },
+          {
+            "text": "me",
+            "start": 130.119,
+            "end": 130.399
+          },
+          {
+            "text": "gusta",
+            "start": 130.399,
+            "end": 130.759
+          },
+          {
+            "text": "mucho.",
+            "start": 130.759,
+            "end": 131.28
+          }
+        ],
+        "translations": {
+          "en": "I really like this house.",
+          "cs": "Tento dům se mi opravdu líbí.",
+          "de": "Dieses Haus gefällt mir wirklich.",
+          "fr": "J'aime vraiment cette maison."
+        }
+      },
+      {
+        "start": 131.28,
+        "end": 133.28,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 131.28,
+            "end": 131.68
+          },
+          {
+            "text": "podría",
+            "start": 131.68,
+            "end": 132.04
+          },
+          {
+            "text": "vivir",
+            "start": 132.04,
+            "end": 132.36
+          },
+          {
+            "text": "en",
+            "start": 132.36,
+            "end": 132.52
+          },
+          {
+            "text": "el",
+            "start": 132.52,
+            "end": 132.68
+          },
+          {
+            "text": "tejado.",
+            "start": 132.68,
+            "end": 133.28
+          }
+        ],
+        "translations": {
+          "en": "Oh, I could live on the roof.",
+          "cs": "Oh, mohl bych bydlet na střeše.",
+          "de": "Oh, ich könnte auf dem Dach leben.",
+          "fr": "Oh, je pourrais vivre sur le toit."
+        }
+      },
+      {
+        "start": 133.599,
+        "end": 137.88,
+        "words": [
+          {
+            "text": "Tiene",
+            "start": 133.599,
+            "end": 133.84
+          },
+          {
+            "text": "lo",
+            "start": 133.84,
+            "end": 134.04
+          },
+          {
+            "text": "necesario",
+            "start": 134.04,
+            "end": 134.64
+          },
+          {
+            "text": "para",
+            "start": 134.64,
+            "end": 134.84
+          },
+          {
+            "text": "una",
+            "start": 134.84,
+            "end": 135.08
+          },
+          {
+            "text": "familia",
+            "start": 135.08,
+            "end": 135.4
+          },
+          {
+            "text": "en",
+            "start": 135.4,
+            "end": 135.56
+          },
+          {
+            "text": "crecimiento.",
+            "start": 135.56,
+            "end": 136.16
+          },
+          {
+            "text": "Oh,",
+            "start": 136.56,
+            "end": 137.16
+          },
+          {
+            "text": "sí.",
+            "start": 137.28,
+            "end": 137.88
+          }
+        ],
+        "translations": {
+          "en": "It has what a growing family needs. Oh, yes.",
+          "cs": "Má to, co rostoucí rodina potřebuje. Oh, ano.",
+          "de": "Es hat, was eine wachsende Familie braucht. Oh, ja.",
+          "fr": "Elle a ce qu'une famille en pleine croissance a besoin. Oh, oui."
+        }
+      },
+      {
+        "start": 138.76,
+        "end": 139.72,
+        "words": [
+          {
+            "text": "¿Ya",
+            "start": 138.76,
+            "end": 138.959
+          },
+          {
+            "text": "me",
+            "start": 138.959,
+            "end": 139.12
+          },
+          {
+            "text": "entienden?",
+            "start": 139.12,
+            "end": 139.72
+          }
+        ],
+        "translations": {
+          "en": "You get me?",
+          "cs": "Chápete mě?",
+          "de": "Versteht ihr?",
+          "fr": "Vous me suivez ?"
+        }
+      },
+      {
+        "start": 140.12,
+        "end": 145.16,
+        "words": [
+          {
+            "text": "Esa",
+            "start": 140.12,
+            "end": 140.319
+          },
+          {
+            "text": "casa",
+            "start": 140.319,
+            "end": 140.64
+          },
+          {
+            "text": "tenía",
+            "start": 140.64,
+            "end": 141.04
+          },
+          {
+            "text": "todo",
+            "start": 141.04,
+            "end": 141.28
+          },
+          {
+            "text": "lo",
+            "start": 141.28,
+            "end": 141.44
+          },
+          {
+            "text": "que",
+            "start": 141.44,
+            "end": 141.56
+          },
+          {
+            "text": "una",
+            "start": 141.56,
+            "end": 141.76
+          },
+          {
+            "text": "familia",
+            "start": 141.76,
+            "end": 142.08
+          },
+          {
+            "text": "en",
+            "start": 142.08,
+            "end": 142.2
+          },
+          {
+            "text": "crecimiento",
+            "start": 142.2,
+            "end": 142.8
+          },
+          {
+            "text": "necesita.",
+            "start": 142.84,
+            "end": 143.44
+          },
+          {
+            "text": "Oh,",
+            "start": 144.56,
+            "end": 145.16
+          }
+        ],
+        "translations": {
+          "en": "That house had everything a growing family needs. Oh,",
+          "cs": "Ten dům měl vše, co potřebuje rostoucí rodina. Oh,",
+          "de": "Dieses Haus hatte alles, was eine wachsende Familie braucht. Oh,",
+          "fr": "Cette maison avait tout ce qu'une famille en croissance a besoin. Oh,"
+        }
+      },
+      {
+        "start": 146.84,
+        "end": 149.08,
+        "words": [
+          {
+            "text": "pero",
+            "start": 146.84,
+            "end": 147.44
+          },
+          {
+            "text": "no",
+            "start": 147.48,
+            "end": 147.76
+          },
+          {
+            "text": "es",
+            "start": 147.76,
+            "end": 148
+          },
+          {
+            "text": "nuestra",
+            "start": 148,
+            "end": 148.48
+          },
+          {
+            "text": "casa.",
+            "start": 148.48,
+            "end": 149.08
+          }
+        ],
+        "translations": {
+          "en": "but it’s not our home.",
+          "cs": "ale není to náš domov.",
+          "de": "aber es ist nicht unser Zuhause.",
+          "fr": "mais ce n'est pas notre maison."
+        }
+      },
+      {
+        "start": 149.959,
+        "end": 151.88,
+        "words": [
+          {
+            "text": "Ay,",
+            "start": 149.959,
+            "end": 150.4
+          },
+          {
+            "text": "no,",
+            "start": 150.4,
+            "end": 150.8
+          },
+          {
+            "text": "no",
+            "start": 150.8,
+            "end": 151.04
+          },
+          {
+            "text": "lo",
+            "start": 151.04,
+            "end": 151.28
+          },
+          {
+            "text": "es.",
+            "start": 151.28,
+            "end": 151.88
+          }
+        ],
+        "translations": {
+          "en": "Oh no, it's not.",
+          "cs": "Ach ne, není.",
+          "de": "Oh nein, ist es nicht.",
+          "fr": "Oh non, ce n'est pas."
+        }
+      },
+      {
+        "start": 152.12,
+        "end": 154.199,
+        "words": [
+          {
+            "text": "Mm,",
+            "start": 152.12,
+            "end": 152.72
+          },
+          {
+            "text": "tiene",
+            "start": 152.84,
+            "end": 153.16
+          },
+          {
+            "text": "razón,",
+            "start": 153.16,
+            "end": 153.599
+          },
+          {
+            "text": "Peppa.",
+            "start": 153.599,
+            "end": 154.199
+          }
+        ],
+        "translations": {
+          "en": "Mm, you’re right, Peppa.",
+          "cs": "Mm, máš pravdu, Peppo.",
+          "de": "Mm, du hast recht, Peppa.",
+          "fr": "Mm, tu as raison, Peppa."
+        }
+      },
+      {
+        "start": 154.239,
+        "end": 155.28,
+        "words": [
+          {
+            "text": "¿Es",
+            "start": 154.239,
+            "end": 154.48
+          },
+          {
+            "text": "en",
+            "start": 154.48,
+            "end": 154.68
+          },
+          {
+            "text": "serio?",
+            "start": 154.68,
+            "end": 155.28
+          }
+        ],
+        "translations": {
+          "en": "Seriously?",
+          "cs": "Vážně?",
+          "de": "Ernsthaft?",
+          "fr": "Sérieusement ?"
+        }
+      },
+      {
+        "start": 155.36,
+        "end": 157.119,
+        "words": [
+          {
+            "text": "Lo",
+            "start": 155.36,
+            "end": 155.519
+          },
+          {
+            "text": "sentimos,",
+            "start": 155.519,
+            "end": 156.04
+          },
+          {
+            "text": "señorita",
+            "start": 156.04,
+            "end": 156.519
+          },
+          {
+            "text": "Liebre.",
+            "start": 156.519,
+            "end": 157.119
+          }
+        ],
+        "translations": {
+          "en": "Sorry, Miss Rabbit.",
+          "cs": "Promiňte, paní Králíková.",
+          "de": "Entschuldigung, Frau Kaninchen.",
+          "fr": "Désolée, Madame Lapin."
+        }
+      },
+      {
+        "start": 157.319,
+        "end": 158.72,
+        "words": [
+          {
+            "text": "Pero",
+            "start": 157.319,
+            "end": 157.519
+          },
+          {
+            "text": "gracias",
+            "start": 157.519,
+            "end": 157.92
+          },
+          {
+            "text": "por",
+            "start": 157.92,
+            "end": 158.12
+          },
+          {
+            "text": "intentarlo.",
+            "start": 158.12,
+            "end": 158.72
+          }
+        ],
+        "translations": {
+          "en": "But thanks for trying.",
+          "cs": "Ale díky za snahu.",
+          "de": "Aber danke für den Versuch.",
+          "fr": "Mais merci d'avoir essayé."
+        }
+      },
+      {
+        "start": 159.92,
+        "end": 162.44,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 159.92,
+            "end": 160.36
+          },
+          {
+            "text": "fue",
+            "start": 160.36,
+            "end": 160.56
+          },
+          {
+            "text": "un",
+            "start": 160.56,
+            "end": 160.72
+          },
+          {
+            "text": "placer",
+            "start": 160.72,
+            "end": 161.159
+          },
+          {
+            "text": "ayudarte,",
+            "start": 161.159,
+            "end": 161.759
+          },
+          {
+            "text": "Peppa.",
+            "start": 161.84,
+            "end": 162.44
+          }
+        ],
+        "translations": {
+          "en": "Well, it was a pleasure helping you, Peppa.",
+          "cs": "No, bylo mi potěšením ti pomoci, Peppo.",
+          "de": "Nun, es war mir ein Vergnügen, dir zu helfen, Peppa.",
+          "fr": "Eh bien, ce fut un plaisir de t'aider, Peppa."
+        }
+      },
+      {
+        "start": 163.84,
+        "end": 167,
+        "words": [
+          {
+            "text": "Peppa",
+            "start": 163.84,
+            "end": 164.12
+          },
+          {
+            "text": "y",
+            "start": 164.12,
+            "end": 164.319
+          },
+          {
+            "text": "su",
+            "start": 164.319,
+            "end": 164.519
+          },
+          {
+            "text": "familia",
+            "start": 164.519,
+            "end": 165.119
+          },
+          {
+            "text": "por",
+            "start": 165.2,
+            "end": 165.44
+          },
+          {
+            "text": "fin",
+            "start": 165.44,
+            "end": 165.84
+          },
+          {
+            "text": "están",
+            "start": 165.84,
+            "end": 166.12
+          },
+          {
+            "text": "en",
+            "start": 166.12,
+            "end": 166.4
+          },
+          {
+            "text": "casa.",
+            "start": 166.4,
+            "end": 167
+          }
+        ],
+        "translations": {
+          "en": "Peppa and her family are finally home.",
+          "cs": "Peppa a její rodina jsou konečně doma.",
+          "de": "Peppa und ihre Familie sind endlich zu Hause.",
+          "fr": "Peppa et sa famille sont enfin chez eux."
+        }
+      },
+      {
+        "start": 167.56,
+        "end": 169.32,
+        "words": [
+          {
+            "text": "Ay,",
+            "start": 167.56,
+            "end": 168.16
+          },
+          {
+            "text": "papá",
+            "start": 168.36,
+            "end": 168.72
+          },
+          {
+            "text": "cerdito,",
+            "start": 168.72,
+            "end": 169.32
+          }
+        ],
+        "translations": {
+          "en": "Oh, Daddy Pig,",
+          "cs": "Ach, Tatínek Prasátko,",
+          "de": "Oh, Papa Wutz,",
+          "fr": "Oh, Papa Pig,"
+        }
+      },
+      {
+        "start": 169.4,
+        "end": 172.159,
+        "words": [
+          {
+            "text": "¿cómo",
+            "start": 169.4,
+            "end": 169.68
+          },
+          {
+            "text": "vamos",
+            "start": 169.68,
+            "end": 169.879
+          },
+          {
+            "text": "a",
+            "start": 169.879,
+            "end": 170.08
+          },
+          {
+            "text": "encontrar",
+            "start": 170.08,
+            "end": 170.519
+          },
+          {
+            "text": "un",
+            "start": 170.519,
+            "end": 170.72
+          },
+          {
+            "text": "lugar",
+            "start": 170.72,
+            "end": 170.959
+          },
+          {
+            "text": "tan",
+            "start": 170.959,
+            "end": 171.28
+          },
+          {
+            "text": "encantador",
+            "start": 171.28,
+            "end": 171.88
+          },
+          {
+            "text": "como",
+            "start": 171.92,
+            "end": 172.159
+          }
+        ],
+        "translations": {
+          "en": "how are we going to find a place as lovely as",
+          "cs": "jak najdeme místo tak pěkné jako",
+          "de": "wie werden wir einen so lieblichen Platz finden wie",
+          "fr": "comment allons-nous trouver un endroit aussi charmant que"
+        }
+      },
+      {
+        "start": 172.159,
+        "end": 173.8,
+        "words": [
+          {
+            "text": "esta",
+            "start": 172.159,
+            "end": 172.44
+          },
+          {
+            "text": "casita",
+            "start": 172.44,
+            "end": 172.8
+          },
+          {
+            "text": "en",
+            "start": 172.8,
+            "end": 172.959
+          },
+          {
+            "text": "la",
+            "start": 172.959,
+            "end": 173.2
+          },
+          {
+            "text": "colina?",
+            "start": 173.2,
+            "end": 173.8
+          }
+        ],
+        "translations": {
+          "en": "this little house on the hill?",
+          "cs": "tento domeček na kopci?",
+          "de": "dieses kleine Haus auf dem Hügel?",
+          "fr": "cette petite maison sur la colline ?"
+        }
+      },
+      {
+        "start": 174.08,
+        "end": 175.479,
+        "words": [
+          {
+            "text": "Te",
+            "start": 174.08,
+            "end": 174.28
+          },
+          {
+            "text": "entiendo",
+            "start": 174.28,
+            "end": 174.879
+          },
+          {
+            "text": "bien.",
+            "start": 174.879,
+            "end": 175.479
+          }
+        ],
+        "translations": {
+          "en": "I understand you.",
+          "cs": "Rozumím ti.",
+          "de": "Ich verstehe dich.",
+          "fr": "Je te comprends."
+        }
+      },
+      {
+        "start": 175.8,
+        "end": 176.96,
+        "words": [
+          {
+            "text": "Modo",
+            "start": 175.8,
+            "end": 176.12
+          },
+          {
+            "text": "Kids",
+            "start": 176.12,
+            "end": 176.36
+          },
+          {
+            "text": "activado.",
+            "start": 176.36,
+            "end": 176.96
+          }
+        ],
+        "translations": {
+          "en": "Kids Mode activated.",
+          "cs": "Režim pro děti aktivován.",
+          "de": "Kindermodus aktiviert.",
+          "fr": "Mode Kids activé."
+        }
+      }
+    ],
+    "dictionary": {
+      "esto": {
+        "lemma": "esto",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "this",
+          "cs": "tohle",
+          "de": "dies",
+          "fr": "ceci"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "discovery": {
+        "lemma": "discovery",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "discovery",
+          "cs": "objev",
+          "de": "Entdeckung",
+          "fr": "découverte"
+        }
+      },
+      "kids": {
+        "lemma": "kids",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "kids",
+          "cs": "děti",
+          "de": "Kinder",
+          "fr": "enfants"
+        }
+      },
+      "comenzamos": {
+        "lemma": "comenzar",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "we begin",
+          "cs": "začínáme",
+          "de": "wir beginnen",
+          "fr": "nous commençons"
+        }
+      },
+      "una": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "feminine form",
+        "glosses": {
+          "en": "a",
+          "cs": "jeden",
+          "de": "eine",
+          "fr": "une"
+        }
+      },
+      "casa": {
+        "lemma": "casa",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "house",
+          "cs": "dům",
+          "de": "Haus",
+          "fr": "maison"
+        }
+      },
+      "más": {
+        "lemma": "más",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "more",
+          "cs": "více",
+          "de": "mehr",
+          "fr": "plus"
+        }
+      },
+      "grande": {
+        "lemma": "grande",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "big",
+          "cs": "velký",
+          "de": "groß",
+          "fr": "grand"
+        }
+      },
+      "peppa": {
+        "lemma": "peppa",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Peppa",
+          "cs": "Peppa",
+          "de": "Peppa",
+          "fr": "Peppa"
+        }
+      },
+      "y": {
+        "lemma": "y",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "and",
+          "cs": "a",
+          "de": "und",
+          "fr": "et"
+        }
+      },
+      "george": {
+        "lemma": "george",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "George",
+          "cs": "George",
+          "de": "George",
+          "fr": "George"
+        }
+      },
+      "están": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "are",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "jugando": {
+        "lemma": "jugar",
+        "pos": "verb",
+        "note": "gerund",
+        "glosses": {
+          "en": "playing",
+          "cs": "hraje",
+          "de": "spielen",
+          "fr": "jouer"
+        }
+      },
+      "en": {
+        "lemma": "en",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "in",
+          "cs": "v",
+          "de": "in",
+          "fr": "dans"
+        }
+      },
+      "su": {
+        "lemma": "su",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "their",
+          "cs": "jejich",
+          "de": "ihr",
+          "fr": "leur"
+        }
+      },
+      "habitación": {
+        "lemma": "habitación",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "room",
+          "cs": "pokoj",
+          "de": "Zimmer",
+          "fr": "chambre"
+        }
+      },
+      "se": {
+        "lemma": "se",
+        "pos": "pron",
+        "note": "reflexive",
+        "glosses": {
+          "en": "themselves",
+          "cs": "sebe",
+          "de": "sich",
+          "fr": "se"
+        }
+      },
+      "divierten": {
+        "lemma": "divertir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "have fun",
+          "cs": "bavit se",
+          "de": "Spaß haben",
+          "fr": "s'amuser"
+        }
+      },
+      "o": {
+        "lemma": "o",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "or",
+          "cs": "nebo",
+          "de": "oder",
+          "fr": "ou"
+        }
+      },
+      "discuten": {
+        "lemma": "discutir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "argue",
+          "cs": "hádat se",
+          "de": "streiten",
+          "fr": "discuter"
+        }
+      },
+      "por": {
+        "lemma": "por",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "for",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "lo": {
+        "lemma": "lo",
+        "pos": "pron",
+        "note": "neuter pronoun",
+        "glosses": {
+          "en": "it",
+          "cs": "to",
+          "de": "es",
+          "fr": "cela"
+        }
+      },
+      "que": {
+        "lemma": "que",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "že",
+          "de": "dass",
+          "fr": "que"
+        }
+      },
+      "parece": {
+        "lemma": "parecer",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "it seems",
+          "cs": "zdá se",
+          "de": "scheint",
+          "fr": "il semble"
+        }
+      },
+      "no": {
+        "lemma": "no",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "no",
+          "cs": "ne",
+          "de": "nein",
+          "fr": "non"
+        }
+      },
+      "permiten": {
+        "lemma": "permitir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "allow",
+          "cs": "dovolit",
+          "de": "erlauben",
+          "fr": "permettre"
+        }
+      },
+      "dinosaurios": {
+        "lemma": "dinosaurio",
+        "pos": "noun",
+        "note": "plural",
+        "glosses": {
+          "en": "dinosaurs",
+          "cs": "dinosauři",
+          "de": "Dinosaurier",
+          "fr": "dinosaures"
+        }
+      },
+      "qué": {
+        "lemma": "qué",
+        "pos": "pron",
+        "note": "interrogative",
+        "glosses": {
+          "en": "what",
+          "cs": "co",
+          "de": "was",
+          "fr": "quoi"
+        }
+      },
+      "está": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "pasando": {
+        "lemma": "pasar",
+        "pos": "verb",
+        "note": "gerund",
+        "glosses": {
+          "en": "happening",
+          "cs": "stává se",
+          "de": "passiert",
+          "fr": "se passe"
+        }
+      },
+      "mamá": {
+        "lemma": "mamá",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "mom",
+          "cs": "máma",
+          "de": "Mama",
+          "fr": "maman"
+        }
+      },
+      "papá": {
+        "lemma": "papá",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "dad",
+          "cs": "táta",
+          "de": "Papa",
+          "fr": "papa"
+        }
+      },
+      "puedo": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "can",
+          "cs": "můžu",
+          "de": "kann",
+          "fr": "peux"
+        }
+      },
+      "tener": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "have",
+          "cs": "mít",
+          "de": "haben",
+          "fr": "avoir"
+        }
+      },
+      "mi": {
+        "lemma": "mi",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "my",
+          "cs": "můj",
+          "de": "mein",
+          "fr": "mon"
+        }
+      },
+      "propia": {
+        "lemma": "propio",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "own",
+          "cs": "vlastní",
+          "de": "eigen",
+          "fr": "propre"
+        }
+      },
+      "dinosaurio": {
+        "lemma": "dinosaurio",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "dinosaur",
+          "cs": "dinosaur",
+          "de": "Dinosaurier",
+          "fr": "dinosaure"
+        }
+      },
+      "ah": {
+        "lemma": "ah",
+        "pos": "other",
+        "note": "interjection",
+        "glosses": {
+          "en": "ah",
+          "cs": "ah",
+          "de": "ah",
+          "fr": "ah"
+        }
+      },
+      "bueno": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "adjective",
+        "glosses": {
+          "en": "well",
+          "cs": "dobře",
+          "de": "gut",
+          "fr": "bien"
+        }
+      },
+      "supongo": {
+        "lemma": "suponer",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "I guess",
+          "cs": "předpokládám",
+          "de": "ich nehme an",
+          "fr": "je suppose"
+        }
+      },
+      "este": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "masculine form",
+        "glosses": {
+          "en": "this",
+          "cs": "tenhle",
+          "de": "dies",
+          "fr": "ce"
+        }
+      },
+      "un": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "masculine form",
+        "glosses": {
+          "en": "a",
+          "cs": "jeden",
+          "de": "ein",
+          "fr": "un"
+        }
+      },
+      "buen": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "shortened form",
+        "glosses": {
+          "en": "good",
+          "cs": "dobrý",
+          "de": "gut",
+          "fr": "bon"
+        }
+      },
+      "momento": {
+        "lemma": "momento",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "moment",
+          "cs": "okamžik",
+          "de": "Moment",
+          "fr": "moment"
+        }
+      },
+      "para": {
+        "lemma": "para",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "for",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "decirles": {
+        "lemma": "decir",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "tell them",
+          "cs": "říci jim",
+          "de": "ihnen sagen",
+          "fr": "leur dire"
+        }
+      },
+      "algo": {
+        "lemma": "algo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "something",
+          "cs": "něco",
+          "de": "etwas",
+          "fr": "quelque chose"
+        }
+      },
+      "cierto": {
+        "lemma": "cierto",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "right",
+          "cs": "pravý",
+          "de": "richtig",
+          "fr": "certain"
+        }
+      },
+      "hacerle": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "make",
+          "cs": "udělat",
+          "de": "machen",
+          "fr": "faire"
+        }
+      },
+      "espacio": {
+        "lemma": "espacio",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "room",
+          "cs": "prostor",
+          "de": "Raum",
+          "fr": "espace"
+        }
+      },
+      "al": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "contraction",
+        "glosses": {
+          "en": "the",
+          "cs": "k",
+          "de": "zum",
+          "fr": "au"
+        }
+      },
+      "bebé": {
+        "lemma": "bebé",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "baby",
+          "cs": "miminko",
+          "de": "Baby",
+          "fr": "bébé"
+        }
+      },
+      "tenemos": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "we have",
+          "cs": "máme",
+          "de": "wir haben",
+          "fr": "nous avons"
+        }
+      },
+      "mudarnos": {
+        "lemma": "mudar",
+        "pos": "verb",
+        "note": "reflexive",
+        "glosses": {
+          "en": "move",
+          "cs": "stěhovat se",
+          "de": "umziehen",
+          "fr": "déménager"
+        }
+      },
+      "puede": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "might",
+          "cs": "můžet",
+          "de": "kann",
+          "fr": "peut"
+        }
+      },
+      "cada": {
+        "lemma": "cada",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "each",
+          "cs": "každý",
+          "de": "jeder",
+          "fr": "chaque"
+        }
+      },
+      "uno": {
+        "lemma": "uno",
+        "pos": "pron",
+        "note": "masculine form",
+        "glosses": {
+          "en": "one",
+          "cs": "jedna",
+          "de": "eins",
+          "fr": "un"
+        }
+      },
+      "tenga": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "subjunctive",
+        "glosses": {
+          "en": "have",
+          "cs": "mít",
+          "de": "haben",
+          "fr": "avoir"
+        }
+      },
+      "bien": {
+        "lemma": "bien",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "okay",
+          "cs": "dobře",
+          "de": "gut",
+          "fr": "bien"
+        }
+      },
+      "sí": {
+        "lemma": "sí",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "yes",
+          "cs": "ano",
+          "de": "ja",
+          "fr": "oui"
+        }
+      },
+      "entre": {
+        "lemma": "entre",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "into",
+          "cs": "do",
+          "de": "hinein",
+          "fr": "dans"
+        }
+      },
+      "familia": {
+        "lemma": "familia",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "family",
+          "cs": "rodina",
+          "de": "Familie",
+          "fr": "famille"
+        }
+      },
+      "fueron": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "went",
+          "cs": "šli",
+          "de": "gingen",
+          "fr": "ont été"
+        }
+      },
+      "a": {
+        "lemma": "a",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "do",
+          "de": "zu",
+          "fr": "à"
+        }
+      },
+      "ver": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "see",
+          "cs": "vidět",
+          "de": "sehen",
+          "fr": "voir"
+        }
+      },
+      "algunas": {
+        "lemma": "alguna",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "some",
+          "cs": "několik",
+          "de": "einige",
+          "fr": "quelques"
+        }
+      },
+      "casas": {
+        "lemma": "casa",
+        "pos": "noun",
+        "note": "plural",
+        "glosses": {
+          "en": "houses",
+          "cs": "domy",
+          "de": "Häuser",
+          "fr": "maisons"
+        }
+      },
+      "nuevas": {
+        "lemma": "nuevo",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "new",
+          "cs": "nový",
+          "de": "neu",
+          "fr": "nouvelles"
+        }
+      },
+      "con": {
+        "lemma": "con",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "with",
+          "cs": "s",
+          "de": "mit",
+          "fr": "avec"
+        }
+      },
+      "la": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "feminine",
+        "glosses": {
+          "en": "the",
+          "cs": "ta",
+          "de": "die",
+          "fr": "la"
+        }
+      },
+      "señorita": {
+        "lemma": "señorita",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "Miss",
+          "cs": "slečna",
+          "de": "Fräulein",
+          "fr": "mademoiselle"
+        }
+      },
+      "liebre": {
+        "lemma": "liebre",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Rabbit",
+          "cs": "zajíc",
+          "de": "Hase",
+          "fr": "lièvre"
+        }
+      },
+      "hola": {
+        "lemma": "hola",
+        "pos": "other",
+        "note": "greeting",
+        "glosses": {
+          "en": "hello",
+          "cs": "ahoj",
+          "de": "hallo",
+          "fr": "salut"
+        }
+      },
+      "vengan": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": "subjunctive",
+        "glosses": {
+          "en": "come",
+          "cs": "přijít",
+          "de": "kommen",
+          "fr": "venir"
+        }
+      },
+      "esta": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "feminine",
+        "glosses": {
+          "en": "this",
+          "cs": "tahle",
+          "de": "diese",
+          "fr": "cette"
+        }
+      },
+      "auténtica": {
+        "lemma": "auténtico",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "real",
+          "cs": "skutečný",
+          "de": "echte",
+          "fr": "authentique"
+        }
+      },
+      "joya": {
+        "lemma": "joya",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "gem",
+          "cs": "klenot",
+          "de": "Juwel",
+          "fr": "bijou"
+        }
+      },
+      "poco": {
+        "lemma": "poco",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "bit",
+          "cs": "málo",
+          "de": "wenig",
+          "fr": "peu"
+        }
+      },
+      "pequeña": {
+        "lemma": "pequeño",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "small",
+          "cs": "malý",
+          "de": "klein",
+          "fr": "petite"
+        }
+      },
+      "entonces": {
+        "lemma": "entonces",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "then",
+          "cs": "potom",
+          "de": "dann",
+          "fr": "alors"
+        }
+      },
+      "sala": {
+        "lemma": "sala",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "living room",
+          "cs": "obývák",
+          "de": "Wohnzimmer",
+          "fr": "salon"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "estar": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "to be",
+          "cs": "být",
+          "de": "sein",
+          "fr": "être"
+        }
+      },
+      "cocina": {
+        "lemma": "cocina",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "kitchen",
+          "cs": "kuchyně",
+          "de": "Küche",
+          "fr": "cuisine"
+        }
+      },
+      "comedor": {
+        "lemma": "comedor",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "dining",
+          "cs": "jídelna",
+          "de": "Esszimmer",
+          "fr": "salle à manger"
+        }
+      },
+      "oficina": {
+        "lemma": "oficina",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "office",
+          "cs": "kancelář",
+          "de": "Büro",
+          "fr": "bureau"
+        }
+      },
+      "también": {
+        "lemma": "también",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "also",
+          "cs": "také",
+          "de": "auch",
+          "fr": "aussi"
+        }
+      },
+      "oh": {
+        "lemma": "oh",
+        "pos": "other",
+        "note": "interjection",
+        "glosses": {
+          "en": "oh",
+          "cs": "oh",
+          "de": "oh",
+          "fr": "oh"
+        }
+      },
+      "eso": {
+        "lemma": "eso",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "to",
+          "de": "das",
+          "fr": "ça"
+        }
+      },
+      "seguro": {
+        "lemma": "seguro",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "sure",
+          "cs": "jistý",
+          "de": "sicher",
+          "fr": "sûr"
+        }
+      },
+      "pero": {
+        "lemma": "pero",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "but",
+          "cs": "ale",
+          "de": "aber",
+          "fr": "mais"
+        }
+      },
+      "excelente": {
+        "lemma": "excelente",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "excellent",
+          "cs": "výborný",
+          "de": "ausgezeichnet",
+          "fr": "excellent"
+        }
+      },
+      "uso": {
+        "lemma": "uso",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "use",
+          "cs": "použití",
+          "de": "Gebrauch",
+          "fr": "utilisation"
+        }
+      },
+      "del": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": "contraction",
+        "glosses": {
+          "en": "of the",
+          "cs": "z",
+          "de": "des",
+          "fr": "du"
+        }
+      },
+      "compraremos": {
+        "lemma": "comprar",
+        "pos": "verb",
+        "note": "future",
+        "glosses": {
+          "en": "we'll take",
+          "cs": "koupíme",
+          "de": "wir werden kaufen",
+          "fr": "nous achèterons"
+        }
+      },
+      "creo": {
+        "lemma": "creer",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "I think",
+          "cs": "věřím",
+          "de": "ich glaube",
+          "fr": "je crois"
+        }
+      },
+      "haremos": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "we won't",
+          "cs": "neuděláme",
+          "de": "wir werden nicht",
+          "fr": "nous ne ferons pas"
+        }
+      },
+      "necesitamos": {
+        "lemma": "necesitar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "we need",
+          "cs": "potřebujeme",
+          "de": "wir brauchen",
+          "fr": "nous avons besoin"
+        }
+      },
+      "menos": {
+        "lemma": "menos",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "less",
+          "cs": "méně",
+          "de": "weniger",
+          "fr": "moins"
+        }
+      },
+      "preocupen": {
+        "lemma": "preocupar",
+        "pos": "verb",
+        "note": "subjunctive",
+        "glosses": {
+          "en": "worry",
+          "cs": "dělat si starosti",
+          "de": "sorgen machen",
+          "fr": "inquiéter"
+        }
+      },
+      "hay": {
+        "lemma": "haber",
+        "pos": "verb",
+        "note": "impersonal",
+        "glosses": {
+          "en": "there are",
+          "cs": "existují",
+          "de": "es gibt",
+          "fr": "il y a"
+        }
+      },
+      "muchas": {
+        "lemma": "mucho",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "plenty",
+          "cs": "mnoho",
+          "de": "viele",
+          "fr": "beaucoup"
+        }
+      },
+      "opinan": {
+        "lemma": "opinar",
+        "pos": "verb",
+        "note": "present tense",
+        "glosses": {
+          "en": "think",
+          "cs": "myslit",
+          "de": "meinen",
+          "fr": "penser"
+        }
+      },
+      "wow": {
+        "lemma": "wow",
+        "pos": "other",
+        "note": "interjection",
+        "glosses": {
+          "en": "wow",
+          "cs": "páni",
+          "de": "wow",
+          "fr": "waouh"
+        }
+      },
+      "si": {
+        "lemma": "si",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "if",
+          "cs": "pokud",
+          "de": "wenn",
+          "fr": "si"
+        }
+      },
+      "buscan": {
+        "lemma": "buscar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "looking",
+          "cs": "hledají",
+          "de": "suchen",
+          "fr": "cherchent"
+        }
+      },
+      "son": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "are",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "habitaciones": {
+        "lemma": "habitación",
+        "pos": "noun",
+        "note": "plural",
+        "glosses": {
+          "en": "rooms",
+          "cs": "pokoje",
+          "de": "Zimmer",
+          "fr": "chambres"
+        }
+      },
+      "las": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ty",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "tiene": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "has",
+          "cs": "má",
+          "de": "hat",
+          "fr": "a"
+        }
+      },
+      "enorme": {
+        "lemma": "enorme",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "huge",
+          "cs": "obrovský",
+          "de": "riesig",
+          "fr": "énorme"
+        }
+      },
+      "cuántas": {
+        "lemma": "cuánto",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "how many",
+          "cs": "kolik",
+          "de": "wie viele",
+          "fr": "combien"
+        }
+      },
+      "sesenta": {
+        "lemma": "sesenta",
+        "pos": "num",
+        "note": null,
+        "glosses": {
+          "en": "sixty",
+          "cs": "šedesát",
+          "de": "sechzig",
+          "fr": "soixante"
+        }
+      },
+      "ocho": {
+        "lemma": "ocho",
+        "pos": "num",
+        "note": null,
+        "glosses": {
+          "en": "eight",
+          "cs": "osm",
+          "de": "acht",
+          "fr": "huit"
+        }
+      },
+      "así": {
+        "lemma": "así",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "so",
+          "cs": "takže",
+          "de": "so",
+          "fr": "ainsi"
+        }
+      },
+      "nunca": {
+        "lemma": "nunca",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "never",
+          "cs": "nikdy",
+          "de": "nie",
+          "fr": "jamais"
+        }
+      },
+      "tendrían": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "conditional",
+        "glosses": {
+          "en": "have to",
+          "cs": "museli by",
+          "de": "müssten",
+          "fr": "devraient"
+        }
+      },
+      "volver": {
+        "lemma": "volver",
+        "pos": "verb",
+        "note": "back",
+        "glosses": {
+          "en": "see",
+          "cs": "vidět",
+          "de": "sehen",
+          "fr": "voir"
+        }
+      },
+      "aceptamos": {
+        "lemma": "aceptar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "we accept",
+          "cs": "přijímáme",
+          "de": "wir akzeptieren",
+          "fr": "nous acceptons"
+        }
+      },
+      "siento": {
+        "lemma": "sentir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "sorry",
+          "cs": "omlouvám se",
+          "de": "es tut mir leid",
+          "fr": "désolé"
+        }
+      },
+      "mm": {
+        "lemma": "mm",
+        "pos": "other",
+        "note": "interjection",
+        "glosses": {
+          "en": "mm",
+          "cs": "mm",
+          "de": "mm",
+          "fr": "mm"
+        }
+      },
+      "muy": {
+        "lemma": "muy",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "very",
+          "cs": "velmi",
+          "de": "sehr",
+          "fr": "très"
+        }
+      },
+      "ahora": {
+        "lemma": "ahora",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "now",
+          "cs": "nyní",
+          "de": "jetzt",
+          "fr": "maintenant"
+        }
+      },
+      "veamos": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": "subjunctive",
+        "glosses": {
+          "en": "let's see",
+          "cs": "podívejme se",
+          "de": "lass uns sehen",
+          "fr": "voyons"
+        }
+      },
+      "me": {
+        "lemma": "yo",
+        "pos": "pron",
+        "note": "object form",
+        "glosses": {
+          "en": "I",
+          "cs": "mně",
+          "de": "mir",
+          "fr": "me"
+        }
+      },
+      "gusta": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": "impersonal",
+        "glosses": {
+          "en": "like",
+          "cs": "líbí se",
+          "de": "gefallen",
+          "fr": "aime"
+        }
+      },
+      "mucho": {
+        "lemma": "mucho",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "a lot",
+          "cs": "hodně",
+          "de": "viel",
+          "fr": "beaucoup"
+        }
+      },
+      "podría": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "conditional",
+        "glosses": {
+          "en": "could",
+          "cs": "mohla bych",
+          "de": "könnte",
+          "fr": "pourrait"
+        }
+      },
+      "vivir": {
+        "lemma": "vivir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "live",
+          "cs": "žít",
+          "de": "leben",
+          "fr": "vivre"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine",
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "tejado": {
+        "lemma": "tejado",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "roof",
+          "cs": "střecha",
+          "de": "Dach",
+          "fr": "toit"
+        }
+      },
+      "necesario": {
+        "lemma": "necesario",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "necessary",
+          "cs": "nezbytný",
+          "de": "notwendig",
+          "fr": "nécessaire"
+        }
+      },
+      "crecimiento": {
+        "lemma": "crecimiento",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "growth",
+          "cs": "růst",
+          "de": "Wachstum",
+          "fr": "croissance"
+        }
+      },
+      "ya": {
+        "lemma": "ya",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "already",
+          "cs": "už",
+          "de": "schon",
+          "fr": "déjà"
+        }
+      },
+      "entienden": {
+        "lemma": "entender",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "you get",
+          "cs": "chápete",
+          "de": "verstehen",
+          "fr": "comprenez"
+        }
+      },
+      "esa": {
+        "lemma": "ese",
+        "pos": "det",
+        "note": "feminine",
+        "glosses": {
+          "en": "that",
+          "cs": "ta",
+          "de": "jene",
+          "fr": "cette"
+        }
+      },
+      "tenía": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "imperfect",
+        "glosses": {
+          "en": "had",
+          "cs": "měla",
+          "de": "hatte",
+          "fr": "avait"
+        }
+      },
+      "todo": {
+        "lemma": "todo",
+        "pos": "adj",
+        "note": "neuter",
+        "glosses": {
+          "en": "everything",
+          "cs": "všechno",
+          "de": "alles",
+          "fr": "tout"
+        }
+      },
+      "necesita": {
+        "lemma": "necesitar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "needs",
+          "cs": "potřebuje",
+          "de": "braucht",
+          "fr": "a besoin"
+        }
+      },
+      "nuestra": {
+        "lemma": "nuestro",
+        "pos": "pron",
+        "note": "feminine form",
+        "glosses": {
+          "en": "our",
+          "cs": "naše",
+          "de": "unsere",
+          "fr": "notre"
+        }
+      },
+      "ay": {
+        "lemma": "ay",
+        "pos": "other",
+        "note": "interjection",
+        "glosses": {
+          "en": "oh",
+          "cs": "ach",
+          "de": "ach",
+          "fr": "aïe"
+        }
+      },
+      "razón": {
+        "lemma": "razón",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "right",
+          "cs": "pravdu",
+          "de": "Grund",
+          "fr": "raison"
+        }
+      },
+      "serio": {
+        "lemma": "serio",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "seriously",
+          "cs": "vážně",
+          "de": "ernsthaft",
+          "fr": "sérieusement"
+        }
+      },
+      "sentimos": {
+        "lemma": "sentir",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "sorry",
+          "cs": "omlouváme se",
+          "de": "entschuldigen",
+          "fr": "désolés"
+        }
+      },
+      "gracias": {
+        "lemma": "gracias",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "thanks",
+          "cs": "díky",
+          "de": "danke",
+          "fr": "merci"
+        }
+      },
+      "intentarlo": {
+        "lemma": "intentar",
+        "pos": "verb",
+        "note": "infinitive",
+        "glosses": {
+          "en": "trying",
+          "cs": "zkusit",
+          "de": "versuchen",
+          "fr": "essayer"
+        }
+      },
+      "fue": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "was",
+          "cs": "bylo",
+          "de": "war",
+          "fr": "était"
+        }
+      },
+      "placer": {
+        "lemma": "placer",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "pleasure",
+          "cs": "potěšení",
+          "de": "Vergnügen",
+          "fr": "plaisir"
+        }
+      },
+      "ayudarte": {
+        "lemma": "ayudar",
+        "pos": "verb",
+        "note": "infinitive",
+        "glosses": {
+          "en": "helping you",
+          "cs": "pomoc vám",
+          "de": "dir helfen",
+          "fr": "aider"
+        }
+      },
+      "fin": {
+        "lemma": "fin",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "finally",
+          "cs": "konec",
+          "de": "Ende",
+          "fr": "fin"
+        }
+      },
+      "cerdito": {
+        "lemma": "cerdito",
+        "pos": "noun",
+        "note": "diminutive",
+        "glosses": {
+          "en": "pig",
+          "cs": "prasečko",
+          "de": "Schweinchen",
+          "fr": "petit cochon"
+        }
+      },
+      "cómo": {
+        "lemma": "cómo",
+        "pos": "adv",
+        "note": "interrogative",
+        "glosses": {
+          "en": "how",
+          "cs": "jak",
+          "de": "wie",
+          "fr": "comment"
+        }
+      },
+      "vamos": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "are we",
+          "cs": "jdeme",
+          "de": "wir gehen",
+          "fr": "nous allons"
+        }
+      },
+      "encontrar": {
+        "lemma": "encontrar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "find",
+          "cs": "najít",
+          "de": "finden",
+          "fr": "trouver"
+        }
+      },
+      "lugar": {
+        "lemma": "lugar",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "place",
+          "cs": "místo",
+          "de": "Ort",
+          "fr": "lieu"
+        }
+      },
+      "tan": {
+        "lemma": "tan",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "so",
+          "cs": "také",
+          "de": "so",
+          "fr": "si"
+        }
+      },
+      "encantador": {
+        "lemma": "encantador",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "lovely",
+          "cs": "okouzlující",
+          "de": "entzückend",
+          "fr": "charmant"
+        }
+      },
+      "como": {
+        "lemma": "como",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "as",
+          "cs": "tak jako",
+          "de": "wie",
+          "fr": "comme"
+        }
+      },
+      "casita": {
+        "lemma": "casa",
+        "pos": "noun",
+        "note": "diminutive",
+        "glosses": {
+          "en": "house",
+          "cs": "domeček",
+          "de": "Häuschen",
+          "fr": "maisonnette"
+        }
+      },
+      "colina": {
+        "lemma": "colina",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "hill",
+          "cs": "kopec",
+          "de": "Hügel",
+          "fr": "colline"
+        }
+      },
+      "te": {
+        "lemma": "tú",
+        "pos": "pron",
+        "note": "object form",
+        "glosses": {
+          "en": "you",
+          "cs": "ty",
+          "de": "dich",
+          "fr": "te"
+        }
+      },
+      "entiendo": {
+        "lemma": "entender",
+        "pos": "verb",
+        "note": "irregular",
+        "glosses": {
+          "en": "understand",
+          "cs": "chápu",
+          "de": "verstehe",
+          "fr": "comprends"
+        }
+      },
+      "modo": {
+        "lemma": "modo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "mode",
+          "cs": "mód",
+          "de": "Modus",
+          "fr": "mode"
+        }
+      },
+      "activado": {
+        "lemma": "activar",
+        "pos": "verb",
+        "note": "past participle",
+        "glosses": {
+          "en": "activated",
+          "cs": "aktivováno",
+          "de": "aktiviert",
+          "fr": "activé"
+        }
+      }
+    },
+    "collection": "peppa"
   }
 ]

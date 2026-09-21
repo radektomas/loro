@@ -213,17 +213,29 @@ function saveRepair(id: string, words: readonly CueWord[], result: RepairResult)
 const isStub = (e: EpisodeEntry): boolean => Object.keys(e.dictionary ?? {}).length === 0;
 
 /**
- * The episode's own name out of the upload's title: "Peppa Pig - El loro
- * Polly (episodio completo)" → "El loro Polly". Channel prefixes before a
- * dash or pipe and bracketed suffixes are the two things every kids
- * channel adds; whatever is left is the name the picker shows.
+ * The episode's own name out of the upload's title. Channels wrap it
+ * differently — "Peppa Pig - El loro Polly (episodio completo)" on the
+ * Spain channel, "Peppa Pig 🐷 El escondite 🐷 Episodio Completo" too, and
+ * "Una nueva decoración en la casa de Peppa | Peppa Pig | Discovery Kids
+ * Latinoamérica" on Discovery Kids — so this splits on the separators
+ * (dashes, pipes, emoji), drops every segment that names the show, the
+ * channel or the format, strips bracketed suffixes, and keeps the longest
+ * of what is left.
  */
+const TITLE_SEPARATOR = /\s+[-–—|]\s+|\s*[\p{Extended_Pictographic}\uFE0F]+\s*/u;
+const NOT_A_TITLE = [
+  /^peppa pig(\s|$)/i, /peppa pig\s*(español|espa[nñ]ol|latino|castellano)/i,
+  /discovery kids/i, /canal oficial/i, /dibujos animados/i, /para ni[nñ]os/i,
+  /episodios? completos?/i, /cap[ií]tulos? completos?/i, /^español( latino)?$/i,
+];
 export function episodeTitle(raw: string): string {
-  let t = raw.trim();
-  t = t.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*$/g, '').trim();
-  const cut = t.split(/\s+[-–—|]\s+/);
-  if (cut.length > 1) t = cut.slice(1).join(' - ').trim();
-  return t || raw.trim();
+  const segments = raw
+    .split(TITLE_SEPARATOR)
+    .map((seg) => seg.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, ' ').trim())
+    .filter(Boolean);
+  const kept = segments.filter((seg) => !NOT_A_TITLE.some((re) => re.test(seg)));
+  const pool = kept.length > 0 ? kept : segments;
+  return [...pool].sort((a, b) => b.length - a.length)[0] ?? raw.trim();
 }
 
 // ── Subtitle audit ──────────────────────────────────────────────────────────
