@@ -129,9 +129,18 @@ export const HAPTIC_ON_CORRECT = true;
  */
 export const LIFT_PLAYER_WHILE_TYPING = true;
 
-/** Resume rhythm, from the web verbatim (Feed.tsx:629-635). */
-export const RESUME_MS_CORRECT = 600;
-export const RESUME_MS_WRONG = 1500;
+/**
+ * Resume rhythm. The web's was 600 / 1500 (Feed.tsx:629-635); shortened
+ * 2026-09-21 because a PAUSED YouTube player draws its own chrome — the
+ * big play mark and the title bar — and nothing of Loro's may cover it. On
+ * a reel it is a flicker; on a landscape episode it fills the frame, and
+ * Radek called it "kinda annoying" after every answer. The celebration
+ * (1200ms) overran the 600 anyway, so a right answer resumes almost at
+ * once. A miss keeps a beat to read the revealed spelling, which stays in
+ * the band after the clip moves on.
+ */
+export const RESUME_MS_CORRECT = 150;
+export const RESUME_MS_WRONG = 900;
 
 /**
  * The web's clamp tolerance (SubtitleTrack.tsx:176). A paused clock further
