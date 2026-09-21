@@ -28468,5 +28468,7574 @@
       }
     },
     "collection": "peppa"
+  },
+  {
+    "id": "4XFlat8LRag",
+    "youtubeId": "4XFlat8LRag",
+    "title": "Peppa va a la casa de su amigo Lorenzo",
+    "creator": "Discovery Kids",
+    "level": "A2",
+    "durationSeconds": 189,
+    "thumbnailUrl": "https://i.ytimg.com/vi/4XFlat8LRag/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Discovery Kids",
+      "channelUrl": "https://www.youtube.com/channel/UC9PIfDp0yx6QRTMVMltMZyA",
+      "videoUrl": "https://www.youtube.com/watch?v=4XFlat8LRag",
+      "license": "youtube"
+    },
+    "cues": [
+      {
+        "start": 0.56,
+        "end": 3.64,
+        "words": [
+          {
+            "text": "Esto",
+            "start": 0.56,
+            "end": 0.799
+          },
+          {
+            "text": "es",
+            "start": 0.799,
+            "end": 1.319
+          },
+          {
+            "text": "Discovery",
+            "start": 1.319,
+            "end": 1.919
+          },
+          {
+            "text": "Kids.",
+            "start": 2.04,
+            "end": 2.64
+          },
+          {
+            "text": "Comencemos.",
+            "start": 3.04,
+            "end": 3.64
+          }
+        ],
+        "translations": {
+          "en": "This is Discovery Kids. Let's start.",
+          "cs": "To je Discovery Kids. Začneme.",
+          "de": "Das ist Discovery Kids. Los geht's.",
+          "fr": "C'est Discovery Kids. Allons-y."
+        }
+      },
+      {
+        "start": 4.64,
+        "end": 6.8,
+        "words": [
+          {
+            "text": "Ay,",
+            "start": 4.64,
+            "end": 4.88
+          },
+          {
+            "text": "qué",
+            "start": 4.88,
+            "end": 5.12
+          },
+          {
+            "text": "lindo.",
+            "start": 5.12,
+            "end": 5.72
+          },
+          {
+            "text": "¿Viven",
+            "start": 5.759,
+            "end": 6.2
+          },
+          {
+            "text": "cerca?",
+            "start": 6.2,
+            "end": 6.8
+          }
+        ],
+        "translations": {
+          "en": "Oh, how nice. Do they live nearby?",
+          "cs": "Oh, jak milé. Žijí blízko?",
+          "de": "Oh, wie nett. Wohnen sie in der Nähe?",
+          "fr": "Oh, c'est mignon. Ils vivent à côté?"
+        }
+      },
+      {
+        "start": 7.16,
+        "end": 8.96,
+        "words": [
+          {
+            "text": "Sí,",
+            "start": 7.16,
+            "end": 7.68
+          },
+          {
+            "text": "vivimos",
+            "start": 7.68,
+            "end": 8.28
+          },
+          {
+            "text": "aquí.",
+            "start": 8.36,
+            "end": 8.96
+          }
+        ],
+        "translations": {
+          "en": "Yes, we live here.",
+          "cs": "Ano, bydlíme tady.",
+          "de": "Ja, wir wohnen hier.",
+          "fr": "Oui, on vit ici."
+        }
+      },
+      {
+        "start": 9.32,
+        "end": 10.88,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 9.32,
+            "end": 9.639
+          },
+          {
+            "text": "vives",
+            "start": 9.639,
+            "end": 10
+          },
+          {
+            "text": "en",
+            "start": 10,
+            "end": 10.16
+          },
+          {
+            "text": "el",
+            "start": 10.16,
+            "end": 10.28
+          },
+          {
+            "text": "zoológico?",
+            "start": 10.28,
+            "end": 10.88
+          }
+        ],
+        "translations": {
+          "en": "Oh, do you live in the zoo?",
+          "cs": "Ó, bydlíte v zoo?",
+          "de": "Oh, wohnst du im Zoo?",
+          "fr": "Oh, tu habites au zoo?"
+        }
+      },
+      {
+        "start": 11.24,
+        "end": 13.84,
+        "words": [
+          {
+            "text": "Sí,",
+            "start": 11.24,
+            "end": 11.84
+          },
+          {
+            "text": "estoy",
+            "start": 11.92,
+            "end": 12.32
+          },
+          {
+            "text": "aquí",
+            "start": 12.32,
+            "end": 12.679
+          },
+          {
+            "text": "por",
+            "start": 12.679,
+            "end": 12.92
+          },
+          {
+            "text": "los",
+            "start": 12.92,
+            "end": 13.24
+          },
+          {
+            "text": "animales.",
+            "start": 13.24,
+            "end": 13.84
+          }
+        ],
+        "translations": {
+          "en": "Yes, I'm here for the animals.",
+          "cs": "Ano, jsem tady kvůli zvířatům.",
+          "de": "Ja, ich bin hier wegen der Tiere.",
+          "fr": "Oui, je suis ici pour les animaux."
+        }
+      },
+      {
+        "start": 14.96,
+        "end": 18.6,
+        "words": [
+          {
+            "text": "Vamos,",
+            "start": 14.96,
+            "end": 15.44
+          },
+          {
+            "text": "Peppa.",
+            "start": 15.44,
+            "end": 16.04
+          },
+          {
+            "text": "¿Quieres",
+            "start": 16.84,
+            "end": 17.16
+          },
+          {
+            "text": "un",
+            "start": 17.16,
+            "end": 17.32
+          },
+          {
+            "text": "café,",
+            "start": 17.32,
+            "end": 17.68
+          },
+          {
+            "text": "mamá",
+            "start": 17.68,
+            "end": 18
+          },
+          {
+            "text": "cerdita?",
+            "start": 18,
+            "end": 18.6
+          }
+        ],
+        "translations": {
+          "en": "Come on, Peppa. Want a coffee, Mama Pig?",
+          "cs": "Pojď, Peppo. Chceš kávu, maminko prasátko?",
+          "de": "Komm, Peppa. Willst du einen Kaffee, Mama Schwein?",
+          "fr": "Viens, Peppa. Tu veux un café, maman cochon?"
+        }
+      },
+      {
+        "start": 18.8,
+        "end": 22.24,
+        "words": [
+          {
+            "text": "Sí,",
+            "start": 18.8,
+            "end": 19.16
+          },
+          {
+            "text": "me",
+            "start": 19.16,
+            "end": 19.359
+          },
+          {
+            "text": "gustaría.",
+            "start": 19.359,
+            "end": 19.959
+          },
+          {
+            "text": "Gracias.",
+            "start": 20.199,
+            "end": 20.799
+          },
+          {
+            "text": "Hola,",
+            "start": 21.119,
+            "end": 21.64
+          },
+          {
+            "text": "mami.",
+            "start": 21.64,
+            "end": 22.24
+          }
+        ],
+        "translations": {
+          "en": "Yes, I'd like that. Thanks. Hi, mom.",
+          "cs": "Ano, ráda bych. Díky. Ahoj, mami.",
+          "de": "Ja, gerne. Danke. Hallo, Mama.",
+          "fr": "Oui, j'aimerais bien. Merci. Salut, maman."
+        }
+      },
+      {
+        "start": 22.72,
+        "end": 25.32,
+        "words": [
+          {
+            "text": "Hola,",
+            "start": 22.72,
+            "end": 23.039
+          },
+          {
+            "text": "Peppa.",
+            "start": 23.039,
+            "end": 23.599
+          },
+          {
+            "text": "Hola,",
+            "start": 23.599,
+            "end": 23.88
+          },
+          {
+            "text": "Lorenzo.",
+            "start": 23.88,
+            "end": 24.48
+          },
+          {
+            "text": "Diviértanse.",
+            "start": 24.72,
+            "end": 25.32
+          }
+        ],
+        "translations": {
+          "en": "Hi, Peppa. Hi, Lorenzo. Have fun.",
+          "cs": "Ahoj, Peppo. Ahoj, Lorenzo. Běžte se bavit.",
+          "de": "Hallo, Peppa. Hallo, Lorenzo. Habt Spaß.",
+          "fr": "Salut, Peppa. Salut, Lorenzo. Amusez-vous bien."
+        }
+      },
+      {
+        "start": 26.8,
+        "end": 29.719,
+        "words": [
+          {
+            "text": "Mira,",
+            "start": 26.8,
+            "end": 27.119
+          },
+          {
+            "text": "Peppa,",
+            "start": 27.119,
+            "end": 27.719
+          },
+          {
+            "text": "este",
+            "start": 27.88,
+            "end": 28.039
+          },
+          {
+            "text": "es",
+            "start": 28.039,
+            "end": 28.199
+          },
+          {
+            "text": "mi",
+            "start": 28.199,
+            "end": 28.359
+          },
+          {
+            "text": "zoológico",
+            "start": 28.359,
+            "end": 28.92
+          },
+          {
+            "text": "de",
+            "start": 28.92,
+            "end": 29.119
+          },
+          {
+            "text": "juguete.",
+            "start": 29.119,
+            "end": 29.719
+          }
+        ],
+        "translations": {
+          "en": "Look, Peppa, this is my toy zoo.",
+          "cs": "Podívej, Peppo, tohle je moje hračka zoo.",
+          "de": "Schau, Peppa, das ist mein Spielzeug-Zoo.",
+          "fr": "Regarde, Peppa, c'est mon zoo en jouet."
+        }
+      },
+      {
+        "start": 30.279,
+        "end": 35.04,
+        "words": [
+          {
+            "text": "Uh,",
+            "start": 30.279,
+            "end": 30.879
+          },
+          {
+            "text": "estos",
+            "start": 31.279,
+            "end": 31.679
+          },
+          {
+            "text": "son",
+            "start": 31.679,
+            "end": 32.12
+          },
+          {
+            "text": "perezosos",
+            "start": 32.12,
+            "end": 32.72
+          },
+          {
+            "text": "y",
+            "start": 33.12,
+            "end": 33.32
+          },
+          {
+            "text": "les",
+            "start": 33.32,
+            "end": 33.559
+          },
+          {
+            "text": "gusta",
+            "start": 33.559,
+            "end": 33.92
+          },
+          {
+            "text": "dormir",
+            "start": 33.92,
+            "end": 34.44
+          },
+          {
+            "text": "mucho.",
+            "start": 34.44,
+            "end": 35.04
+          }
+        ],
+        "translations": {
+          "en": "Uh, these are sloths and they love to sleep a lot.",
+          "cs": "Uh, tohle jsou lenochodi a rádi spí hodně.",
+          "de": "Äh, das sind Faultiere und sie lieben es, viel zu schlafen.",
+          "fr": "Euh, ce sont des paresseux et ils aiment beaucoup dormir."
+        }
+      },
+      {
+        "start": 35.68,
+        "end": 38.92,
+        "words": [
+          {
+            "text": "Hola,",
+            "start": 35.68,
+            "end": 36.28
+          },
+          {
+            "text": "soy",
+            "start": 36.68,
+            "end": 37.04
+          },
+          {
+            "text": "un",
+            "start": 37.04,
+            "end": 37.32
+          },
+          {
+            "text": "perezoso",
+            "start": 37.32,
+            "end": 37.92
+          },
+          {
+            "text": "dormilón.",
+            "start": 38.32,
+            "end": 38.92
+          }
+        ],
+        "translations": {
+          "en": "Hi, I'm a sleepy sloth.",
+          "cs": "Ahoj, jsem ospalý lenochod.",
+          "de": "Hallo, ich bin ein schläfriges Faultier.",
+          "fr": "Salut, je suis un paresseux endormi."
+        }
+      },
+      {
+        "start": 41.52,
+        "end": 45.28,
+        "words": [
+          {
+            "text": "Un",
+            "start": 41.52,
+            "end": 41.76
+          },
+          {
+            "text": "momento,",
+            "start": 41.76,
+            "end": 42.36
+          },
+          {
+            "text": "¿qué",
+            "start": 42.559,
+            "end": 42.76
+          },
+          {
+            "text": "está",
+            "start": 42.76,
+            "end": 43
+          },
+          {
+            "text": "haciendo",
+            "start": 43,
+            "end": 43.48
+          },
+          {
+            "text": "el",
+            "start": 43.48,
+            "end": 43.719
+          },
+          {
+            "text": "camaleón",
+            "start": 43.719,
+            "end": 44.239
+          },
+          {
+            "text": "con",
+            "start": 44.239,
+            "end": 44.44
+          },
+          {
+            "text": "los",
+            "start": 44.44,
+            "end": 44.68
+          },
+          {
+            "text": "periquitos?",
+            "start": 44.68,
+            "end": 45.28
+          }
+        ],
+        "translations": {
+          "en": "Wait a minute, what's the chameleon doing with the parakeets?",
+          "cs": "Počkej chvilku, co dělá chameleon s andulkami?",
+          "de": "Moment mal, was macht das Chamäleon mit den Wellensittichen?",
+          "fr": "Attends, que fait le caméléon avec les perruches?"
+        }
+      },
+      {
+        "start": 47.079,
+        "end": 48.88,
+        "words": [
+          {
+            "text": "Está",
+            "start": 47.079,
+            "end": 47.32
+          },
+          {
+            "text": "jugando",
+            "start": 47.32,
+            "end": 47.76
+          },
+          {
+            "text": "a",
+            "start": 47.76,
+            "end": 47.96
+          },
+          {
+            "text": "las",
+            "start": 47.96,
+            "end": 48.28
+          },
+          {
+            "text": "escondidas.",
+            "start": 48.28,
+            "end": 48.88
+          }
+        ],
+        "translations": {
+          "en": "He's playing hide and seek.",
+          "cs": "Hraje na schovávanou.",
+          "de": "Er spielt Verstecken.",
+          "fr": "Il joue à cache-cache."
+        }
+      },
+      {
+        "start": 50.16,
+        "end": 55.839,
+        "words": [
+          {
+            "text": "Ahora",
+            "start": 50.16,
+            "end": 50.64
+          },
+          {
+            "text": "me",
+            "start": 50.64,
+            "end": 51.24
+          },
+          {
+            "text": "ves.",
+            "start": 51.92,
+            "end": 52.52
+          },
+          {
+            "text": "Ahora",
+            "start": 52.92,
+            "end": 53.52
+          },
+          {
+            "text": "no.",
+            "start": 55.239,
+            "end": 55.839
+          }
+        ],
+        "translations": {
+          "en": "Now you see me. Now you don't.",
+          "cs": "Teď mě vidíš. Teď mě nevidíš.",
+          "de": "Jetzt siehst du mich. Jetzt nicht.",
+          "fr": "Maintenant tu me vois. Maintenant tu ne me vois plus."
+        }
+      },
+      {
+        "start": 56.239,
+        "end": 59.92,
+        "words": [
+          {
+            "text": "¿Cuál",
+            "start": 56.239,
+            "end": 56.48
+          },
+          {
+            "text": "es",
+            "start": 56.48,
+            "end": 56.64
+          },
+          {
+            "text": "tu",
+            "start": 56.64,
+            "end": 56.8
+          },
+          {
+            "text": "animal",
+            "start": 56.8,
+            "end": 57.28
+          },
+          {
+            "text": "favorito",
+            "start": 57.28,
+            "end": 57.88
+          },
+          {
+            "text": "de",
+            "start": 58,
+            "end": 58.28
+          },
+          {
+            "text": "todo",
+            "start": 58.28,
+            "end": 58.84
+          },
+          {
+            "text": "el",
+            "start": 58.84,
+            "end": 59.039
+          },
+          {
+            "text": "zool?",
+            "start": 59.039,
+            "end": 59.32
+          },
+          {
+            "text": "Lógico",
+            "start": 59.32,
+            "end": 59.92
+          }
+        ],
+        "translations": {
+          "en": "What's your favorite zoo animal?",
+          "cs": "Jaké je tvoje oblíbené zvíře v zoo?",
+          "de": "Was ist dein Lieblingstier im Zoo?",
+          "fr": "Quel est ton animal préféré du zoo?"
+        }
+      },
+      {
+        "start": 60.96,
+        "end": 63.119,
+        "words": [
+          {
+            "text": "a",
+            "start": 60.96,
+            "end": 61.199
+          },
+          {
+            "text": "mí",
+            "start": 61.199,
+            "end": 61.32
+          },
+          {
+            "text": "me",
+            "start": 61.32,
+            "end": 61.6
+          },
+          {
+            "text": "gusta",
+            "start": 61.6,
+            "end": 61.96
+          },
+          {
+            "text": "mucho",
+            "start": 61.96,
+            "end": 62.32
+          },
+          {
+            "text": "las",
+            "start": 62.32,
+            "end": 62.519
+          },
+          {
+            "text": "tortugas,",
+            "start": 62.519,
+            "end": 63.119
+          }
+        ],
+        "translations": {
+          "en": "I really like turtles,",
+          "cs": "Mám opravdu rád želvy,",
+          "de": "Ich mag Schildkröten sehr,",
+          "fr": "J'aime beaucoup les tortues,"
+        }
+      },
+      {
+        "start": 63.519,
+        "end": 66.96,
+        "words": [
+          {
+            "text": "pero",
+            "start": 63.519,
+            "end": 63.76
+          },
+          {
+            "text": "mis",
+            "start": 63.76,
+            "end": 64.04
+          },
+          {
+            "text": "favoritos",
+            "start": 64.04,
+            "end": 64.6
+          },
+          {
+            "text": "son",
+            "start": 64.6,
+            "end": 64.839
+          },
+          {
+            "text": "los",
+            "start": 64.839,
+            "end": 65.439
+          },
+          {
+            "text": "pingüinos.",
+            "start": 66.36,
+            "end": 66.96
+          }
+        ],
+        "translations": {
+          "en": "but my favorites are penguins.",
+          "cs": "ale moji oblíbenci jsou tučňáci.",
+          "de": "aber meine Favoriten sind Pinguine.",
+          "fr": "mais mes préférés sont les pingouins."
+        }
+      },
+      {
+        "start": 67.36,
+        "end": 70,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 67.36,
+            "end": 67.96
+          },
+          {
+            "text": "¿dónde",
+            "start": 68.08,
+            "end": 68.479
+          },
+          {
+            "text": "están",
+            "start": 68.479,
+            "end": 68.72
+          },
+          {
+            "text": "los",
+            "start": 68.72,
+            "end": 69.32
+          },
+          {
+            "text": "pingüinos?",
+            "start": 69.4,
+            "end": 70
+          }
+        ],
+        "translations": {
+          "en": "Oh, where are the penguins?",
+          "cs": "Oh, kde jsou tučňáci?",
+          "de": "Oh, wo sind die Pinguine?",
+          "fr": "Oh, où sont les pingouins?"
+        }
+      },
+      {
+        "start": 70.4,
+        "end": 72.2,
+        "words": [
+          {
+            "text": "Tal",
+            "start": 70.4,
+            "end": 70.6
+          },
+          {
+            "text": "vez",
+            "start": 70.6,
+            "end": 70.84
+          },
+          {
+            "text": "en",
+            "start": 70.84,
+            "end": 71.08
+          },
+          {
+            "text": "mi",
+            "start": 71.08,
+            "end": 71.28
+          },
+          {
+            "text": "otra",
+            "start": 71.28,
+            "end": 71.6
+          },
+          {
+            "text": "habitación.",
+            "start": 71.6,
+            "end": 72.2
+          }
+        ],
+        "translations": {
+          "en": "Maybe in my other room.",
+          "cs": "Možná v mém dalším pokoji.",
+          "de": "Vielleicht in meinem anderen Zimmer.",
+          "fr": "Peut-être dans mon autre pièce."
+        }
+      },
+      {
+        "start": 72.64,
+        "end": 78.359,
+        "words": [
+          {
+            "text": "¿Qué?",
+            "start": 72.64,
+            "end": 73.24
+          },
+          {
+            "text": "Tengo",
+            "start": 73.6,
+            "end": 73.96
+          },
+          {
+            "text": "otra",
+            "start": 73.96,
+            "end": 74.28
+          },
+          {
+            "text": "habitación",
+            "start": 74.28,
+            "end": 74.88
+          },
+          {
+            "text": "en",
+            "start": 74.92,
+            "end": 75.159
+          },
+          {
+            "text": "la",
+            "start": 75.159,
+            "end": 75.32
+          },
+          {
+            "text": "casa",
+            "start": 75.32,
+            "end": 75.56
+          },
+          {
+            "text": "de",
+            "start": 75.56,
+            "end": 75.759
+          },
+          {
+            "text": "mi",
+            "start": 75.759,
+            "end": 75.96
+          },
+          {
+            "text": "mamá.",
+            "start": 75.96,
+            "end": 76.56
+          },
+          {
+            "text": "Oh,",
+            "start": 76.6,
+            "end": 77.2
+          },
+          {
+            "text": "Lorenzo.",
+            "start": 77.759,
+            "end": 78.359
+          }
+        ],
+        "translations": {
+          "en": "What? I have another room at my mom's place. Oh, Lorenzo.",
+          "cs": "Co? Mám další pokoj u mámy. Oh, Lorenzo.",
+          "de": "Was? Ich habe noch ein Zimmer bei meiner Mutter. Oh, Lorenzo.",
+          "fr": "Quoi? J'ai une autre chambre chez ma mère. Oh, Lorenzo."
+        }
+      },
+      {
+        "start": 78.759,
+        "end": 82.48,
+        "words": [
+          {
+            "text": "Mamá",
+            "start": 78.759,
+            "end": 79.119
+          },
+          {
+            "text": "León",
+            "start": 79.119,
+            "end": 79.64
+          },
+          {
+            "text": "está",
+            "start": 79.64,
+            "end": 79.84
+          },
+          {
+            "text": "aquí.",
+            "start": 79.84,
+            "end": 80.4
+          },
+          {
+            "text": "Hola,",
+            "start": 80.4,
+            "end": 80.759
+          },
+          {
+            "text": "mami.",
+            "start": 80.759,
+            "end": 81.359
+          },
+          {
+            "text": "Hola,",
+            "start": 81.52,
+            "end": 81.88
+          },
+          {
+            "text": "cariño.",
+            "start": 81.88,
+            "end": 82.48
+          }
+        ],
+        "translations": {
+          "en": "Mama Lion is here. Hi, mom. Hi, love.",
+          "cs": "Maminka lev je tady. Ahoj, mami. Ahoj, miláčku.",
+          "de": "Mama Löwe ist da. Hallo, Mama. Hallo, Liebling.",
+          "fr": "Maman Lion est là. Salut, maman. Salut, chéri."
+        }
+      },
+      {
+        "start": 82.68,
+        "end": 83.84,
+        "words": [
+          {
+            "text": "¿Listo",
+            "start": 82.68,
+            "end": 83
+          },
+          {
+            "text": "para",
+            "start": 83,
+            "end": 83.24
+          },
+          {
+            "text": "irnos?",
+            "start": 83.24,
+            "end": 83.84
+          }
+        ],
+        "translations": {
+          "en": "Ready to go?",
+          "cs": "Připraven jít?",
+          "de": "Bereit zu gehen?",
+          "fr": "Prêt à partir?"
+        }
+      },
+      {
+        "start": 83.92,
+        "end": 86.84,
+        "words": [
+          {
+            "text": "Sí.",
+            "start": 83.92,
+            "end": 84.52
+          },
+          {
+            "text": "¿Puede",
+            "start": 84.52,
+            "end": 84.88
+          },
+          {
+            "text": "venir",
+            "start": 84.88,
+            "end": 85.159
+          },
+          {
+            "text": "mi",
+            "start": 85.159,
+            "end": 85.36
+          },
+          {
+            "text": "amiga",
+            "start": 85.36,
+            "end": 85.68
+          },
+          {
+            "text": "Peppa",
+            "start": 85.68,
+            "end": 86
+          },
+          {
+            "text": "con",
+            "start": 86,
+            "end": 86.24
+          },
+          {
+            "text": "nosotros?",
+            "start": 86.24,
+            "end": 86.84
+          }
+        ],
+        "translations": {
+          "en": "Yeah. Can my friend Peppa come with us?",
+          "cs": "Jo. Může jít Peppa s námi?",
+          "de": "Ja. Kann meine Freundin Peppa mitkommen?",
+          "fr": "Oui. Mon amie Peppa peut venir avec nous?"
+        }
+      },
+      {
+        "start": 86.96,
+        "end": 88.88,
+        "words": [
+          {
+            "text": "Si",
+            "start": 86.96,
+            "end": 87.04
+          },
+          {
+            "text": "a",
+            "start": 87.04,
+            "end": 87.159
+          },
+          {
+            "text": "mamá",
+            "start": 87.159,
+            "end": 87.439
+          },
+          {
+            "text": "Cerdita",
+            "start": 87.439,
+            "end": 87.88
+          },
+          {
+            "text": "le",
+            "start": 87.88,
+            "end": 88.04
+          },
+          {
+            "text": "parece",
+            "start": 88.04,
+            "end": 88.4
+          },
+          {
+            "text": "bien,",
+            "start": 88.4,
+            "end": 88.88
+          }
+        ],
+        "translations": {
+          "en": "If it's alright with Mama Pig,",
+          "cs": "Pokud to maminko prasátko dovolí,",
+          "de": "Wenn es Mama Schwein recht ist,",
+          "fr": "Si ça va pour maman cochon,"
+        }
+      },
+      {
+        "start": 88.88,
+        "end": 90.24,
+        "words": [
+          {
+            "text": "podríamos",
+            "start": 88.88,
+            "end": 89.32
+          },
+          {
+            "text": "tomar",
+            "start": 89.32,
+            "end": 89.64
+          },
+          {
+            "text": "café.",
+            "start": 89.64,
+            "end": 90.24
+          }
+        ],
+        "translations": {
+          "en": "we could have some coffee.",
+          "cs": "mohli bychom si dát kávu.",
+          "de": "könnten wir Kaffee trinken.",
+          "fr": "on pourrait prendre un café."
+        }
+      },
+      {
+        "start": 90.24,
+        "end": 92.84,
+        "words": [
+          {
+            "text": "Wow,",
+            "start": 90.24,
+            "end": 90.6
+          },
+          {
+            "text": "más",
+            "start": 90.6,
+            "end": 90.88
+          },
+          {
+            "text": "café.",
+            "start": 90.88,
+            "end": 91.479
+          },
+          {
+            "text": "Vamos.",
+            "start": 91.479,
+            "end": 92.079
+          },
+          {
+            "text": "Urra.",
+            "start": 92.24,
+            "end": 92.84
+          }
+        ],
+        "translations": {
+          "en": "Wow, more coffee. Let's go. Hooray.",
+          "cs": "Wow, další káva. Jdeme. Hurá.",
+          "de": "Wow, mehr Kaffee. Los geht's. Hurra.",
+          "fr": "Wow, plus de café. Allons-y. Hourra."
+        }
+      },
+      {
+        "start": 97.28,
+        "end": 100.12,
+        "words": [
+          {
+            "text": "Ay,",
+            "start": 97.28,
+            "end": 97.52
+          },
+          {
+            "text": "no.",
+            "start": 97.52,
+            "end": 98.12
+          },
+          {
+            "text": "El",
+            "start": 98.28,
+            "end": 98.399
+          },
+          {
+            "text": "camaleón",
+            "start": 98.399,
+            "end": 98.999
+          },
+          {
+            "text": "sigue",
+            "start": 99.079,
+            "end": 99.52
+          },
+          {
+            "text": "escondido.",
+            "start": 99.52,
+            "end": 100.12
+          }
+        ],
+        "translations": {
+          "en": "Oh no. The chameleon is still hiding.",
+          "cs": "Ach ne. Chameleon je stále schovaný.",
+          "de": "Oh nein. Das Chamäleon versteckt sich immer noch.",
+          "fr": "Oh non. Le caméléon est encore caché."
+        }
+      },
+      {
+        "start": 101.72,
+        "end": 103.88,
+        "words": [
+          {
+            "text": "Adiós,",
+            "start": 101.72,
+            "end": 102.079
+          },
+          {
+            "text": "papá.",
+            "start": 102.079,
+            "end": 102.679
+          },
+          {
+            "text": "Adiós,",
+            "start": 102.759,
+            "end": 103.28
+          },
+          {
+            "text": "hijo.",
+            "start": 103.28,
+            "end": 103.88
+          }
+        ],
+        "translations": {
+          "en": "Bye, dad. Bye, son.",
+          "cs": "Ahoj, tati. Ahoj, synu.",
+          "de": "Tschüss, Papa. Tschüss, Sohn.",
+          "fr": "Salut, papa. Salut, fiston."
+        }
+      },
+      {
+        "start": 104,
+        "end": 106.24,
+        "words": [
+          {
+            "text": "Gracias",
+            "start": 104,
+            "end": 104.36
+          },
+          {
+            "text": "por",
+            "start": 104.36,
+            "end": 104.56
+          },
+          {
+            "text": "toda",
+            "start": 104.56,
+            "end": 104.799
+          },
+          {
+            "text": "tu",
+            "start": 104.799,
+            "end": 105
+          },
+          {
+            "text": "ayuda.",
+            "start": 105,
+            "end": 105.6
+          },
+          {
+            "text": "Adiós.",
+            "start": 105.64,
+            "end": 106.24
+          }
+        ],
+        "translations": {
+          "en": "Thanks for all your help. Goodbye.",
+          "cs": "Díky za všechnu tvou pomoc. Sbohem.",
+          "de": "Danke für deine Hilfe. Tschüss.",
+          "fr": "Merci pour ton aide. Au revoir."
+        }
+      },
+      {
+        "start": 107.88,
+        "end": 109.759,
+        "words": [
+          {
+            "text": "Esta",
+            "start": 107.88,
+            "end": 108.079
+          },
+          {
+            "text": "es",
+            "start": 108.079,
+            "end": 108.24
+          },
+          {
+            "text": "la",
+            "start": 108.24,
+            "end": 108.439
+          },
+          {
+            "text": "casa",
+            "start": 108.439,
+            "end": 108.68
+          },
+          {
+            "text": "de",
+            "start": 108.68,
+            "end": 108.84
+          },
+          {
+            "text": "mamá",
+            "start": 108.84,
+            "end": 109.159
+          },
+          {
+            "text": "Leo.",
+            "start": 109.159,
+            "end": 109.759
+          }
+        ],
+        "translations": {
+          "en": "This is Mama Leo's house.",
+          "cs": "Tohle je dům mámy Lea.",
+          "de": "Das ist das Haus von Mama Leo.",
+          "fr": "C'est la maison de maman Léo."
+        }
+      },
+      {
+        "start": 110.439,
+        "end": 115.88,
+        "words": [
+          {
+            "text": "Vamos,",
+            "start": 110.439,
+            "end": 111.039
+          },
+          {
+            "text": "Peppa.",
+            "start": 111.68,
+            "end": 112.28
+          },
+          {
+            "text": "Esta",
+            "start": 112.68,
+            "end": 112.88
+          },
+          {
+            "text": "es",
+            "start": 112.88,
+            "end": 113.119
+          },
+          {
+            "text": "mi",
+            "start": 113.119,
+            "end": 113.36
+          },
+          {
+            "text": "otra",
+            "start": 113.36,
+            "end": 113.68
+          },
+          {
+            "text": "habitación.",
+            "start": 113.68,
+            "end": 114.28
+          },
+          {
+            "text": "Es",
+            "start": 115.079,
+            "end": 115.28
+          },
+          {
+            "text": "bonita.",
+            "start": 115.28,
+            "end": 115.88
+          }
+        ],
+        "translations": {
+          "en": "Come on, Peppa. This is my other room. It's nice.",
+          "cs": "Pojď, Peppo. Tohle je můj další pokoj. Je hezký.",
+          "de": "Komm, Peppa. Das ist mein anderes Zimmer. Es ist schön.",
+          "fr": "Viens, Peppa. Voici mon autre chambre. Elle est jolie."
+        }
+      },
+      {
+        "start": 116.799,
+        "end": 119.719,
+        "words": [
+          {
+            "text": "Bueno,",
+            "start": 116.799,
+            "end": 117.399
+          },
+          {
+            "text": "¿dónde",
+            "start": 117.479,
+            "end": 117.92
+          },
+          {
+            "text": "podrán",
+            "start": 117.92,
+            "end": 118.52
+          },
+          {
+            "text": "estar",
+            "start": 118.52,
+            "end": 118.799
+          },
+          {
+            "text": "mis",
+            "start": 118.799,
+            "end": 119.119
+          },
+          {
+            "text": "pingüinos?",
+            "start": 119.119,
+            "end": 119.719
+          }
+        ],
+        "translations": {
+          "en": "Well, where could my penguins be?",
+          "cs": "No, kde by mohli být moji tučňáci?",
+          "de": "Hmm, wo könnten meine Pinguine sein?",
+          "fr": "Eh bien, où pourraient être mes pingouins?"
+        }
+      },
+      {
+        "start": 120.68,
+        "end": 122.6,
+        "words": [
+          {
+            "text": "Hm,",
+            "start": 120.68,
+            "end": 121.28
+          },
+          {
+            "text": "aquí",
+            "start": 121.439,
+            "end": 121.719
+          },
+          {
+            "text": "no",
+            "start": 121.719,
+            "end": 122
+          },
+          {
+            "text": "están.",
+            "start": 122,
+            "end": 122.6
+          }
+        ],
+        "translations": {
+          "en": "Hmm, they're not here.",
+          "cs": "Hm, tady nejsou.",
+          "de": "Hm, sie sind nicht hier.",
+          "fr": "Hum, ils ne sont pas là."
+        }
+      },
+      {
+        "start": 122.68,
+        "end": 124.6,
+        "words": [
+          {
+            "text": "Tal",
+            "start": 122.68,
+            "end": 122.88
+          },
+          {
+            "text": "vez",
+            "start": 122.88,
+            "end": 123.119
+          },
+          {
+            "text": "debajo",
+            "start": 123.119,
+            "end": 123.6
+          },
+          {
+            "text": "de",
+            "start": 123.6,
+            "end": 123.799
+          },
+          {
+            "text": "la",
+            "start": 123.799,
+            "end": 124
+          },
+          {
+            "text": "cama.",
+            "start": 124,
+            "end": 124.6
+          }
+        ],
+        "translations": {
+          "en": "Maybe under the bed.",
+          "cs": "Možná pod postelí.",
+          "de": "Vielleicht unter dem Bett.",
+          "fr": "Peut-être sous le lit."
+        }
+      },
+      {
+        "start": 124.92,
+        "end": 129.04,
+        "words": [
+          {
+            "text": "Hm,",
+            "start": 124.92,
+            "end": 125.52
+          },
+          {
+            "text": "sí,",
+            "start": 125.92,
+            "end": 126.52
+          },
+          {
+            "text": "aquí",
+            "start": 126.88,
+            "end": 127.48
+          },
+          {
+            "text": "están.",
+            "start": 128.44,
+            "end": 129.04
+          }
+        ],
+        "translations": {
+          "en": "Hmm, yes, here they are.",
+          "cs": "Hm, ano, tady jsou.",
+          "de": "Hm, ja, hier sind sie.",
+          "fr": "Hum, oui, les voilà."
+        }
+      },
+      {
+        "start": 129.44,
+        "end": 131.8,
+        "words": [
+          {
+            "text": "Muchas",
+            "start": 129.44,
+            "end": 129.8
+          },
+          {
+            "text": "gracias",
+            "start": 129.8,
+            "end": 130.2
+          },
+          {
+            "text": "por",
+            "start": 130.2,
+            "end": 130.44
+          },
+          {
+            "text": "encontrarnos,",
+            "start": 130.44,
+            "end": 131.04
+          },
+          {
+            "text": "Peppa.",
+            "start": 131.2,
+            "end": 131.8
+          }
+        ],
+        "translations": {
+          "en": "Thanks so much for finding us, Peppa.",
+          "cs": "Děkujeme, že jsi nás našla, Peppo.",
+          "de": "Vielen Dank, dass du uns gefunden hast, Peppa.",
+          "fr": "Merci beaucoup de nous avoir trouvés, Peppa."
+        }
+      },
+      {
+        "start": 133.36,
+        "end": 135.839,
+        "words": [
+          {
+            "text": "¿Cómo",
+            "start": 133.36,
+            "end": 133.76
+          },
+          {
+            "text": "están?",
+            "start": 133.76,
+            "end": 134.36
+          },
+          {
+            "text": "¿Encontraste",
+            "start": 134.44,
+            "end": 135
+          },
+          {
+            "text": "tus",
+            "start": 135,
+            "end": 135.239
+          },
+          {
+            "text": "pingüinos?",
+            "start": 135.239,
+            "end": 135.839
+          }
+        ],
+        "translations": {
+          "en": "How are you? Did you find your penguins?",
+          "cs": "Jak se máš? Našel jsi své tučňáky?",
+          "de": "Wie geht's dir? Hast du deine Pinguine gefunden?",
+          "fr": "Comment ça va? As-tu trouvé tes pingouins?"
+        }
+      },
+      {
+        "start": 135.879,
+        "end": 137.88,
+        "words": [
+          {
+            "text": "Sí,",
+            "start": 135.879,
+            "end": 136.479
+          },
+          {
+            "text": "Peppa",
+            "start": 136.599,
+            "end": 136.959
+          },
+          {
+            "text": "los",
+            "start": 136.959,
+            "end": 137.28
+          },
+          {
+            "text": "encontró.",
+            "start": 137.28,
+            "end": 137.88
+          }
+        ],
+        "translations": {
+          "en": "Yes, Peppa found them.",
+          "cs": "Ano, Peppa je našla.",
+          "de": "Ja, Peppa hat sie gefunden.",
+          "fr": "Oui, Peppa les a trouvés."
+        }
+      },
+      {
+        "start": 138.92,
+        "end": 141.52,
+        "words": [
+          {
+            "text": "Tendrás",
+            "start": 138.92,
+            "end": 139.4
+          },
+          {
+            "text": "que",
+            "start": 139.4,
+            "end": 139.599
+          },
+          {
+            "text": "venir",
+            "start": 139.599,
+            "end": 139.879
+          },
+          {
+            "text": "a",
+            "start": 139.879,
+            "end": 140.04
+          },
+          {
+            "text": "ayudarlo",
+            "start": 140.04,
+            "end": 140.64
+          },
+          {
+            "text": "más",
+            "start": 140.68,
+            "end": 140.92
+          },
+          {
+            "text": "seguido.",
+            "start": 140.92,
+            "end": 141.52
+          }
+        ],
+        "translations": {
+          "en": "You'll have to come help him more often.",
+          "cs": "Musíš mu přijít pomáhat častěji.",
+          "de": "Du musst ihm öfter helfen kommen.",
+          "fr": "Il faudra que tu viennes l'aider plus souvent."
+        }
+      },
+      {
+        "start": 142.36,
+        "end": 145.32,
+        "words": [
+          {
+            "text": "Ahora",
+            "start": 142.36,
+            "end": 142.68
+          },
+          {
+            "text": "puedes",
+            "start": 142.68,
+            "end": 143
+          },
+          {
+            "text": "ayudarme",
+            "start": 143,
+            "end": 143.56
+          },
+          {
+            "text": "a",
+            "start": 143.56,
+            "end": 143.8
+          },
+          {
+            "text": "cuidar",
+            "start": 143.8,
+            "end": 144.12
+          },
+          {
+            "text": "a",
+            "start": 144.12,
+            "end": 144.28
+          },
+          {
+            "text": "todos",
+            "start": 144.28,
+            "end": 144.519
+          },
+          {
+            "text": "los",
+            "start": 144.519,
+            "end": 144.72
+          },
+          {
+            "text": "animales.",
+            "start": 144.72,
+            "end": 145.32
+          }
+        ],
+        "translations": {
+          "en": "Now you can help me take care of all the animals.",
+          "cs": "Teď mi můžeš pomoci se starat se o všechna zvířata.",
+          "de": "Jetzt kannst du mir helfen, auf alle Tiere aufzupassen.",
+          "fr": "Maintenant tu peux m'aider à m'occuper de tous les animaux."
+        }
+      },
+      {
+        "start": 146.519,
+        "end": 149.08,
+        "words": [
+          {
+            "text": "Sí.",
+            "start": 146.519,
+            "end": 147.119
+          },
+          {
+            "text": "¿Qué",
+            "start": 147.519,
+            "end": 147.8
+          },
+          {
+            "text": "vamos",
+            "start": 147.8,
+            "end": 148.16
+          },
+          {
+            "text": "a",
+            "start": 148.16,
+            "end": 148.48
+          },
+          {
+            "text": "hacer?",
+            "start": 148.48,
+            "end": 149.08
+          }
+        ],
+        "translations": {
+          "en": "Yeah. What are we going to do?",
+          "cs": "Jo. Co budeme dělat?",
+          "de": "Ja. Was machen wir?",
+          "fr": "Oui. Qu'est-ce qu'on va faire?"
+        }
+      },
+      {
+        "start": 149.319,
+        "end": 152.36,
+        "words": [
+          {
+            "text": "Alimentamos",
+            "start": 149.319,
+            "end": 149.919
+          },
+          {
+            "text": "a",
+            "start": 150,
+            "end": 150.2
+          },
+          {
+            "text": "los",
+            "start": 150.2,
+            "end": 150.36
+          },
+          {
+            "text": "perejquitos",
+            "start": 150.36,
+            "end": 150.959
+          },
+          {
+            "text": "con",
+            "start": 150.959,
+            "end": 151.16
+          },
+          {
+            "text": "fruta",
+            "start": 151.16,
+            "end": 151.519
+          },
+          {
+            "text": "y",
+            "start": 151.519,
+            "end": 151.76
+          },
+          {
+            "text": "semillas.",
+            "start": 151.76,
+            "end": 152.36
+          }
+        ],
+        "translations": {
+          "en": "We feed the parakeets fruit and seeds.",
+          "cs": "Krníme andulky ovocem a semínky.",
+          "de": "Wir füttern die Wellensittiche mit Obst und Samen.",
+          "fr": "On donne des fruits et des graines aux perruches."
+        }
+      },
+      {
+        "start": 154.56,
+        "end": 157.199,
+        "words": [
+          {
+            "text": "cu.",
+            "start": 154.56,
+            "end": 155.16
+          },
+          {
+            "text": "Dejemos",
+            "start": 155.319,
+            "end": 155.84
+          },
+          {
+            "text": "dormir",
+            "start": 155.84,
+            "end": 156.36
+          },
+          {
+            "text": "al",
+            "start": 156.36,
+            "end": 156.599
+          },
+          {
+            "text": "perezoso.",
+            "start": 156.599,
+            "end": 157.199
+          }
+        ],
+        "translations": {
+          "en": "Cool. Let's let the sloth sleep.",
+          "cs": "Fajn. Nechme lenochoda spát.",
+          "de": "Cool. Lassen wir das Faultier schlafen.",
+          "fr": "Chouette. Laissons le paresseux dormir."
+        }
+      },
+      {
+        "start": 158.319,
+        "end": 160.68,
+        "words": [
+          {
+            "text": "Todavía",
+            "start": 158.319,
+            "end": 158.919
+          },
+          {
+            "text": "tengo",
+            "start": 159.319,
+            "end": 159.919
+          },
+          {
+            "text": "sueño.",
+            "start": 160.08,
+            "end": 160.68
+          }
+        ],
+        "translations": {
+          "en": "I'm still sleepy.",
+          "cs": "Stále jsem ospalý.",
+          "de": "Ich bin noch müde.",
+          "fr": "J'ai encore sommeil."
+        }
+      },
+      {
+        "start": 162.56,
+        "end": 165.559,
+        "words": [
+          {
+            "text": "Y",
+            "start": 162.56,
+            "end": 162.72
+          },
+          {
+            "text": "juguemos",
+            "start": 162.72,
+            "end": 163.319
+          },
+          {
+            "text": "a",
+            "start": 163.319,
+            "end": 163.519
+          },
+          {
+            "text": "las",
+            "start": 163.519,
+            "end": 163.8
+          },
+          {
+            "text": "escondidas",
+            "start": 163.8,
+            "end": 164.4
+          },
+          {
+            "text": "con",
+            "start": 164.519,
+            "end": 164.76
+          },
+          {
+            "text": "el",
+            "start": 164.76,
+            "end": 164.959
+          },
+          {
+            "text": "camaleón.",
+            "start": 164.959,
+            "end": 165.559
+          }
+        ],
+        "translations": {
+          "en": "And play hide and seek with the chameleon.",
+          "cs": "A hrajeme na schovávanou s chameleonem.",
+          "de": "Und spielen Verstecken mit dem Chamäleon.",
+          "fr": "Et jouer à cache-cache avec le caméléon."
+        }
+      },
+      {
+        "start": 166.959,
+        "end": 169.559,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 166.959,
+            "end": 167.559
+          },
+          {
+            "text": "¿dónde",
+            "start": 167.959,
+            "end": 168.48
+          },
+          {
+            "text": "estás,",
+            "start": 168.48,
+            "end": 168.959
+          },
+          {
+            "text": "camaleón?",
+            "start": 168.959,
+            "end": 169.559
+          }
+        ],
+        "translations": {
+          "en": "Oh, where are you, chameleon?",
+          "cs": "Oh, kde jsi, chameleone?",
+          "de": "Oh, wo bist du, Chamäleon?",
+          "fr": "Oh, où es-tu, caméléon?"
+        }
+      },
+      {
+        "start": 170.48,
+        "end": 175.96,
+        "words": [
+          {
+            "text": "Ay,",
+            "start": 170.48,
+            "end": 171.08
+          },
+          {
+            "text": "no.",
+            "start": 171.2,
+            "end": 171.8
+          },
+          {
+            "text": "Sigue",
+            "start": 172.2,
+            "end": 172.56
+          },
+          {
+            "text": "escondido",
+            "start": 172.56,
+            "end": 173.08
+          },
+          {
+            "text": "en",
+            "start": 173.08,
+            "end": 173.239
+          },
+          {
+            "text": "mi",
+            "start": 173.239,
+            "end": 173.44
+          },
+          {
+            "text": "otra",
+            "start": 173.44,
+            "end": 174.04
+          },
+          {
+            "text": "habitación.",
+            "start": 174.36,
+            "end": 174.96
+          },
+          {
+            "text": "Oh.",
+            "start": 175.36,
+            "end": 175.96
+          }
+        ],
+        "translations": {
+          "en": "Oh no. Still hiding in my other room. Oh.",
+          "cs": "Ach ne. Stále se schovává v mém dalším pokoji. Ó.",
+          "de": "Oh nein. Immer noch versteckt in meinem anderen Zimmer. Oh.",
+          "fr": "Oh non. Toujours caché dans mon autre chambre. Oh."
+        }
+      },
+      {
+        "start": 177.159,
+        "end": 180.559,
+        "words": [
+          {
+            "text": "Ao",
+            "start": 177.159,
+            "end": 177.72
+          },
+          {
+            "text": "y",
+            "start": 177.72,
+            "end": 177.879
+          },
+          {
+            "text": "Peppa",
+            "start": 177.879,
+            "end": 178.28
+          },
+          {
+            "text": "les",
+            "start": 178.28,
+            "end": 178.519
+          },
+          {
+            "text": "encanta",
+            "start": 178.519,
+            "end": 179
+          },
+          {
+            "text": "cuidar",
+            "start": 179,
+            "end": 179.319
+          },
+          {
+            "text": "a",
+            "start": 179.319,
+            "end": 179.48
+          },
+          {
+            "text": "los",
+            "start": 179.48,
+            "end": 179.959
+          },
+          {
+            "text": "animales,",
+            "start": 179.959,
+            "end": 180.559
+          }
+        ],
+        "translations": {
+          "en": "Peppa and I love taking care of the animals,",
+          "cs": "Peppa a já se rádi staráme o zvířata,",
+          "de": "Peppa und ich kümmern uns gerne um die Tiere,",
+          "fr": "Peppa et moi, on aime s'occuper des animaux,"
+        }
+      },
+      {
+        "start": 180.959,
+        "end": 183.759,
+        "words": [
+          {
+            "text": "incluso",
+            "start": 180.959,
+            "end": 181.36
+          },
+          {
+            "text": "a",
+            "start": 181.36,
+            "end": 181.48
+          },
+          {
+            "text": "los",
+            "start": 181.48,
+            "end": 181.64
+          },
+          {
+            "text": "animales",
+            "start": 181.64,
+            "end": 182.159
+          },
+          {
+            "text": "a",
+            "start": 182.159,
+            "end": 182.319
+          },
+          {
+            "text": "los",
+            "start": 182.319,
+            "end": 182.48
+          },
+          {
+            "text": "que",
+            "start": 182.48,
+            "end": 182.599
+          },
+          {
+            "text": "les",
+            "start": 182.599,
+            "end": 182.84
+          },
+          {
+            "text": "gusta",
+            "start": 182.84,
+            "end": 183.159
+          },
+          {
+            "text": "esconderse.",
+            "start": 183.159,
+            "end": 183.759
+          }
+        ],
+        "translations": {
+          "en": "even the ones that like to hide.",
+          "cs": "i o ty, které se rády schovávají.",
+          "de": "sogar um die, die sich gerne verstecken.",
+          "fr": "même ceux qui aiment se cacher."
+        }
+      },
+      {
+        "start": 184.12,
+        "end": 186.199,
+        "words": [
+          {
+            "text": "Modo",
+            "start": 184.12,
+            "end": 184.4
+          },
+          {
+            "text": "Kids",
+            "start": 184.4,
+            "end": 185
+          },
+          {
+            "text": "activado.",
+            "start": 185.599,
+            "end": 186.199
+          }
+        ],
+        "translations": {
+          "en": "Kids Mode activated.",
+          "cs": "Dětský režim aktivován.",
+          "de": "Kinder Modus aktiviert.",
+          "fr": "Mode Enfants activé."
+        }
+      },
+      {
+        "start": 186.599,
+        "end": 189.08,
+        "words": [
+          {
+            "text": "Encuentra",
+            "start": 186.599,
+            "end": 187
+          },
+          {
+            "text": "más",
+            "start": 187,
+            "end": 187.159
+          },
+          {
+            "text": "de",
+            "start": 187.159,
+            "end": 187.28
+          },
+          {
+            "text": "lo",
+            "start": 187.28,
+            "end": 187.4
+          },
+          {
+            "text": "que",
+            "start": 187.4,
+            "end": 187.48
+          },
+          {
+            "text": "te",
+            "start": 187.48,
+            "end": 187.64
+          },
+          {
+            "text": "gusta",
+            "start": 187.64,
+            "end": 187.84
+          },
+          {
+            "text": "en",
+            "start": 187.84,
+            "end": 188.04
+          },
+          {
+            "text": "Discovery",
+            "start": 188.04,
+            "end": 188.48
+          },
+          {
+            "text": "Kids.",
+            "start": 188.48,
+            "end": 189.08
+          }
+        ],
+        "translations": {
+          "en": "Find more of what you love on Discovery Kids.",
+          "cs": "Najdi více toho, co máš rád na Discovery Kids.",
+          "de": "Finde mehr von dem, was du liebst, auf Discovery Kids.",
+          "fr": "Trouve plus de ce que tu aimes sur Discovery Kids."
+        }
+      }
+    ],
+    "dictionary": {
+      "esto": {
+        "lemma": "esto",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "this",
+          "cs": "tohle",
+          "de": "dies",
+          "fr": "ce"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "discovery": {
+        "lemma": "discovery",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "discovery",
+          "cs": "objevování",
+          "de": "Entdeckung",
+          "fr": "decouverte"
+        }
+      },
+      "kids": {
+        "lemma": "kids",
+        "pos": "other",
+        "note": "proper noun",
+        "glosses": {
+          "en": "kids",
+          "cs": "děti",
+          "de": "Kinder",
+          "fr": "enfants"
+        }
+      },
+      "comencemos": {
+        "lemma": "comenzar",
+        "pos": "verb",
+        "note": "imperative mood",
+        "glosses": {
+          "en": "let's start",
+          "cs": "začněme",
+          "de": "anfangen",
+          "fr": "commençons"
+        }
+      },
+      "ay": {
+        "lemma": "ay",
+        "pos": "other",
+        "note": "expressive interjection",
+        "glosses": {
+          "en": "oh",
+          "cs": "ach",
+          "de": "oh",
+          "fr": "oh"
+        }
+      },
+      "qué": {
+        "lemma": "qué",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "how",
+          "cs": "jak",
+          "de": "wie",
+          "fr": "que"
+        }
+      },
+      "lindo": {
+        "lemma": "lindo",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "nice",
+          "cs": "hezké",
+          "de": "schön",
+          "fr": "joli"
+        }
+      },
+      "viven": {
+        "lemma": "vivir",
+        "pos": "verb",
+        "note": "third person plural",
+        "glosses": {
+          "en": "live",
+          "cs": "žijí",
+          "de": "leben",
+          "fr": "vivent"
+        }
+      },
+      "cerca": {
+        "lemma": "cerca",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "nearby",
+          "cs": "blízko",
+          "de": "nahe",
+          "fr": "près"
+        }
+      },
+      "sí": {
+        "lemma": "sí",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "yes",
+          "cs": "ano",
+          "de": "ja",
+          "fr": "oui"
+        }
+      },
+      "vivimos": {
+        "lemma": "vivir",
+        "pos": "verb",
+        "note": "first person plural",
+        "glosses": {
+          "en": "we live",
+          "cs": "žijeme",
+          "de": "wir leben",
+          "fr": "nous vivons"
+        }
+      },
+      "aquí": {
+        "lemma": "aquí",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "here",
+          "cs": "zde",
+          "de": "hier",
+          "fr": "ici"
+        }
+      },
+      "oh": {
+        "lemma": "oh",
+        "pos": "other",
+        "note": "expressive interjection",
+        "glosses": {
+          "en": "oh",
+          "cs": "oh",
+          "de": "oh",
+          "fr": "oh"
+        }
+      },
+      "vives": {
+        "lemma": "vivir",
+        "pos": "verb",
+        "note": "second person singular",
+        "glosses": {
+          "en": "you live",
+          "cs": "žiješ",
+          "de": "du lebst",
+          "fr": "tu vis"
+        }
+      },
+      "en": {
+        "lemma": "en",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "in",
+          "cs": "v",
+          "de": "in",
+          "fr": "dans"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "zoológico": {
+        "lemma": "zoológico",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "zoo",
+          "cs": "zoo",
+          "de": "Zoo",
+          "fr": "zoo"
+        }
+      },
+      "estoy": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "first person singular",
+        "glosses": {
+          "en": "I am",
+          "cs": "jsem",
+          "de": "ich bin",
+          "fr": "je suis"
+        }
+      },
+      "por": {
+        "lemma": "por",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "for",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "los": {
+        "lemma": "los",
+        "pos": "det",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ti",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "animales": {
+        "lemma": "animal",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "animals",
+          "cs": "zvířata",
+          "de": "Tiere",
+          "fr": "animaux"
+        }
+      },
+      "vamos": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": "imperative form",
+        "glosses": {
+          "en": "come on",
+          "cs": "pojďme",
+          "de": "gehen wir",
+          "fr": "allons-y"
+        }
+      },
+      "peppa": {
+        "lemma": "peppa",
+        "pos": "other",
+        "note": "proper name",
+        "glosses": {
+          "en": "Peppa",
+          "cs": "Peppa",
+          "de": "Peppa",
+          "fr": "Peppa"
+        }
+      },
+      "quieres": {
+        "lemma": "querer",
+        "pos": "verb",
+        "note": "second person singular",
+        "glosses": {
+          "en": "do you want",
+          "cs": "chceš",
+          "de": "willst du",
+          "fr": "veux-tu"
+        }
+      },
+      "un": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "a",
+          "cs": "jeden",
+          "de": "ein",
+          "fr": "un"
+        }
+      },
+      "café": {
+        "lemma": "café",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "coffee",
+          "cs": "káva",
+          "de": "Kaffee",
+          "fr": "café"
+        }
+      },
+      "mamá": {
+        "lemma": "mamá",
+        "pos": "noun",
+        "note": "informal, feminine",
+        "glosses": {
+          "en": "mother",
+          "cs": "máma",
+          "de": "Mama",
+          "fr": "maman"
+        }
+      },
+      "cerdita": {
+        "lemma": "cerdita",
+        "pos": "noun",
+        "note": "diminutive form",
+        "glosses": {
+          "en": "little pig",
+          "cs": "prasátko",
+          "de": "Schweinchen",
+          "fr": "petit cochon"
+        }
+      },
+      "me": {
+        "lemma": "me",
+        "pos": "pron",
+        "note": "object pronoun",
+        "glosses": {
+          "en": "me",
+          "cs": "mně",
+          "de": "mich",
+          "fr": "moi"
+        }
+      },
+      "gustaría": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": "conditional mood",
+        "glosses": {
+          "en": "I would like",
+          "cs": "chtěl bych",
+          "de": "ich möchte",
+          "fr": "je voudrais"
+        }
+      },
+      "gracias": {
+        "lemma": "gracias",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "thanks",
+          "cs": "díky",
+          "de": "danke",
+          "fr": "merci"
+        }
+      },
+      "hola": {
+        "lemma": "hola",
+        "pos": "other",
+        "note": "informal greeting",
+        "glosses": {
+          "en": "hi",
+          "cs": "ahoj",
+          "de": "hallo",
+          "fr": "salut"
+        }
+      },
+      "mami": {
+        "lemma": "mami",
+        "pos": "noun",
+        "note": "informal form",
+        "glosses": {
+          "en": "mom",
+          "cs": "máma",
+          "de": "Mama",
+          "fr": "maman"
+        }
+      },
+      "lorenzo": {
+        "lemma": "lorenzo",
+        "pos": "other",
+        "note": "proper name",
+        "glosses": {
+          "en": "Lorenzo",
+          "cs": "Lorenzo",
+          "de": "Lorenzo",
+          "fr": "Lorenzo"
+        }
+      },
+      "diviértanse": {
+        "lemma": "divertirse",
+        "pos": "verb",
+        "note": "imperative mood",
+        "glosses": {
+          "en": "have fun",
+          "cs": "bavte se",
+          "de": "habt Spaß",
+          "fr": "amusez-vous"
+        }
+      },
+      "mira": {
+        "lemma": "mirar",
+        "pos": "verb",
+        "note": "imperative mood",
+        "glosses": {
+          "en": "look",
+          "cs": "podívej",
+          "de": "schau",
+          "fr": "regarde"
+        }
+      },
+      "este": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "masculine singular",
+        "glosses": {
+          "en": "this",
+          "cs": "tento",
+          "de": "dieser",
+          "fr": "ce"
+        }
+      },
+      "mi": {
+        "lemma": "mi",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "my",
+          "cs": "můj",
+          "de": "mein",
+          "fr": "mon"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "juguete": {
+        "lemma": "juguete",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "toy",
+          "cs": "hračka",
+          "de": "Spielzeug",
+          "fr": "jouet"
+        }
+      },
+      "uh": {
+        "lemma": "uh",
+        "pos": "other",
+        "note": "hesitation interjection",
+        "glosses": {
+          "en": "uh",
+          "cs": "ehm",
+          "de": "äh",
+          "fr": "euh"
+        }
+      },
+      "estos": {
+        "lemma": "estos",
+        "pos": "det",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "these",
+          "cs": "tito",
+          "de": "diese",
+          "fr": "ces"
+        }
+      },
+      "son": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "third person plural",
+        "glosses": {
+          "en": "are",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "perezosos": {
+        "lemma": "perezoso",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "sloths",
+          "cs": "lenochodi",
+          "de": "Faultiere",
+          "fr": "paresseux"
+        }
+      },
+      "y": {
+        "lemma": "y",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "and",
+          "cs": "a",
+          "de": "und",
+          "fr": "et"
+        }
+      },
+      "les": {
+        "lemma": "les",
+        "pos": "pron",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "them",
+          "cs": "jim",
+          "de": "ihnen",
+          "fr": "leur"
+        }
+      },
+      "gusta": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "like",
+          "cs": "mají rádi",
+          "de": "mögen",
+          "fr": "aiment"
+        }
+      },
+      "dormir": {
+        "lemma": "dormir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to sleep",
+          "cs": "spát",
+          "de": "schlafen",
+          "fr": "dormir"
+        }
+      },
+      "mucho": {
+        "lemma": "mucho",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "a lot",
+          "cs": "hodně",
+          "de": "viel",
+          "fr": "beaucoup"
+        }
+      },
+      "soy": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "first person singular",
+        "glosses": {
+          "en": "I am",
+          "cs": "jsem",
+          "de": "ich bin",
+          "fr": "je suis"
+        }
+      },
+      "perezoso": {
+        "lemma": "perezoso",
+        "pos": "adj",
+        "note": "can also mean lazy",
+        "glosses": {
+          "en": "sleepy",
+          "cs": "ospalý",
+          "de": "schläfrig",
+          "fr": "endormi"
+        }
+      },
+      "dormilón": {
+        "lemma": "dormilón",
+        "pos": "noun",
+        "note": "informal",
+        "glosses": {
+          "en": "sleepyhead",
+          "cs": "ospalec",
+          "de": "Schlafmütze",
+          "fr": "dormeur"
+        }
+      },
+      "momento": {
+        "lemma": "momento",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "moment",
+          "cs": "okamžik",
+          "de": "Moment",
+          "fr": "moment"
+        }
+      },
+      "está": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "third person singular",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "haciendo": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "present participle",
+        "glosses": {
+          "en": "doing",
+          "cs": "dělající",
+          "de": "machend",
+          "fr": "faisant"
+        }
+      },
+      "camaleón": {
+        "lemma": "camaleón",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "chameleon",
+          "cs": "chameleon",
+          "de": "Chamäleon",
+          "fr": "caméléon"
+        }
+      },
+      "con": {
+        "lemma": "con",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "with",
+          "cs": "s",
+          "de": "mit",
+          "fr": "avec"
+        }
+      },
+      "periquitos": {
+        "lemma": "periquito",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "parakeets",
+          "cs": "papoušci",
+          "de": "Wellensittiche",
+          "fr": "perruches"
+        }
+      },
+      "jugando": {
+        "lemma": "jugar",
+        "pos": "verb",
+        "note": "present participle",
+        "glosses": {
+          "en": "playing",
+          "cs": "hrající",
+          "de": "spielend",
+          "fr": "jouant"
+        }
+      },
+      "a": {
+        "lemma": "a",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "k",
+          "de": "zu",
+          "fr": "à"
+        }
+      },
+      "las": {
+        "lemma": "las",
+        "pos": "det",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ty",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "escondidas": {
+        "lemma": "escondidas",
+        "pos": "noun",
+        "note": "game context",
+        "glosses": {
+          "en": "hide and seek",
+          "cs": "schovávaná",
+          "de": "Verstecken",
+          "fr": "cache-cache"
+        }
+      },
+      "ahora": {
+        "lemma": "ahora",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "now",
+          "cs": "nyní",
+          "de": "jetzt",
+          "fr": "maintenant"
+        }
+      },
+      "ves": {
+        "lemma": "ver",
+        "pos": "verb",
+        "note": "second person singular",
+        "glosses": {
+          "en": "you see",
+          "cs": "vidíš",
+          "de": "du siehst",
+          "fr": "tu vois"
+        }
+      },
+      "no": {
+        "lemma": "no",
+        "pos": "other",
+        "note": "negation",
+        "glosses": {
+          "en": "no",
+          "cs": "ne",
+          "de": "nein",
+          "fr": "non"
+        }
+      },
+      "cuál": {
+        "lemma": "cuál",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "which",
+          "cs": "který",
+          "de": "welcher",
+          "fr": "quel"
+        }
+      },
+      "tu": {
+        "lemma": "tu",
+        "pos": "pron",
+        "note": "possessive",
+        "glosses": {
+          "en": "your",
+          "cs": "tvůj",
+          "de": "dein",
+          "fr": "ton"
+        }
+      },
+      "animal": {
+        "lemma": "animal",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "animal",
+          "cs": "zvíře",
+          "de": "Tier",
+          "fr": "animal"
+        }
+      },
+      "favorito": {
+        "lemma": "favorito",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "favorite",
+          "cs": "oblíbený",
+          "de": "Lieblings-",
+          "fr": "préféré"
+        }
+      },
+      "todo": {
+        "lemma": "todo",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "all",
+          "cs": "všechno",
+          "de": "alles",
+          "fr": "tout"
+        }
+      },
+      "zool": {
+        "lemma": "zoológico",
+        "pos": "noun",
+        "note": "abbreviation",
+        "glosses": {
+          "en": "zoo",
+          "cs": "zoo",
+          "de": "Zoo",
+          "fr": "zoo"
+        }
+      },
+      "lógico": {
+        "lemma": "lógico",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "logical",
+          "cs": "logický",
+          "de": "logisch",
+          "fr": "logique"
+        }
+      },
+      "mí": {
+        "lemma": "mí",
+        "pos": "pron",
+        "note": "stressed form",
+        "glosses": {
+          "en": "my",
+          "cs": "můj",
+          "de": "mein",
+          "fr": "mon"
+        }
+      },
+      "tortugas": {
+        "lemma": "tortuga",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "turtles",
+          "cs": "želvy",
+          "de": "Schildkröten",
+          "fr": "tortues"
+        }
+      },
+      "pero": {
+        "lemma": "pero",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "but",
+          "cs": "ale",
+          "de": "aber",
+          "fr": "mais"
+        }
+      },
+      "mis": {
+        "lemma": "mi",
+        "pos": "pron",
+        "note": "plural form",
+        "glosses": {
+          "en": "my",
+          "cs": "moje",
+          "de": "meine",
+          "fr": "mes"
+        }
+      },
+      "favoritos": {
+        "lemma": "favorito",
+        "pos": "adj",
+        "note": "plural form",
+        "glosses": {
+          "en": "favorites",
+          "cs": "oblíbené",
+          "de": "Lieblings-",
+          "fr": "préférés"
+        }
+      },
+      "pingüinos": {
+        "lemma": "pingüino",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "penguins",
+          "cs": "tučňáci",
+          "de": "Pinguine",
+          "fr": "pingouins"
+        }
+      },
+      "dónde": {
+        "lemma": "dónde",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "where",
+          "cs": "kde",
+          "de": "wo",
+          "fr": "où"
+        }
+      },
+      "están": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "third person plural",
+        "glosses": {
+          "en": "are",
+          "cs": "jsou",
+          "de": "sind",
+          "fr": "sont"
+        }
+      },
+      "tal": {
+        "lemma": "tal",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "such",
+          "cs": "takový",
+          "de": "solch",
+          "fr": "tel"
+        }
+      },
+      "vez": {
+        "lemma": "vez",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "time",
+          "cs": "čas",
+          "de": "Mal",
+          "fr": "fois"
+        }
+      },
+      "otra": {
+        "lemma": "otro",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "other",
+          "cs": "jiný",
+          "de": "andere",
+          "fr": "autre"
+        }
+      },
+      "habitación": {
+        "lemma": "habitación",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "room",
+          "cs": "pokoj",
+          "de": "Zimmer",
+          "fr": "chambre"
+        }
+      },
+      "tengo": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "first person singular",
+        "glosses": {
+          "en": "I have",
+          "cs": "mám",
+          "de": "ich habe",
+          "fr": "j'ai"
+        }
+      },
+      "la": {
+        "lemma": "la",
+        "pos": "det",
+        "note": "feminine singular",
+        "glosses": {
+          "en": "the",
+          "cs": "ta",
+          "de": "die",
+          "fr": "la"
+        }
+      },
+      "casa": {
+        "lemma": "casa",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "house",
+          "cs": "dům",
+          "de": "Haus",
+          "fr": "maison"
+        }
+      },
+      "león": {
+        "lemma": "león",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "lion",
+          "cs": "lev",
+          "de": "Löwe",
+          "fr": "lion"
+        }
+      },
+      "cariño": {
+        "lemma": "cariño",
+        "pos": "noun",
+        "note": "term of endearment",
+        "glosses": {
+          "en": "love",
+          "cs": "láska",
+          "de": "Liebling",
+          "fr": "chérie"
+        }
+      },
+      "listo": {
+        "lemma": "listo",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "ready",
+          "cs": "připravený",
+          "de": "bereit",
+          "fr": "prêt"
+        }
+      },
+      "para": {
+        "lemma": "para",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "na",
+          "de": "um zu",
+          "fr": "pour"
+        }
+      },
+      "irnos": {
+        "lemma": "ir",
+        "pos": "verb",
+        "note": "reflexive form",
+        "glosses": {
+          "en": "to go",
+          "cs": "jít",
+          "de": "gehen",
+          "fr": "aller"
+        }
+      },
+      "puede": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "third person singular",
+        "glosses": {
+          "en": "can",
+          "cs": "může",
+          "de": "kann",
+          "fr": "peut"
+        }
+      },
+      "venir": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to come",
+          "cs": "přijít",
+          "de": "kommen",
+          "fr": "venir"
+        }
+      },
+      "amiga": {
+        "lemma": "amiga",
+        "pos": "noun",
+        "note": "feminine form",
+        "glosses": {
+          "en": "friend",
+          "cs": "kamarádka",
+          "de": "Freundin",
+          "fr": "amie"
+        }
+      },
+      "nosotros": {
+        "lemma": "nosotros",
+        "pos": "pron",
+        "note": "first person plural",
+        "glosses": {
+          "en": "us",
+          "cs": "my",
+          "de": "wir",
+          "fr": "nous"
+        }
+      },
+      "si": {
+        "lemma": "si",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "if",
+          "cs": "jestli",
+          "de": "wenn",
+          "fr": "si"
+        }
+      },
+      "le": {
+        "lemma": "le",
+        "pos": "pron",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "him",
+          "cs": "mu",
+          "de": "ihm",
+          "fr": "lui"
+        }
+      },
+      "parece": {
+        "lemma": "parecer",
+        "pos": "verb",
+        "note": "third person singular",
+        "glosses": {
+          "en": "seems",
+          "cs": "zdá se",
+          "de": "scheint",
+          "fr": "semble"
+        }
+      },
+      "bien": {
+        "lemma": "bien",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "alright",
+          "cs": "dobře",
+          "de": "gut",
+          "fr": "bien"
+        }
+      },
+      "podríamos": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "conditional form",
+        "glosses": {
+          "en": "we could",
+          "cs": "mohli bychom",
+          "de": "könnten wir",
+          "fr": "pourrions"
+        }
+      },
+      "tomar": {
+        "lemma": "tomar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "to have",
+          "cs": "mít",
+          "de": "nehmen",
+          "fr": "prendre"
+        }
+      },
+      "wow": {
+        "lemma": "wow",
+        "pos": "other",
+        "note": "expressive interjection",
+        "glosses": {
+          "en": "wow",
+          "cs": "wow",
+          "de": "wow",
+          "fr": "wow"
+        }
+      },
+      "más": {
+        "lemma": "más",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "more",
+          "cs": "více",
+          "de": "mehr",
+          "fr": "plus"
+        }
+      },
+      "urra": {
+        "lemma": "urra",
+        "pos": "other",
+        "note": "celebratory cheer",
+        "glosses": {
+          "en": "hooray",
+          "cs": "hurá",
+          "de": "hurra",
+          "fr": "hourra"
+        }
+      },
+      "sigue": {
+        "lemma": "seguir",
+        "pos": "verb",
+        "note": "third person singular",
+        "glosses": {
+          "en": "continues",
+          "cs": "pokračuje",
+          "de": "folgt",
+          "fr": "continue"
+        }
+      },
+      "escondido": {
+        "lemma": "escondido",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "hidden",
+          "cs": "skrytý",
+          "de": "versteckt",
+          "fr": "caché"
+        }
+      },
+      "adiós": {
+        "lemma": "adiós",
+        "pos": "other",
+        "note": null,
+        "glosses": {
+          "en": "goodbye",
+          "cs": "sbohem",
+          "de": "auf Wiedersehen",
+          "fr": "adieu"
+        }
+      },
+      "papá": {
+        "lemma": "papá",
+        "pos": "noun",
+        "note": "informal, masculine",
+        "glosses": {
+          "en": "dad",
+          "cs": "táta",
+          "de": "Papa",
+          "fr": "papa"
+        }
+      },
+      "hijo": {
+        "lemma": "hijo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "son",
+          "cs": "syn",
+          "de": "Sohn",
+          "fr": "fils"
+        }
+      },
+      "toda": {
+        "lemma": "todo",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "all",
+          "cs": "všechno",
+          "de": "alles",
+          "fr": "tout"
+        }
+      },
+      "ayuda": {
+        "lemma": "ayuda",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "help",
+          "cs": "pomoc",
+          "de": "Hilfe",
+          "fr": "aide"
+        }
+      },
+      "esta": {
+        "lemma": "este",
+        "pos": "det",
+        "note": "feminine form",
+        "glosses": {
+          "en": "this",
+          "cs": "tato",
+          "de": "diese",
+          "fr": "cette"
+        }
+      },
+      "leo": {
+        "lemma": "leo",
+        "pos": "other",
+        "note": "proper name",
+        "glosses": {
+          "en": "Leo",
+          "cs": "Leo",
+          "de": "Leo",
+          "fr": "Léo"
+        }
+      },
+      "bonita": {
+        "lemma": "bonito",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "pretty",
+          "cs": "krásný",
+          "de": "hübsch",
+          "fr": "jolie"
+        }
+      },
+      "bueno": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "well",
+          "cs": "dobře",
+          "de": "gut",
+          "fr": "bien"
+        }
+      },
+      "podrán": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "future form",
+        "glosses": {
+          "en": "could",
+          "cs": "mohli by",
+          "de": "könnten",
+          "fr": "pourraient"
+        }
+      },
+      "estar": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "infinitive form",
+        "glosses": {
+          "en": "be",
+          "cs": "být",
+          "de": "sein",
+          "fr": "être"
+        }
+      },
+      "hm": {
+        "lemma": "hm",
+        "pos": "other",
+        "note": "thoughtful interjection",
+        "glosses": {
+          "en": "hmm",
+          "cs": "hm",
+          "de": "hm",
+          "fr": "hum"
+        }
+      },
+      "debajo": {
+        "lemma": "debajo",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "underneath",
+          "cs": "pod",
+          "de": "unter",
+          "fr": "sous"
+        }
+      },
+      "cama": {
+        "lemma": "cama",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "bed",
+          "cs": "postel",
+          "de": "Bett",
+          "fr": "lit"
+        }
+      },
+      "muchas": {
+        "lemma": "mucho",
+        "pos": "adj",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "many",
+          "cs": "mnoho",
+          "de": "viele",
+          "fr": "beaucoup"
+        }
+      },
+      "encontrarnos": {
+        "lemma": "encontrar",
+        "pos": "verb",
+        "note": "reflexive form",
+        "glosses": {
+          "en": "finding us",
+          "cs": "najít nás",
+          "de": "finden uns",
+          "fr": "nous trouver"
+        }
+      },
+      "cómo": {
+        "lemma": "cómo",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "how",
+          "cs": "jak",
+          "de": "wie",
+          "fr": "comment"
+        }
+      },
+      "encontraste": {
+        "lemma": "encontrar",
+        "pos": "verb",
+        "note": "second person singular",
+        "glosses": {
+          "en": "you found",
+          "cs": "našel jsi",
+          "de": "du fandst",
+          "fr": "tu as trouvé"
+        }
+      },
+      "tus": {
+        "lemma": "tu",
+        "pos": "pron",
+        "note": "plural form",
+        "glosses": {
+          "en": "your",
+          "cs": "tvé",
+          "de": "deine",
+          "fr": "tes"
+        }
+      },
+      "encontró": {
+        "lemma": "encontrar",
+        "pos": "verb",
+        "note": "third person singular",
+        "glosses": {
+          "en": "found",
+          "cs": "našel",
+          "de": "fand",
+          "fr": "a trouvé"
+        }
+      },
+      "tendrás": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "future form",
+        "glosses": {
+          "en": "you'll have",
+          "cs": "budeš mít",
+          "de": "du wirst haben",
+          "fr": "tu auras"
+        }
+      },
+      "que": {
+        "lemma": "que",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "že",
+          "de": "dass",
+          "fr": "que"
+        }
+      },
+      "ayudarlo": {
+        "lemma": "ayudar",
+        "pos": "verb",
+        "note": "infinitive with object",
+        "glosses": {
+          "en": "help him",
+          "cs": "pomoci mu",
+          "de": "ihm helfen",
+          "fr": "l'aider"
+        }
+      },
+      "seguido": {
+        "lemma": "seguido",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "often",
+          "cs": "často",
+          "de": "oft",
+          "fr": "souvent"
+        }
+      },
+      "puedes": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "second person singular",
+        "glosses": {
+          "en": "you can",
+          "cs": "můžeš",
+          "de": "du kannst",
+          "fr": "tu peux"
+        }
+      },
+      "ayudarme": {
+        "lemma": "ayudar",
+        "pos": "verb",
+        "note": "infinitive with object",
+        "glosses": {
+          "en": "help me",
+          "cs": "pomoci mi",
+          "de": "mir helfen",
+          "fr": "m'aider"
+        }
+      },
+      "cuidar": {
+        "lemma": "cuidar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "take care",
+          "cs": "starat se",
+          "de": "pflegen",
+          "fr": "soigner"
+        }
+      },
+      "todos": {
+        "lemma": "todo",
+        "pos": "adj",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "all",
+          "cs": "všichni",
+          "de": "alle",
+          "fr": "tous"
+        }
+      },
+      "hacer": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "infinitive form",
+        "glosses": {
+          "en": "do",
+          "cs": "dělat",
+          "de": "machen",
+          "fr": "faire"
+        }
+      },
+      "alimentamos": {
+        "lemma": "alimentar",
+        "pos": "verb",
+        "note": "first person plural",
+        "glosses": {
+          "en": "we feed",
+          "cs": "krmíme",
+          "de": "füttern",
+          "fr": "nourrissons"
+        }
+      },
+      "perejquitos": {
+        "lemma": "periquito",
+        "pos": "noun",
+        "note": "altered spelling",
+        "glosses": {
+          "en": "parakeets",
+          "cs": "papoušci",
+          "de": "Wellensittiche",
+          "fr": "perruches"
+        }
+      },
+      "fruta": {
+        "lemma": "fruta",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "fruit",
+          "cs": "ovoce",
+          "de": "Frucht",
+          "fr": "fruit"
+        }
+      },
+      "semillas": {
+        "lemma": "semilla",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "seeds",
+          "cs": "semínka",
+          "de": "Samen",
+          "fr": "graines"
+        }
+      },
+      "cu": {
+        "lemma": "cu",
+        "pos": "other",
+        "note": "informal",
+        "glosses": {
+          "en": "cool",
+          "cs": "super",
+          "de": "cool",
+          "fr": "cool"
+        }
+      },
+      "dejemos": {
+        "lemma": "dejar",
+        "pos": "verb",
+        "note": "imperative mood",
+        "glosses": {
+          "en": "let's let",
+          "cs": "nechme",
+          "de": "lassen wir",
+          "fr": "laissons"
+        }
+      },
+      "al": {
+        "lemma": "a el",
+        "pos": "prep",
+        "note": "contracted form",
+        "glosses": {
+          "en": "the",
+          "cs": "do",
+          "de": "zum",
+          "fr": "au"
+        }
+      },
+      "todavía": {
+        "lemma": "todavía",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "still",
+          "cs": "stále",
+          "de": "immer noch",
+          "fr": "encore"
+        }
+      },
+      "sueño": {
+        "lemma": "sueño",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "sleepy",
+          "cs": "ospalý",
+          "de": "müde",
+          "fr": "endormi"
+        }
+      },
+      "juguemos": {
+        "lemma": "jugar",
+        "pos": "verb",
+        "note": "imperative mood",
+        "glosses": {
+          "en": "let's play",
+          "cs": "hrajeme",
+          "de": "spielen wir",
+          "fr": "jouons"
+        }
+      },
+      "estás": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "second person singular",
+        "glosses": {
+          "en": "are you",
+          "cs": "jsi",
+          "de": "bist du",
+          "fr": "es-tu"
+        }
+      },
+      "ao": {
+        "lemma": "ao",
+        "pos": "other",
+        "note": "unknown/unclear",
+        "glosses": {
+          "en": "ao",
+          "cs": "ao",
+          "de": "ao",
+          "fr": "ao"
+        }
+      },
+      "encanta": {
+        "lemma": "encantar",
+        "pos": "verb",
+        "note": "third person singular",
+        "glosses": {
+          "en": "love",
+          "cs": "milují",
+          "de": "lieben",
+          "fr": "adorer"
+        }
+      },
+      "incluso": {
+        "lemma": "incluso",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "even",
+          "cs": "dokonce",
+          "de": "sogar",
+          "fr": "même"
+        }
+      },
+      "esconderse": {
+        "lemma": "esconder",
+        "pos": "verb",
+        "note": "reflexive form",
+        "glosses": {
+          "en": "hide",
+          "cs": "schovat se",
+          "de": "verstecken",
+          "fr": "se cacher"
+        }
+      },
+      "modo": {
+        "lemma": "modo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "mode",
+          "cs": "mód",
+          "de": "Modus",
+          "fr": "mode"
+        }
+      },
+      "activado": {
+        "lemma": "activar",
+        "pos": "verb",
+        "note": "past participle",
+        "glosses": {
+          "en": "activated",
+          "cs": "aktivovaný",
+          "de": "aktiviert",
+          "fr": "activé"
+        }
+      },
+      "encuentra": {
+        "lemma": "encontrar",
+        "pos": "verb",
+        "note": "imperative mood",
+        "glosses": {
+          "en": "find",
+          "cs": "najde",
+          "de": "finden",
+          "fr": "trouve"
+        }
+      },
+      "lo": {
+        "lemma": "lo",
+        "pos": "pron",
+        "note": "direct object pronoun",
+        "glosses": {
+          "en": "it",
+          "cs": "to",
+          "de": "es",
+          "fr": "le"
+        }
+      },
+      "te": {
+        "lemma": "te",
+        "pos": "pron",
+        "note": "informal, direct object pronoun",
+        "glosses": {
+          "en": "you",
+          "cs": "tě",
+          "de": "dich",
+          "fr": "te"
+        }
+      }
+    },
+    "collection": "peppa"
+  },
+  {
+    "id": "CdKefgYEHew",
+    "youtubeId": "CdKefgYEHew",
+    "title": "Nuevos amigos en un día caluroso",
+    "creator": "Discovery Kids",
+    "level": "A2",
+    "durationSeconds": 189,
+    "thumbnailUrl": "https://i.ytimg.com/vi/CdKefgYEHew/hqdefault.jpg",
+    "attribution": {
+      "channelTitle": "Discovery Kids",
+      "channelUrl": "https://www.youtube.com/channel/UC9PIfDp0yx6QRTMVMltMZyA",
+      "videoUrl": "https://www.youtube.com/watch?v=CdKefgYEHew",
+      "license": "youtube"
+    },
+    "cues": [
+      {
+        "start": 0.56,
+        "end": 3.64,
+        "words": [
+          {
+            "text": "Esto",
+            "start": 0.56,
+            "end": 0.799
+          },
+          {
+            "text": "es",
+            "start": 0.799,
+            "end": 1.319
+          },
+          {
+            "text": "Discovery",
+            "start": 1.319,
+            "end": 1.919
+          },
+          {
+            "text": "Kids.",
+            "start": 2.04,
+            "end": 2.64
+          },
+          {
+            "text": "Comencemos.",
+            "start": 3.04,
+            "end": 3.64
+          }
+        ],
+        "translations": {
+          "en": "This is Discovery Kids. Let's get started.",
+          "cs": "Tady je Discovery Kids. Začněme.",
+          "de": "Das ist Discovery Kids. Lass uns anfangen.",
+          "fr": "C'est Discovery Kids. Allons-y."
+        }
+      },
+      {
+        "start": 4.799,
+        "end": 6,
+        "words": [
+          {
+            "text": "No",
+            "start": 4.799,
+            "end": 5.04
+          },
+          {
+            "text": "está",
+            "start": 5.04,
+            "end": 5.4
+          },
+          {
+            "text": "saltando.",
+            "start": 5.4,
+            "end": 6
+          }
+        ],
+        "translations": {
+          "en": "It's not jumping.",
+          "cs": "Neskáče.",
+          "de": "Es springt nicht.",
+          "fr": "Il ne saute pas."
+        }
+      },
+      {
+        "start": 7.04,
+        "end": 8.96,
+        "words": [
+          {
+            "text": "No",
+            "start": 7.04,
+            "end": 7.52
+          },
+          {
+            "text": "tiene",
+            "start": 7.52,
+            "end": 7.96
+          },
+          {
+            "text": "mucho",
+            "start": 7.96,
+            "end": 8.36
+          },
+          {
+            "text": "calor.",
+            "start": 8.36,
+            "end": 8.96
+          }
+        ],
+        "translations": {
+          "en": "It's not too hot.",
+          "cs": "Není moc horko.",
+          "de": "Es ist nicht zu heiß.",
+          "fr": "Il ne fait pas trop chaud."
+        }
+      },
+      {
+        "start": 10.12,
+        "end": 12.6,
+        "words": [
+          {
+            "text": "Ven",
+            "start": 10.12,
+            "end": 10.36
+          },
+          {
+            "text": "a",
+            "start": 10.36,
+            "end": 10.559
+          },
+          {
+            "text": "jugar",
+            "start": 10.559,
+            "end": 10.88
+          },
+          {
+            "text": "en",
+            "start": 10.88,
+            "end": 11.08
+          },
+          {
+            "text": "nuestra",
+            "start": 11.08,
+            "end": 11.48
+          },
+          {
+            "text": "piscina",
+            "start": 11.48,
+            "end": 12
+          },
+          {
+            "text": "inflable.",
+            "start": 12,
+            "end": 12.6
+          }
+        ],
+        "translations": {
+          "en": "Come play in our inflatable pool.",
+          "cs": "Pojď si hrát do našeho nafukovacího bazénu.",
+          "de": "Komm in unser Planschbecken.",
+          "fr": "Viens jouer dans notre piscine gonflable."
+        }
+      },
+      {
+        "start": 17.88,
+        "end": 19.08,
+        "words": [
+          {
+            "text": "No",
+            "start": 17.88,
+            "end": 18.08
+          },
+          {
+            "text": "puede",
+            "start": 18.08,
+            "end": 18.48
+          },
+          {
+            "text": "entrar.",
+            "start": 18.48,
+            "end": 19.08
+          }
+        ],
+        "translations": {
+          "en": "It can't get in.",
+          "cs": "Nemůže se dostat dovnitř.",
+          "de": "Es kann nicht rein.",
+          "fr": "Il ne peut pas entrer."
+        }
+      },
+      {
+        "start": 19.64,
+        "end": 22.76,
+        "words": [
+          {
+            "text": "Esta",
+            "start": 19.64,
+            "end": 19.84
+          },
+          {
+            "text": "madera",
+            "start": 19.84,
+            "end": 20.32
+          },
+          {
+            "text": "puede",
+            "start": 20.32,
+            "end": 20.68
+          },
+          {
+            "text": "ser",
+            "start": 20.68,
+            "end": 20.88
+          },
+          {
+            "text": "una",
+            "start": 20.88,
+            "end": 21.119
+          },
+          {
+            "text": "rampa",
+            "start": 21.119,
+            "end": 21.719
+          },
+          {
+            "text": "y",
+            "start": 21.92,
+            "end": 22.16
+          },
+          {
+            "text": "también",
+            "start": 22.16,
+            "end": 22.56
+          },
+          {
+            "text": "hay",
+            "start": 22.56,
+            "end": 22.76
+          }
+        ],
+        "translations": {
+          "en": "This wood can be a ramp and also there are",
+          "cs": "Tohle dřevo může být rampa, a taky",
+          "de": "Dieses Holz kann eine Rampe sein und auch",
+          "fr": "Ce bois peut être une rampe et il y a aussi"
+        }
+      },
+      {
+        "start": 22.76,
+        "end": 25.039,
+        "words": [
+          {
+            "text": "que",
+            "start": 22.76,
+            "end": 22.92
+          },
+          {
+            "text": "asegurarnos",
+            "start": 22.92,
+            "end": 23.52
+          },
+          {
+            "text": "de",
+            "start": 23.64,
+            "end": 23.8
+          },
+          {
+            "text": "que",
+            "start": 23.8,
+            "end": 24.08
+          },
+          {
+            "text": "pueda",
+            "start": 24.08,
+            "end": 24.439
+          },
+          {
+            "text": "salir.",
+            "start": 24.439,
+            "end": 25.039
+          }
+        ],
+        "translations": {
+          "en": "we need to make sure it can get out.",
+          "cs": "musíme zajistit, že může vylézt.",
+          "de": "müssen wir sicherstellen, dass es wieder raus kann.",
+          "fr": "il faut s'assurer qu'il peut sortir."
+        }
+      },
+      {
+        "start": 25.519,
+        "end": 28.879,
+        "words": [
+          {
+            "text": "Ahora",
+            "start": 25.519,
+            "end": 25.8
+          },
+          {
+            "text": "la",
+            "start": 25.8,
+            "end": 26.039
+          },
+          {
+            "text": "rana",
+            "start": 26.039,
+            "end": 26.48
+          },
+          {
+            "text": "puede",
+            "start": 26.48,
+            "end": 26.8
+          },
+          {
+            "text": "entrar",
+            "start": 26.8,
+            "end": 27.119
+          },
+          {
+            "text": "y",
+            "start": 27.119,
+            "end": 27.4
+          },
+          {
+            "text": "salir",
+            "start": 27.4,
+            "end": 27.92
+          },
+          {
+            "text": "del",
+            "start": 27.92,
+            "end": 28.279
+          },
+          {
+            "text": "agua.",
+            "start": 28.279,
+            "end": 28.879
+          }
+        ],
+        "translations": {
+          "en": "Now the frog can get in and out of the water.",
+          "cs": "Teď žába může dovnitř a ven z vody.",
+          "de": "Jetzt kann der Frosch rein und raus aus dem Wasser.",
+          "fr": "Maintenant, la grenouille peut entrer et sortir de l'eau."
+        }
+      },
+      {
+        "start": 29.759,
+        "end": 31,
+        "words": [
+          {
+            "text": "Ahora",
+            "start": 29.759,
+            "end": 30.08
+          },
+          {
+            "text": "está",
+            "start": 30.08,
+            "end": 30.4
+          },
+          {
+            "text": "feliz.",
+            "start": 30.4,
+            "end": 31
+          }
+        ],
+        "translations": {
+          "en": "Now it's happy.",
+          "cs": "Teď je spokojená.",
+          "de": "Jetzt ist es glücklich.",
+          "fr": "Maintenant, il est content."
+        }
+      },
+      {
+        "start": 34.239,
+        "end": 37.679,
+        "words": [
+          {
+            "text": "Creo",
+            "start": 34.239,
+            "end": 34.64
+          },
+          {
+            "text": "que",
+            "start": 34.64,
+            "end": 34.84
+          },
+          {
+            "text": "la",
+            "start": 34.84,
+            "end": 35.16
+          },
+          {
+            "text": "rana",
+            "start": 35.16,
+            "end": 35.76
+          },
+          {
+            "text": "necesita",
+            "start": 35.96,
+            "end": 36.56
+          },
+          {
+            "text": "la",
+            "start": 36.68,
+            "end": 37.079
+          },
+          {
+            "text": "sombra.",
+            "start": 37.079,
+            "end": 37.679
+          }
+        ],
+        "translations": {
+          "en": "I think the frog needs some shade.",
+          "cs": "Myslím, že žábě chybí stín.",
+          "de": "Ich glaube, der Frosch braucht Schatten.",
+          "fr": "Je pense que la grenouille a besoin d'ombre."
+        }
+      },
+      {
+        "start": 38.399,
+        "end": 39.92,
+        "words": [
+          {
+            "text": "Ahí",
+            "start": 38.399,
+            "end": 38.8
+          },
+          {
+            "text": "tienes",
+            "start": 38.8,
+            "end": 39.32
+          },
+          {
+            "text": "ranita.",
+            "start": 39.32,
+            "end": 39.92
+          }
+        ],
+        "translations": {
+          "en": "There you go, froggy.",
+          "cs": "Tady máš, žabičko.",
+          "de": "Da hast du, Frosch.",
+          "fr": "Voilà, petite grenouille."
+        }
+      },
+      {
+        "start": 42.28,
+        "end": 43.639,
+        "words": [
+          {
+            "text": "Este",
+            "start": 42.28,
+            "end": 42.559
+          },
+          {
+            "text": "es",
+            "start": 42.559,
+            "end": 42.84
+          },
+          {
+            "text": "un",
+            "start": 42.84,
+            "end": 43.039
+          },
+          {
+            "text": "erizo.",
+            "start": 43.039,
+            "end": 43.639
+          }
+        ],
+        "translations": {
+          "en": "This is a hedgehog.",
+          "cs": "To je ježek.",
+          "de": "Das ist ein Igel.",
+          "fr": "C'est un hérisson."
+        }
+      },
+      {
+        "start": 44.28,
+        "end": 47.799,
+        "words": [
+          {
+            "text": "Hola.",
+            "start": 44.28,
+            "end": 44.88
+          },
+          {
+            "text": "Creo",
+            "start": 45.039,
+            "end": 45.32
+          },
+          {
+            "text": "que",
+            "start": 45.32,
+            "end": 45.44
+          },
+          {
+            "text": "el",
+            "start": 45.44,
+            "end": 45.6
+          },
+          {
+            "text": "erizo",
+            "start": 45.6,
+            "end": 46.2
+          },
+          {
+            "text": "también",
+            "start": 46.239,
+            "end": 46.76
+          },
+          {
+            "text": "tiene",
+            "start": 46.76,
+            "end": 47.199
+          },
+          {
+            "text": "calor.",
+            "start": 47.199,
+            "end": 47.799
+          }
+        ],
+        "translations": {
+          "en": "Hi. I think the hedgehog is hot too.",
+          "cs": "Ahoj. Myslím, že ježek má taky horko.",
+          "de": "Hallo. Ich glaube, dem Igel ist auch heiß.",
+          "fr": "Salut. Je crois que le hérisson a aussi chaud."
+        }
+      },
+      {
+        "start": 48.12,
+        "end": 50.839,
+        "words": [
+          {
+            "text": "¿También",
+            "start": 48.12,
+            "end": 48.48
+          },
+          {
+            "text": "te",
+            "start": 48.48,
+            "end": 48.719
+          },
+          {
+            "text": "gustaría",
+            "start": 48.719,
+            "end": 49.239
+          },
+          {
+            "text": "nadar",
+            "start": 49.239,
+            "end": 49.6
+          },
+          {
+            "text": "en",
+            "start": 49.6,
+            "end": 49.8
+          },
+          {
+            "text": "nuestra",
+            "start": 49.8,
+            "end": 50.239
+          },
+          {
+            "text": "piscina?",
+            "start": 50.239,
+            "end": 50.839
+          }
+        ],
+        "translations": {
+          "en": "Would you like to swim in our pool too?",
+          "cs": "Chceš si taky zaplavat v našem bazénu?",
+          "de": "Möchtest du auch in unserem Pool schwimmen?",
+          "fr": "Tu veux, toi aussi, nager dans notre piscine ?"
+        }
+      },
+      {
+        "start": 51.199,
+        "end": 55.52,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 51.199,
+            "end": 51.799
+          },
+          {
+            "text": "los",
+            "start": 51.879,
+            "end": 52.12
+          },
+          {
+            "text": "erizos",
+            "start": 52.12,
+            "end": 52.52
+          },
+          {
+            "text": "no",
+            "start": 52.52,
+            "end": 52.719
+          },
+          {
+            "text": "deben",
+            "start": 52.719,
+            "end": 53.039
+          },
+          {
+            "text": "acercarse",
+            "start": 53.039,
+            "end": 53.639
+          },
+          {
+            "text": "mucho",
+            "start": 53.68,
+            "end": 53.96
+          },
+          {
+            "text": "a",
+            "start": 53.96,
+            "end": 54.16
+          },
+          {
+            "text": "las",
+            "start": 54.16,
+            "end": 54.32
+          },
+          {
+            "text": "piscinas",
+            "start": 54.32,
+            "end": 54.92
+          },
+          {
+            "text": "inflables.",
+            "start": 54.92,
+            "end": 55.52
+          }
+        ],
+        "translations": {
+          "en": "Oh, hedgehogs shouldn't get too close to inflatable pools.",
+          "cs": "Ježci by se neměli přibližovat k nafukovacím bazénům.",
+          "de": "Oh, Igel sollten nicht zu nah an aufblasbare Pools.",
+          "fr": "Les hérissons ne doivent pas trop s'approcher des piscines gonflables."
+        }
+      },
+      {
+        "start": 56,
+        "end": 58.04,
+        "words": [
+          {
+            "text": "Quizás",
+            "start": 56,
+            "end": 56.399
+          },
+          {
+            "text": "solo",
+            "start": 56.399,
+            "end": 56.68
+          },
+          {
+            "text": "quiere",
+            "start": 56.68,
+            "end": 57.039
+          },
+          {
+            "text": "beber",
+            "start": 57.039,
+            "end": 57.44
+          },
+          {
+            "text": "algo.",
+            "start": 57.44,
+            "end": 58.04
+          }
+        ],
+        "translations": {
+          "en": "Maybe it just wants a drink.",
+          "cs": "Možná chce jen něco k pití.",
+          "de": "Vielleicht will es nur etwas trinken.",
+          "fr": "Peut-être qu'il veut juste boire quelque chose."
+        }
+      },
+      {
+        "start": 62.84,
+        "end": 64.36,
+        "words": [
+          {
+            "text": "Aquí",
+            "start": 62.84,
+            "end": 63.199
+          },
+          {
+            "text": "tienes",
+            "start": 63.199,
+            "end": 63.76
+          },
+          {
+            "text": "erizo.",
+            "start": 63.76,
+            "end": 64.36
+          }
+        ],
+        "translations": {
+          "en": "Here you go, hedgehog.",
+          "cs": "Tady máš, ježku.",
+          "de": "Hier, Igel.",
+          "fr": "Voilà, hérisson."
+        }
+      },
+      {
+        "start": 66.64,
+        "end": 73.96,
+        "words": [
+          {
+            "text": "Mucho",
+            "start": 66.64,
+            "end": 67.2
+          },
+          {
+            "text": "mejor.",
+            "start": 67.2,
+            "end": 67.8
+          },
+          {
+            "text": "Escucho",
+            "start": 69.799,
+            "end": 70.24
+          },
+          {
+            "text": "ruidos",
+            "start": 70.24,
+            "end": 70.68
+          },
+          {
+            "text": "de",
+            "start": 70.68,
+            "end": 70.88
+          },
+          {
+            "text": "más",
+            "start": 70.88,
+            "end": 71.48
+          },
+          {
+            "text": "animales.",
+            "start": 73.36,
+            "end": 73.96
+          }
+        ],
+        "translations": {
+          "en": "Much better. I hear more animal noises.",
+          "cs": "Mnohem lepší. Slyším další zvuky zvířat.",
+          "de": "Viel besser. Ich höre mehr Tiergeräusche.",
+          "fr": "Beaucoup mieux. J'entends d'autres bruits d'animaux."
+        }
+      },
+      {
+        "start": 74.36,
+        "end": 76.399,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 74.36,
+            "end": 74.96
+          },
+          {
+            "text": "es",
+            "start": 75,
+            "end": 75.2
+          },
+          {
+            "text": "Tita",
+            "start": 75.2,
+            "end": 75.56
+          },
+          {
+            "text": "la",
+            "start": 75.56,
+            "end": 75.799
+          },
+          {
+            "text": "tortuga.",
+            "start": 75.799,
+            "end": 76.399
+          }
+        ],
+        "translations": {
+          "en": "Ah, it's Tita the turtle.",
+          "cs": "Aha, to je želva Tita.",
+          "de": "Ah, das ist Tita die Schildkröte.",
+          "fr": "Ah, c'est Tita la tortue."
+        }
+      },
+      {
+        "start": 78.6,
+        "end": 81.64,
+        "words": [
+          {
+            "text": "Tita.",
+            "start": 78.6,
+            "end": 79.2
+          },
+          {
+            "text": "Tita.",
+            "start": 79.6,
+            "end": 80.2
+          },
+          {
+            "text": "¿Dónde",
+            "start": 80.32,
+            "end": 80.92
+          },
+          {
+            "text": "estás?",
+            "start": 81.04,
+            "end": 81.64
+          }
+        ],
+        "translations": {
+          "en": "Tita. Tita. Where are you?",
+          "cs": "Tita. Tita. Kde jsi?",
+          "de": "Tita. Tita. Wo bist du?",
+          "fr": "Tita. Tita. Où es-tu?"
+        }
+      },
+      {
+        "start": 82.04,
+        "end": 84,
+        "words": [
+          {
+            "text": "Ahí",
+            "start": 82.04,
+            "end": 82.36
+          },
+          {
+            "text": "está",
+            "start": 82.36,
+            "end": 82.6
+          },
+          {
+            "text": "la",
+            "start": 82.6,
+            "end": 82.759
+          },
+          {
+            "text": "doctora",
+            "start": 82.759,
+            "end": 83.359
+          },
+          {
+            "text": "Hamster.",
+            "start": 83.4,
+            "end": 84
+          }
+        ],
+        "translations": {
+          "en": "There's Doctor Hamster.",
+          "cs": "Tady je doktorka Hamsterová.",
+          "de": "Da ist Doktor Hamster.",
+          "fr": "Voilà docteur Hamster."
+        }
+      },
+      {
+        "start": 84.799,
+        "end": 89.88,
+        "words": [
+          {
+            "text": "Ah,",
+            "start": 84.799,
+            "end": 85.399
+          },
+          {
+            "text": "ahí",
+            "start": 85.52,
+            "end": 86.04
+          },
+          {
+            "text": "estás,",
+            "start": 86.04,
+            "end": 86.64
+          },
+          {
+            "text": "Tita.",
+            "start": 87.119,
+            "end": 87.719
+          },
+          {
+            "text": "Traviesa,",
+            "start": 88.119,
+            "end": 88.719
+          },
+          {
+            "text": "tortuga.",
+            "start": 89.28,
+            "end": 89.88
+          }
+        ],
+        "translations": {
+          "en": "Ah, there you are, Tita. Naughty turtle.",
+          "cs": "Tady jsi, Tita. Zlobivá želva.",
+          "de": "Ah, da bist du, Tita. Freche Schildkröte.",
+          "fr": "Ah, te voilà, Tita. Coquine de tortue."
+        }
+      },
+      {
+        "start": 90.28,
+        "end": 93.039,
+        "words": [
+          {
+            "text": "No",
+            "start": 90.28,
+            "end": 90.52
+          },
+          {
+            "text": "huyas",
+            "start": 90.52,
+            "end": 91.04
+          },
+          {
+            "text": "en",
+            "start": 91.04,
+            "end": 91.24
+          },
+          {
+            "text": "un",
+            "start": 91.24,
+            "end": 91.4
+          },
+          {
+            "text": "día",
+            "start": 91.4,
+            "end": 91.72
+          },
+          {
+            "text": "tan",
+            "start": 91.72,
+            "end": 92.32
+          },
+          {
+            "text": "caluroso.",
+            "start": 92.439,
+            "end": 93.039
+          }
+        ],
+        "translations": {
+          "en": "Don't run off on a hot day.",
+          "cs": "Neutíkej v tak horký den.",
+          "de": "Lauf nicht weg an einem heißen Tag.",
+          "fr": "Ne t'enfuis pas par une telle chaleur."
+        }
+      },
+      {
+        "start": 94.28,
+        "end": 97.12,
+        "words": [
+          {
+            "text": "Tita",
+            "start": 94.28,
+            "end": 94.72
+          },
+          {
+            "text": "también",
+            "start": 94.72,
+            "end": 95.2
+          },
+          {
+            "text": "quiere",
+            "start": 95.2,
+            "end": 95.6
+          },
+          {
+            "text": "venir",
+            "start": 95.6,
+            "end": 95.88
+          },
+          {
+            "text": "a",
+            "start": 95.88,
+            "end": 96.079
+          },
+          {
+            "text": "nuestra",
+            "start": 96.079,
+            "end": 96.52
+          },
+          {
+            "text": "piscina.",
+            "start": 96.52,
+            "end": 97.12
+          }
+        ],
+        "translations": {
+          "en": "Tita also wants to come to our pool.",
+          "cs": "Tita taky chce k našemu bazénu.",
+          "de": "Tita will auch in unseren Pool.",
+          "fr": "Tita veut aussi venir à notre piscine."
+        }
+      },
+      {
+        "start": 97.64,
+        "end": 100.28,
+        "words": [
+          {
+            "text": "Oh,",
+            "start": 97.64,
+            "end": 97.799
+          },
+          {
+            "text": "no.",
+            "start": 97.799,
+            "end": 98.399
+          },
+          {
+            "text": "Las",
+            "start": 98.64,
+            "end": 98.799
+          },
+          {
+            "text": "tortugas",
+            "start": 98.799,
+            "end": 99.32
+          },
+          {
+            "text": "no",
+            "start": 99.32,
+            "end": 99.68
+          },
+          {
+            "text": "nadan,",
+            "start": 99.68,
+            "end": 100.28
+          }
+        ],
+        "translations": {
+          "en": "Oh, no. Turtles don't swim,",
+          "cs": "Ó ne. Želvy neplavou,",
+          "de": "Oh, nein. Schildkröten schwimmen nicht,",
+          "fr": "Oh, non. Les tortues ne nagent pas,"
+        }
+      },
+      {
+        "start": 100.68,
+        "end": 103.28,
+        "words": [
+          {
+            "text": "pero",
+            "start": 100.68,
+            "end": 101
+          },
+          {
+            "text": "sí",
+            "start": 101,
+            "end": 101.2
+          },
+          {
+            "text": "les",
+            "start": 101.2,
+            "end": 101.479
+          },
+          {
+            "text": "gusta",
+            "start": 101.479,
+            "end": 101.84
+          },
+          {
+            "text": "el",
+            "start": 101.84,
+            "end": 102.119
+          },
+          {
+            "text": "clima",
+            "start": 102.119,
+            "end": 102.68
+          },
+          {
+            "text": "cálido.",
+            "start": 102.68,
+            "end": 103.28
+          }
+        ],
+        "translations": {
+          "en": "but they do like warm weather.",
+          "cs": "ale mají rády teplé počasí.",
+          "de": "aber sie mögen warmes Wetter.",
+          "fr": "mais elles aiment le climat chaud."
+        }
+      },
+      {
+        "start": 104.759,
+        "end": 107.12,
+        "words": [
+          {
+            "text": "¿Podemos",
+            "start": 104.759,
+            "end": 105.32
+          },
+          {
+            "text": "darle",
+            "start": 105.32,
+            "end": 105.759
+          },
+          {
+            "text": "agua",
+            "start": 105.759,
+            "end": 106.119
+          },
+          {
+            "text": "para",
+            "start": 106.119,
+            "end": 106.52
+          },
+          {
+            "text": "beber?",
+            "start": 106.52,
+            "end": 107.12
+          }
+        ],
+        "translations": {
+          "en": "Can we give it some water to drink?",
+          "cs": "Můžeme jí dát vodu na pití?",
+          "de": "Können wir ihr Wasser zum Trinken geben?",
+          "fr": "Pouvons-nous lui donner un peu d'eau à boire?"
+        }
+      },
+      {
+        "start": 107.52,
+        "end": 109.039,
+        "words": [
+          {
+            "text": "Sí,",
+            "start": 107.52,
+            "end": 107.88
+          },
+          {
+            "text": "es",
+            "start": 107.88,
+            "end": 108.159
+          },
+          {
+            "text": "una",
+            "start": 108.159,
+            "end": 108.439
+          },
+          {
+            "text": "buena",
+            "start": 108.439,
+            "end": 109.039
+          }
+        ],
+        "translations": {
+          "en": "Yes, that's a good",
+          "cs": "Ano, to je dobrý",
+          "de": "Ja, das ist eine gute",
+          "fr": "Oui, c'est une bonne"
+        }
+      },
+      {
+        "start": 112.079,
+        "end": 114.359,
+        "words": [
+          {
+            "text": "idea.",
+            "start": 112.079,
+            "end": 112.679
+          },
+          {
+            "text": "Muy",
+            "start": 113.079,
+            "end": 113.399
+          },
+          {
+            "text": "buen",
+            "start": 113.399,
+            "end": 113.759
+          },
+          {
+            "text": "trabajo,",
+            "start": 113.759,
+            "end": 114.359
+          }
+        ],
+        "translations": {
+          "en": "idea. Very well done,",
+          "cs": "nápad. Velmi dobře,",
+          "de": "Idee. Sehr gut,",
+          "fr": "idée. Très bien,"
+        }
+      },
+      {
+        "start": 114.52,
+        "end": 117.92,
+        "words": [
+          {
+            "text": "Peppa",
+            "start": 114.52,
+            "end": 115.04
+          },
+          {
+            "text": "George",
+            "start": 115.04,
+            "end": 115.479
+          },
+          {
+            "text": "al",
+            "start": 115.479,
+            "end": 115.719
+          },
+          {
+            "text": "cuidar",
+            "start": 115.719,
+            "end": 116.079
+          },
+          {
+            "text": "de",
+            "start": 116.079,
+            "end": 116.24
+          },
+          {
+            "text": "estos",
+            "start": 116.24,
+            "end": 116.52
+          },
+          {
+            "text": "animales",
+            "start": 116.52,
+            "end": 117.12
+          },
+          {
+            "text": "también,",
+            "start": 117.32,
+            "end": 117.92
+          }
+        ],
+        "translations": {
+          "en": "Peppa George for taking care of these animals,",
+          "cs": "Peppa George taky při péči o tato zvířata,",
+          "de": "Peppa George, dass ihr euch um diese Tiere kümmert,",
+          "fr": "Peppa George pour la prise en charge de ces animaux,"
+        }
+      },
+      {
+        "start": 118.479,
+        "end": 121.679,
+        "words": [
+          {
+            "text": "refrescarlos",
+            "start": 118.479,
+            "end": 119.079
+          },
+          {
+            "text": "y",
+            "start": 119.479,
+            "end": 119.68
+          },
+          {
+            "text": "darles",
+            "start": 119.68,
+            "end": 120.28
+          },
+          {
+            "text": "agua",
+            "start": 120.32,
+            "end": 120.719
+          },
+          {
+            "text": "para",
+            "start": 120.719,
+            "end": 121.079
+          },
+          {
+            "text": "beber.",
+            "start": 121.079,
+            "end": 121.679
+          }
+        ],
+        "translations": {
+          "en": "refreshing them and giving them water.",
+          "cs": "osvěžující je a dávající jim vodu.",
+          "de": "sie erfrischt und mit Wasser versorgt.",
+          "fr": "les rafraîchir et leur donner de l'eau."
+        }
+      },
+      {
+        "start": 122.24,
+        "end": 124.8,
+        "words": [
+          {
+            "text": "¿Quiere",
+            "start": 122.24,
+            "end": 122.56
+          },
+          {
+            "text": "un",
+            "start": 122.56,
+            "end": 122.759
+          },
+          {
+            "text": "poco",
+            "start": 122.759,
+            "end": 122.96
+          },
+          {
+            "text": "de",
+            "start": 122.96,
+            "end": 123.24
+          },
+          {
+            "text": "agua,",
+            "start": 123.24,
+            "end": 123.68
+          },
+          {
+            "text": "doctora",
+            "start": 123.68,
+            "end": 124.2
+          },
+          {
+            "text": "Hamster?",
+            "start": 124.2,
+            "end": 124.8
+          }
+        ],
+        "translations": {
+          "en": "Do you want some water, Doctor Hamster?",
+          "cs": "Chcete vodu, doktorko Hamsterová?",
+          "de": "Möchten Sie etwas Wasser, Doktor Hamster?",
+          "fr": "Voulez-vous un peu d'eau, docteur Hamster?"
+        }
+      },
+      {
+        "start": 124.92,
+        "end": 126.759,
+        "words": [
+          {
+            "text": "Ay,",
+            "start": 124.92,
+            "end": 125.2
+          },
+          {
+            "text": "sí,",
+            "start": 125.2,
+            "end": 125.6
+          },
+          {
+            "text": "por",
+            "start": 125.6,
+            "end": 126.159
+          },
+          {
+            "text": "favor.",
+            "start": 126.159,
+            "end": 126.759
+          }
+        ],
+        "translations": {
+          "en": "Oh yes, please.",
+          "cs": "Ano, prosím.",
+          "de": "Oh ja, bitte.",
+          "fr": "Oh oui, s'il vous plaît."
+        }
+      },
+      {
+        "start": 127.159,
+        "end": 130.24,
+        "words": [
+          {
+            "text": "Es",
+            "start": 127.159,
+            "end": 127.32
+          },
+          {
+            "text": "bueno",
+            "start": 127.32,
+            "end": 127.719
+          },
+          {
+            "text": "beber",
+            "start": 127.719,
+            "end": 128.2
+          },
+          {
+            "text": "mucha",
+            "start": 128.2,
+            "end": 128.72
+          },
+          {
+            "text": "agua",
+            "start": 128.72,
+            "end": 129.039
+          },
+          {
+            "text": "en",
+            "start": 129.039,
+            "end": 129.239
+          },
+          {
+            "text": "un",
+            "start": 129.239,
+            "end": 129.399
+          },
+          {
+            "text": "día",
+            "start": 129.399,
+            "end": 129.64
+          },
+          {
+            "text": "tan",
+            "start": 129.64,
+            "end": 130.24
+          }
+        ],
+        "translations": {
+          "en": "It's good to drink a lot of water on such a",
+          "cs": "V takový horký den je dobré pít hodně vody.",
+          "de": "Es ist gut, viel Wasser zu trinken an so einem",
+          "fr": "C'est bien de boire beaucoup d'eau par un jour si"
+        }
+      },
+      {
+        "start": 132.36,
+        "end": 135.44,
+        "words": [
+          {
+            "text": "caluroso.",
+            "start": 132.36,
+            "end": 132.96
+          },
+          {
+            "text": "¿Qué",
+            "start": 133.36,
+            "end": 133.56
+          },
+          {
+            "text": "animal",
+            "start": 133.56,
+            "end": 134.08
+          },
+          {
+            "text": "hace",
+            "start": 134.08,
+            "end": 134.48
+          },
+          {
+            "text": "ese",
+            "start": 134.48,
+            "end": 134.84
+          },
+          {
+            "text": "ruido?",
+            "start": 134.84,
+            "end": 135.44
+          }
+        ],
+        "translations": {
+          "en": "hot day. What animal makes that noise?",
+          "cs": "horký den. Jaké zvíře dělá ten hluk?",
+          "de": "heißen Tag. Welches Tier macht diesen Lärm?",
+          "fr": "chaud. Quel animal fait ce bruit ?"
+        }
+      },
+      {
+        "start": 136.08,
+        "end": 137.76,
+        "words": [
+          {
+            "text": "Eso",
+            "start": 136.08,
+            "end": 136.28
+          },
+          {
+            "text": "no",
+            "start": 136.28,
+            "end": 136.44
+          },
+          {
+            "text": "es",
+            "start": 136.44,
+            "end": 136.56
+          },
+          {
+            "text": "un",
+            "start": 136.56,
+            "end": 136.68
+          },
+          {
+            "text": "animal,",
+            "start": 136.68,
+            "end": 137.16
+          },
+          {
+            "text": "Peppa.",
+            "start": 137.16,
+            "end": 137.76
+          }
+        ],
+        "translations": {
+          "en": "That's not an animal, Peppa.",
+          "cs": "To není zvíře, Peppo.",
+          "de": "Das ist kein Tier, Peppa.",
+          "fr": "Ce n'est pas un animal, Peppa."
+        }
+      },
+      {
+        "start": 138,
+        "end": 139.16,
+        "words": [
+          {
+            "text": "Eso",
+            "start": 138,
+            "end": 138.2
+          },
+          {
+            "text": "fue",
+            "start": 138.2,
+            "end": 138.4
+          },
+          {
+            "text": "un",
+            "start": 138.4,
+            "end": 138.56
+          },
+          {
+            "text": "trueno.",
+            "start": 138.56,
+            "end": 139.16
+          }
+        ],
+        "translations": {
+          "en": "That was thunder.",
+          "cs": "To byl hrom.",
+          "de": "Das war ein Donner.",
+          "fr": "C'était du tonnerre."
+        }
+      },
+      {
+        "start": 139.879,
+        "end": 142.199,
+        "words": [
+          {
+            "text": "Entremos",
+            "start": 139.879,
+            "end": 140.4
+          },
+          {
+            "text": "antes",
+            "start": 140.4,
+            "end": 140.68
+          },
+          {
+            "text": "de",
+            "start": 140.68,
+            "end": 140.8
+          },
+          {
+            "text": "que",
+            "start": 140.8,
+            "end": 140.959
+          },
+          {
+            "text": "empiece",
+            "start": 140.959,
+            "end": 141.44
+          },
+          {
+            "text": "a",
+            "start": 141.44,
+            "end": 141.599
+          },
+          {
+            "text": "llover.",
+            "start": 141.599,
+            "end": 142.199
+          }
+        ],
+        "translations": {
+          "en": "Let's go inside before it starts to rain.",
+          "cs": "Pojďme dovnitř, než začne pršet.",
+          "de": "Gehen wir rein, bevor es anfängt zu regnen.",
+          "fr": "Rentrons avant qu'il ne commence à pleuvoir."
+        }
+      },
+      {
+        "start": 144.48,
+        "end": 147.76,
+        "words": [
+          {
+            "text": "La",
+            "start": 144.48,
+            "end": 144.68
+          },
+          {
+            "text": "tormenta",
+            "start": 144.68,
+            "end": 145.28
+          },
+          {
+            "text": "llegó",
+            "start": 145.44,
+            "end": 146.04
+          },
+          {
+            "text": "demasiado",
+            "start": 146.16,
+            "end": 146.76
+          },
+          {
+            "text": "pronto.",
+            "start": 147.16,
+            "end": 147.76
+          }
+        ],
+        "translations": {
+          "en": "The storm came too soon.",
+          "cs": "Bouřka přišla moc brzy.",
+          "de": "Der Sturm kam zu früh.",
+          "fr": "L'orage est arrivé trop tôt."
+        }
+      },
+      {
+        "start": 149.92,
+        "end": 153.76,
+        "words": [
+          {
+            "text": "Uh.",
+            "start": 149.92,
+            "end": 150.52
+          },
+          {
+            "text": "Los",
+            "start": 151.44,
+            "end": 151.68
+          },
+          {
+            "text": "animales",
+            "start": 151.68,
+            "end": 152.28
+          },
+          {
+            "text": "aman",
+            "start": 152.519,
+            "end": 152.92
+          },
+          {
+            "text": "la",
+            "start": 152.92,
+            "end": 153.16
+          },
+          {
+            "text": "lluvia.",
+            "start": 153.16,
+            "end": 153.76
+          }
+        ],
+        "translations": {
+          "en": "Uh, animals love the rain.",
+          "cs": "Zvířata mají ráda déšť.",
+          "de": "Uh, Tiere lieben den Regen.",
+          "fr": "Les animaux adorent la pluie."
+        }
+      },
+      {
+        "start": 163.319,
+        "end": 165,
+        "words": [
+          {
+            "text": "La",
+            "start": 163.319,
+            "end": 163.519
+          },
+          {
+            "text": "lluvia",
+            "start": 163.519,
+            "end": 164.119
+          },
+          {
+            "text": "se",
+            "start": 164.12,
+            "end": 164.4
+          },
+          {
+            "text": "detuvo.",
+            "start": 164.4,
+            "end": 165
+          }
+        ],
+        "translations": {
+          "en": "The rain stopped.",
+          "cs": "Déšť přestal.",
+          "de": "Der Regen hat aufgehört.",
+          "fr": "La pluie s'est arrêtée."
+        }
+      },
+      {
+        "start": 165.599,
+        "end": 169.68,
+        "words": [
+          {
+            "text": "Mira,",
+            "start": 165.599,
+            "end": 166.199
+          },
+          {
+            "text": "mami,",
+            "start": 166.2,
+            "end": 166.8
+          },
+          {
+            "text": "a",
+            "start": 167.2,
+            "end": 167.4
+          },
+          {
+            "text": "la",
+            "start": 167.4,
+            "end": 167.599
+          },
+          {
+            "text": "rana",
+            "start": 167.599,
+            "end": 167.959
+          },
+          {
+            "text": "le",
+            "start": 167.959,
+            "end": 168.159
+          },
+          {
+            "text": "gusta",
+            "start": 168.159,
+            "end": 168.519
+          },
+          {
+            "text": "saltar",
+            "start": 168.519,
+            "end": 168.879
+          },
+          {
+            "text": "en",
+            "start": 168.879,
+            "end": 169.08
+          },
+          {
+            "text": "los",
+            "start": 169.08,
+            "end": 169.239
+          },
+          {
+            "text": "charcos",
+            "start": 169.239,
+            "end": 169.68
+          }
+        ],
+        "translations": {
+          "en": "Look, Mommy, the frog likes to jump in puddles",
+          "cs": "Podívej, mami, žába ráda skáče do kaluží,",
+          "de": "Schau, Mama, der Frosch springt gerne in Pfützen,",
+          "fr": "Regarde, maman, la grenouille aime sauter dans des flaques"
+        }
+      },
+      {
+        "start": 169.68,
+        "end": 177.199,
+        "words": [
+          {
+            "text": "de",
+            "start": 169.68,
+            "end": 169.879
+          },
+          {
+            "text": "lodo.",
+            "start": 169.879,
+            "end": 170.479
+          },
+          {
+            "text": "Peppa",
+            "start": 173.239,
+            "end": 173.599
+          },
+          {
+            "text": "y",
+            "start": 173.599,
+            "end": 173.84
+          },
+          {
+            "text": "George",
+            "start": 173.84,
+            "end": 174.4
+          },
+          {
+            "text": "adoran",
+            "start": 174.4,
+            "end": 174.84
+          },
+          {
+            "text": "saltar",
+            "start": 174.84,
+            "end": 175.239
+          },
+          {
+            "text": "en",
+            "start": 175.239,
+            "end": 175.519
+          },
+          {
+            "text": "charcos",
+            "start": 175.519,
+            "end": 176.04
+          },
+          {
+            "text": "de",
+            "start": 176.04,
+            "end": 176.599
+          },
+          {
+            "text": "lobo.",
+            "start": 176.599,
+            "end": 177.199
+          }
+        ],
+        "translations": {
+          "en": "of mud. Peppa and George love jumping in muddy puddles.",
+          "cs": "bahenních. Peppa a George rádi skáčou v kalužích.",
+          "de": "Schlamm. Peppa und George lieben es, in schlammige Pfützen zu springen.",
+          "fr": "de boue. Peppa et George adorent sauter dans les flaques boueuses."
+        }
+      },
+      {
+        "start": 177.599,
+        "end": 182.88,
+        "words": [
+          {
+            "text": "Todos",
+            "start": 177.599,
+            "end": 178.12
+          },
+          {
+            "text": "adoran",
+            "start": 178.12,
+            "end": 178.599
+          },
+          {
+            "text": "saltar",
+            "start": 178.599,
+            "end": 179.04
+          },
+          {
+            "text": "en",
+            "start": 179.04,
+            "end": 179.319
+          },
+          {
+            "text": "charcos",
+            "start": 179.319,
+            "end": 179.76
+          },
+          {
+            "text": "de",
+            "start": 179.76,
+            "end": 179.959
+          },
+          {
+            "text": "lobo",
+            "start": 179.959,
+            "end": 180.28
+          },
+          {
+            "text": "en",
+            "start": 180.28,
+            "end": 180.44
+          },
+          {
+            "text": "un",
+            "start": 180.44,
+            "end": 180.76
+          },
+          {
+            "text": "día",
+            "start": 180.76,
+            "end": 181.36
+          },
+          {
+            "text": "caluroso.",
+            "start": 182.28,
+            "end": 182.88
+          }
+        ],
+        "translations": {
+          "en": "Everyone loves jumping in muddy puddles on a hot day.",
+          "cs": "Každý rád skáče do kaluží bláta v horký den.",
+          "de": "Jeder liebt es, an einem heißen Tag in schlammige Pfützen zu springen.",
+          "fr": "Tout le monde adore sauter dans les flaques boueuses par une chaude journée."
+        }
+      },
+      {
+        "start": 183.28,
+        "end": 185.399,
+        "words": [
+          {
+            "text": "Modo",
+            "start": 183.28,
+            "end": 183.599
+          },
+          {
+            "text": "Kids",
+            "start": 183.599,
+            "end": 184.199
+          },
+          {
+            "text": "activado.",
+            "start": 184.799,
+            "end": 185.399
+          }
+        ],
+        "translations": {
+          "en": "Kids Mode activated.",
+          "cs": "Režim Děti aktivován.",
+          "de": "Kinder-Modus aktiviert.",
+          "fr": "Mode Enfants activé."
+        }
+      },
+      {
+        "start": 185.799,
+        "end": 188.28,
+        "words": [
+          {
+            "text": "Encuentra",
+            "start": 185.799,
+            "end": 186.2
+          },
+          {
+            "text": "más",
+            "start": 186.2,
+            "end": 186.36
+          },
+          {
+            "text": "de",
+            "start": 186.36,
+            "end": 186.48
+          },
+          {
+            "text": "lo",
+            "start": 186.48,
+            "end": 186.599
+          },
+          {
+            "text": "que",
+            "start": 186.599,
+            "end": 186.68
+          },
+          {
+            "text": "te",
+            "start": 186.68,
+            "end": 186.84
+          },
+          {
+            "text": "gusta",
+            "start": 186.84,
+            "end": 187.04
+          },
+          {
+            "text": "en",
+            "start": 187.04,
+            "end": 187.239
+          },
+          {
+            "text": "Discovery",
+            "start": 187.239,
+            "end": 187.68
+          },
+          {
+            "text": "Kids.",
+            "start": 187.68,
+            "end": 188.28
+          }
+        ],
+        "translations": {
+          "en": "Find more of what you love on Discovery Kids.",
+          "cs": "Najdi více z toho, co máš rád, na Discovery Kids.",
+          "de": "Finde mehr von dem, was du liebst, auf Discovery Kids.",
+          "fr": "Trouvez plus de ce que vous aimez sur Discovery Kids."
+        }
+      }
+    ],
+    "dictionary": {
+      "esto": {
+        "lemma": "esto",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "this",
+          "cs": "tohle",
+          "de": "dieses",
+          "fr": "ceci"
+        }
+      },
+      "es": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "discovery": {
+        "lemma": "discovery",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Discovery",
+          "cs": "Discovery",
+          "de": "Discovery",
+          "fr": "Discovery"
+        }
+      },
+      "kids": {
+        "lemma": "kids",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Kids",
+          "cs": "Kids",
+          "de": "Kids",
+          "fr": "Kids"
+        }
+      },
+      "comencemos": {
+        "lemma": "comenzar",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "let's get started",
+          "cs": "začněme",
+          "de": "beginnen wir",
+          "fr": "commençons"
+        }
+      },
+      "no": {
+        "lemma": "no",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "not",
+          "cs": "ne",
+          "de": "nicht",
+          "fr": "pas"
+        }
+      },
+      "está": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "is",
+          "cs": "je",
+          "de": "ist",
+          "fr": "est"
+        }
+      },
+      "saltando": {
+        "lemma": "saltar",
+        "pos": "verb",
+        "note": "present participle",
+        "glosses": {
+          "en": "jumping",
+          "cs": "skákat",
+          "de": "springen",
+          "fr": "sauter"
+        }
+      },
+      "tiene": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "has",
+          "cs": "má",
+          "de": "hat",
+          "fr": "a"
+        }
+      },
+      "mucho": {
+        "lemma": "mucho",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "too",
+          "cs": "příliš",
+          "de": "viel",
+          "fr": "trop"
+        }
+      },
+      "calor": {
+        "lemma": "calor",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "hot",
+          "cs": "horký",
+          "de": "heiß",
+          "fr": "chaud"
+        }
+      },
+      "ven": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": "command form",
+        "glosses": {
+          "en": "come",
+          "cs": "pojď",
+          "de": "komm",
+          "fr": "viens"
+        }
+      },
+      "a": {
+        "lemma": "a",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "do",
+          "de": "zu",
+          "fr": "à"
+        }
+      },
+      "jugar": {
+        "lemma": "jugar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "play",
+          "cs": "hrát",
+          "de": "spielen",
+          "fr": "jouer"
+        }
+      },
+      "en": {
+        "lemma": "en",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "in",
+          "cs": "v",
+          "de": "in",
+          "fr": "dans"
+        }
+      },
+      "nuestra": {
+        "lemma": "nuestro",
+        "pos": "pron",
+        "note": "feminine form",
+        "glosses": {
+          "en": "our",
+          "cs": "náš",
+          "de": "unser",
+          "fr": "notre"
+        }
+      },
+      "piscina": {
+        "lemma": "piscina",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "pool",
+          "cs": "bazén",
+          "de": "Pool",
+          "fr": "piscine"
+        }
+      },
+      "inflable": {
+        "lemma": "inflable",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "inflatable",
+          "cs": "nafukovací",
+          "de": "aufblasbar",
+          "fr": "gonflable"
+        }
+      },
+      "puede": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "can",
+          "cs": "může",
+          "de": "kann",
+          "fr": "peut"
+        }
+      },
+      "entrar": {
+        "lemma": "entrar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "get in",
+          "cs": "vstoupit",
+          "de": "eintreten",
+          "fr": "entrer"
+        }
+      },
+      "esta": {
+        "lemma": "este",
+        "pos": "pron",
+        "note": "feminine form",
+        "glosses": {
+          "en": "this",
+          "cs": "tato",
+          "de": "diese",
+          "fr": "cette"
+        }
+      },
+      "madera": {
+        "lemma": "madera",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "wood",
+          "cs": "dřevo",
+          "de": "Holz",
+          "fr": "bois"
+        }
+      },
+      "ser": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "be",
+          "cs": "být",
+          "de": "sein",
+          "fr": "être"
+        }
+      },
+      "una": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "feminine form",
+        "glosses": {
+          "en": "a",
+          "cs": "nějaký",
+          "de": "eine",
+          "fr": "une"
+        }
+      },
+      "rampa": {
+        "lemma": "rampa",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "ramp",
+          "cs": "rampa",
+          "de": "Rampe",
+          "fr": "rampe"
+        }
+      },
+      "y": {
+        "lemma": "y",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "and",
+          "cs": "a",
+          "de": "und",
+          "fr": "et"
+        }
+      },
+      "también": {
+        "lemma": "también",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "also",
+          "cs": "také",
+          "de": "auch",
+          "fr": "aussi"
+        }
+      },
+      "hay": {
+        "lemma": "haber",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "there are",
+          "cs": "jsou",
+          "de": "gibt",
+          "fr": "il y a"
+        }
+      },
+      "que": {
+        "lemma": "que",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "že",
+          "de": "dass",
+          "fr": "que"
+        }
+      },
+      "asegurarnos": {
+        "lemma": "asegurar",
+        "pos": "verb",
+        "note": "reflexive form",
+        "glosses": {
+          "en": "make sure",
+          "cs": "ujistit se",
+          "de": "vergewissern",
+          "fr": "assurer"
+        }
+      },
+      "de": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "of",
+          "cs": "z",
+          "de": "von",
+          "fr": "de"
+        }
+      },
+      "pueda": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "can",
+          "cs": "může",
+          "de": "kann",
+          "fr": "peut"
+        }
+      },
+      "salir": {
+        "lemma": "salir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "get out",
+          "cs": "vyjít",
+          "de": "aussteigen",
+          "fr": "sortir"
+        }
+      },
+      "ahora": {
+        "lemma": "ahora",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "now",
+          "cs": "teď",
+          "de": "jetzt",
+          "fr": "maintenant"
+        }
+      },
+      "la": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "feminine form",
+        "glosses": {
+          "en": "the",
+          "cs": "ta",
+          "de": "die",
+          "fr": "la"
+        }
+      },
+      "rana": {
+        "lemma": "rana",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "frog",
+          "cs": "žába",
+          "de": "Frosch",
+          "fr": "grenouille"
+        }
+      },
+      "del": {
+        "lemma": "de",
+        "pos": "prep",
+        "note": "contraction",
+        "glosses": {
+          "en": "from the",
+          "cs": "z",
+          "de": "vom",
+          "fr": "du"
+        }
+      },
+      "agua": {
+        "lemma": "agua",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "water",
+          "cs": "voda",
+          "de": "Wasser",
+          "fr": "eau"
+        }
+      },
+      "feliz": {
+        "lemma": "feliz",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "happy",
+          "cs": "šťastný",
+          "de": "glücklich",
+          "fr": "heureux"
+        }
+      },
+      "creo": {
+        "lemma": "creer",
+        "pos": "verb",
+        "note": "first-person singular",
+        "glosses": {
+          "en": "I think",
+          "cs": "myslím",
+          "de": "ich glaube",
+          "fr": "je pense"
+        }
+      },
+      "necesita": {
+        "lemma": "necesitar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "needs",
+          "cs": "potřebuje",
+          "de": "braucht",
+          "fr": "a besoin de"
+        }
+      },
+      "sombra": {
+        "lemma": "sombra",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "shade",
+          "cs": "stín",
+          "de": "Schatten",
+          "fr": "ombre"
+        }
+      },
+      "ahí": {
+        "lemma": "ahí",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "there",
+          "cs": "tam",
+          "de": "da",
+          "fr": "là"
+        }
+      },
+      "tienes": {
+        "lemma": "tener",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "you go",
+          "cs": "máš",
+          "de": "du hast",
+          "fr": "tu as"
+        }
+      },
+      "ranita": {
+        "lemma": "rana",
+        "pos": "noun",
+        "note": "diminutive form",
+        "glosses": {
+          "en": "froggy",
+          "cs": "žabička",
+          "de": "Fröschchen",
+          "fr": "petite grenouille"
+        }
+      },
+      "este": {
+        "lemma": "este",
+        "pos": "pron",
+        "note": "masculine form",
+        "glosses": {
+          "en": "this",
+          "cs": "toto",
+          "de": "dies",
+          "fr": "ce"
+        }
+      },
+      "un": {
+        "lemma": "un",
+        "pos": "det",
+        "note": "masculine form",
+        "glosses": {
+          "en": "a",
+          "cs": "nějaký",
+          "de": "ein",
+          "fr": "un"
+        }
+      },
+      "erizo": {
+        "lemma": "erizo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "hedgehog",
+          "cs": "ježek",
+          "de": "Igel",
+          "fr": "hérisson"
+        }
+      },
+      "hola": {
+        "lemma": "hola",
+        "pos": "interj",
+        "note": null,
+        "glosses": {
+          "en": "hi",
+          "cs": "ahoj",
+          "de": "hallo",
+          "fr": "salut"
+        }
+      },
+      "el": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine form",
+        "glosses": {
+          "en": "the",
+          "cs": "ten",
+          "de": "der",
+          "fr": "le"
+        }
+      },
+      "te": {
+        "lemma": "tú",
+        "pos": "pron",
+        "note": "informal",
+        "glosses": {
+          "en": "you",
+          "cs": "ty",
+          "de": "du",
+          "fr": "tu"
+        }
+      },
+      "gustaría": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": "conditional form",
+        "glosses": {
+          "en": "would like",
+          "cs": "chtěl by",
+          "de": "würde gerne",
+          "fr": "voudrais"
+        }
+      },
+      "nadar": {
+        "lemma": "nadar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "swim",
+          "cs": "plavat",
+          "de": "schwimmen",
+          "fr": "nager"
+        }
+      },
+      "oh": {
+        "lemma": "oh",
+        "pos": "interj",
+        "note": null,
+        "glosses": {
+          "en": "oh",
+          "cs": "ach",
+          "de": "oh",
+          "fr": "oh"
+        }
+      },
+      "los": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ti",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "erizos": {
+        "lemma": "erizo",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "hedgehogs",
+          "cs": "ježci",
+          "de": "Igel",
+          "fr": "hérissons"
+        }
+      },
+      "deben": {
+        "lemma": "deber",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "should",
+          "cs": "měli by",
+          "de": "sollten",
+          "fr": "devraient"
+        }
+      },
+      "acercarse": {
+        "lemma": "acercar",
+        "pos": "verb",
+        "note": "reflexive form",
+        "glosses": {
+          "en": "get close",
+          "cs": "přiblížit se",
+          "de": "nähern",
+          "fr": "approcher"
+        }
+      },
+      "las": {
+        "lemma": "el",
+        "pos": "det",
+        "note": "feminine plural",
+        "glosses": {
+          "en": "the",
+          "cs": "ty",
+          "de": "die",
+          "fr": "les"
+        }
+      },
+      "piscinas": {
+        "lemma": "piscina",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "pools",
+          "cs": "bazény",
+          "de": "Pools",
+          "fr": "piscines"
+        }
+      },
+      "inflables": {
+        "lemma": "inflable",
+        "pos": "adj",
+        "note": "plural form",
+        "glosses": {
+          "en": "inflatable",
+          "cs": "nafukovací",
+          "de": "aufblasbare",
+          "fr": "gonflables"
+        }
+      },
+      "quizás": {
+        "lemma": "quizás",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "maybe",
+          "cs": "možná",
+          "de": "vielleicht",
+          "fr": "peut-être"
+        }
+      },
+      "solo": {
+        "lemma": "solo",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "just",
+          "cs": "jen",
+          "de": "nur",
+          "fr": "juste"
+        }
+      },
+      "quiere": {
+        "lemma": "querer",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "wants",
+          "cs": "chce",
+          "de": "will",
+          "fr": "veut"
+        }
+      },
+      "beber": {
+        "lemma": "beber",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "drink",
+          "cs": "pít",
+          "de": "trinken",
+          "fr": "boire"
+        }
+      },
+      "algo": {
+        "lemma": "algo",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "something",
+          "cs": "něco",
+          "de": "etwas",
+          "fr": "quelque chose"
+        }
+      },
+      "aquí": {
+        "lemma": "aquí",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "here",
+          "cs": "zde",
+          "de": "hier",
+          "fr": "ici"
+        }
+      },
+      "mejor": {
+        "lemma": "mejor",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "better",
+          "cs": "lépe",
+          "de": "besser",
+          "fr": "mieux"
+        }
+      },
+      "escucho": {
+        "lemma": "escuchar",
+        "pos": "verb",
+        "note": "first-person singular",
+        "glosses": {
+          "en": "I hear",
+          "cs": "slyším",
+          "de": "ich höre",
+          "fr": "j'entends"
+        }
+      },
+      "ruidos": {
+        "lemma": "ruido",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "noises",
+          "cs": "zvuky",
+          "de": "Geräusche",
+          "fr": "bruits"
+        }
+      },
+      "más": {
+        "lemma": "más",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "more",
+          "cs": "více",
+          "de": "mehr",
+          "fr": "plus"
+        }
+      },
+      "animales": {
+        "lemma": "animal",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "animals",
+          "cs": "zvířata",
+          "de": "Tiere",
+          "fr": "animaux"
+        }
+      },
+      "ah": {
+        "lemma": "ah",
+        "pos": "interj",
+        "note": null,
+        "glosses": {
+          "en": "ah",
+          "cs": "ach",
+          "de": "ah",
+          "fr": "ah"
+        }
+      },
+      "tita": {
+        "lemma": "tita",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Tita",
+          "cs": "Tita",
+          "de": "Tita",
+          "fr": "Tita"
+        }
+      },
+      "tortuga": {
+        "lemma": "tortuga",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "turtle",
+          "cs": "želva",
+          "de": "Schildkröte",
+          "fr": "tortue"
+        }
+      },
+      "dónde": {
+        "lemma": "dónde",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "where",
+          "cs": "kde",
+          "de": "wo",
+          "fr": "où"
+        }
+      },
+      "estás": {
+        "lemma": "estar",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "are you",
+          "cs": "jsi",
+          "de": "bist du",
+          "fr": "es-tu"
+        }
+      },
+      "doctora": {
+        "lemma": "doctor",
+        "pos": "noun",
+        "note": "feminine form",
+        "glosses": {
+          "en": "Doctor",
+          "cs": "doktor",
+          "de": "Doktor",
+          "fr": "Docteur"
+        }
+      },
+      "hamster": {
+        "lemma": "hamster",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Hamster",
+          "cs": "křeček",
+          "de": "Hamster",
+          "fr": "hamster"
+        }
+      },
+      "traviesa": {
+        "lemma": "travieso",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "naughty",
+          "cs": "nezbedný",
+          "de": "frech",
+          "fr": "coquine"
+        }
+      },
+      "huyas": {
+        "lemma": "huir",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "run off",
+          "cs": "utek",
+          "de": "weglaufen",
+          "fr": "fuis"
+        }
+      },
+      "día": {
+        "lemma": "día",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "day",
+          "cs": "den",
+          "de": "Tag",
+          "fr": "jour"
+        }
+      },
+      "tan": {
+        "lemma": "tan",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "so",
+          "cs": "tak",
+          "de": "so",
+          "fr": "si"
+        }
+      },
+      "caluroso": {
+        "lemma": "caluroso",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "hot",
+          "cs": "teplý",
+          "de": "heiß",
+          "fr": "chaud"
+        }
+      },
+      "venir": {
+        "lemma": "venir",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "come",
+          "cs": "přijít",
+          "de": "kommen",
+          "fr": "venir"
+        }
+      },
+      "tortugas": {
+        "lemma": "tortuga",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "turtles",
+          "cs": "želvy",
+          "de": "Schildkröten",
+          "fr": "tortues"
+        }
+      },
+      "nadan": {
+        "lemma": "nadar",
+        "pos": "verb",
+        "note": "third-person plural",
+        "glosses": {
+          "en": "swim",
+          "cs": "plavat",
+          "de": "schwimmen",
+          "fr": "nagent"
+        }
+      },
+      "pero": {
+        "lemma": "pero",
+        "pos": "conj",
+        "note": null,
+        "glosses": {
+          "en": "but",
+          "cs": "ale",
+          "de": "aber",
+          "fr": "mais"
+        }
+      },
+      "sí": {
+        "lemma": "sí",
+        "pos": "adv",
+        "note": "used for emphasis",
+        "glosses": {
+          "en": "do",
+          "cs": "ano",
+          "de": "doch",
+          "fr": "oui"
+        }
+      },
+      "les": {
+        "lemma": "le",
+        "pos": "pron",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "them",
+          "cs": "jim",
+          "de": "sie",
+          "fr": "les"
+        }
+      },
+      "gusta": {
+        "lemma": "gustar",
+        "pos": "verb",
+        "note": null,
+        "glosses": {
+          "en": "like",
+          "cs": "líbí se",
+          "de": "gefällt",
+          "fr": "aime"
+        }
+      },
+      "clima": {
+        "lemma": "clima",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "weather",
+          "cs": "počasí",
+          "de": "Wetter",
+          "fr": "temps"
+        }
+      },
+      "cálido": {
+        "lemma": "cálido",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "warm",
+          "cs": "teplý",
+          "de": "warm",
+          "fr": "chaud"
+        }
+      },
+      "podemos": {
+        "lemma": "poder",
+        "pos": "verb",
+        "note": "first-person plural",
+        "glosses": {
+          "en": "can we",
+          "cs": "můžeme",
+          "de": "können wir",
+          "fr": "pouvons-nous"
+        }
+      },
+      "darle": {
+        "lemma": "dar",
+        "pos": "verb",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "give it",
+          "cs": "dát mu",
+          "de": "geben ihm",
+          "fr": "lui donner"
+        }
+      },
+      "para": {
+        "lemma": "para",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "to",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "buena": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "good",
+          "cs": "dobrá",
+          "de": "gute",
+          "fr": "bonne"
+        }
+      },
+      "idea": {
+        "lemma": "idea",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "idea",
+          "cs": "nápad",
+          "de": "Idee",
+          "fr": "idée"
+        }
+      },
+      "muy": {
+        "lemma": "muy",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "very",
+          "cs": "velmi",
+          "de": "sehr",
+          "fr": "très"
+        }
+      },
+      "buen": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "masculine form",
+        "glosses": {
+          "en": "well",
+          "cs": "dobrý",
+          "de": "gut",
+          "fr": "bon"
+        }
+      },
+      "trabajo": {
+        "lemma": "trabajo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "work",
+          "cs": "práce",
+          "de": "Arbeit",
+          "fr": "travail"
+        }
+      },
+      "peppa": {
+        "lemma": "peppa",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "Peppa",
+          "cs": "Peppa",
+          "de": "Peppa",
+          "fr": "Peppa"
+        }
+      },
+      "george": {
+        "lemma": "george",
+        "pos": "noun",
+        "note": "proper noun",
+        "glosses": {
+          "en": "George",
+          "cs": "George",
+          "de": "George",
+          "fr": "George"
+        }
+      },
+      "al": {
+        "lemma": "a el",
+        "pos": "prep",
+        "note": "contraction",
+        "glosses": {
+          "en": "for",
+          "cs": "do",
+          "de": "zum",
+          "fr": "au"
+        }
+      },
+      "cuidar": {
+        "lemma": "cuidar",
+        "pos": "verb",
+        "note": "infinitive form",
+        "glosses": {
+          "en": "taking care",
+          "cs": "pečovat",
+          "de": "pflegen",
+          "fr": "caring"
+        }
+      },
+      "estos": {
+        "lemma": "este",
+        "pos": "pron",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "these",
+          "cs": "tyto",
+          "de": "diese",
+          "fr": "ces"
+        }
+      },
+      "refrescarlos": {
+        "lemma": "refrescar",
+        "pos": "verb",
+        "note": "infinitive with pronoun",
+        "glosses": {
+          "en": "refreshing",
+          "cs": "osvěžovat",
+          "de": "auffrischen",
+          "fr": "rafraîchir"
+        }
+      },
+      "darles": {
+        "lemma": "dar",
+        "pos": "verb",
+        "note": "infinitive with pronoun",
+        "glosses": {
+          "en": "giving them",
+          "cs": "dát jim",
+          "de": "geben ihnen",
+          "fr": "leur donner"
+        }
+      },
+      "poco": {
+        "lemma": "poco",
+        "pos": "adj",
+        "note": null,
+        "glosses": {
+          "en": "some",
+          "cs": "málo",
+          "de": "wenig",
+          "fr": "peu"
+        }
+      },
+      "ay": {
+        "lemma": "ay",
+        "pos": "interj",
+        "note": null,
+        "glosses": {
+          "en": "oh",
+          "cs": "ach",
+          "de": "ach",
+          "fr": "oh"
+        }
+      },
+      "por": {
+        "lemma": "por",
+        "pos": "prep",
+        "note": null,
+        "glosses": {
+          "en": "for",
+          "cs": "pro",
+          "de": "für",
+          "fr": "pour"
+        }
+      },
+      "favor": {
+        "lemma": "favor",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "please",
+          "cs": "prosím",
+          "de": "bitte",
+          "fr": "s'il vous plaît"
+        }
+      },
+      "bueno": {
+        "lemma": "bueno",
+        "pos": "adj",
+        "note": "masculine form",
+        "glosses": {
+          "en": "good",
+          "cs": "dobrý",
+          "de": "gut",
+          "fr": "bon"
+        }
+      },
+      "mucha": {
+        "lemma": "mucho",
+        "pos": "adj",
+        "note": "feminine form",
+        "glosses": {
+          "en": "a lot of",
+          "cs": "hodně",
+          "de": "viel",
+          "fr": "beaucoup de"
+        }
+      },
+      "qué": {
+        "lemma": "qué",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "what",
+          "cs": "co",
+          "de": "was",
+          "fr": "quoi"
+        }
+      },
+      "animal": {
+        "lemma": "animal",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "animal",
+          "cs": "zvíře",
+          "de": "Tier",
+          "fr": "animal"
+        }
+      },
+      "hace": {
+        "lemma": "hacer",
+        "pos": "verb",
+        "note": "irregular verb",
+        "glosses": {
+          "en": "makes",
+          "cs": "dělá",
+          "de": "macht",
+          "fr": "fait"
+        }
+      },
+      "ese": {
+        "lemma": "ese",
+        "pos": "pron",
+        "note": "masculine form",
+        "glosses": {
+          "en": "that",
+          "cs": "ten",
+          "de": "jener",
+          "fr": "ce"
+        }
+      },
+      "ruido": {
+        "lemma": "ruido",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "noise",
+          "cs": "hluk",
+          "de": "Geräusch",
+          "fr": "bruit"
+        }
+      },
+      "eso": {
+        "lemma": "eso",
+        "pos": "pron",
+        "note": null,
+        "glosses": {
+          "en": "that",
+          "cs": "to",
+          "de": "jenes",
+          "fr": "cela"
+        }
+      },
+      "fue": {
+        "lemma": "ser",
+        "pos": "verb",
+        "note": "past tense",
+        "glosses": {
+          "en": "was",
+          "cs": "byla",
+          "de": "war",
+          "fr": "était"
+        }
+      },
+      "trueno": {
+        "lemma": "trueno",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "thunder",
+          "cs": "hrom",
+          "de": "Donner",
+          "fr": "tonnerre"
+        }
+      },
+      "entremos": {
+        "lemma": "entrar",
+        "pos": "verb",
+        "note": "command form",
+        "glosses": {
+          "en": "go inside",
+          "cs": "vejít",
+          "de": "eintreten",
+          "fr": "entrons"
+        }
+      },
+      "antes": {
+        "lemma": "antes",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "before",
+          "cs": "předtím",
+          "de": "bevor",
+          "fr": "avant"
+        }
+      },
+      "empiece": {
+        "lemma": "empezar",
+        "pos": "verb",
+        "note": "subjunctive form",
+        "glosses": {
+          "en": "starts",
+          "cs": "začne",
+          "de": "beginnt",
+          "fr": "commence"
+        }
+      },
+      "llover": {
+        "lemma": "llover",
+        "pos": "verb",
+        "note": "impersonal verb",
+        "glosses": {
+          "en": "to rain",
+          "cs": "pršet",
+          "de": "regnen",
+          "fr": "pleuvoir"
+        }
+      },
+      "tormenta": {
+        "lemma": "tormenta",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "storm",
+          "cs": "bouřka",
+          "de": "Sturm",
+          "fr": "tempête"
+        }
+      },
+      "llegó": {
+        "lemma": "llegar",
+        "pos": "verb",
+        "note": "past tense",
+        "glosses": {
+          "en": "came",
+          "cs": "přišel",
+          "de": "kam",
+          "fr": "a arrivé"
+        }
+      },
+      "demasiado": {
+        "lemma": "demasiado",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "too",
+          "cs": "příliš",
+          "de": "zu",
+          "fr": "trop"
+        }
+      },
+      "pronto": {
+        "lemma": "pronto",
+        "pos": "adv",
+        "note": null,
+        "glosses": {
+          "en": "soon",
+          "cs": "brzy",
+          "de": "früh",
+          "fr": "tôt"
+        }
+      },
+      "uh": {
+        "lemma": "uh",
+        "pos": "interj",
+        "note": null,
+        "glosses": {
+          "en": "uh",
+          "cs": "ehm",
+          "de": "äh",
+          "fr": "euh"
+        }
+      },
+      "aman": {
+        "lemma": "amar",
+        "pos": "verb",
+        "note": "third-person plural",
+        "glosses": {
+          "en": "love",
+          "cs": "milují",
+          "de": "lieben",
+          "fr": "aiment"
+        }
+      },
+      "lluvia": {
+        "lemma": "lluvia",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "rain",
+          "cs": "déšť",
+          "de": "Regen",
+          "fr": "pluie"
+        }
+      },
+      "se": {
+        "lemma": "se",
+        "pos": "pron",
+        "note": "reflexive pronoun",
+        "glosses": {
+          "en": "the",
+          "cs": "se",
+          "de": "sich",
+          "fr": "se"
+        }
+      },
+      "detuvo": {
+        "lemma": "detener",
+        "pos": "verb",
+        "note": "past tense",
+        "glosses": {
+          "en": "stopped",
+          "cs": "zastavil",
+          "de": "hielt an",
+          "fr": "s'est arrêté"
+        }
+      },
+      "mira": {
+        "lemma": "mirar",
+        "pos": "verb",
+        "note": "command form",
+        "glosses": {
+          "en": "look",
+          "cs": "podívej se",
+          "de": "schau",
+          "fr": "regarde"
+        }
+      },
+      "mami": {
+        "lemma": "mami",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "Mommy",
+          "cs": "mamka",
+          "de": "Mama",
+          "fr": "maman"
+        }
+      },
+      "le": {
+        "lemma": "le",
+        "pos": "pron",
+        "note": "indirect object pronoun",
+        "glosses": {
+          "en": "him",
+          "cs": "mu",
+          "de": "ihm",
+          "fr": "lui"
+        }
+      },
+      "saltar": {
+        "lemma": "saltar",
+        "pos": "verb",
+        "note": "infinitive form",
+        "glosses": {
+          "en": "jump",
+          "cs": "skákat",
+          "de": "springen",
+          "fr": "sauter"
+        }
+      },
+      "charcos": {
+        "lemma": "charco",
+        "pos": "noun",
+        "note": "plural form",
+        "glosses": {
+          "en": "puddles",
+          "cs": "kaluže",
+          "de": "Pfützen",
+          "fr": "flaques"
+        }
+      },
+      "lodo": {
+        "lemma": "lodo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "mud",
+          "cs": "bahno",
+          "de": "Schlamm",
+          "fr": "boue"
+        }
+      },
+      "adoran": {
+        "lemma": "adorar",
+        "pos": "verb",
+        "note": "third-person plural",
+        "glosses": {
+          "en": "love",
+          "cs": "zbožňují",
+          "de": "vergöttern",
+          "fr": "adorent"
+        }
+      },
+      "lobo": {
+        "lemma": "lodo",
+        "pos": "noun",
+        "note": "corruption of 'lodo'",
+        "glosses": {
+          "en": "muddy",
+          "cs": "špinavý",
+          "de": "schlammig",
+          "fr": "boueuse"
+        }
+      },
+      "todos": {
+        "lemma": "todo",
+        "pos": "pron",
+        "note": "masculine plural",
+        "glosses": {
+          "en": "everyone",
+          "cs": "všichni",
+          "de": "alle",
+          "fr": "tout le monde"
+        }
+      },
+      "modo": {
+        "lemma": "modo",
+        "pos": "noun",
+        "note": null,
+        "glosses": {
+          "en": "mode",
+          "cs": "režim",
+          "de": "Modus",
+          "fr": "mode"
+        }
+      },
+      "activado": {
+        "lemma": "activar",
+        "pos": "verb",
+        "note": "past participle",
+        "glosses": {
+          "en": "activated",
+          "cs": "aktivován",
+          "de": "aktiviert",
+          "fr": "activé"
+        }
+      },
+      "encuentra": {
+        "lemma": "encontrar",
+        "pos": "verb",
+        "note": "command form",
+        "glosses": {
+          "en": "find",
+          "cs": "najdi",
+          "de": "finde",
+          "fr": "trouve"
+        }
+      },
+      "lo": {
+        "lemma": "el",
+        "pos": "pron",
+        "note": "neuter pronoun",
+        "glosses": {
+          "en": "what",
+          "cs": "to",
+          "de": "was",
+          "fr": "ce"
+        }
+      }
+    },
+    "collection": "peppa"
   }
 ]
