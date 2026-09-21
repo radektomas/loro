@@ -1,4 +1,8 @@
 import { DevSettings } from 'react-native';
+import { devRaiseDayDone } from '../feed/dayDone';
+import { devRaiseLevelUp } from '../feed/levelUp';
+import { devRaiseReviewEnd } from '../feed/reviewSession';
+import { devRaiseWordLearned } from '../feed/wordLearned';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { storageDriver } from './storage';
 
@@ -125,6 +129,10 @@ export function installDevMenu(): void {
    * that no longer exists.
    */
   publish([
+    /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
+        "so i can see it right away and not search it like a crazy man").
+        Open the Feed tab, then tap. */
+    { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     /**
      * THE DEFAULT FIRST RUN, AND IT ENDS AT THE WALL.
      *
@@ -191,6 +199,19 @@ export function installDevMenu(): void {
       name: 'Loro · Play a telenovela episode (embed test)',
       run: () => requestDevVideo('FrfN6fMMMZ4'),
     },
+    /**
+     * THE CARDS, ON DEMAND (Radek, 2026-09-15: "add them to the devtools so
+     * I can see them all"). Each raises its card with made-up numbers and
+     * touches no latch, so the real one still fires when it is earned.
+     * Open the Feed tab first — the cards live there.
+     */
+    { name: 'Loro · Card: level up → Turista', run: () => devRaiseLevelUp(2) },
+    { name: 'Loro · Card: level up → Se Defiende', run: () => devRaiseLevelUp(3) },
+    { name: 'Loro · Card: level up → Casi Local', run: () => devRaiseLevelUp(4) },
+    { name: 'Loro · Card: level up → Local', run: () => devRaiseLevelUp(5) },
+    { name: 'Loro · Card: level up → Nativo', run: () => devRaiseLevelUp(6) },
+    { name: 'Loro · Card: day done', run: () => devRaiseDayDone() },
+    { name: 'Loro · Card: review session done', run: () => devRaiseReviewEnd() },
     /** Back to the real verdict from RevenueCat. */
     {
       name: 'Loro · Clear paywall override',

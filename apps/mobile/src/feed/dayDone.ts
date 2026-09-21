@@ -92,3 +92,10 @@ export function maybeCelebrateDayDone(now: number = Date.now()): boolean {
 export function dayDoneShownToday(now: number = Date.now()): boolean {
   return storageDriver.local.getItem(SHOWN_FOR_KEY) === dayKey(now);
 }
+
+/** DEV: raise the card with made-up numbers, no latch touched. */
+export function devRaiseDayDone(): void {
+  const { wordsPerDay } = getPlan();
+  const words = answeredCorrectToday(storage.getSavedWords()).slice(0, 6);
+  for (const l of listeners) l({ goal: wordsPerDay, count: wordsPerDay, streak: 4, words });
+}

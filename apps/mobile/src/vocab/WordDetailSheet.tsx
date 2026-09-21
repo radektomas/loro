@@ -25,6 +25,7 @@ import {
 import { formatDue, KNOWN_BOX } from '@loro/core/srs';
 import { storage } from '@loro/core/storage';
 import { getExplanations } from '../platform/explanations';
+import { SentenceWithHit, TranslationWithHit } from '../feed/SentenceWithHit';
 
 /**
  * The word-detail sheet on the Words tab — tap a row, get everything the app
@@ -66,11 +67,11 @@ function explanationLang(): ExplanationLang {
     : 'en';
 }
 
-/** The spoken sentence of a cue — cues carry words, not a text field. */
-function cueSentence(video: Video, cueIndex: number): string | null {
+/** The spoken words of a cue — cues carry words, not a text field. */
+function cueWords(video: Video, cueIndex: number): readonly { text: string }[] | null {
   const cue = video.cues[cueIndex];
   if (!cue || cue.words.length === 0) return null;
-  return cue.words.map((w) => w.text).join(' ');
+  return cue.words;
 }
 
 const REGISTER_LABEL: Record<string, string> = {
@@ -192,7 +193,7 @@ export function WordDetailSheet({
   const now = Date.now();
 
   const stateLabel: Record<SavedWord['state'], string> = {
-    lapsed: 'Slipped — review soon',
+    lapsed: 'Missed, review soon',
     new: 'Just saved',
     learning: 'Getting it',
     known: 'Learned ✓',
@@ -226,7 +227,11 @@ export function WordDetailSheet({
               </Text>
             )}
             <Text style={styles.srsDue}>
-              {word.dueAt <= now ? 'Ready now' : `Review ${formatDue(word.dueAt, now)}`}
+              {word.state === 'new'
+                ? 'Comes up as a blank when a video says it'
+                : word.dueAt <= now
+                  ? 'Ready now'
+                  : `Review ${formatDue(word.dueAt, now)}`}
             </Text>
           </View>
 
@@ -251,8 +256,9 @@ export function WordDetailSheet({
               {explanation.examples.map((example, i) => {
                 const video = derived.catalog.find((v) => v.id === example.videoId);
                 if (!video) return null;
-                const sentence = cueSentence(video, example.cueIndex);
-                if (!sentence) return null;
+                const words = cueWords(video, example.cueIndex);
+                if (!words) return null;
+                const key = normalizeSurface(word.text);
                 const cueTranslation =
                   video.cues[example.cueIndex]?.translations[lang] ??
                   video.cues[example.cueIndex]?.translations.en ??
@@ -260,9 +266,17 @@ export function WordDetailSheet({
                 return (
                   <View key={`${example.videoId}-${example.cueIndex}-${i}`}
                     style={styles.example}>
-                    <Text style={styles.exampleEs}>“{sentence}”</Text>
+                    <SentenceWithHit
+                      words={words}
+                      isHit={(w) => normalizeSurface(w.text) === key}
+                      style={styles.exampleEs}
+                    />
                     {cueTranslation && (
-                      <Text style={styles.exampleTr}>{cueTranslation}</Text>
+                      <TranslationWithHit
+                        text={cueTranslation}
+                        gloss={word.translation}
+                        style={styles.exampleTr}
+                      />
                     )}
                   </View>
                 );

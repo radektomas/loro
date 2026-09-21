@@ -50,9 +50,17 @@ export function ReviewPickerSheet({
   onPick,
   onFeed,
   onClose,
+  kind = 'due',
 }: {
   /** Due words, most urgent first — the caller's ordering is kept. */
   words: SavedWord[];
+  /**
+   * 'due' is the Review door: words waiting. 'learned' is the Learned
+   * face's Practise: every word earned, pick one to bring back (Radek,
+   * 2026-09-18: "all of the learned words should come up and you choose").
+   * Same sheet, same landing; only the words and the line under the title.
+   */
+  kind?: 'due' | 'learned';
   /** A word was chosen (by tap or by Random). The caller parks it and
       launches AFTER its window is gone. */
   onPick: (word: SavedWord) => void;
@@ -94,8 +102,9 @@ export function ReviewPickerSheet({
         <View style={styles.grabber} />
         <Text style={styles.title}>Which word?</Text>
         <Text style={styles.subtitle}>
-          {rows.playable.length} ready · most urgent first. The video opens just
-          before the word.
+          {kind === 'learned'
+            ? `${rows.playable.length} learned · newest first. The video opens just before the word.`
+            : `${rows.playable.length} ready · most urgent first. The video opens just before the word.`}
         </Text>
 
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
@@ -113,7 +122,7 @@ export function ReviewPickerSheet({
                   {word.translation}
                 </Text>
               </View>
-              {word.state === 'lapsed' && <Text style={styles.rowSlipped}>Slipped</Text>}
+              {word.state === 'lapsed' && <Text style={styles.rowSlipped}>Missed</Text>}
               <Text style={styles.rowChevron}>›</Text>
             </Pressable>
           ))}
@@ -122,8 +131,8 @@ export function ReviewPickerSheet({
             <Text style={styles.silentNote}>
               {rows.playable.length === 0 ? 'Your ' : `${rows.silent} more `}
               {rows.silent === 1 && rows.playable.length > 0 ? 'word is' : 'words are'}{' '}
-              ready but not in any video right now. They come back as blanks when
-              a video says them.
+              {kind === 'learned' ? 'learned' : 'ready'} but not in any video right now.
+              They come back as blanks when a video says them.
             </Text>
           )}
         </ScrollView>

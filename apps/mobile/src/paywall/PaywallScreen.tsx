@@ -231,29 +231,17 @@ function zeroPrice(product: PurchasesStoreProduct): string {
   }
 }
 
-function TimelineRow({
-  dot,
-  head,
-  body,
-  last = false,
-}: {
-  dot: string;
-  head: string;
-  body: string;
-  last?: boolean;
-}) {
+/**
+ * One stop on the trial timeline: a column in the sheet, a small mint
+ * label on top and the fact under it. No dots, no icons, no rail — the
+ * same sheet the plan screens use, so the wall reads as the last page of
+ * the plan rather than a different app.
+ */
+function TimelineStop({ head, body }: { head: string; body: string }) {
   return (
-    <View style={styles.tlRow}>
-      <View style={styles.tlRail}>
-        <View style={styles.tlDot}>
-          <Text style={styles.tlDotText}>{dot}</Text>
-        </View>
-        {!last && <View style={styles.tlLine} />}
-      </View>
-      <View style={styles.tlText}>
-        <Text style={styles.tlHead}>{head}</Text>
-        <Text style={styles.tlBody}>{body}</Text>
-      </View>
+    <View style={styles.tlStop}>
+      <Text style={styles.tlHead}>{head}</Text>
+      <Text style={styles.tlBody}>{body}</Text>
     </View>
   );
 }
@@ -510,31 +498,21 @@ export function PaywallScreen() {
             line instead. */}
         {offer.status === 'ready' && selected && selectedDays !== null && (
           <View style={styles.timeline}>
-            <TimelineRow
-              dot="●"
-              head="Today"
-              body="Everything unlocked. Every video, every word, every review."
-            />
-            <TimelineRow
-              dot="🔔"
-              head={`Day ${selectedDays - 2}`}
-              body="We remind you before anything is charged."
-            />
-            <TimelineRow
-              dot="★"
+            <TimelineStop head="Today" body="Everything unlocked" />
+            <View style={styles.tlDivider} />
+            <TimelineStop head={`Day ${selectedDays - 2}`} body="We remind you" />
+            <View style={styles.tlDivider} />
+            <TimelineStop
               head={`Day ${selectedDays}`}
-              body={`Your trial ends. ${selected.product.priceString} ${billedWord(selectedPeriod)} from here, unless you cancelled.`}
-              last
+              body={`Trial ends, ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
             />
           </View>
         )}
         {offer.status === 'ready' && selected && selectedDays === null && (
           <View style={styles.timeline}>
-            <TimelineRow
-              dot="●"
+            <TimelineStop
               head="Today"
               body={`Everything unlocked, ${selected.product.priceString} ${billedWord(selectedPeriod)}. No trial on this plan.`}
-              last
             />
           </View>
         )}
@@ -693,22 +671,25 @@ const styles = StyleSheet.create({
   },
   stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
   stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
-  timeline: { marginTop: 22 },
-  tlRow: { flexDirection: 'row', gap: 12 },
-  tlRail: { alignItems: 'center', width: 28 },
-  tlDot: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(94,230,168,0.16)',
-    borderRadius: 999,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
+  timeline: {
+    backgroundColor: CARD,
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 24,
+    overflow: 'hidden',
   },
-  tlDotText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
-  tlLine: { backgroundColor: 'rgba(94,230,168,0.25)', flex: 1, marginVertical: 3, width: 2 },
-  tlText: { flex: 1, paddingBottom: 14 },
-  tlHead: { color: TEXT, fontSize: 14, fontWeight: '800' },
-  tlBody: { color: MUTED, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  tlStop: { flex: 1, paddingHorizontal: 12, paddingVertical: 14 },
+  tlDivider: { backgroundColor: 'rgba(242,245,243,0.08)', width: 1 },
+  tlHead: {
+    color: ACCENT,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  tlBody: { color: TEXT, fontSize: 14, fontWeight: '600', lineHeight: 19, marginTop: 6 },
   disclosure: {
     color: 'rgba(242,245,243,0.45)',
     fontSize: 11,

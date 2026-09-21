@@ -20,7 +20,7 @@ import {
   dayKey,
   distinctWords,
   dueCount,
-  isLearned,
+  isReady,
   learnedThisWeek,
   nextDueAt,
   splitFunctionWords,
@@ -29,6 +29,8 @@ import {
   type WeekDay,
 } from '@loro/core/progress';
 import { launchReview, launchReviewOfWord } from '../feed/launchReview';
+import { requestWordsView } from '../vocab/wordsView';
+import { onLearnedFace } from '../feed/wordLearned';
 import {
   formatTime,
   getPermissionState,
@@ -341,11 +343,14 @@ function LearnedCard({
   week,
   onTheWay,
   allTime,
+  onSeeAll,
 }: {
   week: SavedWord[];
   /** Saved, not yet learned, not slipped — the pipeline. */
   onTheWay: number;
   allTime: number;
+  /** The Words tab's Learned face — every word ever earned, and practice. */
+  onSeeAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const { content, small } = splitFunctionWords(week);
@@ -392,6 +397,19 @@ function LearnedCard({
           <Text style={styles.allTimeStrong}>{onTheWay}</Text> on the way
         </Text>
       </View>
+      {/* Radek, 2026-09-18: the learned words felt "hidden and not clear".
+          The count was here all along; this is the door to the words
+          themselves, and to practising them. */}
+      {onSeeAll && allTime > 0 && (
+        <Pressable
+          onPress={onSeeAll}
+          accessibilityRole="button"
+          accessibilityHint="Opens the Words tab on your learned words"
+          style={({ pressed }) => [styles.seeAll, pressed && styles.pressed]}
+        >
+          <Text style={styles.seeAllText}>See all {allTime} learned words ›</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -408,8 +426,8 @@ function LearnedCard({
  * correct/false words, learned words amount, it makes more sense". The
  * row reads "61 of 75 words → Casi Local", the meter is the way through
  * that step, and each rung on the ladder names its threshold. `learned`
- * is the same distinct-word isLearned count the Learned card prints, so
- * the two never disagree. The feed's own level (storage.getLevelState) is
+ * is the same distinct-word count the Learned card and the Words tab's
+ * Learned pile print (onLearnedFace), so the three never disagree. The feed's own level (storage.getLevelState) is
  * no longer shown anywhere on this page; it still drives the blanks.
  */
 function LevelSection({ learned }: { learned: number }) {
@@ -722,9 +740,12 @@ function NotificationsSection() {
 export function ProgressScreen({
   active,
   onGoToFeed,
+  onGoToWords,
 }: {
   active: boolean;
   onGoToFeed: () => void;
+  /** The learned card's door to the Words tab's Learned face. */
+  onGoToWords?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [words, setWords] = useState<SavedWord[]>(() => storage.getSavedWords());
@@ -777,19 +798,20 @@ export function ProgressScreen({
   }, [active]);
 
   /**
-   * The honest totals. `learned` is core's isLearned over DISTINCT words —
-   * not `state === 'known'`, which counted starter grants and one-shot
-   * fills, and not rows, which counted "de" three times. `learning` is the
-   * pipeline: saved, not yet learned, not slipped. ("Times remembered",
-   * the sum of every correct answer, used to sit beside them; nobody could
-   * say what it meant, so it went with the chips.)
+   * The totals, and they are the Words tab's. `learned` is onLearnedFace
+   * over DISTINCT words — earned from memory OR filed as known, not
+   * slipped — because Radek wants ONE number everywhere (2026-09-18:
+   * "progress words learned need to be definitely unified"; the Learned
+   * pile said 80 while this said 60). One-shot level fills are demoted on
+   * read (core demoteLegacyLevelFill), so they do not creep back in.
+   * `learning` is the pipeline: saved, not yet learned, not slipped.
    */
   const totals = useMemo(() => {
     const distinct = distinctWords(words);
     let learned = 0;
     let learning = 0;
     for (const w of distinct) {
-      if (isLearned(w)) learned++;
+      if (onLearnedFace(w)) learned++;
       else if (w.state === 'learning' || w.state === 'new') learning++;
     }
     return { learned, learning };
@@ -822,7 +844,7 @@ export function ProgressScreen({
   const dueWords = useMemo(
     () =>
       words
-        .filter((w) => w.dueAt <= now)
+        .filter((w) => isReady(w, now))
         .sort(
           (a, b) =>
             Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
@@ -887,6 +909,14 @@ export function ProgressScreen({
                 week={learnedWeek}
                 onTheWay={totals.learning}
                 allTime={totals.learned}
+                onSeeAll={
+                  onGoToWords
+                    ? () => {
+                        requestWordsView('learned');
+                        onGoToWords();
+                      }
+                    : undefined
+                }
               />
             </View>
 
@@ -1189,6 +1219,8 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   allTimeStrong: { color: 'rgba(242,245,243,0.8)', fontWeight: '700' },
+  seeAll: { marginTop: 10 },
+  seeAllText: { color: '#5ee6a8', fontSize: 14, fontWeight: '700' },
 
   /** LEVEL. */
   tier: {
