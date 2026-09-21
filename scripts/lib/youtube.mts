@@ -79,6 +79,7 @@ export type YouTubeVideo = {
     license?: string;
     embeddable?: boolean;
     privacyStatus?: string;
+    madeForKids?: boolean;
     uploadStatus?: string;
   };
 };
