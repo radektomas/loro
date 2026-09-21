@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Ingest whole EPISODES into a collection shelf — Peppa, Masha, Bluey, the
- * novelas — from explicit YouTube ids.
+ * novelas when they come — from explicit YouTube ids.
  *
  *   npm run ingest-episodes -- --collection peppa --ids a,b,c [--budget-usd 1] [--dry-run]
  *

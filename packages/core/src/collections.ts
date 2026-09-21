@@ -27,9 +27,9 @@ export const REELS = 'reels';
 export const COLLECTIONS: readonly Collection[] = [
   { id: REELS, label: 'Reels', episodes: false },
   { id: 'peppa', label: 'Peppa Pig', episodes: true },
-  { id: 'masha', label: 'Masha y el Oso', episodes: true },
-  { id: 'bluey', label: 'Bluey', episodes: true },
-  { id: 'novelas', label: 'Novelas', episodes: true },
+  // Masha, Bluey and the novelas were shelves here until 2026-09-21. Radek:
+  // "in the next update I will just release Peppa Pig — we don't have them
+  // yet". A shelf returns when it has episodes to show, not before.
 ];
 
 export function collectionOf(video: Pick<Video, 'collection'>): string {

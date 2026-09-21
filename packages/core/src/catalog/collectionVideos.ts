@@ -4,7 +4,7 @@ import type { Video } from '../types.ts';
 import { mapEmbedEntries } from './embedVideos.ts';
 
 /**
- * THE COLLECTIONS FILE — Peppa, Masha, Bluey, the novelas — kept APART from
+ * THE COLLECTIONS FILE — Peppa today, more shows later — kept APART from
  * data/embedVideos.json on purpose (2026-09-11). The App Store build shows
  * whatever the published snapshot holds, inside a vertical reels feed, and
  * knows nothing of collections; so these stay out of that snapshot until a

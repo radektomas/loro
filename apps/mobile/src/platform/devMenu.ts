@@ -195,10 +195,6 @@ export function installDevMenu(): void {
       name: 'Loro · Play a Peppa episode (kids-embed test)',
       run: () => requestDevVideo('8EtuM5xgpno'),
     },
-    {
-      name: 'Loro · Play a telenovela episode (embed test)',
-      run: () => requestDevVideo('FrfN6fMMMZ4'),
-    },
     /**
      * THE CARDS, ON DEMAND (Radek, 2026-09-15: "add them to the devtools so
      * I can see them all"). Each raises its card with made-up numbers and

@@ -108,7 +108,7 @@ export type Video = {
   durationSeconds?: number;
   /**
    * Which shelf the feed shows this under — 'reels' (absent means reels),
-   * 'peppa', 'masha', 'bluey', 'novelas'… See core/collections.ts. Every
+   * 'peppa', … See core/collections.ts. Every
    * collection but reels is landscape and played in episode order.
    */
   collection?: string;
