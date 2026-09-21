@@ -3,6 +3,7 @@ import { normalizeAnswer } from './srs.ts';
 import { glossText, lookupGloss, normalizeSurface } from './dictionary.ts';
 import { isFunctionWord } from './glossary.ts';
 import { numberWordBand } from './numerals.ts';
+import { cueWindows, isLongVideo, longBlankCount } from './blankBudget.ts';
 
 /**
  * Level fill-in mode: every word gets an approximate difficulty level, the
@@ -369,7 +370,10 @@ export function computeLevelBlankPlan(
   const saved = new Set(savedWords.map((w) => normalizeAnswer(w.text)));
   const plan = new Map<number, LevelBlankWord>();
   const used = new Set<string>();
-  const maxBlanks = maxLevelBlanks(video.cues.length);
+  // A long video is budgeted by length and filled window by window, so an
+  // episode has practice all the way through (blankBudget.ts).
+  const long = isLongVideo(video);
+  const maxBlanks = long ? longBlankCount(video) : maxLevelBlanks(video.cues.length);
 
   // Checked against every planned cue rather than a running maximum: later
   // passes fill gaps left by earlier ones, so they can land BEFORE a cue
@@ -381,40 +385,61 @@ export function computeLevelBlankPlan(
     return false;
   };
 
+  /** Plan one word of `band` in cue `ci` if it has one. */
+  const tryCue = (ci: number, band: number): boolean => {
+    for (const word of video.cues[ci].words) {
+      // Zero-length timings are alignment artifacts (UGC pipeline data can
+      // carry them). The blank interaction is "hear the word, then type it"
+      // — a word with no audible span was never heard, so never blank it.
+      if (word.end - word.start <= 0.05) continue;
+      const key = normalizeAnswer(word.text);
+      if (key.length < 2 || saved.has(key) || used.has(key)) continue;
+      const gloss = lookupGloss(video, word.text);
+      if (wordLevel(normalizeSurface(word.text), gloss?.lemma) !== band) {
+        continue;
+      }
+      const translation = gloss && glossText(gloss, language);
+      if (!translation) continue;
+
+      plan.set(ci, {
+        text: word.text,
+        translation,
+        videoId: video.id,
+        cueIndex: ci,
+        // The word's OWN band, which is what the tier chip names. Equal to
+        // the user's level whenever the exact band had material, and
+        // honest about the step out when it did not.
+        level: band,
+      });
+      used.add(key);
+      return true;
+    }
+    return false;
+  };
+
+  if (long) {
+    // One blank per window, the exact band first within each window and
+    // the nearest bands out only when the window has nothing at it.
+    for (const [start, end] of cueWindows(video.cues.length, MIN_CUE_INDEX, maxBlanks)) {
+      let placed = false;
+      for (const band of bandPreference(userLevel)) {
+        for (let ci = start; ci < end && !placed; ci++) {
+          if (excludeCues.has(ci) || plan.has(ci) || tooClose(ci)) continue;
+          placed = tryCue(ci, band);
+        }
+        if (placed) break;
+      }
+    }
+    return plan;
+  }
+
   for (const band of bandPreference(userLevel)) {
     if (plan.size >= maxBlanks) break;
 
     for (let ci = MIN_CUE_INDEX; ci < video.cues.length; ci++) {
       if (plan.size >= maxBlanks) break;
       if (excludeCues.has(ci) || plan.has(ci) || tooClose(ci)) continue;
-
-      for (const word of video.cues[ci].words) {
-        // Zero-length timings are alignment artifacts (UGC pipeline data can
-        // carry them). The blank interaction is "hear the word, then type it"
-        // — a word with no audible span was never heard, so never blank it.
-        if (word.end - word.start <= 0.05) continue;
-        const key = normalizeAnswer(word.text);
-        if (key.length < 2 || saved.has(key) || used.has(key)) continue;
-        const gloss = lookupGloss(video, word.text);
-        if (wordLevel(normalizeSurface(word.text), gloss?.lemma) !== band) {
-          continue;
-        }
-        const translation = gloss && glossText(gloss, language);
-        if (!translation) continue;
-
-        plan.set(ci, {
-          text: word.text,
-          translation,
-          videoId: video.id,
-          cueIndex: ci,
-          // The word's OWN band, which is what the tier chip names. Equal to
-          // the user's level whenever the exact band had material, and
-          // honest about the step out when it did not.
-          level: band,
-        });
-        used.add(key);
-        break;
-      }
+      tryCue(ci, band);
     }
   }
   return plan;
