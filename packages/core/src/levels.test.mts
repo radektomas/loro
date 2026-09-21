@@ -242,3 +242,25 @@ describe('tierForLearned — the ladder on words learned', () => {
     assert.equal(tierForLearned(30.7).have, 30);
   });
 });
+
+describe('computeLevelBlankPlan — long videos', () => {
+  // 200 one-second cues: a 200s video, well over LONG_VIDEO_S. Every cue
+  // offers one unlisted (band 5) word, so a band-5 user can be asked
+  // anywhere — the question is WHERE the planner chooses to ask.
+  const long = video(Array.from({ length: 200 }, (_, i) => [FILLER_WORD, `zq${i}`]));
+
+  it('budgets by length and spreads the blanks across the whole run', () => {
+    const plan = computeLevelBlankPlan(long, 5, [], 'en');
+    assert.equal(plan.size, 6); // floor(200 / 30)
+    const cues = [...plan.keys()].sort((a, b) => a - b);
+    assert.ok(cues[0] >= 2);
+    assert.ok(cues[cues.length - 1] >= 160, `last blank at cue ${cues[cues.length - 1]}`);
+    for (let i = 1; i < cues.length; i++) assert.ok(cues[i] - cues[i - 1] >= 20);
+  });
+
+  it('leaves a short video exactly as it was', () => {
+    const short = video(Array.from({ length: 20 }, (_, i) => [FILLER_WORD, `zq${i}`]));
+    const plan = computeLevelBlankPlan(short, 5, [], 'en');
+    assert.equal(plan.size, 4);
+  });
+});

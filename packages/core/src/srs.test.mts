@@ -268,3 +268,16 @@ describe('matchAnswer — near-miss tier', () => {
     assert.equal(matchAnswer('zzzzz', 'perro'), 'wrong');
   });
 });
+
+describe('computeBlankPlan — long videos', () => {
+  it('raises the cap by length and keeps recall blanks apart in time', () => {
+    // 200 one-second cues; eight due words, one every twenty cues.
+    const cues: string[][] = Array.from({ length: 200 }, () => ['x']);
+    const words = ['uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho'];
+    words.forEach((w, i) => { cues[5 + i * 20] = [w]; });
+    const plan = computeBlankPlan(video('long', cues), words.map((w) => saved(w, 'vid-A')), NOW);
+    assert.equal(plan.size, 6); // max(5, floor(200 / 30))
+    const at = [...plan.keys()].sort((a, b) => a - b);
+    for (let i = 1; i < at.length; i++) assert.ok(at[i] - at[i - 1] >= 12);
+  });
+});

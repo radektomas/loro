@@ -29,8 +29,12 @@ export const BOX_INTERVALS_MS = [
 
 export const MAX_BOX = BOX_INTERVALS_MS.length - 1;
 
+import { isLongVideo, longBlankCount } from './blankBudget.ts';
+
 /** Blank throttling — the feed must never feel like a test. */
 const MAX_BLANKS_PER_VIDEO = 5;
+/** On a long video, two recall blanks keep at least this far apart. */
+const MIN_RECALL_GAP_S = 12;
 const MAX_BLANKS_IN_FIRST_TWO_CUES = 1;
 /** Never blank a word saved less than this long ago (matches box 0's interval). */
 const MIN_AGE_MS = 1 * MIN;
@@ -334,6 +338,11 @@ export function computeBlankPlan(
   const plan = new Map<number, SavedWord>();
   const used = new Set<string>();
   let inFirstTwo = 0;
+  // A long video carries more (blankBudget.ts), spaced out in time so they
+  // do not all land in its first minute.
+  const long = isLongVideo(video);
+  const cap = long ? Math.max(MAX_BLANKS_PER_VIDEO, longBlankCount(video)) : MAX_BLANKS_PER_VIDEO;
+  let lastAt = -Infinity;
 
   // The asked-for word goes in first and decides where the rest of the plan
   // starts, so it is the first blank the user meets.
@@ -343,11 +352,13 @@ export function computeBlankPlan(
     used.add(asked.key);
     if (asked.cueIndex < 2) inFirstTwo++;
     from = asked.cueIndex + 1;
+    lastAt = video.cues[asked.cueIndex]?.start ?? lastAt;
   }
 
   for (let ci = from; ci < video.cues.length; ci++) {
-    if (plan.size >= MAX_BLANKS_PER_VIDEO) break;
+    if (plan.size >= cap) break;
     if (ci < 2 && inFirstTwo >= MAX_BLANKS_IN_FIRST_TWO_CUES) continue;
+    if (long && video.cues[ci].start - lastAt < MIN_RECALL_GAP_S) continue;
 
     let chosen: SavedWord | undefined;
     let chosenKey = '';
@@ -366,6 +377,7 @@ export function computeBlankPlan(
     plan.set(ci, chosen);
     used.add(chosenKey);
     if (ci < 2) inFirstTwo++;
+    lastAt = video.cues[ci].start;
   }
   return plan;
 }
