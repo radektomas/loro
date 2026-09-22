@@ -17,6 +17,7 @@ import Animated, {
 import { onCatalogChanged } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
 import { CHROME } from './copy';
+import { Backdrop } from './art';
 import { SLIDE_MS, olog } from './flow';
 import {
   INITIAL_FLOW,
@@ -66,7 +67,7 @@ function canonicalIndex(id: StepId): number {
  * this component renders instead of Shell rather than inside it (App.tsx).
  */
 export function Onboarding({ onDone }: { onDone: () => void }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
 
@@ -258,6 +259,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={styles.root}>
+      {/* The light behind every screen — pools of colour that drift and
+          follow the row at a fraction of its travel (art.tsx Backdrop). */}
+      <Backdrop width={width} height={height} />
       {/* Chrome sits ABOVE the row and does not move with it: a progress bar
           that slid off screen with its own screen would be a strange thing. */}
       {!fullBleed && (

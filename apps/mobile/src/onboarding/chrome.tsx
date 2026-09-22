@@ -1,6 +1,14 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 /**
  * The shared furniture every onboarding screen is built from.
@@ -123,10 +131,14 @@ export function ChoiceCard({
   selected,
   multi,
   onPress,
+  icon,
 }: {
   label: string;
   body?: string;
   selected?: boolean;
+  /** A tile on the left (art.tsx IconTile) — the colour these cards were
+      missing (2026-09-22). */
+  icon?: ReactNode;
   /**
    * Several answers allowed. Changes what the card SAYS about itself, not just
    * how it looks: a box that can stay ticked alongside its neighbours is a
@@ -137,36 +149,74 @@ export function ChoiceCard({
   onPress: () => void;
 }) {
   const on = Boolean(selected);
+  /**
+   * SELECTION IS ANIMATED, not switched (Radek, 2026-09-22: "smoother
+   * choosing"). One clock, 0→1, drives the fill, the border and the label
+   * colour together, and a press squeezes the card a touch; a tap reads
+   * as a tap rather than a repaint. Reduce Motion makes both instant.
+   */
+  const reduced = useReducedMotion();
+  const sel = useSharedValue(on ? 1 : 0);
+  const press = useSharedValue(0);
+  useEffect(() => {
+    sel.value = withTiming(on ? 1 : 0, {
+      duration: reduced ? 0 : 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [on, reduced, sel]);
+  const card = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sel.value, [0, 1], [CARD, CHOICE_ON_BG]),
+    borderColor: interpolateColor(sel.value, [0, 1], [CHOICE_OFF_BORDER, CHOICE_ON_BORDER]),
+    transform: [{ scale: 1 - press.value * 0.02 }],
+  }));
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(sel.value, [0, 1], [TEXT, ACCENT]),
+  }));
+  const tickStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sel.value, [0, 1], ['rgba(94,230,168,0)', ACCENT]),
+    borderColor: interpolateColor(sel.value, [0, 1], [TICK_OFF_BORDER, ACCENT]),
+  }));
+  const tickMark = useAnimatedStyle(() => ({
+    opacity: sel.value,
+    transform: [{ scale: 0.6 + sel.value * 0.4 }],
+  }));
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={() => {
+        press.value = withTiming(1, { duration: reduced ? 0 : 90 });
+      }}
+      onPressOut={() => {
+        press.value = withTiming(0, { duration: reduced ? 0 : 160 });
+      }}
       accessibilityRole={multi ? 'checkbox' : 'radio'}
       accessibilityState={multi ? { checked: on } : { selected: on }}
-      style={({ pressed }) => [
-        styles.choice,
-        on && styles.choiceOn,
-        pressed && styles.pressed,
-      ]}
     >
-      <View style={styles.choiceRow}>
-        <View style={styles.choiceText}>
-          <Text style={[styles.choiceLabel, on && styles.choiceLabelOn]}>
-            {label}
-          </Text>
-          {body && <Text style={styles.choiceBody}>{body}</Text>}
-        </View>
-        {/* The tick box is drawn only in multi mode, and it is always drawn
-            there: an empty box is what tells you more than one is allowed
-            before you have tapped anything. */}
-        {multi && (
-          <View style={[styles.tick, on && styles.tickOn]}>
-            {on && <Text style={styles.tickMark}>✓</Text>}
+      <Animated.View style={[styles.choice, card]}>
+        <View style={styles.choiceRow}>
+          {icon}
+          <View style={styles.choiceText}>
+            <Animated.Text style={[styles.choiceLabel, labelStyle]}>{label}</Animated.Text>
+            {body && <Text style={styles.choiceBody}>{body}</Text>}
           </View>
-        )}
-      </View>
+          {/* The tick box is drawn only in multi mode, and it is always drawn
+              there: an empty box is what tells you more than one is allowed
+              before you have tapped anything. */}
+          {multi && (
+            <Animated.View style={[styles.tick, tickStyle]}>
+              <Animated.Text style={[styles.tickMark, tickMark]}>✓</Animated.Text>
+            </Animated.View>
+          )}
+        </View>
+      </Animated.View>
     </Pressable>
   );
 }
+
+const CHOICE_ON_BG = 'rgba(94,230,168,0.12)';
+const CHOICE_ON_BORDER = 'rgba(94,230,168,0.4)';
+const CHOICE_OFF_BORDER = 'rgba(20,26,23,1)';
+const TICK_OFF_BORDER = 'rgba(242,245,243,0.25)';
 
 /**
  * A static mock of the in-video blank, for the screen that teaches it.

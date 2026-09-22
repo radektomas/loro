@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -24,7 +24,6 @@ import {
   ACCENT,
   CARD,
   Body,
-  BlankMock,
   ChoiceCard,
   MUTED,
   ON_ACCENT,
@@ -34,6 +33,18 @@ import {
   Title,
 } from './chrome';
 import { BRAND } from './brand';
+import {
+  BarsIcon,
+  FeedMock,
+  IconTile,
+  LevelLadder,
+  LineMock,
+  ParrotPeek,
+  TINTS,
+  TypingMock,
+  WeekIcon,
+  type Tint,
+} from './art';
 import {
   BLANKS,
   CALIBRATION_INTRO,
@@ -171,7 +182,17 @@ const CALIBRATION_WORDS = buildCalibrationWords();
 
 // ------------------------------------------------------------------ 1. hook
 
-function HookStep({ next }: StepProps) {
+function HookStep({ next, isCurrent }: StepProps) {
+  /**
+   * FITS THE WINDOW, NEVER SCROLLS (Radek: "the first page cannot be able
+   * to scroll"). Everything else on the screen is a known height — logo,
+   * title, body, button, chrome, paddings — so the mock takes what is left
+   * and no more, between a floor that still reads and a ceiling that
+   * still looks like a phone.
+   */
+  const { height } = useWindowDimensions();
+  const fixed = 96 + 74 + 46 + 96 + 60 + 72 + 24; // logo, title, body, footer, chrome, paddings, stage margins
+  const mockWidth = Math.max(150, Math.min(210, (height - fixed - 96) / 1.25));
   return (
     <Screen footer={<PrimaryButton label={HOOK.cta} onPress={next} />}>
       {/* The full lockup, wordmark and parrot together, because this is the
@@ -184,6 +205,20 @@ function HookStep({ next }: StepProps) {
         accessibilityRole="image"
         accessibilityLabel="Loro"
       />
+      {/* THE PRODUCT, BEFORE A WORD ABOUT IT: a phone with a clip playing,
+          the line under it with one word lit, and the tap→saved beat on a
+          loop. Someone who reads nothing else on this screen still knows
+          what the app does. The scene is drawn, not a real clip. */}
+      <View style={styles.hookStage}>
+        <FeedMock
+          words={['Vivo', 'en', 'esta', 'ciudad']}
+          litIndex={2}
+          translation="I live in this city"
+          gloss="this"
+          isCurrent={isCurrent}
+          width={mockWidth}
+        />
+      </View>
       <Title>{HOOK.title}</Title>
       <Body>{HOOK.body}</Body>
     </Screen>
@@ -220,20 +255,54 @@ function MotivationStep({ state, update, next }: StepProps) {
       <Title>{MOTIVATION.title}</Title>
       <Body>{MOTIVATION.body}</Body>
       <View style={styles.choices}>
-        {MOTIVATION.options.map((option) => (
-          <ChoiceCard
-            key={option.id}
-            multi
-            label={option.label}
-            body={option.body}
-            selected={state.motivation.includes(option.id)}
-            onPress={() => toggle(option.id)}
-          />
-        ))}
+        {MOTIVATION.options.map((option) => {
+          const on = state.motivation.includes(option.id);
+          const art = MOTIVATION_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
+          return (
+            <ChoiceCard
+              key={option.id}
+              multi
+              label={option.label}
+              body={option.body}
+              selected={on}
+              icon={<IconTile glyph={art.glyph} tint={art.tint} on={on} />}
+              onPress={() => toggle(option.id)}
+            />
+          );
+        })}
       </View>
     </Screen>
   );
 }
+
+/**
+ * ART PER ANSWER, NOT COPY: a glyph and a tint for each card. Keyed on the
+ * stored ids, so a label can be reworded in copy.ts without touching this.
+ * Four different tints on purpose — one accent repeated four times is the
+ * "black and white" Radek was tired of.
+ */
+/** Text-presentation symbols (U+FE0E forces the monochrome form), drawn
+    in the tile's tint — never an emoji. */
+const MOTIVATION_ART: Record<string, { glyph: string; tint: Tint }> = {
+  travel: { glyph: '✈︎', tint: 'sky' },
+  people: { glyph: '♥︎', tint: 'rose' },
+  work: { glyph: '✎︎', tint: 'amber' },
+  culture: { glyph: '♫', tint: 'violet' },
+};
+
+/** Drawn bars: one lit for zero, two for a bit, three for comfortable. */
+const SELF_LEVEL_ART: Record<string, { level: 1 | 2 | 3; tint: Tint }> = {
+  zero: { level: 1, tint: 'mint' },
+  some: { level: 2, tint: 'sky' },
+  confident: { level: 3, tint: 'amber' },
+};
+
+/** Drawn week: three days lit, every day lit, every day twice over. */
+const FREQUENCY_ART: Record<string, { lit: number; strong?: boolean; tint: Tint }> = {
+  light: { lit: 3, tint: 'amber' },
+  daily: { lit: 7, tint: 'rose' },
+  serious: { lit: 7, strong: true, tint: 'violet' },
+};
 
 // ----------------------------------------------------------- 3. self-assess
 
@@ -279,15 +348,26 @@ function SelfLevelStep({ state, update, next }: StepProps) {
       <Title>{SELF_LEVEL.title}</Title>
       <Body>{SELF_LEVEL.body}</Body>
       <View style={styles.choices} accessibilityRole="radiogroup">
-        {SELF_LEVEL.options.map((option) => (
-          <ChoiceCard
-            key={option.id}
-            label={option.label}
-            body={option.body}
-            selected={state.selfLevel === option.id}
-            onPress={() => pick(option.id)}
-          />
-        ))}
+        {SELF_LEVEL.options.map((option) => {
+          const on = state.selfLevel === option.id;
+          const art = SELF_LEVEL_ART[option.id];
+          return (
+            <ChoiceCard
+              key={option.id}
+              label={option.label}
+              body={option.body}
+              selected={on}
+              icon={
+                art && (
+                  <IconTile tint={art.tint} on={on}>
+                    <BarsIcon level={art.level} tint={art.tint} on={on} />
+                  </IconTile>
+                )
+              }
+              onPress={() => pick(option.id)}
+            />
+          );
+        })}
       </View>
     </Screen>
   );
@@ -296,8 +376,32 @@ function SelfLevelStep({ state, update, next }: StepProps) {
 // ------------------------------------------------------ 4. calibration intro
 
 function CalibrationIntroStep({ next }: StepProps) {
+  // A taste of the grid itself: four of its real words, dimmed, one lit —
+  // so the next screen is recognised rather than met.
+  const preview = CALIBRATION_WORDS.slice(0, 5).map((w) => w.text);
   return (
     <Screen footer={<PrimaryButton label={CALIBRATION_INTRO.cta} onPress={next} />}>
+      <View style={styles.introStage}>
+        <View style={styles.introFacts}>
+          <View style={styles.introFact}>
+            <Text style={styles.introNumber}>{CALIBRATION_WORDS.length}</Text>
+            <Text style={styles.introUnit}>words</Text>
+          </View>
+          <View style={styles.introFactDivider} />
+          <View style={styles.introFact}>
+            <Text style={styles.introNumber}>20</Text>
+            <Text style={styles.introUnit}>seconds</Text>
+          </View>
+        </View>
+        <View style={styles.introChips}>
+          {preview.map((w, i) => (
+            <View key={w} style={[styles.introChip, i === 1 && styles.introChipOn]}>
+              <Text style={[styles.introChipText, i === 1 && styles.introChipTextOn]}>{w}</Text>
+            </View>
+          ))}
+        </View>
+        <ParrotPeek size={120} style={styles.introParrot} />
+      </View>
       <Title>{CALIBRATION_INTRO.title}</Title>
       <Body>{CALIBRATION_INTRO.body}</Body>
     </Screen>
@@ -455,6 +559,9 @@ function ResultStep({ state, next }: StepProps) {
             path that does not derive one. Rendered defensively anyway — a
             crash here would be at the worst possible moment. */}
         <Text style={styles.level}>{state.derived ?? 'A1'}</Text>
+        {/* The level on its scale: "A2" alone is a code; A2 lit on the road
+            from A1 to C2 is a place to start from. */}
+        <LevelLadder level={state.derived ?? 'A1'} />
         <Body>{RESULT.body}</Body>
       </View>
     </Screen>
@@ -508,15 +615,26 @@ function HowItWorksStep({ next, isCurrent }: StepProps) {
             captioned. The rail lives inside its row and reaches down through
             the text's bottom padding, which is why the container has no gap
             — a gap would cut the line at every joint. */}
+        {/* ONE PICTURE, THEN FOUR LINES. The picture is the mechanic in
+            a single beat: the line with the word lit, and the saved tag it
+            becomes. Under it, the steps as clean type — a large light
+            numeral and the sentence, nothing boxed. Two earlier cuts (a
+            dot-and-rail timeline with small grey text; four cards each
+            with its own mini picture) were "not visible enough" and then
+            "not pretty at all" (Radek, 2026-09-22). Less, larger, calmer. */}
+        <Reveal active={isCurrent} delay={150}>
+          <View style={styles.howStage}>
+            <LineMock words={['Vivo', 'en', 'esta', 'ciudad']} litIndex={2} />
+            <Text style={styles.stepArrow}>→</Text>
+            <View style={styles.stepSavedTag}>
+              <Text style={styles.stepSavedText}>✓ Saved · this</Text>
+            </View>
+          </View>
+        </Reveal>
         {HOW_IT_WORKS.steps.map((line, i) => (
-          <Reveal key={line} active={isCurrent} delay={250 + i * 450}>
-            <View style={styles.stepRow}>
-              <View style={styles.stepSpine}>
-                <View style={styles.stepDot} />
-                {i < HOW_IT_WORKS.steps.length - 1 && (
-                  <View style={styles.stepRail} />
-                )}
-              </View>
+          <Reveal key={line} active={isCurrent} delay={350 + i * 260}>
+            <View style={styles.stepLine}>
+              <Text style={styles.stepNumeral}>{i + 1}</Text>
               <Text style={styles.stepText}>{line}</Text>
             </View>
           </Reveal>
@@ -528,24 +646,23 @@ function HowItWorksStep({ next, isCurrent }: StepProps) {
 
 // -------------------------------------------------------------- 8. blanks
 
-function BlanksStep({ next }: StepProps) {
+function BlanksStep({ next, isCurrent }: StepProps) {
+  const at = BLANKS.mockSentence.indexOf('__BLANK__');
   return (
     <Screen footer={<PrimaryButton label={BLANKS.cta} onPress={next} />}>
       <Title>{BLANKS.title}</Title>
       <Body>{BLANKS.body}</Body>
-      {/* The mock sentence, laid out like the real subtitle line so the shape
-          is recognised when it appears mid-video. */}
-      <View style={styles.mockLine}>
-        {BLANKS.mockSentence.map((token, i) =>
-          token === '__BLANK__' ? (
-            <BlankMock key={i} gloss={BLANKS.mockGloss} />
-          ) : (
-            <Text key={i} style={styles.mockWord}>
-              {token}
-            </Text>
-          )
-        )}
-      </View>
+      {/* The mechanic, played: the gap in the line, the letters arriving in
+          the answer bar and the slot together, the word turning green. The
+          static dashed slot (BlankMock) was the first cut; the loop says
+          "the video waits, you type, it carries on" without a caption. */}
+      <TypingMock
+        before={BLANKS.mockSentence.slice(0, at)}
+        answer="esta"
+        after={BLANKS.mockSentence.slice(at + 1)}
+        gloss={BLANKS.mockGloss}
+        isCurrent={isCurrent}
+      />
     </Screen>
   );
 }
@@ -564,6 +681,18 @@ function FrequencyStep({ state, update, next }: StepProps) {
             label={option.label}
             body={option.body}
             selected={state.frequency === option.id}
+            // The dots alone, no tile behind them (Radek: "without the
+            // squares, the dots is a good idea").
+            icon={
+              FREQUENCY_ART[option.id] && (
+                <WeekIcon
+                  lit={FREQUENCY_ART[option.id].lit}
+                  strong={FREQUENCY_ART[option.id].strong}
+                  tint={FREQUENCY_ART[option.id].tint}
+                  size={7}
+                />
+              )
+            }
             onPress={() => {
               setFrequency(option.id);
               // The number core grades the streak day against (Shell.tsx).
@@ -1103,34 +1232,68 @@ function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
     { label: 'Recall', head: PLAN_READY.recallHead, body: PLAN_READY.recall },
   ];
 
+  /**
+   * ONE SCREEN, NO SCROLL (Radek, 2026-09-22: "make the page not
+   * scrolling, just the titles next to each other, smooth, and vamos").
+   * The parrot and the title share a row, the date is one line, and the
+   * four facts are their HEADLINES only, as a 2×2 of tinted tiles — the
+   * explanatory bodies from the sheet are gone; the paywall's own copy
+   * picks the story up next. Every line is still the user's own answer.
+   */
+  const tiles: { label: string; head: string; tint: Tint }[] = [
+    { label: rows[0].label, head: rows[0].head, tint: 'mint' },
+    { label: rows[1].label, head: rows[1].head, tint: 'sky' },
+    { label: rows[2].label, head: rows[2].head, tint: 'amber' },
+    { label: rows[3].label, head: rows[3].head, tint: 'violet' },
+  ];
   return (
     <Screen footer={<PrimaryButton label={PLAN_READY.cta} onPress={leave} />}>
-      <Image
-        source={BRAND.parrotWaving}
-        style={styles.parrotWaving}
-        resizeMode="contain"
-        accessibilityRole="image"
-        accessibilityLabel="Loro the parrot, waving"
-      />
-      <Title>{PLAN_READY.title}</Title>
-      <Text style={styles.planReadyGloss}>{PLAN_READY.gloss}</Text>
-      <Body>{`${PLAN_READY.targetPrefix}${goalDate}.`}</Body>
+      <View style={styles.readyHero}>
+        <Image
+          source={BRAND.parrotWaving}
+          style={styles.readyParrot}
+          resizeMode="contain"
+          accessibilityRole="image"
+          accessibilityLabel="Loro the parrot, waving"
+        />
+        <View style={styles.readyTitles}>
+          <Title>{PLAN_READY.title}</Title>
+          <Text style={styles.planReadyGloss}>{PLAN_READY.gloss}</Text>
+        </View>
+      </View>
+      <Text style={styles.readyDate}>
+        Fluent by <Text style={styles.readyDateStrong}>{goalDate}</Text>
+      </Text>
 
-      <View style={styles.planSheet}>
-        {rows.map((row, i) => (
-          <Reveal key={row.label} active={isCurrent} delay={200 + i * 180}>
-            <View style={[styles.planSheetRow, i > 0 && styles.planSheetRowNext]}>
-              <Text style={styles.planLabel}>{row.label}</Text>
-              <View style={styles.planReadyText}>
-                <Text style={styles.planReadyHead}>{row.head}</Text>
-                <Text style={styles.planReadyBody}>{row.body}</Text>
+      <View style={styles.readyGrid}>
+        {tiles.map((tile, i) => (
+          // The cell owns the column width; Reveal is a plain wrapper.
+          <View key={tile.label} style={styles.readyCell}>
+            <Reveal active={isCurrent} delay={200 + i * 140}>
+              <View
+                style={[
+                  styles.readyTile,
+                  { backgroundColor: readyTileBg(tile.tint), borderColor: readyTileBorder(tile.tint) },
+                ]}
+              >
+                <Text style={[styles.readyTileLabel, { color: TINTS[tile.tint] }]}>{tile.label}</Text>
+                <Text style={styles.readyTileHead} numberOfLines={3}>
+                  {tile.head}
+                </Text>
               </View>
-            </View>
-          </Reveal>
+            </Reveal>
+          </View>
         ))}
       </View>
     </Screen>
   );
+}
+
+function readyTileBg(tint: Tint): string {
+  return TINTS[tint] + '1f'; // ~12% — hex alpha on the tint
+}
+function readyTileBorder(tint: Tint): string {
+  return TINTS[tint] + '4d'; // ~30%
 }
 
 // -------------------------------------------------------------- 12. paywall
@@ -1339,7 +1502,101 @@ const styles = StyleSheet.create({
    * the logo 660pt wide; and a resizeMode of 'contain' with only a width would
    * still reserve the full intrinsic height, pushing the title off screen.
    */
-  logo: { alignSelf: 'flex-start', height: 104, marginBottom: 22, width: 210 },
+  logo: { alignSelf: 'flex-start', height: 88, marginBottom: 14, width: 178 },
+  hookStage: { alignItems: 'center', marginBottom: 22, marginTop: 4 },
+
+  // ---- calibration intro ----
+  introStage: {
+    backgroundColor: 'rgba(20,26,23,0.85)',
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 22,
+    borderWidth: 1,
+    marginBottom: 24,
+    overflow: 'hidden',
+    padding: 18,
+    paddingRight: 110,
+  },
+  introFacts: { alignItems: 'center', flexDirection: 'row', gap: 16 },
+  introFact: { alignItems: 'flex-start' },
+  introNumber: { color: ACCENT, fontSize: 40, fontWeight: '800', letterSpacing: -1, lineHeight: 44 },
+  introUnit: { color: MUTED, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  introFactDivider: { backgroundColor: 'rgba(242,245,243,0.12)', height: 36, width: 1 },
+  introChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 16 },
+  introChip: {
+    backgroundColor: 'rgba(242,245,243,0.07)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  introChipOn: { backgroundColor: ACCENT },
+  introChipText: { color: 'rgba(242,245,243,0.7)', fontSize: 13, fontWeight: '600' },
+  introChipTextOn: { color: ON_ACCENT, fontWeight: '800' },
+  introParrot: { bottom: -6, position: 'absolute', right: -14 },
+
+  // ---- how it works ----
+  stepCard: {
+    backgroundColor: 'rgba(20,26,23,0.9)',
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+    padding: 14,
+  },
+  stepNumber: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.16)',
+    borderRadius: 999,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  stepNumberText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
+  stepBody: { flex: 1 },
+  stepArt: { marginTop: 10 },
+  howStage: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(20,26,23,0.9)',
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  stepLine: { alignItems: 'flex-start', flexDirection: 'row', gap: 14, paddingVertical: 11 },
+  /** The numeral in a soft mint bubble — round, bold, the app's own
+      vibe (Radek: "make them more bubbly or smooth"). A thin light
+      numeral was the cut before. */
+  stepNumeral: {
+    backgroundColor: 'rgba(94,230,168,0.18)',
+    borderRadius: 999,
+    color: ACCENT,
+    fontSize: 15,
+    fontWeight: '800',
+    height: 32,
+    lineHeight: 32,
+    marginTop: -4,
+    overflow: 'hidden',
+    textAlign: 'center',
+    width: 32,
+  },
+  stepTapRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  stepArrow: { color: MUTED, fontSize: 16, fontWeight: '800' },
+  stepSavedTag: {
+    backgroundColor: 'rgba(94,230,168,0.14)',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  stepSavedText: { color: ACCENT, fontSize: 12, fontWeight: '800' },
   parrot: { height: 168, marginBottom: 18, width: 113 },
   parrotWaving: { alignSelf: 'flex-start', height: 150, marginBottom: 20, width: 134 },
   choices: { marginTop: 18 },
@@ -1370,7 +1627,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
     marginTop: 6,
   },
-  steps: { marginTop: 26 },
+  steps: { marginTop: 14 },
   stepRow: { alignItems: 'stretch', flexDirection: 'row', gap: 14 },
   stepSpine: { alignItems: 'center', width: 12 },
   stepDot: {
@@ -1388,15 +1645,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     width: 2,
   },
-  stepText: {
-    color: 'rgba(242,245,243,0.75)',
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 22,
-    // The rail's reach: rows have no gap, so this is the space between steps
-    // and the rail runs through it unbroken.
-    paddingBottom: 20,
-  },
+  stepText: { color: TEXT, flex: 1, fontSize: 17, fontWeight: '700', lineHeight: 23 },
   mockLine: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1483,6 +1732,17 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   planReadyGloss: { color: MUTED, fontSize: 13, fontWeight: '600', marginTop: -6, marginBottom: 10 },
+  // ---- plan ready ----
+  readyHero: { alignItems: 'center', flexDirection: 'row', gap: 14 },
+  readyParrot: { height: 118, width: 105 },
+  readyTitles: { flex: 1 },
+  readyDate: { color: MUTED, fontSize: 16, marginTop: 6 },
+  readyDateStrong: { color: TEXT, fontWeight: '800' },
+  readyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 22 },
+  readyCell: { width: '48%' },
+  readyTile: { borderRadius: 18, borderWidth: 1, minHeight: 96, padding: 14 },
+  readyTileLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
+  readyTileHead: { color: TEXT, fontSize: 15, fontWeight: '700', lineHeight: 20, marginTop: 6 },
   planReadyText: { flex: 1, gap: 2 },
   planReadyHead: { color: TEXT, fontSize: 15, fontWeight: '700', lineHeight: 21 },
   planReadyBody: { color: MUTED, fontSize: 13, lineHeight: 19 },

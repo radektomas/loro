@@ -129,6 +129,7 @@ export const HOW_IT_WORKS = {
     'Watch real clips. Words light up as they’re spoken.',
     'Tap anything you don’t recognise. That saves it.',
     'It returns days later, right as it’s about to slip away.',
+    'Or practise your words whenever you want.',
   ],
   cta: 'Continuar',
 };
