@@ -589,11 +589,12 @@ function EmptyShelf({ collection, onPick }: { collection: string; onPick: (id: s
         <CollectionMenu
           selected={collection}
           topInset={insets.top}
+          onClose={() => setOpen(false)}
           onPick={(id) => {
             setOpen(false);
             onPick(id);
           }}
-          onClose={() => setOpen(false)}
+          episodesFor={() => null}
         />
       )}
       <View style={styles.emptyRoot}>
@@ -786,11 +787,19 @@ function FeedBody({
    * remount. The flag keeps a catalog refresh from re-landing later.
    */
   const landOnLastRef = useRef(false);
+  /** A specific episode to land on after a shelf switch (the menu's pick
+      from another shelf); null means the shelf's last episode. */
+  const landAtRef = useRef<number | null>(null);
   useEffect(() => {
     if (!landOnLastRef.current) return;
     landOnLastRef.current = false;
     if (!episodes || videos.length === 0) return;
-    const index = landingIndexFor(collection, videos);
+    const asked = landAtRef.current;
+    landAtRef.current = null;
+    const index =
+      asked !== null && asked >= 0 && asked < videos.length
+        ? asked
+        : landingIndexFor(collection, videos);
     if (index === 0) return;
     feedLog(`episodes: back to ${index + 1}/${videos.length}`);
     mountIndexRef.current = index;
@@ -1158,34 +1167,42 @@ function FeedBody({
             <CollectionMenu
               selected={collection}
               topInset={insets.top}
-              // An episode shelf keeps the menu up so its episodes can be
-              // picked; the reels shelf closes it, there is nothing to pick.
+              onClose={() => setMenuOpen(false)}
               onPick={(id) => {
-                if (!isEpisodes(id)) setMenuOpen(false);
+                setMenuOpen(false);
                 setCollection(id);
               }}
-              onClose={() => setMenuOpen(false)}
-              episodes={
-                episodes
-                  ? videos.map((v) => ({
+              // Any episode shelf's list, from the same source the feed
+              // builds its own from; an episode shelf is never shuffled, so
+              // the order here is the order the feed will play. Progress is
+              // read at open: the player yields while the menu is up, so
+              // nothing moves under the list.
+              episodesFor={(id) =>
+                isEpisodes(id)
+                  ? listFor(id, sourceVideos()).map((v) => ({
                       id: v.id,
                       youtubeId: v.youtubeId,
                       title: v.title ?? v.creator,
                       durationSeconds: v.durationSeconds,
-                      // Read at open: the player yields while the menu is
-                      // up, so nothing moves under the list.
                       ...(episodeProgress(v.id) ?? {}),
                     }))
                   : null
               }
               activeIndex={activeIndex}
-              // The review jump's own mechanism: a remount at the index.
-              onPickEpisode={(index) => {
+              onPickEpisode={(shelfId, index) => {
                 setMenuOpen(false);
-                if (index === activeIndex) return;
-                jumpTargetRef.current = index;
-                setActiveIndex(index);
-                setListGeneration((g) => g + 1);
+                if (shelfId === collection) {
+                  // The review jump's own mechanism: a remount at the index.
+                  if (index === activeIndex) return;
+                  jumpTargetRef.current = index;
+                  setActiveIndex(index);
+                  setListGeneration((g) => g + 1);
+                  return;
+                }
+                // Another shelf: switch, and land on THIS episode once its
+                // list arrives (the same path the last-episode landing takes).
+                landAtRef.current = index;
+                setCollection(shelfId);
               }}
             />
           )}

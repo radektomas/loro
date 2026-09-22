@@ -1,26 +1,32 @@
+import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { COLLECTIONS, findCollection, isEpisodes } from '@loro/core/collections';
+import { COLLECTIONS, REELS, findCollection, isEpisodes } from '@loro/core/collections';
 
 /**
- * THE SHELF PILL — one centred pill in the strip between the status bar and
- * the video, saying where you are ("Reels ▾", "Peppa · 2/5 ▾"). Tap it and
- * a menu opens: the shelves as a row of chips, and, for an episode shelf,
- * the shelf's episodes underneath — thumbnail, name, length — to pick from.
+ * THE SHELF PILL AND ITS MENU.
  *
- * The first cut was a row of chips, always on. Radek: "a user will not
- * want to see those chips all the time — one big chip in the middle saying
- * the current position, tap it to open a simple menu". Then, with Peppa
- * playing (2026-09-21): "if you can choose episodes — it doesn't make
- * sense the scrolling here". So episodes are CHOSEN, not swiped to: the
- * feed turns paging off for an episode shelf and this list is the way
- * between episodes.
+ * The pill sits in the strip between the status bar and the video and says
+ * where you are — "Reels" on the reels, "Peppa · 3/25" on the shelf — and
+ * nothing else: on the reels the user never sees a Peppa sign while they
+ * scroll (Radek, 2026-09-22). Tap it and a small menu opens:
+ *
+ *   on Reels    the other shelves, as rows; tap Peppa and its episodes
+ *               unfold right there — "a little Peppa Pig menu with the
+ *               episodes" — tap one and you are in it;
+ *   on Peppa    the episode list, with a Reels row above it to go back.
+ *
+ * Episodes are CHOSEN, not swiped to (2026-09-21: "it doesn't make sense,
+ * the scrolling here"): the feed turns paging off on an episode shelf and
+ * this list is the way between episodes.
  *
  * THE MENU DRAWS OVER THE PLAYER, so the player yields while it is open —
- * FeedBody raises the same obscure flag the day-done card and the
- * notification explainer use, and the poster carries the frame underneath.
- * The pill itself sits ABOVE the player area (the slide's spacer is
- * CHIP_ROW_H taller), so with the menu closed nothing of Loro's is over the
- * frame.
+ * FeedBody raises the same obscure flag the day-done card uses, and the
+ * poster carries the frame underneath. The pill itself sits ABOVE the
+ * player area, so with the menu closed nothing of Loro's is over the frame.
+ *
+ * Two earlier cuts, for the record: a menu with the shelves as two chips
+ * in an empty card ("two bubbles in an empty space"), then a segmented
+ * Reels|Peppa switch, which showed Peppa on the reels all the time.
  */
 export const CHIP_ROW_H = 44;
 
@@ -46,7 +52,7 @@ export function CollectionPill({
   onPress,
 }: {
   selected: string;
-  /** "2/5" on an episode shelf — where you are in the list. */
+  /** "3/25" on an episode shelf — where you are in the list. */
   detail?: string;
   topInset: number;
   open: boolean;
@@ -81,109 +87,162 @@ function clock(seconds: number | undefined): string | null {
 export function CollectionMenu({
   selected,
   topInset,
-  onPick,
   onClose,
-  episodes,
+  onPick,
+  episodesFor,
   activeIndex,
   onPickEpisode,
 }: {
   selected: string;
   topInset: number;
-  onPick: (id: string) => void;
   onClose: () => void;
-  /** The selected shelf's episodes, in order — null on the reels shelf,
-      absent where there is no list to pick from (EmptyShelf). */
-  episodes?: EpisodeItem[] | null;
+  /** Switch shelf without choosing an episode (the Reels row). */
+  onPick: (id: string) => void;
+  /** The episodes of any episode shelf, in order — null when the caller
+      has no list (EmptyShelf). */
+  episodesFor: (id: string) => EpisodeItem[] | null;
+  /** The playing episode's index on the SELECTED shelf. */
   activeIndex?: number;
-  onPickEpisode?: (index: number) => void;
+  /** An episode was chosen — on the selected shelf or another. */
+  onPickEpisode?: (shelfId: string, index: number) => void;
 }) {
   const { height } = useWindowDimensions();
-  const listMax = Math.max(200, height * 0.5);
+  const listMax = Math.max(220, height * 0.55);
+  /** Which episode shelf's list is unfolded. Starts open on the shelf you
+      are on; on the reels, opens when a shelf row is tapped. */
+  const [browsing, setBrowsing] = useState<string | null>(isEpisodes(selected) ? selected : null);
+  const shelves = COLLECTIONS.filter((c) => c.id !== selected);
+
   return (
     <View style={styles.backdrop}>
       {/* The dim closes it — the same gesture every sheet answers to. */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.menu, { top: topInset + CHIP_ROW_H + 4 }]}>
-        <Text style={styles.menuTitle}>What to watch</Text>
-        <View style={styles.shelves}>
-          {COLLECTIONS.map((c) => {
-            const on = c.id === selected;
-            return (
-              <Pressable
-                key={c.id}
-                onPress={() => onPick(c.id)}
-                accessibilityRole="menuitem"
-                accessibilityState={{ selected: on }}
-                style={({ pressed }) => [styles.shelf, on && styles.shelfOn, pressed && styles.pressed]}
-              >
-                <Text style={[styles.shelfText, on && styles.shelfTextOn]}>{c.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {shelves.map((c) => {
+          const list = isEpisodes(c.id) ? episodesFor(c.id) : null;
+          const unfolded = browsing === c.id;
+          return (
+            <Pressable
+              key={c.id}
+              onPress={() => (isEpisodes(c.id) ? setBrowsing(unfolded ? null : c.id) : onPick(c.id))}
+              accessibilityRole="menuitem"
+              accessibilityState={isEpisodes(c.id) ? { expanded: unfolded } : undefined}
+              style={({ pressed }) => [styles.shelfRow, pressed && styles.pressed]}
+            >
+              {/* The first episode's frame as the shelf's picture; the reels
+                  row gets a plain mint mark. */}
+              {list && list[0]?.youtubeId ? (
+                <Image
+                  source={{ uri: `https://i.ytimg.com/vi/${list[0].youtubeId}/mqdefault.jpg` }}
+                  style={styles.shelfThumb}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.shelfThumb, styles.shelfMark]}>
+                  <Text style={styles.shelfMarkText}>{c.id === REELS ? '▲' : '▶'}</Text>
+                </View>
+              )}
+              <View style={styles.episodeText}>
+                <Text style={styles.shelfTitle}>{c.label}</Text>
+                <Text style={styles.episodeMeta}>
+                  {list ? `${list.length} episodes` : c.id === REELS ? 'Short clips from real people' : ''}
+                </Text>
+              </View>
+              <Text style={styles.shelfChevron}>{isEpisodes(c.id) ? (unfolded ? '▴' : '▾') : '›'}</Text>
+            </Pressable>
+          );
+        })}
 
-        {isEpisodes(selected) && (
-          <>
-            <Text style={[styles.menuTitle, styles.episodesTitle]}>
-              Episodes{episodes && episodes.length > 0 ? ` · ${episodes.length}` : ''}
-            </Text>
-            {!episodes || episodes.length === 0 ? (
-              <Text style={styles.none}>Nothing on this shelf yet.</Text>
-            ) : (
-              <ScrollView style={{ maxHeight: listMax }} contentContainerStyle={styles.list}>
-                {episodes.map((ep, i) => {
-                  const on = i === activeIndex;
-                  const len = clock(ep.durationSeconds);
-                  return (
-                    <Pressable
-                      key={ep.id}
-                      onPress={() => onPickEpisode?.(i)}
-                      accessibilityRole="menuitem"
-                      accessibilityState={{ selected: on }}
-                      accessibilityLabel={`Episode ${i + 1}, ${ep.title}${len ? `, ${len}` : ''}`}
-                      style={({ pressed }) => [styles.episode, on && styles.episodeOn, pressed && styles.pressed]}
-                    >
-                      <View style={styles.thumb}>
-                        {ep.youtubeId && (
-                          <Image
-                            source={{ uri: `https://i.ytimg.com/vi/${ep.youtubeId}/mqdefault.jpg` }}
-                            style={StyleSheet.absoluteFill}
-                            resizeMode="cover"
-                          />
-                        )}
-                        {/* The progress line: how far in, along the bottom edge. */}
-                        {ep.share != null && ep.share > 0 && (
-                          <View style={styles.track}>
-                            <View style={[styles.fill, { width: `${Math.round(ep.share * 100)}%` }]} />
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.episodeText}>
-                        <Text style={[styles.episodeTitle, on && styles.episodeTitleOn]} numberOfLines={2}>
-                          {ep.title}
-                        </Text>
-                        <Text style={styles.episodeMeta}>
-                          {i + 1}
-                          {len ? ` · ${len}` : ''}
-                          {on ? ' · playing' : ''}
-                        </Text>
-                        {/* Where you are, in words — the line alone was
-                            "not precise enough" (Radek, on device). */}
-                        {ep.done ? (
-                          <Text style={styles.watched}>✓ Watched</Text>
-                        ) : ep.atSeconds != null && ep.atSeconds > 0 ? (
-                          <Text style={styles.resume}>▶ Continue at {clock(ep.atSeconds)}</Text>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            )}
-          </>
+        {browsing && isEpisodes(browsing) && (
+          <EpisodeList
+            shelfId={browsing}
+            episodes={episodesFor(browsing)}
+            activeIndex={browsing === selected ? activeIndex : undefined}
+            maxHeight={listMax}
+            titled={shelves.length > 0}
+            onPick={(index) => onPickEpisode?.(browsing, index)}
+          />
         )}
       </View>
     </View>
+  );
+}
+
+function EpisodeList({
+  shelfId,
+  episodes,
+  activeIndex,
+  maxHeight,
+  titled,
+  onPick,
+}: {
+  shelfId: string;
+  episodes: EpisodeItem[] | null;
+  activeIndex?: number;
+  maxHeight: number;
+  /** Draw the "Episodes · N" header — skipped when the list stands alone. */
+  titled: boolean;
+  onPick: (index: number) => void;
+}) {
+  return (
+    <>
+      <Text style={[styles.menuTitle, titled && styles.episodesTitle]}>
+        {findCollection(shelfId).label} · {episodes && episodes.length > 0 ? `${episodes.length} episodes` : 'episodes'}
+      </Text>
+      {!episodes || episodes.length === 0 ? (
+        <Text style={styles.none}>Nothing on this shelf yet.</Text>
+      ) : (
+        <ScrollView style={{ maxHeight }} contentContainerStyle={styles.list}>
+          {episodes.map((ep, i) => {
+            const on = i === activeIndex;
+            const len = clock(ep.durationSeconds);
+            return (
+              <Pressable
+                key={ep.id}
+                onPress={() => onPick(i)}
+                accessibilityRole="menuitem"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`Episode ${i + 1}, ${ep.title}${len ? `, ${len}` : ''}`}
+                style={({ pressed }) => [styles.episode, on && styles.episodeOn, pressed && styles.pressed]}
+              >
+                <View style={styles.thumb}>
+                  {ep.youtubeId && (
+                    <Image
+                      source={{ uri: `https://i.ytimg.com/vi/${ep.youtubeId}/mqdefault.jpg` }}
+                      style={StyleSheet.absoluteFill}
+                      resizeMode="cover"
+                    />
+                  )}
+                  {/* The progress line: how far in, along the bottom edge. */}
+                  {ep.share != null && ep.share > 0 && (
+                    <View style={styles.track}>
+                      <View style={[styles.fill, { width: `${Math.round(ep.share * 100)}%` }]} />
+                    </View>
+                  )}
+                </View>
+                <View style={styles.episodeText}>
+                  <Text style={[styles.episodeTitle, on && styles.episodeTitleOn]} numberOfLines={2}>
+                    {ep.title}
+                  </Text>
+                  <Text style={styles.episodeMeta}>
+                    {i + 1}
+                    {len ? ` · ${len}` : ''}
+                    {on ? ' · playing' : ''}
+                  </Text>
+                  {/* Where you are, in words — the line alone was "not
+                      precise enough" (Radek, on device). */}
+                  {ep.done ? (
+                    <Text style={styles.watched}>✓ Watched</Text>
+                  ) : ep.atSeconds != null && ep.atSeconds > 0 ? (
+                    <Text style={styles.resume}>▶ Continue at {clock(ep.atSeconds)}</Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+    </>
   );
 }
 
@@ -246,19 +305,23 @@ const styles = StyleSheet.create({
   episodesTitle: {
     borderTopColor: 'rgba(242,245,243,0.08)',
     borderTopWidth: 1,
-    marginTop: 8,
+    marginTop: 6,
     paddingTop: 12,
   },
-  shelves: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingVertical: 4 },
-  shelf: {
-    backgroundColor: 'rgba(242,245,243,0.07)',
-    borderRadius: 999,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+  /** A shelf as a row: picture, name, a line about it, a chevron. */
+  shelfRow: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
-  shelfOn: { backgroundColor: '#5ee6a8' },
-  shelfText: { color: 'rgba(242,245,243,0.85)', fontSize: 14, fontWeight: '700' },
-  shelfTextOn: { color: '#06130d', fontWeight: '800' },
+  shelfThumb: { backgroundColor: 'rgba(242,245,243,0.06)', borderRadius: 8, height: 46, width: 82 },
+  shelfMark: { alignItems: 'center', backgroundColor: 'rgba(94,230,168,0.14)', justifyContent: 'center' },
+  shelfMarkText: { color: '#5ee6a8', fontSize: 16, fontWeight: '800' },
+  shelfTitle: { color: '#f2f5f3', fontSize: 16, fontWeight: '800' },
+  shelfChevron: { color: 'rgba(242,245,243,0.5)', fontSize: 14, fontWeight: '800', paddingRight: 4 },
   none: { color: 'rgba(242,245,243,0.5)', fontSize: 14, paddingHorizontal: 12, paddingBottom: 10 },
   list: { paddingBottom: 4 },
   episode: {
