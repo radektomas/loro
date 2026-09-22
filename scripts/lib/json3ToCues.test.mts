@@ -55,3 +55,38 @@ describe('multiWordTokenShare', () => {
     assert.equal(multiWordTokenShare([]), 0);
   });
 });
+
+/**
+ * THE LATE TAIL — YouTube's recogniser stamps an utterance's last word at
+ * the end of the silence after it (see snapLateTails). Timings below mirror
+ * "El loro Polly" 55–60s: "Venid a" at pace, "verlo" three seconds late.
+ */
+describe('snapLateTails', () => {
+  const w = (text: string, start: number, end: number) => ({ text, start, end });
+
+  it('moves a late sentence tail to right after its predecessor, and keeps it in the cue', async () => {
+    const { snapLateTails, groupIntoCues } = await import('./json3ToCues.mts');
+    const words = [w('Venid', 55.4, 55.88), w('a', 55.88, 56.1), w('verlo.', 58.92, 59.52), w('Hola.', 60.76, 61.2)];
+    const { words: out, snapped } = snapLateTails(words);
+    assert.equal(snapped, 1);
+    assert.equal(out[2].start, 56.15);
+    assert.ok(out[2].end <= 56.75);
+    assert.equal(out[3].start, 60.76, 'a word after a full stop is a new utterance');
+    const cues = groupIntoCues(words);
+    const tail = cues.find((c) => c.words.some((x) => x.text === 'verlo.'))!;
+    assert.ok(tail.words.some((x) => x.text === 'Venid'), 'the tail stays with its sentence');
+    assert.notEqual(tail.words[0].text, 'verlo.', 'no cue opens on a sentence tail');
+  });
+
+  it('leaves a pause after a comma alone — a repeated call is real', async () => {
+    const { snapLateTails } = await import('./json3ToCues.mts');
+    const words = [w('George,', 295.28, 295.88), w('George,', 298.92, 299.4), w('¿qué', 299.44, 299.6), w('pasa?', 299.8, 300.2)];
+    assert.equal(snapLateTails(words).snapped, 0);
+  });
+
+  it('does nothing on a bare track — without punctuation no gap is provably inside a sentence', async () => {
+    const { snapLateTails } = await import('./json3ToCues.mts');
+    const words = [w('venid', 55.4, 55.88), w('a', 55.88, 56.1), w('verlo', 58.92, 59.52)];
+    assert.equal(snapLateTails(words).snapped, 0);
+  });
+});

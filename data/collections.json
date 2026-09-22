@@ -3996,8 +3996,8 @@
           },
           {
             "text": "Pig.",
-            "start": 12,
-            "end": 12.6
+            "start": 11.01,
+            "end": 11.61
           },
           {
             "text": "Peppa",
@@ -4013,13 +4013,13 @@
         }
       },
       {
-        "start": 18.199,
+        "start": 13.65,
         "end": 20.52,
         "words": [
           {
             "text": "Pig,",
-            "start": 18.199,
-            "end": 18.799
+            "start": 13.65,
+            "end": 14.25
           },
           {
             "text": "el",
@@ -4117,8 +4117,8 @@
           },
           {
             "text": "Pig.",
-            "start": 32.559,
-            "end": 33.159
+            "start": 30.849,
+            "end": 31.449
           }
         ],
         "translations": {
@@ -4393,8 +4393,8 @@
           },
           {
             "text": "verlo.",
-            "start": 58.92,
-            "end": 59.52
+            "start": 56.529,
+            "end": 57.129
           }
         ],
         "translations": {
@@ -4519,8 +4519,8 @@
           },
           {
             "text": "Polly.",
-            "start": 71.08,
-            "end": 71.68
+            "start": 69.57,
+            "end": 70.17
           }
         ],
         "translations": {
@@ -4541,8 +4541,8 @@
           },
           {
             "text": "bonito,",
-            "start": 74.08,
-            "end": 74.68
+            "start": 72.73,
+            "end": 73.33
           },
           {
             "text": "Polly",
@@ -4558,13 +4558,13 @@
         }
       },
       {
-        "start": 78.72,
+        "start": 75.73,
         "end": 82.28,
         "words": [
           {
             "text": "bonito.",
-            "start": 78.72,
-            "end": 79.32
+            "start": 75.73,
+            "end": 76.33
           },
           {
             "text": "Soy",
@@ -4625,8 +4625,8 @@
           },
           {
             "text": "listo.",
-            "start": 85.72,
-            "end": 86.32
+            "start": 84.17,
+            "end": 84.77
           }
         ],
         "translations": {
@@ -4852,13 +4852,13 @@
         }
       },
       {
-        "start": 106.759,
+        "start": 105.449,
         "end": 109.88,
         "words": [
           {
             "text": "merendar.",
-            "start": 106.759,
-            "end": 107.359
+            "start": 105.449,
+            "end": 106.049
           },
           {
             "text": "Peppa,",
@@ -5003,8 +5003,8 @@
           },
           {
             "text": "Polly.",
-            "start": 124.88,
-            "end": 125.48
+            "start": 123.93,
+            "end": 124.53
           },
           {
             "text": "Ya",
@@ -5025,13 +5025,13 @@
         }
       },
       {
-        "start": 131.04,
+        "start": 126.809,
         "end": 134.199,
         "words": [
           {
             "text": "acabado.",
-            "start": 131.04,
-            "end": 131.64
+            "start": 126.809,
+            "end": 127.409
           },
           {
             "text": "¡Qué",
@@ -5193,13 +5193,13 @@
         }
       },
       {
-        "start": 144.599,
+        "start": 142.889,
         "end": 149.44,
         "words": [
           {
             "text": "tarta?",
-            "start": 144.599,
-            "end": 145.199
+            "start": 142.889,
+            "end": 143.489
           },
           {
             "text": "Ahora",
@@ -5292,8 +5292,8 @@
           },
           {
             "text": "tímido.",
-            "start": 163,
-            "end": 163.6
+            "start": 159.37,
+            "end": 159.97
           },
           {
             "text": "Hola.",
@@ -5418,13 +5418,13 @@
         }
       },
       {
-        "start": 185.64,
+        "start": 182.41,
         "end": 187.919,
         "words": [
           {
             "text": "Pig.",
-            "start": 185.64,
-            "end": 186.24
+            "start": 182.41,
+            "end": 183.01
           },
           {
             "text": "George",
@@ -5492,13 +5492,13 @@
         }
       },
       {
-        "start": 203.879,
+        "start": 201.09,
         "end": 209.36,
         "words": [
           {
             "text": "loros.",
-            "start": 203.879,
-            "end": 204.479
+            "start": 201.09,
+            "end": 201.69
           },
           {
             "text": "Soy",
@@ -5517,8 +5517,8 @@
           },
           {
             "text": "Polly.",
-            "start": 208.76,
-            "end": 209.36
+            "start": 206.01,
+            "end": 206.61
           }
         ],
         "translations": {
@@ -5628,13 +5628,13 @@
         }
       },
       {
-        "start": 222.2,
+        "start": 220.529,
         "end": 224.68,
         "words": [
           {
             "text": "ruidoso.",
-            "start": 222.2,
-            "end": 222.8
+            "start": 220.529,
+            "end": 221.129
           },
           {
             "text": "Soy",
@@ -5791,13 +5791,13 @@
         }
       },
       {
-        "start": 248.92,
+        "start": 246.889,
         "end": 252.8,
         "words": [
           {
             "text": "listo.",
-            "start": 248.92,
-            "end": 249.52
+            "start": 246.889,
+            "end": 247.489
           },
           {
             "text": "Soy",
@@ -5865,13 +5865,13 @@
         }
       },
       {
-        "start": 257.68,
+        "start": 254.69,
         "end": 269.32,
         "words": [
           {
             "text": "ruidoso.",
-            "start": 257.68,
-            "end": 258.28
+            "start": 254.69,
+            "end": 255.29
           },
           {
             "text": "Oh,",
@@ -5934,43 +5934,43 @@
         }
       },
       {
-        "start": 292,
+        "start": 291.01,
         "end": 296.84,
         "words": [
           {
             "text": "mágica",
-            "start": 292,
-            "end": 292.6
+            "start": 291.01,
+            "end": 291.61
           },
           {
             "text": "y",
-            "start": 293,
-            "end": 293.32
+            "start": 291.66,
+            "end": 291.98
           },
           {
             "text": "voy",
-            "start": 293.32,
-            "end": 293.56
+            "start": 292.03,
+            "end": 292.27
           },
           {
             "text": "a",
-            "start": 293.56,
-            "end": 293.759
+            "start": 292.32,
+            "end": 292.52
           },
           {
             "text": "convertirte",
-            "start": 293.759,
-            "end": 294.32
+            "start": 292.57,
+            "end": 293.131
           },
           {
             "text": "en",
-            "start": 294.32,
-            "end": 294.92
+            "start": 293.181,
+            "end": 293.781
           },
           {
             "text": "rana.",
-            "start": 296.24,
-            "end": 296.84
+            "start": 293.831,
+            "end": 294.431
           }
         ],
         "translations": {
@@ -7528,8 +7528,8 @@
           },
           {
             "text": "Pig.",
-            "start": 12.28,
-            "end": 12.88
+            "start": 11.05,
+            "end": 11.65
           },
           {
             "text": "Peppa",
@@ -7545,13 +7545,13 @@
         }
       },
       {
-        "start": 18.6,
+        "start": 13.93,
         "end": 22.119,
         "words": [
           {
             "text": "Pig,",
-            "start": 18.6,
-            "end": 19.2
+            "start": 13.93,
+            "end": 14.53
           },
           {
             "text": "el",
@@ -7587,13 +7587,13 @@
         }
       },
       {
-        "start": 25.72,
+        "start": 22.169,
         "end": 29.56,
         "words": [
           {
             "text": "perdido.",
-            "start": 25.72,
-            "end": 26.32
+            "start": 22.169,
+            "end": 22.769
           },
           {
             "text": "El",
@@ -7686,13 +7686,13 @@
         }
       },
       {
-        "start": 36.36,
+        "start": 34.61,
         "end": 38.239,
         "words": [
           {
             "text": "Dinosaurio.",
-            "start": 36.36,
-            "end": 36.96
+            "start": 34.61,
+            "end": 35.21
           },
           {
             "text": "A",
@@ -7758,8 +7758,8 @@
           },
           {
             "text": "Dinosaurio.",
-            "start": 41.76,
-            "end": 42.36
+            "start": 40.25,
+            "end": 40.85
           },
           {
             "text": "¡Qué",
@@ -7775,13 +7775,13 @@
         }
       },
       {
-        "start": 48.719,
+        "start": 43.41,
         "end": 50.719,
         "words": [
           {
             "text": "miedo!",
-            "start": 48.719,
-            "end": 49.319
+            "start": 43.41,
+            "end": 44.01
           },
           {
             "text": "Durante",
@@ -7985,13 +7985,13 @@
         }
       },
       {
-        "start": 72.68,
+        "start": 67.33,
         "end": 74.96,
         "words": [
           {
             "text": "Dinosaurio.",
-            "start": 72.68,
-            "end": 73.28
+            "start": 67.33,
+            "end": 67.93
           },
           {
             "text": "Buenas",
@@ -8091,13 +8091,13 @@
         }
       },
       {
-        "start": 81.6,
+        "start": 80.25,
         "end": 84.2,
         "words": [
           {
             "text": "Dinosaurio.",
-            "start": 81.6,
-            "end": 82.2
+            "start": 80.25,
+            "end": 80.85
           },
           {
             "text": "Cuando",
@@ -8351,13 +8351,13 @@
         }
       },
       {
-        "start": 110.759,
+        "start": 109.69,
         "end": 113.48,
         "words": [
           {
             "text": "damas.",
-            "start": 110.759,
-            "end": 111.359
+            "start": 109.69,
+            "end": 110.29
           },
           {
             "text": "He",
@@ -8660,8 +8660,8 @@
           },
           {
             "text": "detective?",
-            "start": 142.2,
-            "end": 142.8
+            "start": 141.21,
+            "end": 141.81
           }
         ],
         "translations": {
@@ -8910,8 +8910,8 @@
           },
           {
             "text": "Dinosaurio.",
-            "start": 162.2,
-            "end": 162.8
+            "start": 160.93,
+            "end": 161.53
           }
         ],
         "translations": {
@@ -9036,13 +9036,13 @@
         }
       },
       {
-        "start": 173,
+        "start": 170.73,
         "end": 176.44,
         "words": [
           {
             "text": "Dinosaurio?",
-            "start": 173,
-            "end": 173.6
+            "start": 170.73,
+            "end": 171.33
           },
           {
             "text": "George",
@@ -9172,18 +9172,18 @@
         }
       },
       {
-        "start": 187.159,
+        "start": 183.13,
         "end": 191.479,
         "words": [
           {
             "text": "está",
-            "start": 187.159,
-            "end": 187.759
+            "start": 183.13,
+            "end": 183.73
           },
           {
             "text": "siempre?",
-            "start": 188.159,
-            "end": 188.48
+            "start": 183.78,
+            "end": 184.101
           },
           {
             "text": "Se",
@@ -9734,13 +9734,13 @@
         }
       },
       {
-        "start": 224.159,
+        "start": 220.57,
         "end": 227.44,
         "words": [
           {
             "text": "decir.",
-            "start": 224.159,
-            "end": 224.759
+            "start": 220.57,
+            "end": 221.17
           },
           {
             "text": "¿Dónde",
@@ -10066,8 +10066,8 @@
           },
           {
             "text": "primero.",
-            "start": 250.64,
-            "end": 251.24
+            "start": 249.57,
+            "end": 250.17
           }
         ],
         "translations": {
@@ -10125,13 +10125,13 @@
         }
       },
       {
-        "start": 260.4,
+        "start": 255.49,
         "end": 268.04,
         "words": [
           {
             "text": "buena.",
-            "start": 260.4,
-            "end": 261
+            "start": 255.49,
+            "end": 256.09
           },
           {
             "text": "Dinosaurio.",
@@ -10279,8 +10279,8 @@
           },
           {
             "text": "árboles.",
-            "start": 281.36,
-            "end": 281.96
+            "start": 276.569,
+            "end": 277.169
           }
         ],
         "translations": {
@@ -12879,13 +12879,13 @@
         }
       },
       {
-        "start": 100.88,
+        "start": 99.21,
         "end": 104.6,
         "words": [
           {
             "text": "mirar.",
-            "start": 100.88,
-            "end": 101.48
+            "start": 99.21,
+            "end": 99.81
           },
           {
             "text": "George",
@@ -12988,13 +12988,13 @@
         }
       },
       {
-        "start": 110.28,
+        "start": 108.93,
         "end": 114.92,
         "words": [
           {
             "text": "mesa.",
-            "start": 110.28,
-            "end": 110.88
+            "start": 108.93,
+            "end": 109.53
           },
           {
             "text": "George,",
@@ -13082,13 +13082,13 @@
         }
       },
       {
-        "start": 132.28,
+        "start": 130.49,
         "end": 135.24,
         "words": [
           {
             "text": "cama.",
-            "start": 132.28,
-            "end": 132.88
+            "start": 130.49,
+            "end": 131.09
           },
           {
             "text": "¿Qué",
@@ -13129,13 +13129,13 @@
         }
       },
       {
-        "start": 139.36,
+        "start": 135.29,
         "end": 142.44,
         "words": [
           {
             "text": "raro?",
-            "start": 139.36,
-            "end": 139.96
+            "start": 135.29,
+            "end": 135.89
           },
           {
             "text": "Peppa",
@@ -13176,13 +13176,13 @@
         }
       },
       {
-        "start": 144.04,
+        "start": 142.49,
         "end": 148.559,
         "words": [
           {
             "text": "cortinas.",
-            "start": 144.04,
-            "end": 144.64
+            "start": 142.49,
+            "end": 143.09
           },
           {
             "text": "Otra",
@@ -13275,13 +13275,13 @@
         }
       },
       {
-        "start": 164.239,
+        "start": 160.69,
         "end": 166.68,
         "words": [
           {
             "text": "Peppa.",
-            "start": 164.239,
-            "end": 164.839
+            "start": 160.69,
+            "end": 161.29
           },
           {
             "text": "George",
@@ -13767,13 +13767,13 @@
         }
       },
       {
-        "start": 203.56,
+        "start": 201.889,
         "end": 208.64,
         "words": [
           {
             "text": "tenido!",
-            "start": 203.56,
-            "end": 204.16
+            "start": 201.889,
+            "end": 202.489
           },
           {
             "text": "Oh,",
@@ -13911,8 +13911,8 @@
           },
           {
             "text": "arriba?",
-            "start": 215.36,
-            "end": 215.96
+            "start": 214.21,
+            "end": 214.81
           }
         ],
         "translations": {
@@ -13943,8 +13943,8 @@
           },
           {
             "text": "está!",
-            "start": 219.36,
-            "end": 219.96
+            "start": 217.449,
+            "end": 218.049
           }
         ],
         "translations": {
@@ -14002,13 +14002,13 @@
         }
       },
       {
-        "start": 226.64,
+        "start": 222.33,
         "end": 231,
         "words": [
           {
             "text": "juguetes.",
-            "start": 226.64,
-            "end": 227.24
+            "start": 222.33,
+            "end": 222.93
           },
           {
             "text": "George",
@@ -14069,13 +14069,13 @@
         }
       },
       {
-        "start": 234.599,
+        "start": 231.05,
         "end": 238.28,
         "words": [
           {
             "text": "estará?",
-            "start": 234.599,
-            "end": 235.199
+            "start": 231.05,
+            "end": 231.65
           },
           {
             "text": "Peppa",
@@ -14195,13 +14195,13 @@
         }
       },
       {
-        "start": 250.28,
+        "start": 245.65,
         "end": 254.72,
         "words": [
           {
             "text": "estará.",
-            "start": 250.28,
-            "end": 250.88
+            "start": 245.65,
+            "end": 246.25
           },
           {
             "text": "Me",
@@ -14277,8 +14277,8 @@
           },
           {
             "text": "encontré!",
-            "start": 265.759,
-            "end": 266.359
+            "start": 264.73,
+            "end": 265.33
           },
           {
             "text": "Oh,",
@@ -16102,8 +16102,8 @@
           },
           {
             "text": "Pig.",
-            "start": 12.44,
-            "end": 13.04
+            "start": 11.169,
+            "end": 11.769
           },
           {
             "text": "Peppa",
@@ -16119,13 +16119,13 @@
         }
       },
       {
-        "start": 19.16,
+        "start": 14.09,
         "end": 21.039,
         "words": [
           {
             "text": "Pig,",
-            "start": 19.16,
-            "end": 19.76
+            "start": 14.09,
+            "end": 14.69
           },
           {
             "text": "la",
@@ -16146,13 +16146,13 @@
         }
       },
       {
-        "start": 24.68,
+        "start": 21.089,
         "end": 28.48,
         "words": [
           {
             "text": "amiga.",
-            "start": 24.68,
-            "end": 25.28
+            "start": 21.089,
+            "end": 21.689
           },
           {
             "text": "Peppa",
@@ -16272,13 +16272,13 @@
         }
       },
       {
-        "start": 43.16,
+        "start": 40.93,
         "end": 45.8,
         "words": [
           {
             "text": "Peppa.",
-            "start": 43.16,
-            "end": 43.76
+            "start": 40.93,
+            "end": 41.53
           },
           {
             "text": "Peppa",
@@ -16497,13 +16497,13 @@
         }
       },
       {
-        "start": 69.64,
+        "start": 65.209,
         "end": 72.759,
         "words": [
           {
             "text": "jugar.",
-            "start": 69.64,
-            "end": 70.24
+            "start": 65.209,
+            "end": 65.809
           },
           {
             "text": "A",
@@ -16586,13 +16586,13 @@
         }
       },
       {
-        "start": 75.479,
+        "start": 74.01,
         "end": 77.6,
         "words": [
           {
             "text": "Peppa,",
-            "start": 75.479,
-            "end": 76.079
+            "start": 74.01,
+            "end": 74.61
           },
           {
             "text": "y",
@@ -16618,13 +16618,13 @@
         }
       },
       {
-        "start": 80.84,
+        "start": 77.65,
         "end": 83,
         "words": [
           {
             "text": "también.",
-            "start": 80.84,
-            "end": 81.44
+            "start": 77.65,
+            "end": 78.25
           },
           {
             "text": "No,",
@@ -16860,38 +16860,38 @@
         }
       },
       {
-        "start": 108.52,
-        "end": 111.359,
+        "start": 107.409,
+        "end": 110.189,
         "words": [
           {
             "text": "mágica",
-            "start": 108.52,
-            "end": 109.12
+            "start": 107.409,
+            "end": 108.009
           },
           {
             "text": "y",
-            "start": 109.52,
-            "end": 109.799
+            "start": 108.059,
+            "end": 108.338
           },
           {
             "text": "voy",
-            "start": 109.799,
-            "end": 110
+            "start": 108.388,
+            "end": 108.589
           },
           {
             "text": "a",
-            "start": 110,
-            "end": 110.119
+            "start": 108.639,
+            "end": 108.839
           },
           {
             "text": "convertirte",
-            "start": 110.119,
-            "end": 110.719
+            "start": 108.889,
+            "end": 109.489
           },
           {
             "text": "en",
-            "start": 110.759,
-            "end": 111.359
+            "start": 109.539,
+            "end": 110.139
           }
         ],
         "translations": {
@@ -16902,13 +16902,13 @@
         }
       },
       {
-        "start": 113.159,
+        "start": 110.189,
         "end": 116.16,
         "words": [
           {
             "text": "rana.",
-            "start": 113.159,
-            "end": 113.759
+            "start": 110.189,
+            "end": 110.789
           },
           {
             "text": "A",
@@ -16949,13 +16949,13 @@
         }
       },
       {
-        "start": 118.84,
+        "start": 116.21,
         "end": 125.2,
         "words": [
           {
             "text": "solo.",
-            "start": 118.84,
-            "end": 119.44
+            "start": 116.21,
+            "end": 116.81
           },
           {
             "text": "A",
@@ -17208,13 +17208,13 @@
         }
       },
       {
-        "start": 142.04,
+        "start": 138.93,
         "end": 145.08,
         "words": [
           {
             "text": "chocolate.",
-            "start": 142.04,
-            "end": 142.64
+            "start": 138.93,
+            "end": 139.53
           },
           {
             "text": "Alguien",
@@ -17250,13 +17250,13 @@
         }
       },
       {
-        "start": 146.8,
+        "start": 145.13,
         "end": 150.559,
         "words": [
           {
             "text": "cuenco.",
-            "start": 146.8,
-            "end": 147.4
+            "start": 145.13,
+            "end": 145.73
           },
           {
             "text": "A",
@@ -17307,13 +17307,13 @@
         }
       },
       {
-        "start": 151.76,
+        "start": 150.609,
         "end": 154.68,
         "words": [
           {
             "text": "galletas,",
-            "start": 151.76,
-            "end": 152.36
+            "start": 150.609,
+            "end": 151.209
           },
           {
             "text": "pero",
@@ -17354,13 +17354,13 @@
         }
       },
       {
-        "start": 158.159,
+        "start": 154.73,
         "end": 163.28,
         "words": [
           {
             "text": "Peppa.",
-            "start": 158.159,
-            "end": 158.759
+            "start": 154.73,
+            "end": 155.33
           },
           {
             "text": "Yo",
@@ -17456,8 +17456,8 @@
           },
           {
             "text": "enfermo?",
-            "start": 167.84,
-            "end": 168.44
+            "start": 165.73,
+            "end": 166.33
           }
         ],
         "translations": {
@@ -17649,8 +17649,8 @@
           },
           {
             "text": "tose.",
-            "start": 189.519,
-            "end": 190.119
+            "start": 187.37,
+            "end": 187.97
           }
         ],
         "translations": {
@@ -17738,8 +17738,8 @@
           },
           {
             "text": "tirita.",
-            "start": 197.72,
-            "end": 198.32
+            "start": 196.529,
+            "end": 197.129
           }
         ],
         "translations": {
@@ -17928,13 +17928,13 @@
         }
       },
       {
-        "start": 212.76,
+        "start": 210.969,
         "end": 215.92,
         "words": [
           {
             "text": "años.",
-            "start": 212.76,
-            "end": 213.36
+            "start": 210.969,
+            "end": 211.569
           },
           {
             "text": "Papá",
@@ -18173,8 +18173,8 @@
           },
           {
             "text": "cansarse.",
-            "start": 232.76,
-            "end": 233.36
+            "start": 231.33,
+            "end": 231.93
           }
         ],
         "translations": {
@@ -18343,13 +18343,13 @@
         }
       },
       {
-        "start": 257.959,
+        "start": 254.33,
         "end": 260.839,
         "words": [
           {
             "text": "cosquillas!",
-            "start": 257.959,
-            "end": 258.559
+            "start": 254.33,
+            "end": 254.93
           },
           {
             "text": "Se",
@@ -20518,8 +20518,8 @@
           },
           {
             "text": "decorando.",
-            "start": 6.08,
-            "end": 6.68
+            "start": 3.17,
+            "end": 3.77
           }
         ],
         "translations": {
@@ -24486,38 +24486,38 @@
         }
       },
       {
-        "start": 14.559,
+        "start": 12.289,
         "end": 16.76,
         "words": [
           {
             "text": "o",
-            "start": 14.559,
-            "end": 14.92
+            "start": 12.289,
+            "end": 12.65
           },
           {
             "text": "discuten",
-            "start": 14.92,
-            "end": 15.52
+            "start": 12.7,
+            "end": 13.3
           },
           {
             "text": "por",
-            "start": 15.679,
-            "end": 15.879
+            "start": 13.35,
+            "end": 13.55
           },
           {
             "text": "lo",
-            "start": 15.879,
-            "end": 16
+            "start": 13.6,
+            "end": 13.8
           },
           {
             "text": "que",
-            "start": 16,
-            "end": 16.16
+            "start": 13.85,
+            "end": 14.05
           },
           {
             "text": "parece.",
-            "start": 16.16,
-            "end": 16.76
+            "start": 14.1,
+            "end": 14.7
           }
         ],
         "translations": {
@@ -29209,8 +29209,8 @@
           },
           {
             "text": "animales.",
-            "start": 73.36,
-            "end": 73.96
+            "start": 71.53,
+            "end": 72.13
           }
         ],
         "translations": {
@@ -29621,13 +29621,13 @@
         }
       },
       {
-        "start": 112.079,
+        "start": 109.089,
         "end": 114.359,
         "words": [
           {
             "text": "idea.",
-            "start": 112.079,
-            "end": 112.679
+            "start": 109.089,
+            "end": 109.689
           },
           {
             "text": "Muy",
@@ -29883,13 +29883,13 @@
         }
       },
       {
-        "start": 132.36,
+        "start": 130.29,
         "end": 135.44,
         "words": [
           {
             "text": "caluroso.",
-            "start": 132.36,
-            "end": 132.96
+            "start": 130.29,
+            "end": 130.89
           },
           {
             "text": "¿Qué",
@@ -40941,13 +40941,13 @@
         }
       },
       {
-        "start": 90.759,
+        "start": 89.69,
         "end": 94.28,
         "words": [
           {
             "text": "rápido,",
-            "start": 90.759,
-            "end": 91.359
+            "start": 89.69,
+            "end": 90.29
           },
           {
             "text": "además",
@@ -44849,8 +44849,8 @@
           },
           {
             "text": "así.",
-            "start": 79.72,
-            "end": 80.32
+            "start": 78.69,
+            "end": 79.29
           }
         ],
         "translations": {
@@ -44995,8 +44995,8 @@
           },
           {
             "text": "ahora.",
-            "start": 92.2,
-            "end": 92.8
+            "start": 90.49,
+            "end": 91.09
           }
         ],
         "translations": {
@@ -45484,18 +45484,18 @@
         }
       },
       {
-        "start": 153.519,
+        "start": 148.29,
         "end": 157.119,
         "words": [
           {
             "text": "y",
-            "start": 153.519,
-            "end": 154.119
+            "start": 148.29,
+            "end": 148.89
           },
           {
             "text": "listo.",
-            "start": 154.56,
-            "end": 155.16
+            "start": 148.94,
+            "end": 149.54
           },
           {
             "text": "Gracias,",
@@ -65318,8 +65318,8 @@
           },
           {
             "text": "no.",
-            "start": 145.2,
-            "end": 145.8
+            "start": 143.529,
+            "end": 144.129
           }
         ],
         "translations": {
@@ -65392,13 +65392,13 @@
         }
       },
       {
-        "start": 150.92,
+        "start": 149.93,
         "end": 153.08,
         "words": [
           {
             "text": "a",
-            "start": 150.92,
-            "end": 151.16
+            "start": 149.93,
+            "end": 150.17
           },
           {
             "text": "mí",
@@ -68222,8 +68222,8 @@
           },
           {
             "text": "hoy.",
-            "start": 55.359,
-            "end": 55.959
+            "start": 54.009,
+            "end": 54.609
           }
         ],
         "translations": {
@@ -68360,28 +68360,28 @@
         }
       },
       {
-        "start": 72.36,
+        "start": 66.89,
         "end": 74.6,
         "words": [
           {
             "text": "miren",
-            "start": 72.36,
-            "end": 72.759
+            "start": 66.89,
+            "end": 67.289
           },
           {
             "text": "todos",
-            "start": 72.759,
-            "end": 73.359
+            "start": 67.339,
+            "end": 67.939
           },
           {
             "text": "un",
-            "start": 73.6,
-            "end": 74
+            "start": 67.989,
+            "end": 68.389
           },
           {
             "text": "pingüino.",
-            "start": 74,
-            "end": 74.6
+            "start": 68.439,
+            "end": 69.039
           }
         ],
         "translations": {
@@ -69171,8 +69171,8 @@
           },
           {
             "text": "ahora.",
-            "start": 148.12,
-            "end": 148.56
+            "start": 146.609,
+            "end": 147.049
           },
           {
             "text": "Síganme",
@@ -69484,18 +69484,18 @@
           },
           {
             "text": "está",
-            "start": 179,
-            "end": 179.36
+            "start": 176.969,
+            "end": 177.329
           },
           {
             "text": "muy",
-            "start": 179.36,
-            "end": 179.8
+            "start": 177.379,
+            "end": 177.819
           },
           {
             "text": "oscuro.",
-            "start": 179.8,
-            "end": 180.4
+            "start": 177.869,
+            "end": 178.469
           }
         ],
         "translations": {
@@ -75013,13 +75013,13 @@
         }
       },
       {
-        "start": 12.759,
+        "start": 9.81,
         "end": 18.28,
         "words": [
           {
             "text": "dinosaurio.",
-            "start": 12.759,
-            "end": 13.359
+            "start": 9.81,
+            "end": 10.41
           },
           {
             "text": "Sí,",
@@ -75629,33 +75629,33 @@
         }
       },
       {
-        "start": 71.72,
-        "end": 75.12,
+        "start": 70.769,
+        "end": 73.299,
         "words": [
           {
             "text": "secreto",
-            "start": 71.72,
-            "end": 72.32
+            "start": 70.769,
+            "end": 71.369
           },
           {
             "text": "y",
-            "start": 73.04,
-            "end": 73.64
+            "start": 71.419,
+            "end": 72.019
           },
           {
             "text": "lo",
-            "start": 74.04,
-            "end": 74.28
+            "start": 72.069,
+            "end": 72.309
           },
           {
             "text": "van",
-            "start": 74.28,
-            "end": 74.52
+            "start": 72.359,
+            "end": 72.599
           },
           {
             "text": "a",
-            "start": 74.52,
-            "end": 75.12
+            "start": 72.649,
+            "end": 73.249
           }
         ],
         "translations": {
@@ -75666,13 +75666,13 @@
         }
       },
       {
-        "start": 76.36,
+        "start": 73.299,
         "end": 80.039,
         "words": [
           {
             "text": "liberar?",
-            "start": 76.36,
-            "end": 76.96
+            "start": 73.299,
+            "end": 73.899
           },
           {
             "text": "El",
@@ -76138,8 +76138,8 @@
           },
           {
             "text": "zoológico.",
-            "start": 117.52,
-            "end": 118.12
+            "start": 116.409,
+            "end": 117.009
           }
         ],
         "translations": {
@@ -76266,13 +76266,13 @@
         }
       },
       {
-        "start": 130.36,
+        "start": 129.129,
         "end": 136.04,
         "words": [
           {
             "text": "secreto.",
-            "start": 130.36,
-            "end": 130.96
+            "start": 129.129,
+            "end": 129.729
           },
           {
             "text": "¿Emocionante?",
@@ -76731,13 +76731,13 @@
         }
       },
       {
-        "start": 171.92,
+        "start": 167.57,
         "end": 174.32,
         "words": [
           {
             "text": "dinosaurios.",
-            "start": 171.92,
-            "end": 172.52
+            "start": 167.57,
+            "end": 168.17
           },
           {
             "text": "¡Qué",
@@ -78629,13 +78629,13 @@
         }
       },
       {
-        "start": 10.599,
+        "start": 7.29,
         "end": 13.119,
         "words": [
           {
             "text": "raro?",
-            "start": 10.599,
-            "end": 11.199
+            "start": 7.29,
+            "end": 7.89
           },
           {
             "text": "¿Qué",
@@ -78827,8 +78827,8 @@
           },
           {
             "text": "sí.",
-            "start": 25.16,
-            "end": 25.76
+            "start": 22.97,
+            "end": 23.57
           }
         ],
         "translations": {
@@ -79264,8 +79264,8 @@
           },
           {
             "text": "favor.",
-            "start": 56.32,
-            "end": 56.92
+            "start": 54.009,
+            "end": 54.609
           }
         ],
         "translations": {
@@ -79442,8 +79442,8 @@
           },
           {
             "text": "cupcake.",
-            "start": 70.84,
-            "end": 71.44
+            "start": 69.409,
+            "end": 70.009
           }
         ],
         "translations": {
@@ -79875,8 +79875,8 @@
           },
           {
             "text": "visto.",
-            "start": 100.36,
-            "end": 100.96
+            "start": 97.21,
+            "end": 97.81
           }
         ],
         "translations": {
@@ -80122,13 +80122,13 @@
         }
       },
       {
-        "start": 122.92,
+        "start": 121.25,
         "end": 126.2,
         "words": [
           {
             "text": "cupcakes.",
-            "start": 122.92,
-            "end": 123.52
+            "start": 121.25,
+            "end": 121.85
           },
           {
             "text": "Wow,",
@@ -80597,8 +80597,8 @@
           },
           {
             "text": "Gaga,",
-            "start": 160.76,
-            "end": 161.36
+            "start": 159.65,
+            "end": 160.25
           },
           {
             "text": "gugu",
@@ -80661,18 +80661,18 @@
           },
           {
             "text": "¡Funciona",
-            "start": 168.56,
-            "end": 169.16
+            "start": 167.49,
+            "end": 168.09
           },
           {
             "text": "muy",
-            "start": 169.56,
-            "end": 169.879
+            "start": 168.14,
+            "end": 168.459
           },
           {
             "text": "bien!",
-            "start": 169.879,
-            "end": 170.479
+            "start": 168.509,
+            "end": 169.109
           }
         ],
         "translations": {
@@ -80738,8 +80738,8 @@
           },
           {
             "text": "bebés.",
-            "start": 176.959,
-            "end": 177.559
+            "start": 174.09,
+            "end": 174.69
           }
         ],
         "translations": {
@@ -83872,13 +83872,13 @@
         }
       },
       {
-        "start": 69.56,
+        "start": 65.05,
         "end": 72.439,
         "words": [
           {
             "text": "zapatos.",
-            "start": 69.56,
-            "end": 70.16
+            "start": 65.05,
+            "end": 65.65
           },
           {
             "text": "¿Qué",
@@ -84861,8 +84861,8 @@
           },
           {
             "text": "favor.",
-            "start": 134,
-            "end": 134.6
+            "start": 132.65,
+            "end": 133.25
           }
         ],
         "translations": {
@@ -87853,13 +87853,13 @@
         }
       },
       {
-        "start": 10.96,
+        "start": 9.09,
         "end": 15.879,
         "words": [
           {
             "text": "sombra.",
-            "start": 10.96,
-            "end": 11.56
+            "start": 9.09,
+            "end": 9.69
           },
           {
             "text": "Un",
@@ -88235,13 +88235,13 @@
         }
       },
       {
-        "start": 47.44,
+        "start": 46.01,
         "end": 51.32,
         "words": [
           {
             "text": "parque.",
-            "start": 47.44,
-            "end": 48.04
+            "start": 46.01,
+            "end": 46.61
           },
           {
             "text": "Luego",
@@ -88929,18 +88929,18 @@
         }
       },
       {
-        "start": 104.92,
+        "start": 103.049,
         "end": 110.319,
         "words": [
           {
             "text": "jugar",
-            "start": 104.92,
-            "end": 105.52
+            "start": 103.049,
+            "end": 103.649
           },
           {
             "text": "bien.",
-            "start": 105.92,
-            "end": 106.52
+            "start": 103.699,
+            "end": 104.299
           },
           {
             "text": "Peppa",
@@ -89859,13 +89859,13 @@
         }
       },
       {
-        "start": 175.04,
+        "start": 173.57,
         "end": 179.44,
         "words": [
           {
             "text": "desayunando.",
-            "start": 175.04,
-            "end": 175.64
+            "start": 173.57,
+            "end": 174.17
           },
           {
             "text": "Amo",
@@ -89931,8 +89931,8 @@
           },
           {
             "text": "planeta.",
-            "start": 183.04,
-            "end": 183.64
+            "start": 181.69,
+            "end": 182.29
           }
         ],
         "translations": {
@@ -92042,13 +92042,13 @@
         }
       },
       {
-        "start": 25.439,
+        "start": 22.849,
         "end": 31,
         "words": [
           {
             "text": "hacer.",
-            "start": 25.439,
-            "end": 26.039
+            "start": 22.849,
+            "end": 23.449
           },
           {
             "text": "Mami,",
@@ -92141,13 +92141,13 @@
         }
       },
       {
-        "start": 35.04,
+        "start": 33.01,
         "end": 38.16,
         "words": [
           {
             "text": "callados.",
-            "start": 35.04,
-            "end": 35.64
+            "start": 33.01,
+            "end": 33.61
           },
           {
             "text": "A",
@@ -92228,8 +92228,8 @@
           },
           {
             "text": "computadora.",
-            "start": 40.719,
-            "end": 41.319
+            "start": 39.65,
+            "end": 40.25
           }
         ],
         "translations": {
@@ -92640,13 +92640,13 @@
         }
       },
       {
-        "start": 74.96,
+        "start": 72.449,
         "end": 82.96,
         "words": [
           {
             "text": "hacer.",
-            "start": 74.96,
-            "end": 75.56
+            "start": 72.449,
+            "end": 73.049
           },
           {
             "text": "¡Cielos!",
@@ -92690,8 +92690,8 @@
           },
           {
             "text": "cerdito!",
-            "start": 80.72,
-            "end": 81.32
+            "start": 79.73,
+            "end": 80.33
           },
           {
             "text": "¡Papá",
@@ -93043,13 +93043,13 @@
         }
       },
       {
-        "start": 126.479,
+        "start": 123.97,
         "end": 129.999,
         "words": [
           {
             "text": "encender.",
-            "start": 126.479,
-            "end": 127.079
+            "start": 123.97,
+            "end": 124.57
           },
           {
             "text": "Papá",
@@ -94977,13 +94977,13 @@
         }
       },
       {
-        "start": 15.119,
+        "start": 13.05,
         "end": 18.84,
         "words": [
           {
             "text": "escribiendo.",
-            "start": 15.119,
-            "end": 15.719
+            "start": 13.05,
+            "end": 13.65
           },
           {
             "text": "Papá",
@@ -95370,13 +95370,13 @@
         }
       },
       {
-        "start": 53.879,
+        "start": 50.529,
         "end": 58.36,
         "words": [
           {
             "text": "guardar.",
-            "start": 53.879,
-            "end": 54.479
+            "start": 50.529,
+            "end": 51.129
           },
           {
             "text": "Cuarenta,",
@@ -96522,8 +96522,8 @@
           },
           {
             "text": "cebolla.",
-            "start": 123.68,
-            "end": 124.28
+            "start": 122.729,
+            "end": 123.329
           }
         ],
         "translations": {
@@ -97241,13 +97241,13 @@
         }
       },
       {
-        "start": 168.08,
+        "start": 166.69,
         "end": 172.24,
         "words": [
           {
             "text": "feliz,",
-            "start": 168.08,
-            "end": 168.68
+            "start": 166.69,
+            "end": 167.29
           },
           {
             "text": "lo",
