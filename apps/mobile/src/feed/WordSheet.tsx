@@ -364,7 +364,7 @@ function SavedBadge({
     >
       <Animated.View style={[styles.badgeCard, { transform: [{ scale }] }]}>
         <View style={styles.badgeLoro}>
-          <Image source={BRAND.parrot} style={styles.badgeParrot} resizeMode="cover" />
+          <Image source={BRAND.parrot} style={styles.badgeParrot} resizeMode="contain" />
         </View>
         <View style={styles.badgeText}>
           <Text style={styles.badgeWord} numberOfLines={1}>
@@ -877,16 +877,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 14,
   },
-  /** A round window on Loro's head — the parrot art is 282x420, so the
-      image is scaled to the window's width and its top is what shows. */
+  /** The whole parrot, small, on a soft mint tile. A round crop on the
+      head was tried first and Radek called it weird — at 44pt the crop
+      landed on the big glassy eye, cut by the circle's edge. The full
+      character reads at this size; a crop does not. */
   badgeLoro: {
-    backgroundColor: '#5ee6a8',
-    borderRadius: 22,
-    height: 44,
-    overflow: 'hidden',
-    width: 44,
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.14)',
+    borderRadius: 14,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
   },
-  badgeParrot: { height: 66, width: 44 },
+  /** 282x420 art at 46 tall is ~31 wide; contain keeps the ratio. */
+  badgeParrot: { height: 46, width: 40 },
   badgeText: { flex: 1 },
   badgeWord: { color: '#f2f5f3', fontSize: 19, fontWeight: '800', letterSpacing: -0.2 },
   badgeMeaning: { color: 'rgba(242,245,243,0.62)', fontSize: 13, fontWeight: '600', marginTop: 1 },
