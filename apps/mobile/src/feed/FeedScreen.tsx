@@ -40,6 +40,8 @@ import { setStoredRate } from '../player/rate';
 import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
 import { CHIP_ROW_H, CollectionMenu, CollectionPill } from './CollectionChips';
+import { EpisodeProgressTracker } from './EpisodeProgressTracker';
+import { episodeProgress, landingIndexFor, resumeSecondsFor } from './episodeProgress';
 import { getCollection, setCollection, subscribeToCollection } from './collection';
 import { DayDoneCard } from './DayDoneCard';
 import { LevelUpCard } from './LevelUpCard';
@@ -744,7 +746,10 @@ function FeedBody({
   useEffect(() => {
     if (!active) setMenuOpen(false);
   }, [active]);
-  const [activeIndex, setActiveIndex] = useState(0);
+  // An episode shelf opens on the episode it was last on (episodeProgress.ts).
+  const [activeIndex, setActiveIndex] = useState(() =>
+    episodes ? landingIndexFor(collection, videos) : 0
+  );
   /**
    * WHERE A FRESH LIST STARTS. FlashList reads `initialScrollIndex` once, at
    * mount, so this has to hold the truth at every moment a mount could happen
@@ -769,7 +774,27 @@ function FeedBody({
     jumpTargetRef.current = null;
     setActiveIndex(0);
     setListGeneration((g) => g + 1);
+    landOnLastRef.current = true;
   }, [collection]);
+  /**
+   * …AND AN EPISODE SHELF THEN MOVES TO ITS LAST EPISODE. The new shelf's
+   * list arrives a render after the shelf id (FeedScreen rebuilds it in an
+   * effect), so the landing waits for `videos` and uses the review jump's
+   * remount. The flag keeps a catalog refresh from re-landing later.
+   */
+  const landOnLastRef = useRef(false);
+  useEffect(() => {
+    if (!landOnLastRef.current) return;
+    landOnLastRef.current = false;
+    if (!episodes || videos.length === 0) return;
+    const index = landingIndexFor(collection, videos);
+    if (index === 0) return;
+    feedLog(`episodes: back to ${index + 1}/${videos.length}`);
+    mountIndexRef.current = index;
+    jumpTargetRef.current = index;
+    setActiveIndex(index);
+    setListGeneration((g) => g + 1);
+  }, [videos, episodes, collection]);
   /** The index a jump is waiting on — see applyViewableIndex. */
   const jumpTargetRef = useRef<number | null>(null);
   /**
@@ -938,6 +963,20 @@ function FeedBody({
   const swipe = useSwipeLifecycle(setDragging);
 
   const activeVideo = videos[activeIndex] ?? null;
+  /**
+   * WHERE THIS EPISODE OPENS — read once per episode, not per render: the
+   * tracker rewrites the record every few seconds, and PlayerDriver reloads
+   * whenever its start changes, so a live read here would reload the video
+   * under the user every five seconds.
+   */
+  const activeVideoKey = activeVideo?.id ?? null;
+  const resumeAt = useMemo(() => {
+    if (!episodes || !activeVideo) return 0;
+    const at = resumeSecondsFor(activeVideo);
+    if (at > 0) feedLog(`episodes: "${activeVideo.title ?? activeVideo.id}" resumes at ${at}s`);
+    return at;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodes, activeVideoKey]);
 
   /**
    * The review session's boundary: a swipe past the last lifted video ends
@@ -1128,6 +1167,9 @@ function FeedBody({
                       youtubeId: v.youtubeId,
                       title: v.title ?? v.creator,
                       durationSeconds: v.durationSeconds,
+                      // Read at open: the player yields while the menu is
+                      // up, so nothing moves under the list.
+                      ...(episodeProgress(v.id) ?? {}),
                     }))
                   : null
               }
@@ -1233,8 +1275,11 @@ function FeedBody({
           <PlayerDriver
             video={activeVideo}
             landing={landing}
-            startSeconds={walkthrough?.startSeconds ?? null}
+            startSeconds={walkthrough?.startSeconds ?? (resumeAt > 0 ? resumeAt : null)}
           />
+          {episodes && (
+            <EpisodeProgressTracker shelf={collection} video={activeVideo} active={active} />
+          )}
           <WordSheet
             data={sheet}
             language={language}

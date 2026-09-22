@@ -29,6 +29,11 @@ export type EpisodeItem = {
   youtubeId?: string;
   title: string;
   durationSeconds?: number;
+  /** 0..1 of the episode seen — the line under the thumbnail. Absent
+      until the user is a real way in (episodeProgress.ts). */
+  share?: number;
+  /** Watched to the end: a full line and "watched" in the meta. */
+  done?: boolean;
 };
 
 export function CollectionPill({
@@ -136,15 +141,21 @@ export function CollectionMenu({
                       accessibilityLabel={`Episode ${i + 1}, ${ep.title}${len ? `, ${len}` : ''}`}
                       style={({ pressed }) => [styles.episode, on && styles.episodeOn, pressed && styles.pressed]}
                     >
-                      {ep.youtubeId ? (
-                        <Image
-                          source={{ uri: `https://i.ytimg.com/vi/${ep.youtubeId}/mqdefault.jpg` }}
-                          style={styles.thumb}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={styles.thumb} />
-                      )}
+                      <View style={styles.thumb}>
+                        {ep.youtubeId && (
+                          <Image
+                            source={{ uri: `https://i.ytimg.com/vi/${ep.youtubeId}/mqdefault.jpg` }}
+                            style={StyleSheet.absoluteFill}
+                            resizeMode="cover"
+                          />
+                        )}
+                        {/* The progress line: how far in, along the bottom edge. */}
+                        {ep.share != null && ep.share > 0 && (
+                          <View style={styles.track}>
+                            <View style={[styles.fill, { width: `${Math.round(ep.share * 100)}%` }]} />
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.episodeText}>
                         <Text style={[styles.episodeTitle, on && styles.episodeTitleOn]} numberOfLines={2}>
                           {ep.title}
@@ -152,7 +163,7 @@ export function CollectionMenu({
                         <Text style={styles.episodeMeta}>
                           {i + 1}
                           {len ? ` · ${len}` : ''}
-                          {on ? ' · playing' : ''}
+                          {on ? ' · playing' : ep.done ? ' · watched' : ''}
                         </Text>
                       </View>
                     </Pressable>
@@ -250,7 +261,22 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   episodeOn: { backgroundColor: 'rgba(94,230,168,0.1)' },
-  thumb: { backgroundColor: 'rgba(242,245,243,0.06)', borderRadius: 8, height: 50, width: 89 },
+  thumb: {
+    backgroundColor: 'rgba(242,245,243,0.06)',
+    borderRadius: 8,
+    height: 50,
+    overflow: 'hidden',
+    width: 89,
+  },
+  track: {
+    backgroundColor: 'rgba(10,13,11,0.55)',
+    bottom: 0,
+    height: 3,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
+  fill: { backgroundColor: '#5ee6a8', height: 3 },
   episodeText: { flex: 1 },
   episodeTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
   episodeTitleOn: { color: '#5ee6a8' },
