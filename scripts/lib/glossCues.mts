@@ -25,7 +25,16 @@ const TARGET_LANGS: Record<string, string> = {
 
 const OPENAI_MODEL = 'gpt-4o';
 
-async function chatJson(prompt: string): Promise<Record<string, unknown>> {
+/**
+ * One JSON-mode chat call, metered. Exported (2026-09-21) so the episode
+ * repair pass (repairWords.mts) shares the same transport and the same
+ * dollar meter instead of growing a second fetch — every OpenAI call in the
+ * scripts must go through charge(), or the --budget-usd ceiling is a lie.
+ */
+export async function chatJson(
+  prompt: string,
+  model: string = OPENAI_MODEL
+): Promise<Record<string, unknown>> {
   const key = requireEnv('OPENAI_API_KEY');
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -34,7 +43,7 @@ async function chatJson(prompt: string): Promise<Record<string, unknown>> {
       authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
+      model,
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
     }),
@@ -49,7 +58,7 @@ async function chatJson(prompt: string): Promise<Record<string, unknown>> {
   // Metered so a run can be given a hard dollar ceiling. This is the expensive
   // half of the pipeline by a wide margin — the gloss emits one four-language
   // dictionary entry per unique word.
-  charge(OPENAI_MODEL, data.usage);
+  charge(model, data.usage);
   let text = (data.choices?.[0]?.message?.content ?? '').trim();
   // Belt-and-braces fence stripping, same as transcribe.py.
   text = text.replace(/^```(?:json)?|```$/gm, '').trim();
@@ -88,10 +97,26 @@ ${JSON.stringify(lines, null, 1)}
 Respond with ONLY a JSON object, no preamble, no markdown fences. One object per input line, in the same order:
 {"lines": [{"i": 0, "en": "...", "cs": "...", "de": "...", "fr": "..."}]}`;
 
-  const parsed = await chatJson(prompt);
-  const rows = (parsed.lines ?? []) as Record<string, unknown>[];
-  const byIndex = new Map<number, Record<string, unknown>>();
-  for (const row of rows) byIndex.set(Number(row.i), row);
+  // The model numbers its own rows. When it merges or skips a line, every
+  // row after it lands under the wrong cue and the video ends up with
+  // confidently wrong subtitles for the rest of its length (seen on a Peppa
+  // episode: two lines merged at cue 13, cues 14..61 shifted, the last one
+  // empty). Verify the index set; retry once; then fail the video rather
+  // than write shifted translations.
+  let byIndex = new Map<number, Record<string, unknown>>();
+  for (let attempt = 1; ; attempt++) {
+    const parsed = await chatJson(prompt);
+    const rows = (parsed.lines ?? []) as Record<string, unknown>[];
+    byIndex = new Map(rows.map((row) => [Number(row.i), row]));
+    const missing = lines.filter((l) => !byIndex.has(l.i)).map((l) => l.i);
+    if (missing.length === 0 && byIndex.size === lines.length) break;
+    const problem =
+      `translateCues("${videoName}"): model returned ${rows.length} rows for ` +
+      `${lines.length} cues` +
+      (missing.length ? ` (missing i=${missing.slice(0, 5).join(',')})` : '');
+    if (attempt === 2) throw new Error(problem);
+    console.warn(`   ~ ${problem} — retrying once`);
+  }
   cues.forEach((cue, i) => {
     const row = byIndex.get(i) ?? {};
     cue.translations = Object.fromEntries(

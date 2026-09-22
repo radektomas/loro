@@ -22,9 +22,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
+import { collectionVideos } from '@loro/core/catalog/collectionVideos';
+import { REELS, collectionOf, findCollection, isEpisodes } from '@loro/core/collections';
 import { liftDueBlock } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import { refreshCatalog } from '../platform/catalog';
+import { subscribeDevVideo } from '../platform/devMenu';
 import { trackOnce } from '../platform/analytics';
 import {
   usePlayerApi,
@@ -36,6 +39,10 @@ import {
 import { setStoredRate } from '../player/rate';
 import { useTabBarHeight } from '../shell/tabBar';
 import { AuthorLine } from './AuthorLine';
+import { CHIP_ROW_H, CollectionMenu, CollectionPill } from './CollectionChips';
+import { EpisodeProgressTracker } from './EpisodeProgressTracker';
+import { episodeProgress, landingIndexFor, resumeSecondsFor } from './episodeProgress';
+import { getCollection, setCollection, subscribeToCollection } from './collection';
 import { DayDoneCard } from './DayDoneCard';
 import { LevelUpCard } from './LevelUpCard';
 import { LearnedToast } from './LearnedToast';
@@ -85,8 +92,9 @@ import { WordSheet, type WordSheetData } from './WordSheet';
 /** Matches the web's VISIBILITY_THRESHOLD = 0.6 exactly. */
 const VISIBLE_PERCENT = 60;
 
-/** Every embed is 9:16. */
+/** Every reel is 9:16; every episode collection is 16:9 (core/collections). */
 const PLAYER_ASPECT = 9 / 16;
+const EPISODE_ASPECT = 16 / 9;
 
 /**
  * How much speech to hear before the word a review jumped to. The same three
@@ -283,13 +291,39 @@ export function FeedScreen({
   const reelRef = useRef(reel);
   reelRef.current = reel;
 
+  /** The shelf — Reels, Peppa, … (core/collections). Remembered on disk. */
+  const [collection, setCollectionState] = useState<string>(() =>
+    reel ? REELS : getCollection()
+  );
+  const collectionRef = useRef(collection);
+  collectionRef.current = collection;
+  useEffect(() => subscribeToCollection(setCollectionState), []);
+
   const [videos, setVideos] = useState<EmbedVideo[]>(() => {
     if (reel) return embedsFrom(reel as Video[]);
-    const ordered = orderFeed(embedsFrom(getCatalog()));
+    const ordered = listFor(collection, sourceVideos());
     // An EMPTY list settles nothing — see the note on the effect below.
     if (ordered.length > 0) orderedRef.current = ordered;
     return ordered;
   });
+
+  /**
+   * A NEW SHELF IS A NEW FEED: the list is rebuilt from scratch (reels
+   * reshuffled, episodes in order) and FeedBody remounts its list at the
+   * top on the same change. Skipped on mount — the initial state above
+   * already built it, and building twice would shuffle twice.
+   */
+  const firstShelfRef = useRef(true);
+  useEffect(() => {
+    if (firstShelfRef.current) {
+      firstShelfRef.current = false;
+      return;
+    }
+    if (reelRef.current) return;
+    const next = listFor(collection, sourceVideos());
+    orderedRef.current = next.length > 0 ? next : null;
+    setVideos(next);
+  }, [collection]);
 
   /**
    * The catalog arrives from the Supabase snapshot shortly after boot and the
@@ -326,7 +360,15 @@ export function FeedScreen({
           // not reorder or extend the three clips someone is mid-swipe through.
           if (reelRef.current) return current;
 
-          const incoming = embedsFrom(getCatalog());
+          // Episode shelves are in file order and have no settled order to
+          // protect; a refresh simply rebuilds them.
+          if (isEpisodes(collectionRef.current)) {
+            const next = listFor(collectionRef.current, sourceVideos());
+            orderedRef.current = next.length > 0 ? next : null;
+            return next;
+          }
+
+          const incoming = sourceVideos().filter((v) => collectionOf(v) === REELS);
           const settled = orderedRef.current;
 
           if (!settled) {
@@ -457,21 +499,26 @@ export function FeedScreen({
    * The 9:16 box centred in that area — the same arithmetic the slide uses for
    * its poster and tap surface, so the WebView lands exactly on top of them.
    */
+  const episodes = isEpisodes(collection);
   const box = useMemo(() => {
     if (!area) return null;
+    // Reels: the 9:16 box centred in the area. Episodes: 16:9 across the
+    // full width at the TOP of the area — the slide gives that area exactly
+    // this height (Slide's playerArea), so centred and top-aligned agree.
+    const aspect = episodes ? EPISODE_ASPECT : PLAYER_ASPECT;
     let height = area.height;
-    let width = height * PLAYER_ASPECT;
+    let width = height * aspect;
     if (width > area.width) {
       width = area.width;
-      height = width / PLAYER_ASPECT;
+      height = width / aspect;
     }
     return {
       left: (area.width - width) / 2,
-      top: area.y + (area.height - height) / 2,
+      top: area.y + (episodes ? 0 : (area.height - height) / 2),
       width,
       height,
     };
-  }, [area]);
+  }, [area, episodes]);
 
   /**
    * The first pixel below the player area — where the band begins.
@@ -485,7 +532,14 @@ export function FeedScreen({
 
   // Nothing to render a feed FROM — show the honest waiting state instead of
   // a black screen. Everything inside FeedBody assumes at least one slide.
-  if (emptyFeed) return <EmptyFeed />;
+  // An empty EPISODE shelf is a different fact (nothing published there yet)
+  // and keeps the chips, so the user can leave it.
+  if (emptyFeed) {
+    if (!reel && collection !== REELS) {
+      return <EmptyShelf collection={collection} onPick={setCollection} />;
+    }
+    return <EmptyFeed />;
+  }
 
   return (
     <FeedBody
@@ -494,6 +548,9 @@ export function FeedScreen({
       bandTop={bandTop}
       active={active}
       walkthrough={walkthrough}
+      collection={collection}
+      episodes={episodes}
+      showChips={!reel}
       onAreaLayout={onAreaLayout}
       onGoToProgress={onGoToProgress}
       onGoToWords={onGoToWords}
@@ -516,6 +573,37 @@ const SLOW_HINT_MS = 6000;
  * likely cause and offer a manual retry on top of the automatic one
  * FeedScreen already runs.
  */
+/** An episode shelf with nothing published on it yet — chips stay usable. */
+function EmptyShelf({ collection, onPick }: { collection: string; onPick: (id: string) => void }) {
+  const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.root}>
+      <CollectionPill
+        selected={collection}
+        topInset={insets.top}
+        open={open}
+        onPress={() => setOpen((o) => !o)}
+      />
+      {open && (
+        <CollectionMenu
+          selected={collection}
+          topInset={insets.top}
+          onPick={(id) => {
+            setOpen(false);
+            onPick(id);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      )}
+      <View style={styles.emptyRoot}>
+        <Text style={styles.emptyTitle}>{findCollection(collection).label}</Text>
+        <Text style={styles.emptyBody}>Nothing here yet. Episodes are on the way.</Text>
+      </View>
+    </View>
+  );
+}
+
 function EmptyFeed() {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -595,6 +683,27 @@ function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
   return shuffled(list);
 }
 
+/**
+ * Everything the feed could show: the published snapshot plus the shelves,
+ * which ship INSIDE the binary (core/catalog/collectionVideos.ts). The
+ * shelves were dev-only until 2026-09-22, when Radek decided to ship the
+ * Peppa update; they stay out of the published snapshot on purpose — a
+ * 1.4.0 app reads that snapshot and knows nothing of collections, so an
+ * episode in it would land inside the old reels feed. Bundled, an episode
+ * is only ever seen by a build that can shelve it.
+ */
+function sourceVideos(): EmbedVideo[] {
+  const base = embedsFrom(getCatalog());
+  const have = new Set(base.map((v) => v.id));
+  return [...base, ...embedsFrom(collectionVideos).filter((v) => !have.has(v.id))];
+}
+
+/** The shelf's list: reels shuffled by orderFeed, episodes in file order. */
+function listFor(collection: string, source: EmbedVideo[]): EmbedVideo[] {
+  const mine = source.filter((v) => collectionOf(v) === collection);
+  return isEpisodes(collection) ? mine : orderFeed(mine);
+}
+
 function embedsFrom(catalog: Video[]): EmbedVideo[] {
   // EMBEDS ONLY, and this is a data fact rather than a preference: 0 of the 8
   // seed clips carry a youtubeId, and their src is a WEB-RELATIVE path
@@ -610,6 +719,9 @@ function FeedBody({
   bandTop,
   active,
   walkthrough,
+  collection,
+  episodes,
+  showChips,
   onAreaLayout,
   onGoToProgress,
   onGoToWords,
@@ -624,8 +736,23 @@ function FeedBody({
   onAreaLayout: (event: LayoutChangeEvent) => void;
   onGoToProgress?: () => void;
   onGoToWords?: () => void;
+  /** The shelf on show, whether it is landscape episodes, and whether the
+      chip row is drawn (never during the onboarding reel). */
+  collection: string;
+  episodes: boolean;
+  showChips: boolean;
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const insets = useSafeAreaInsets();
+  /** The shelf menu. The player yields while it is up (see CollectionMenu);
+      the obscure effect sits below, after the flag it writes is declared. */
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!active) setMenuOpen(false);
+  }, [active]);
+  // An episode shelf opens on the episode it was last on (episodeProgress.ts).
+  const [activeIndex, setActiveIndex] = useState(() =>
+    episodes ? landingIndexFor(collection, videos) : 0
+  );
   /**
    * WHERE A FRESH LIST STARTS. FlashList reads `initialScrollIndex` once, at
    * mount, so this has to hold the truth at every moment a mount could happen
@@ -638,6 +765,39 @@ function FeedBody({
   const mountIndexRef = useRef(0);
   /** Bumped to force a remount — the review jump's whole mechanism. */
   const [listGeneration, setListGeneration] = useState(0);
+
+  // A new shelf starts at its top: same remount the review jump uses.
+  const firstShelfRef = useRef(true);
+  useEffect(() => {
+    if (firstShelfRef.current) {
+      firstShelfRef.current = false;
+      return;
+    }
+    mountIndexRef.current = 0;
+    jumpTargetRef.current = null;
+    setActiveIndex(0);
+    setListGeneration((g) => g + 1);
+    landOnLastRef.current = true;
+  }, [collection]);
+  /**
+   * …AND AN EPISODE SHELF THEN MOVES TO ITS LAST EPISODE. The new shelf's
+   * list arrives a render after the shelf id (FeedScreen rebuilds it in an
+   * effect), so the landing waits for `videos` and uses the review jump's
+   * remount. The flag keeps a catalog refresh from re-landing later.
+   */
+  const landOnLastRef = useRef(false);
+  useEffect(() => {
+    if (!landOnLastRef.current) return;
+    landOnLastRef.current = false;
+    if (!episodes || videos.length === 0) return;
+    const index = landingIndexFor(collection, videos);
+    if (index === 0) return;
+    feedLog(`episodes: back to ${index + 1}/${videos.length}`);
+    mountIndexRef.current = index;
+    jumpTargetRef.current = index;
+    setActiveIndex(index);
+    setListGeneration((g) => g + 1);
+  }, [videos, episodes, collection]);
   /** The index a jump is waiting on — see applyViewableIndex. */
   const jumpTargetRef = useRef<number | null>(null);
   /**
@@ -664,6 +824,9 @@ function FeedBody({
    * winning while the other overlay was still up.
    */
   const [promptObscured, setPromptObscured] = useState(false);
+  useEffect(() => {
+    setPromptObscured(menuOpen);
+  }, [menuOpen]);
 
   /**
    * The tapped word, or null. Held HERE rather than in the slide because the
@@ -803,6 +966,20 @@ function FeedBody({
   const swipe = useSwipeLifecycle(setDragging);
 
   const activeVideo = videos[activeIndex] ?? null;
+  /**
+   * WHERE THIS EPISODE OPENS — read once per episode, not per render: the
+   * tracker rewrites the record every few seconds, and PlayerDriver reloads
+   * whenever its start changes, so a live read here would reload the video
+   * under the user every five seconds.
+   */
+  const activeVideoKey = activeVideo?.id ?? null;
+  const resumeAt = useMemo(() => {
+    if (!episodes || !activeVideo) return 0;
+    const at = resumeSecondsFor(activeVideo);
+    if (at > 0) feedLog(`episodes: "${activeVideo.title ?? activeVideo.id}" resumes at ${at}s`);
+    return at;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodes, activeVideoKey]);
 
   /**
    * The review session's boundary: a swipe past the last lifted video ends
@@ -941,6 +1118,8 @@ function FeedBody({
               : null
         }
         focusCueIndex={walkthrough?.focusCueIndex}
+        // A resumed episode: no blank before the landing second.
+        startAtS={episodes ? resumeAt : 0}
         recallBlanks={walkthrough?.recallBlanks ?? true}
         // Per-clip during the guided run, core's own rules everywhere else.
         levelBlanks={walkthrough ? (walkthrough.levelBlanks ?? false) : true}
@@ -966,6 +1145,50 @@ function FeedBody({
             else noteHiddenLayout();
           }}
         >
+          {showChips && (
+            <CollectionPill
+              selected={collection}
+              detail={episodes && videos.length > 0 ? `${activeIndex + 1}/${videos.length}` : undefined}
+              topInset={insets.top}
+              open={menuOpen}
+              onPress={() => setMenuOpen((o) => !o)}
+            />
+          )}
+          {showChips && menuOpen && (
+            <CollectionMenu
+              selected={collection}
+              topInset={insets.top}
+              // An episode shelf keeps the menu up so its episodes can be
+              // picked; the reels shelf closes it, there is nothing to pick.
+              onPick={(id) => {
+                if (!isEpisodes(id)) setMenuOpen(false);
+                setCollection(id);
+              }}
+              onClose={() => setMenuOpen(false)}
+              episodes={
+                episodes
+                  ? videos.map((v) => ({
+                      id: v.id,
+                      youtubeId: v.youtubeId,
+                      title: v.title ?? v.creator,
+                      durationSeconds: v.durationSeconds,
+                      // Read at open: the player yields while the menu is
+                      // up, so nothing moves under the list.
+                      ...(episodeProgress(v.id) ?? {}),
+                    }))
+                  : null
+              }
+              activeIndex={activeIndex}
+              // The review jump's own mechanism: a remount at the index.
+              onPickEpisode={(index) => {
+                setMenuOpen(false);
+                if (index === activeIndex) return;
+                jumpTargetRef.current = index;
+                setActiveIndex(index);
+                setListGeneration((g) => g + 1);
+              }}
+            />
+          )}
           {pageHeight > 0 && (
             <FlashList
               ref={listRef}
@@ -982,6 +1205,9 @@ function FeedBody({
               data={videos}
               keyExtractor={(video) => video.id}
               extraData={activeIndex}
+              // Episodes are chosen from the menu, not swiped to (Radek:
+              // "it doesn't make sense the scrolling here").
+              scrollEnabled={!episodes}
               renderItem={({ item, index }) => (
                 <Slide
                   video={item}
@@ -992,6 +1218,8 @@ function FeedBody({
                   // at.
                   isActive={active && index === activeIndex}
                   box={box}
+                  episodes={episodes}
+                  topStrip={insets.top + (showChips ? CHIP_ROW_H : 0)}
                   language={language}
                   // ACTIVE SLIDE ONLY. FlashList recycles cells, and a ring
                   // drawn on a background slide would be waiting on a screen
@@ -1052,8 +1280,11 @@ function FeedBody({
           <PlayerDriver
             video={activeVideo}
             landing={landing}
-            startSeconds={walkthrough?.startSeconds ?? null}
+            startSeconds={walkthrough?.startSeconds ?? (resumeAt > 0 ? resumeAt : null)}
           />
+          {episodes && (
+            <EpisodeProgressTracker shelf={collection} video={activeVideo} active={active} />
+          )}
           <WordSheet
             data={sheet}
             language={language}
@@ -1282,6 +1513,12 @@ function PlayerDriver({
   const { anchorTime, isPlaying } = usePlayerClock();
   const appliedRef = useRef<ReviewTarget | null>(null);
 
+  // Dev only: the dev menu's "play this id" — see platform/devMenu.ts.
+  useEffect(() => {
+    if (!__DEV__) return;
+    return subscribeDevVideo((id) => api.loadAndPlay(id, 0));
+  }, [api]);
+
   useEffect(() => {
     if (!video || !status.ready) return;
     const opening =
@@ -1364,6 +1601,8 @@ const Slide = memo(function Slide({
   height,
   isActive,
   box,
+  episodes,
+  topStrip,
   language,
   spotlight,
   onWordTap,
@@ -1373,6 +1612,11 @@ const Slide = memo(function Slide({
   height: number;
   isActive: boolean;
   box: Omit<PlayerBox, 'visible'> | null;
+  /** Landscape 16:9 at the top, the band taking the rest — an episode shelf. */
+  episodes: boolean;
+  /** The status bar plus the chip row when it is shown — the spacer above
+      the player area. Must match what the chips actually occupy. */
+  topStrip: number;
   language: string;
   /** The walkthrough's ring, or null in the real feed. See Karaoke.spotlight. */
   spotlight?: { cueIndex: number; surface: string } | null;
@@ -1381,6 +1625,7 @@ const Slide = memo(function Slide({
   onAreaLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   /** Zero when there is no tab bar below the slide — see the band's padding. */
   const tabBarHeight = useTabBarHeight();
   const api = usePlayerApi();
@@ -1436,13 +1681,20 @@ const Slide = memo(function Slide({
           those points to the video rather than leaving a gap. The safe-area
           inset stays: it is what keeps the frame out from under the status
           bar and the notch. */}
-      <View style={{ height: insets.top }} />
+      <View style={{ height: topStrip }} />
 
       {/* THE PLAYER AREA. Holds no player — the persistent WebView positions
           itself over this box. flex:1 means the band below takes what it needs
           and this takes the remainder, so it is structurally impossible for
           Loro UI to overlap the player. That is the embed-terms constraint. */}
-      <View style={styles.playerArea} onLayout={onAreaLayout}>
+      {/* EPISODES: the area is exactly one 16:9 frame across the width and the
+          band below takes the rest — captions for a forty-minute episode
+          need the room more than the frame needs to be tall. Reels keep
+          flex:1 and the band its content height. */}
+      <View
+        style={episodes ? { height: Math.round(windowWidth * (9 / 16)) } : styles.playerArea}
+        onLayout={onAreaLayout}
+      >
         {box && (
           <View
             style={[
@@ -1451,7 +1703,7 @@ const Slide = memo(function Slide({
               // land in playerArea-local coordinates. It MUST match the
               // spacer's height exactly or the poster and the tap surface
               // drift away from the WebView.
-              { left: box.left, top: box.top - insets.top, width: box.width, height: box.height },
+              { left: box.left, top: box.top - topStrip, width: box.width, height: box.height },
             ]}
           >
             <Image source={{ uri: video.poster }} style={styles.poster} resizeMode="cover" />
@@ -1529,6 +1781,7 @@ const Slide = memo(function Slide({
       <View
         style={[
           styles.band,
+          episodes && styles.bandEpisodes,
           { paddingBottom: tabBarHeight > 0 ? 8 : insets.bottom + 8 },
         ]}
       >
@@ -1926,6 +2179,7 @@ const styles = StyleSheet.create({
   },
   poster: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   band: { paddingTop: 6 },
+  bandEpisodes: { flex: 1 },
   bandTop: {
     flexDirection: 'row',
     alignItems: 'center',

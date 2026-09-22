@@ -448,6 +448,23 @@ export function clearWayTo(plan: RecallPlan, asked: string): RecallPlan {
 }
 
 /**
+ * THE SAME CLEAR WAY, FROM A SECOND: a resumed episode opens at the moment
+ * the user left it (episodeProgress.ts), and every blank behind that moment
+ * goes. Its audio is not heard on this watch, and a hold armed behind the
+ * landing point does not just ask for unheard audio — it re-seats the
+ * player back to the blank (2026-09-22, on device: resumed at 93s, the
+ * first hold dragged the video to 29s).
+ */
+export function clearWayFrom(plan: RecallPlan, startAtS: number): RecallPlan {
+  if (!(startAtS > 0)) return plan;
+  const entries = plan.entries.filter((e) => e.pauseAt >= startAtS);
+  const dropped = plan.entries.length - entries.length;
+  if (dropped === 0) return plan;
+  flog(`clear way from ${startAtS.toFixed(1)}s: ${dropped} earlier blank(s) dropped`);
+  return { entries, pauseAts: entries.map((e) => e.pauseAt) };
+}
+
+/**
  * Grade one typed answer — core's matchAnswer: normalizeAnswer on both sides
  * (accent- and case-insensitive, punctuation trimmed) plus the spelling
  * near-miss tier ('almost', Levenshtein <=1 at 4-7 letters, <=2 at 8+). NO

@@ -1,4 +1,4 @@
-import type { SavedWord, Video } from './types.ts';
+import type { Gloss, SavedWord, Video } from './types.ts';
 import { normalizeAnswer } from './srs.ts';
 import { glossText, lookupGloss, normalizeSurface } from './dictionary.ts';
 import { isFunctionWord } from './glossary.ts';
@@ -291,6 +291,43 @@ export function wordLevel(surface: string, lemma?: string | null): number {
 // ---------------------------------------------------------------------------
 // Blank planning
 
+/**
+ * IS THIS A WORD WORTH PRACTISING? Unlisted words are band 5 by definition,
+ * and at the top of the ladder band 5 is asked for FIRST — so with no gate
+ * the first unlisted word of a cue was blanked, and in Peppa that is
+ * "Pig", "Peppa", "George", "eh" (Radek, 2026-09-22: "the blue blank words
+ * are super weird … it needs to be very good Spanish words based on the
+ * level"; and in reels "you fill up eh as a level word, which seems
+ * unprofessional"). The gloss knows what the word is: a proper noun by its
+ * note or its capitalised lemma, a filler by its part of speech or note,
+ * and an unlisted word is trusted only when it is a content word.
+ */
+const FILLER_WORDS = new Set([
+  'eh', 'ah', 'oh', 'uh', 'um', 'mm', 'mmm', 'hmm', 'ay', 'uy', 'ey', 'ja',
+  'jaja', 'je', 'ji', 'jo', 'wow', 'guau', 'yeah', 'ok', 'okey', 'ñam',
+  'gugu', 'gaga', 'brr', 'pum', 'bum', 'boom', 'ups', 'uf', 'puf', 'bah',
+  'tsk', 'psst', 'shh', 'ah', 'aah', 'ahh', 'ooh', 'ohh', 'ehh', 'hum',
+]);
+const JUNK_POS = new Set(['interj', 'name', 'propn', 'proper noun', 'proper', 'phrase', 'abbr']);
+const JUNK_NOTE = /proper|\bname\b|interj|exclam|filler|onomat|hesitat|expressive|brand|sound/i;
+const CONTENT_POS = new Set(['noun', 'verb', 'adj', 'adv', 'num', 'number']);
+/** Grammar glue — "de", "la", "y" — is not vocabulary to practise; its gloss
+    ("of") makes a poor prompt and a blank on it teaches nothing. */
+const GLUE_POS = new Set(['det', 'prep', 'conj', 'aux', 'poss', 'preposition', 'contracted', 'contr']);
+
+export function isLevelBlankable(surface: string, gloss: Gloss | null, band: number): boolean {
+  const key = normalizeSurface(surface);
+  if (FILLER_WORDS.has(key)) return false;
+  if (!/^[\p{L}]+$/u.test(key)) return false;
+  if (!gloss) return false;
+  const pos = gloss.pos.trim().toLowerCase();
+  if (JUNK_POS.has(pos) || GLUE_POS.has(pos)) return false;
+  if (gloss.note && JUNK_NOTE.test(gloss.note)) return false;
+  if (/^\p{Lu}/u.test(gloss.lemma)) return false;
+  if (band === MAX_WORD_LEVEL && !CONTENT_POS.has(pos)) return false;
+  return true;
+}
+
 /** A level-practice blank target. Shape-compatible with what the blank UI
     needs (text + translation prompt) and with the SRS save path. */
 export type LevelBlankWord = {
@@ -398,6 +435,7 @@ export function computeLevelBlankPlan(
       if (wordLevel(normalizeSurface(word.text), gloss?.lemma) !== band) {
         continue;
       }
+      if (!isLevelBlankable(word.text, gloss, band)) continue;
       const translation = gloss && glossText(gloss, language);
       if (!translation) continue;
 

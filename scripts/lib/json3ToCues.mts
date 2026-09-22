@@ -96,8 +96,53 @@ function boundaryScore(words: readonly CueWord[], i: number): number {
   return 0.0;
 }
 
-export function groupIntoCues(words: readonly CueWord[]): CueOut[] {
-  if (words.length === 0) return [];
+/**
+ * THE LATE TAIL. YouTube's recogniser stamps the LAST word of an utterance
+ * at the moment the silence after it ends, not when it was said: in the raw
+ * json3 the word sits alone in its own event ("verlo" 3s after "Venid a"),
+ * or opens the next event with its second seg exactly +1000ms behind
+ * ("loros" +0, " soy" +1000). Downstream that word starts a new cue at its
+ * bogus time, and the user sees the sentence end appear five seconds late
+ * with the next sentence (Radek, 2026-09-22, Peppa: "the last word of the
+ * sentence doesn't appear, and appears in 5 seconds with the other
+ * sentence starting"). 39 of the 1,333 Peppa cues had one.
+ *
+ * The signature: a gap of a second or more in front of a word whose
+ * predecessor carries NO punctuation — a sentence does not pause inside
+ * itself for a second. The word is moved to right after its predecessor.
+ * A predecessor with a comma is left alone ("George, … George,") — a
+ * repeated call is a real pause. Only a PUNCTUATED track can say which
+ * gaps are inside a sentence, so a bare ASR track is untouched; the
+ * episode ingest repairs punctuation first and groups again after it.
+ */
+export const LATE_TAIL_MIN_GAP_S = 1.0;
+export const LATE_TAIL_MAX_GAP_S = 6;
+const TRAILING_PUNCTUATION = /[.?!…,;:]["»)]*$/;
+
+export function snapLateTails(words: readonly CueWord[]): { words: CueWord[]; snapped: number } {
+  if (!words.some((w) => isSentenceEnd(w.text))) return { words: [...words], snapped: 0 };
+  const out: CueWord[] = [];
+  let snapped = 0;
+  for (const word of words) {
+    const prev = out[out.length - 1];
+    if (prev && !TRAILING_PUNCTUATION.test(prev.text)) {
+      const gap = word.start - prev.end;
+      if (gap >= LATE_TAIL_MIN_GAP_S && gap <= LATE_TAIL_MAX_GAP_S) {
+        const start = round3(prev.end + 0.05);
+        const length = Math.min(MAX_WORD_SECONDS, Math.max(0.2, word.end - word.start));
+        out.push({ ...word, start, end: round3(start + length) });
+        snapped++;
+        continue;
+      }
+    }
+    out.push(word);
+  }
+  return { words: out, snapped };
+}
+
+export function groupIntoCues(input: readonly CueWord[]): CueOut[] {
+  if (input.length === 0) return [];
+  const { words } = snapLateTails(input);
   const cues: CueOut[] = [];
 
   const emit = (indices: readonly number[]): void => {
