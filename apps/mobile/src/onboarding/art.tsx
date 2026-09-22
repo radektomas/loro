@@ -276,6 +276,7 @@ export function FeedMock({
   isCurrent,
   loop = true,
   width = 232,
+  frameRatio = 1.25,
 }: {
   words: string[];
   litIndex: number;
@@ -286,6 +287,9 @@ export function FeedMock({
   /** Play the tap→save beat on repeat while on stage. */
   loop?: boolean;
   width?: number;
+  /** Frame height as a share of width: 1.25 is the portrait phone of the
+      hook screen; 0.56 is a landscape clip for a wide, short slot. */
+  frameRatio?: number;
 }) {
   const reduced = useReducedMotion();
   /** 0 = watching, 1 = the word lit, 2 = saved card up. */
@@ -317,8 +321,9 @@ export function FeedMock({
     return { opacity: 0.55 + (1 - t) * 0.45 };
   });
 
-  const frameH = width * 1.25;
-  const parrotH = frameH * 0.6;
+  const frameH = width * frameRatio;
+  const landscape = frameRatio < 1;
+  const parrotH = frameH * (landscape ? 0.82 : 0.6);
   return (
     <View style={[styles.phone, { width, height: frameH + 96 }]}>
       {/* the video: a sky, a sun, a hill — and Loro in it, saying the line.
@@ -339,7 +344,7 @@ export function FeedMock({
           source={BRAND.parrot}
           style={{
             height: parrotH,
-            left: width * 0.5,
+            left: width * (landscape ? 0.68 : 0.5),
             position: 'absolute',
             top: frameH - parrotH + 6,
             width: parrotH * (282 / 420),
@@ -348,7 +353,7 @@ export function FeedMock({
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot"
         />
-        <View style={[styles.bubble, { left: width * 0.1, top: frameH * 0.34 }]}>
+        <View style={[styles.bubble, { left: width * (landscape ? 0.4 : 0.1), top: frameH * (landscape ? 0.16 : 0.34) }]}>
           <Text style={styles.bubbleText}>¡Hola!</Text>
           <View style={styles.bubbleTail} />
         </View>
@@ -520,12 +525,23 @@ export function TypingMock({
   after,
   gloss,
   isCurrent,
+  bar = true,
+  size = 22,
+  frame = true,
 }: {
   before: string[];
   answer: string;
   after: string[];
+  /** The hint over the gap; empty draws none. */
   gloss: string;
   isCurrent: boolean;
+  /** Draw the answer bar under the line. Off for a slim strip (paywall). */
+  bar?: boolean;
+  /** The line's type size; the letter cells scale with it. */
+  size?: number;
+  /** Draw the card around it. Off when the line sits inside something
+      else — the paywall's speech bubble. */
+  frame?: boolean;
 }) {
   const reduced = useReducedMotion();
   /** 0..answer.length letters typed, then answer.length+1 = graded. */
@@ -553,34 +569,37 @@ export function TypingMock({
   }, [isCurrent, reduced, typed, answer.length]);
 
   const letters = answer.split('');
+  const wordStyle = { fontSize: size, lineHeight: size + 8 };
   return (
-    <View style={styles.typing}>
+    <View style={[styles.typing, !bar && styles.typingSlim, !frame && styles.typingBare]}>
       <View style={styles.typingLine}>
         {before.map((w, i) => (
-          <Text key={`b${i}`} style={styles.typingWord}>
+          <Text key={`b${i}`} style={[styles.typingWord, wordStyle]}>
             {w}
           </Text>
         ))}
         <View style={styles.typingSlot}>
-          <Text style={styles.typingGloss}>{gloss}</Text>
+          {gloss ? <Text style={styles.typingGloss}>{gloss}</Text> : null}
           <View style={styles.typingCells}>
             {letters.map((ch, i) => (
-              <TypingCell key={i} index={i} letter={ch} typed={typed} total={letters.length} />
+              <TypingCell key={i} index={i} letter={ch} typed={typed} total={letters.length} size={size} />
             ))}
           </View>
         </View>
         {after.map((w, i) => (
-          <Text key={`a${i}`} style={styles.typingWord}>
+          <Text key={`a${i}`} style={[styles.typingWord, wordStyle]}>
             {w}
           </Text>
         ))}
       </View>
-      <View style={styles.answerBar}>
-        <AnswerText answer={answer} typed={typed} />
-        <View style={styles.answerGo}>
-          <Text style={styles.answerGoText}>→</Text>
+      {bar && (
+        <View style={styles.answerBar}>
+          <AnswerText answer={answer} typed={typed} />
+          <View style={styles.answerGo}>
+            <Text style={styles.answerGoText}>→</Text>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -590,11 +609,13 @@ function TypingCell({
   letter,
   typed,
   total,
+  size = 22,
 }: {
   index: number;
   letter: string;
   typed: SharedValue<number>;
   total: number;
+  size?: number;
 }) {
   const style = useAnimatedStyle(() => {
     const shown = typed.value > index;
@@ -612,9 +633,11 @@ function TypingCell({
     backgroundColor: typed.value > total ? ACCENT : ACCENT_DIM,
   }));
   return (
-    <View style={styles.cell}>
-      <Animated.Text style={[styles.cellLetter, style]}>{letter}</Animated.Text>
-      <Animated.View style={[styles.cellDash, dash]} />
+    <View style={[styles.cell, { width: Math.round(size * 0.73) }]}>
+      <Animated.Text style={[styles.cellLetter, { fontSize: size, lineHeight: size + 4 }, style]}>
+        {letter}
+      </Animated.Text>
+      <Animated.View style={[styles.cellDash, { width: Math.round(size * 0.64) }, dash]} />
     </View>
   );
 }
@@ -880,6 +903,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: 16,
   },
+  /** The slim strip: no answer bar, tighter padding, sits flush. */
+  typingSlim: { alignItems: 'center', marginTop: 18, paddingHorizontal: 14, paddingVertical: 12 },
+  /** Inside something else: no card of its own. */
+  typingBare: { backgroundColor: 'transparent', borderWidth: 0, marginTop: 0, padding: 0 },
   typingLine: { alignItems: 'flex-end', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typingWord: { color: TEXT, fontSize: 22, fontWeight: '700', lineHeight: 30 },
   typingSlot: { alignItems: 'center' },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
@@ -18,6 +19,10 @@ import type {
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { SignInCard } from '../auth/SignInCard';
 import { BRAND } from '../onboarding/brand';
+import { Backdrop, IconTile, TypingMock } from '../onboarding/art';
+import { getCatalog } from '@loro/core/catalog';
+import { collectionVideos } from '@loro/core/catalog/collectionVideos';
+import { storage } from '@loro/core/storage';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import { track } from '../platform/analytics';
@@ -219,35 +224,42 @@ function trialDays(product: PurchasesStoreProduct): number | null {
   }
 }
 
-/** "$0.00" in the product's own currency — the button's number. */
-function zeroPrice(product: PurchasesStoreProduct): string {
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: product.currencyCode,
-    }).format(0);
-  } catch {
-    return `0.00 ${product.currencyCode}`;
-  }
-}
+/** How many Peppa episodes ship in this build — a fact from the bundle,
+    never a number typed into copy. */
+/**
+ * THE ONE REVIEW, quoted. A REAL App Store review (Czech storefront,
+ * five stars, by "tomasooooo", 2026), reproduced with its grammar tidied
+ * and its meaning untouched: the original reads "Finally someone did
+ * something for get my Spanish after 4years of duolingo to higher level".
+ * This repo once shipped invented testimonials and deleted them; a quote
+ * lives here only because a person wrote it on the store, and the next
+ * one goes in the same way — copy it from the store, note the original.
+ */
+const REVIEW = {
+  stars: 5,
+  text: 'Finally someone did something to get my Spanish to a higher level after four years of Duolingo.',
+  author: 'tomasooooo',
+  source: 'App Store review',
+};
 
 /**
- * One stop on the trial timeline: a column in the sheet, a small mint
- * label on top and the fact under it. No dots, no icons, no rail — the
- * same sheet the plan screens use, so the wall reads as the last page of
- * the plan rather than a different app.
+ * HOW MANY WORDS LORO HOLDS — distinct dictionary entries across the
+ * catalog on the device plus the bundled shelves, rounded DOWN to the
+ * hundred so the line never claims more than is there. Counted, never
+ * typed (Radek, 2026-09-22: "say the amount of words we have on Loro").
  */
-function TimelineStop({ head, body }: { head: string; body: string }) {
-  return (
-    <View style={styles.tlStop}>
-      <Text style={styles.tlHead}>{head}</Text>
-      <Text style={styles.tlBody}>{body}</Text>
-    </View>
-  );
+function wordCount(): number {
+  const keys = new Set<string>();
+  for (const video of [...getCatalog(), ...collectionVideos]) {
+    for (const key of Object.keys(video.dictionary ?? {})) keys.add(key.toLowerCase());
+  }
+  return Math.floor(keys.size / 100) * 100;
 }
 
 export function PaywallScreen() {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const words = useMemo(() => wordCount(), []);
   const [offer, setOffer] = useState<Offer>({ status: 'loading' });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<'purchase' | 'restore' | null>(null);
@@ -452,6 +464,8 @@ export function PaywallScreen() {
 
   return (
     <View style={styles.screen}>
+      {/* The same wash the onboarding sits on — the wall is its last page. */}
+      <Backdrop width={width} height={height} />
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -460,21 +474,23 @@ export function PaywallScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <Image
-          source={BRAND.parrot}
-          style={styles.parrot}
-          resizeMode="contain"
-        />
-        {/* THE SALE, said the way the owner says it: we want you to try it,
-            for free. The plan line under it is the user's own onboarding
-            answer read back (plan.ts), so the trial is a trial OF something
-            they just built. Nothing here promises an outcome. */}
-        <Text style={styles.title}>Your plan is set</Text>
-        <Text style={styles.planLine}>{planLine(getPlan())}</Text>
-        <Text style={styles.subtitle}>
-          Real clips at your level, your saved words back before they slip,
-          and a goal you can finish tonight.
-        </Text>
+        {/* THE SALE, in this order: their plan (the answers they just gave,
+            as chips — level, pace), the product doing the thing (a clip with
+            a word lit and Loro saying the line, the tap→saved beat on a
+            loop), three lines of what that buys, and a free week that is
+            safe to start. Nothing here promises an outcome. */}
+        <Text style={styles.title}>Your plan is ready</Text>
+        <View style={styles.chips}>
+          <View style={[styles.chip, styles.chipAccent]}>
+            <Text style={styles.chipAccentText}>{storage.getStartLevel() ?? 'A1'}</Text>
+          </View>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>{planLine(getPlan())}</Text>
+          </View>
+        </View>
+        {/* No paragraph under the title: the value card below says it, and
+            the wall must fit one screen (Radek: "I don't want any
+            scrolling"). */}
 
         {offer.status === 'loading' && (
           <View style={styles.stateBox}>
@@ -491,38 +507,66 @@ export function PaywallScreen() {
           </View>
         )}
 
-        {/* THE TIMELINE. What the fear at Apple's sheet actually is: "I will
-            forget and get charged". Three lines answer it before the tap —
-            and the middle one is a promise the app keeps (noteTrialStarted).
-            With monthly selected there is no trial, so it says so in one
-            line instead. */}
-        {offer.status === 'ready' && selected && selectedDays !== null && (
-          <View style={styles.timeline}>
-            <TimelineStop head="Today" body="Everything unlocked" />
-            <View style={styles.tlDivider} />
-            <TimelineStop head={`Day ${selectedDays - 2}`} body="We remind you" />
-            <View style={styles.tlDivider} />
-            <TimelineStop
-              head={`Day ${selectedDays}`}
-              body={`Trial ends, ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
+        {/* THE MECHANIC, IN ONE STRIP: the line with the word lit, and the
+            saved tag it becomes — the same picture the how-it-works screen
+            opens on. (A drawn clip with Loro saying "¡Hola!" stood here for
+            an hour; Radek: "I don't want that banner".) */}
+        {/* LORO SAYS THE OWNER'S LINE, and the last word arrives the way a
+            blank does in the app: letter by letter, then green (Radek,
+            2026-09-22: "the mascot saying in a bubble 'we want you to try
+            Loro for free', and the free will be like esta is now"). */}
+        <View style={styles.hero}>
+          <Image
+            source={BRAND.parrot}
+            style={styles.heroParrot}
+            resizeMode="contain"
+            accessibilityRole="image"
+            accessibilityLabel="Loro the parrot"
+          />
+          <View style={styles.bubble}>
+            <View style={styles.bubbleTail} />
+            <TypingMock
+              before={['We', 'want', 'you', 'to', 'try', 'Loro', 'for']}
+              answer="free"
+              after={[]}
+              gloss=""
+              isCurrent
+              bar={false}
+              frame={false}
+              size={18}
             />
           </View>
-        )}
-        {offer.status === 'ready' && selected && selectedDays === null && (
-          <View style={styles.timeline}>
-            <TimelineStop
-              head="Today"
-              body={`Everything unlocked, ${selected.product.priceString} ${billedWord(selectedPeriod)}. No trial on this plan.`}
-            />
+        </View>
+
+        {/* WHAT THAT BUYS — three lines, each a shipped fact. */}
+        <View style={styles.benefits}>
+          <View style={styles.benefit}>
+            <IconTile glyph="▶︎" tint="sky" size={34} />
+            <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
           </View>
-        )}
+          <View style={styles.benefit}>
+            <IconTile glyph="✓" tint="mint" size={34} />
+            <Text style={styles.benefitText}>Every word you tap comes back before you forget it</Text>
+          </View>
+          <View style={styles.benefit}>
+            <IconTile glyph="★︎" tint="amber" size={34} />
+            <Text style={styles.benefitText}>{words.toLocaleString('en-US')}+ Spanish words, every one tappable</Text>
+          </View>
+        </View>
+
+        {/* WHAT SOMEONE SAID — see REVIEW. */}
+        <View style={styles.review} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
+          <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
+          <Text style={styles.reviewText}>“{REVIEW.text}”</Text>
+          <Text style={styles.reviewBy}>
+            {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
+          </Text>
+        </View>
+
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
         {/* The owner's line, right above the button it belongs to. */}
-        {selected && selectedDays !== null && (
-          <Text style={styles.ctaLead}>We want you to try Loro for free.</Text>
-        )}
         {selected && (
           <Pressable
             onPress={() => void purchase()}
@@ -538,7 +582,7 @@ export function PaywallScreen() {
             ) : (
               <Text style={styles.ctaText}>
                 {selectedDays !== null
-                  ? `Try ${selectedDays} days for ${zeroPrice(selected.product)}`
+                  ? 'Start Loro for free'
                   : `Subscribe · ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
               </Text>
             )}
@@ -549,10 +593,10 @@ export function PaywallScreen() {
         {selected && (
           <Text style={styles.ctaTerms}>
             {selectedDays !== null
-              ? `then ${selected.product.priceString} ${billedWord(selectedPeriod)}` +
+              ? `${selectedDays} days free, then ${selected.product.priceString} ${billedWord(selectedPeriod)}` +
                 (perMonthLabel(selected.product) ? ` (${perMonthLabel(selected.product)} / month)` : '') +
-                ' · cancel anytime in Settings'
-              : 'Renews automatically · cancel anytime in Settings'}
+                ', renews until you cancel in Settings'
+              : `${selected.product.priceString} ${billedWord(selectedPeriod)}, renews until you cancel in Settings`}
           </Text>
         )}
         {/* THE OTHER PLAN, one tap away. Names its price and whether it has a
@@ -573,13 +617,11 @@ export function PaywallScreen() {
             </Text>
           </Pressable>
         )}
-        {selected && (
-          <Text style={styles.disclosure}>
-            Charged to your Apple ID{selectedDays !== null ? ' when the trial ends' : ''}, renews
-            automatically until cancelled at least 24 hours before the end of the
-            period. Manage it in Settings → Subscriptions.
-          </Text>
-        )}
+        {/* No boilerplate paragraph here any more (Radek: "are those things
+            necessary? I want a really nice paywall"). The one line under
+            the button carries the terms Apple's 3.1.2 asks for — price,
+            period, trial, auto-renewal, how to cancel — and Apple's own
+            purchase sheet repeats them before any money moves. */}
         <View style={styles.footerLinks}>
           <TextButton
             label={busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
@@ -644,7 +686,64 @@ export function PaywallScreen() {
 const styles = StyleSheet.create({
   screen: { backgroundColor: GROUND, flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
-  parrot: { alignSelf: 'center', height: 72, width: 48 },
+  // ---- the plan as chips ----
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 },
+  chip: {
+    backgroundColor: 'rgba(242,245,243,0.08)',
+    borderColor: 'rgba(242,245,243,0.12)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipText: { color: TEXT, fontSize: 13, fontWeight: '700' },
+  chipAccent: { backgroundColor: 'rgba(94,230,168,0.16)', borderColor: 'rgba(94,230,168,0.4)' },
+  chipAccentText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
+  // ---- the demo and the benefits ----
+  benefits: { gap: 10, marginTop: 18 },
+  benefit: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  benefitText: { color: TEXT, flex: 1, fontSize: 14, fontWeight: '600', lineHeight: 19 },
+  // ---- the review ----
+  review: {
+    backgroundColor: 'rgba(20,26,23,0.92)',
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reviewStars: { color: '#ffc46b', fontSize: 14, letterSpacing: 1.5 },
+  reviewText: { color: TEXT, fontSize: 14, fontStyle: 'italic', lineHeight: 20, marginTop: 6 },
+  reviewBy: { color: MUTED, fontSize: 12, fontWeight: '700', marginTop: 8 },
+  reviewSource: { fontWeight: '600' },
+  // ---- Loro and the bubble ----
+  hero: { alignItems: 'flex-end', flexDirection: 'row', gap: 10, marginTop: 18 },
+  heroParrot: { height: 96, width: 64 },
+  bubble: {
+    backgroundColor: 'rgba(20,26,23,0.95)',
+    borderColor: 'rgba(242,245,243,0.1)',
+    borderRadius: 18,
+    borderBottomLeftRadius: 6,
+    borderWidth: 1,
+    flex: 1,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  /** The wedge on the bubble's lower-left corner, toward the parrot. */
+  bubbleTail: {
+    backgroundColor: 'rgba(20,26,23,0.95)',
+    borderColor: 'rgba(242,245,243,0.1)',
+    borderLeftWidth: 1,
+    borderBottomWidth: 1,
+    bottom: -7,
+    height: 12,
+    left: 10,
+    position: 'absolute',
+    transform: [{ rotate: '45deg' }],
+    width: 12,
+  },
   title: {
     color: TEXT,
     fontSize: 26,
@@ -654,49 +753,34 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
-  /** The plan, in the accent: the one line on this screen that is theirs. */
-  planLine: {
-    color: ACCENT,
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: MUTED,
-    fontSize: 15,
-    lineHeight: 21,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
-  stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
-  timeline: {
-    backgroundColor: CARD,
+  // ---- the mechanic strip ----
+  mechanic: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(20,26,23,0.92)',
     borderColor: 'rgba(242,245,243,0.08)',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    marginTop: 24,
-    overflow: 'hidden',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+    marginTop: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  tlStop: { flex: 1, paddingHorizontal: 12, paddingVertical: 14 },
-  tlDivider: { backgroundColor: 'rgba(242,245,243,0.08)', width: 1 },
-  tlHead: {
-    color: ACCENT,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+  mechanicArrow: { color: MUTED, fontSize: 16, fontWeight: '800' },
+  savedTag: {
+    backgroundColor: 'rgba(94,230,168,0.14)',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  tlBody: { color: TEXT, fontSize: 14, fontWeight: '600', lineHeight: 19, marginTop: 6 },
-  disclosure: {
-    color: 'rgba(242,245,243,0.45)',
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 10,
-    textAlign: 'center',
-  },
+  savedTagText: { color: ACCENT, fontSize: 12, fontWeight: '800' },
+  stateBox: { alignItems: 'center', gap: 12, marginTop: 40 },
+  stateText: { color: MUTED, fontSize: 14, textAlign: 'center' },
   /** The other plan as a second, quiet button under the mint one: same
       shape, grey, so it reads as a real choice rather than a footnote. */
   switchPlan: {
