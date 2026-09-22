@@ -243,11 +243,14 @@ describe('tierForLearned — the ladder on words learned', () => {
   });
 });
 
+/** A unique all-letter word per index — the planner blanks letters only. */
+const letters = (i: number): string => 'zq' + 'abcdefghijklmnopqrstuvwxyz'[i % 26] + 'abcdefghij'[Math.floor(i / 26)];
+
 describe('computeLevelBlankPlan — long videos', () => {
   // 200 one-second cues: a 200s video, well over LONG_VIDEO_S. Every cue
   // offers one unlisted (band 5) word, so a band-5 user can be asked
   // anywhere — the question is WHERE the planner chooses to ask.
-  const long = video(Array.from({ length: 200 }, (_, i) => [FILLER_WORD, `zq${i}`]));
+  const long = video(Array.from({ length: 200 }, (_, i) => [FILLER_WORD, letters(i)]));
 
   it('budgets by length and spreads the blanks across the whole run', () => {
     const plan = computeLevelBlankPlan(long, 5, [], 'en');
@@ -259,8 +262,59 @@ describe('computeLevelBlankPlan — long videos', () => {
   });
 
   it('leaves a short video exactly as it was', () => {
-    const short = video(Array.from({ length: 20 }, (_, i) => [FILLER_WORD, `zq${i}`]));
+    const short = video(Array.from({ length: 20 }, (_, i) => [FILLER_WORD, letters(i)]));
     const plan = computeLevelBlankPlan(short, 5, [], 'en');
     assert.equal(plan.size, 4);
+  });
+});
+
+/**
+ * WHAT IS WORTH PRACTISING. Unlisted words are band 5, and at the top of
+ * the ladder band 5 comes first — so without a gate the first unlisted word
+ * of a cue was blanked, and in Peppa that was "Pig", "Peppa", "eh". The gloss
+ * says what a word is; the planner listens.
+ */
+describe('computeLevelBlankPlan — only real vocabulary', () => {
+  const NAME_NOTE: Gloss = { lemma: 'Peppa', pos: 'noun', note: 'proper noun', glosses: { en: 'Peppa' } };
+  const NAME_LEMMA: Gloss = { lemma: 'Pig', pos: 'noun', note: null, glosses: { en: 'Pig' } };
+  const INTERJ: Gloss = { lemma: 'eh', pos: 'interj', note: null, glosses: { en: 'eh' } };
+  const FILLER_NOTE: Gloss = { lemma: 'ah', pos: 'other', note: 'filler word', glosses: { en: 'ah' } };
+  const OTHER_UNLISTED: Gloss = { lemma: 'zzqqyy', pos: 'other', note: null, glosses: { en: 'huh' } };
+
+  const withDict = (v: Video, entries: Record<string, Gloss>): Video => ({
+    ...v,
+    dictionary: { ...v.dictionary, ...entries },
+  });
+
+  it('skips names — by note, and by a capitalised lemma with no note', () => {
+    const v = withDict(video([filler, filler, ['Peppa', 'Pig', BAND_5], filler]), {
+      peppa: NAME_NOTE,
+      pig: NAME_LEMMA,
+    });
+    const plan = computeLevelBlankPlan(v, 5, [], 'en');
+    assert.equal(plan.get(2)?.text, BAND_5);
+  });
+
+  it('skips interjections and fillers, however the gloss files them', () => {
+    const v = withDict(video([filler, filler, ['eh', 'ah', BAND_5], filler]), {
+      eh: INTERJ,
+      ah: FILLER_NOTE,
+    });
+    assert.equal(computeLevelBlankPlan(v, 5, [], 'en').get(2)?.text, BAND_5);
+  });
+
+  it('trusts an unlisted word only when it is a content word', () => {
+    const v = withDict(video([filler, filler, ['zzqqyy', BAND_5], filler]), {
+      zzqqyy: OTHER_UNLISTED,
+    });
+    assert.equal(computeLevelBlankPlan(v, 5, [], 'en').get(2)?.text, BAND_5);
+  });
+
+  it('plans nothing rather than a name when a cue offers only names', () => {
+    const v = withDict(video([filler, filler, ['Peppa', 'Pig'], filler]), {
+      peppa: NAME_NOTE,
+      pig: NAME_LEMMA,
+    });
+    assert.equal(computeLevelBlankPlan(v, 5, [], 'en').size, 0);
   });
 });
