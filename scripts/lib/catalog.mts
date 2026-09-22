@@ -58,6 +58,8 @@ export type EmbedEntry = {
   };
   cues: Cue[];
   dictionary: Record<string, Gloss>;
+  /** Episodes only (data/collections.json) — the cleaned upload title. */
+  title?: string;
 };
 
 /** One row of loro_catalog_videos, exactly as the table declares it. */
