@@ -4,6 +4,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { BRAND } from '../onboarding/brand';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetBackdrop,
@@ -157,10 +159,13 @@ type WordSheetProps = {
 };
 
 /** What a shell needs on top of the public props: how to report a save. */
-type ShellProps = WordSheetProps & {
-  /** Called ONLY after saveWord() has returned a verified ok. */
-  onSaved: (word: string) => void;
+type ShellProps = Omit<WordSheetProps, 'onSaved'> & {
+  /** Called ONLY after saveWord() has returned a verified ok. The
+      translation rides along for the confirmation card. */
+  onSaved: (word: string, translation: string | null) => void;
 };
+
+type SavedNote = { word: string; translation: string | null };
 
 export function WordSheet(props: WordSheetProps) {
   /**
@@ -173,11 +178,11 @@ export function WordSheet(props: WordSheetProps) {
    * this level also means both shells get the confirmation, so flipping
    * USE_BOTTOM_SHEET does not quietly lose it.
    */
-  const [savedWord, setSavedWord] = useState<string | null>(null);
+  const [savedWord, setSavedWord] = useState<SavedNote | null>(null);
   const notify = props.onSaved;
   const handleSaved = useCallback(
-    (word: string) => {
-      setSavedWord(word);
+    (word: string, translation: string | null) => {
+      setSavedWord({ word, translation });
       notify?.(word);
     },
     [notify]
@@ -193,7 +198,7 @@ export function WordSheet(props: WordSheetProps) {
       ) : (
         <ModalShell {...props} onSaved={handleSaved} />
       )}
-      <SavedBadge word={savedWord} bandTop={props.bandTop} onDone={handleToastDone} />
+      <SavedBadge note={savedWord} bandTop={props.bandTop} onDone={handleToastDone} />
     </>
   );
 }
@@ -208,7 +213,9 @@ export function WordSheet(props: WordSheetProps) {
 const BADGE_IN_MS = 140;
 const BADGE_SNAP_MS = 180;
 const BADGE_SETTLE_MS = 120;
-const BADGE_HOLD_MS = 650;
+/** Long enough to read a word and its meaning — the pill it replaced held
+    650ms and Radek never saw it. */
+const BADGE_HOLD_MS = 1600;
 const BADGE_OUT_MS = 200;
 /** The overshoot peak. The web's loro-snap starts at 1.25; this is a quarter of
     that excursion, which is the whole "scaled down, not ported" decision in one
@@ -258,14 +265,15 @@ const BADGE_FROM = 0.86;
  * readout, not a control, and there is nothing to dismiss.
  */
 function SavedBadge({
-  word,
+  note,
   bandTop,
   onDone,
 }: {
-  word: string | null;
+  note: SavedNote | null;
   bandTop: number | null;
   onDone: () => void;
 }) {
+  const word = note?.word ?? null;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(BADGE_FROM)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -341,16 +349,36 @@ function SavedBadge({
 
   if (!word || bandTop === null) return null;
 
+  /**
+   * A CARD, NOT A PILL (Radek, 2026-09-22: "now it's just an almost
+   * invisible pill — make it more visible and more pleasant"). Loro's head
+   * on the left, the word large with its meaning under it, and a mint
+   * "Saved" tag: the same three facts the Words tab will show for it, so
+   * the card reads as "it went in there". Still a readout — pointer-
+   * transparent, below the player, gone on its own.
+   */
   return (
     <Animated.View
       pointerEvents="none"
       style={[styles.badgeLayer, { top: bandTop + 8, opacity }]}
     >
-      <Animated.View style={[styles.badgePill, { transform: [{ scale }] }]}>
-        <Text style={styles.badgeCheck}>✓</Text>
-        <Text style={styles.badgeText} numberOfLines={1}>
-          Saved · {word}
-        </Text>
+      <Animated.View style={[styles.badgeCard, { transform: [{ scale }] }]}>
+        <View style={styles.badgeLoro}>
+          <Image source={BRAND.parrot} style={styles.badgeParrot} resizeMode="cover" />
+        </View>
+        <View style={styles.badgeText}>
+          <Text style={styles.badgeWord} numberOfLines={1}>
+            {word}
+          </Text>
+          {note?.translation ? (
+            <Text style={styles.badgeMeaning} numberOfLines={1}>
+              {note.translation}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.badgeTag}>
+          <Text style={styles.badgeTagText}>✓ Saved</Text>
+        </View>
       </Animated.View>
     </Animated.View>
   );
@@ -535,7 +563,7 @@ function ModalShell({ data, language, onClose, onSaved }: ShellProps) {
                 // The false branch is the failure path and must stay untouched:
                 // no toast, no close, panel keeps showing the failure line.
                 if (!saveWord()) return;
-                if (data) onSaved(data.word.text);
+                if (data) onSaved(data.word.text, gloss ? glossText(gloss, language) : null);
                 close();
               }}
             />
@@ -599,7 +627,7 @@ function SheetShell({ data, language, onClose, onSaved }: ShellProps) {
           failed={failed}
           onSave={() => {
             if (!saveWord()) return;
-            if (data) onSaved(data.word.text);
+            if (data) onSaved(data.word.text, gloss ? glossText(gloss, language) : null);
             sheetRef.current?.dismiss();
           }}
         />
@@ -830,18 +858,43 @@ const styles = StyleSheet.create({
       MEASURED band edge — never a constant, and never derived from the player
       box. See the note on SavedBadge. */
   badgeLayer: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  badgePill: {
+  badgeCard: {
     alignItems: 'center',
-    backgroundColor: 'rgba(10,13,11,0.94)',
-    borderColor: 'rgba(94,230,168,0.55)',
-    borderRadius: 999,
+    backgroundColor: '#141a17',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderRadius: 18,
     borderWidth: 1,
+    elevation: 8,
     flexDirection: 'row',
-    gap: 6,
-    maxWidth: '86%',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 12,
+    maxWidth: '90%',
+    minWidth: '70%',
+    paddingLeft: 10,
+    paddingRight: 12,
+    paddingVertical: 10,
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
   },
-  badgeCheck: { color: '#5ee6a8', fontSize: 15, fontWeight: '800' },
-  badgeText: { color: '#5ee6a8', fontSize: 14, fontWeight: '700' },
+  /** A round window on Loro's head — the parrot art is 282x420, so the
+      image is scaled to the window's width and its top is what shows. */
+  badgeLoro: {
+    backgroundColor: '#5ee6a8',
+    borderRadius: 22,
+    height: 44,
+    overflow: 'hidden',
+    width: 44,
+  },
+  badgeParrot: { height: 66, width: 44 },
+  badgeText: { flex: 1 },
+  badgeWord: { color: '#f2f5f3', fontSize: 19, fontWeight: '800', letterSpacing: -0.2 },
+  badgeMeaning: { color: 'rgba(242,245,243,0.62)', fontSize: 13, fontWeight: '600', marginTop: 1 },
+  badgeTag: {
+    backgroundColor: 'rgba(94,230,168,0.16)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  badgeTagText: { color: '#5ee6a8', fontSize: 12, fontWeight: '800' },
 });
