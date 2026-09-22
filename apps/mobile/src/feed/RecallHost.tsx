@@ -53,6 +53,7 @@ import {
   RESUME_MS_CORRECT,
   RESUME_MS_WRONG,
   SEEK_BACK_PAD_S,
+  clearWayFrom,
   clearWayTo,
   type BlankEntry,
 } from './recall';
@@ -206,6 +207,7 @@ export function RecallHost({
   maxLevelBlanks,
   minLevelBlankAtS,
   focusCueIndex,
+  startAtS = 0,
   scriptedLevelBlankCue,
   scriptedLevelBlankText,
   revealBlanksUntilHeld = false,
@@ -234,6 +236,16 @@ export function RecallHost({
   /** Pin focusWord's blank to this cue instead of core's earliest-occurrence
       choice — see buildRecallPlan. Walkthrough only. */
   focusCueIndex?: number;
+  /**
+   * THE VIDEO OPENS HERE, NOT AT 0 — an episode resumed where the user left
+   * it (episodeProgress.ts). No blank before this second: its audio is not
+   * heard on this watch, and a hold armed behind the landing point does
+   * worse than ask for unheard audio — it re-seats the player BACK to the
+   * blank (2026-09-22, on device: resumed at 93s, the first hold dragged
+   * the video to 29s, and the resume read as "remembered the wrong place").
+   * The review landing solves the same problem with clearWayTo.
+   */
+  startAtS?: number;
   /**
    * MAY GREEN RECALL BLANKS BE PLANNED? True everywhere except the onboarding
    * taste reel's uncoached clips — levelBlanks' twin, for the same reason.
@@ -619,10 +631,11 @@ export function RecallHost({
     const merged = mergeBlankPlans(levelEntries, recallEntries);
     // A review landing (focusWord with no pinned cue — the walkthrough always
     // pins) gets a clear way to its word: no blank of either colour before
-    // it. See clearWayTo.
-    setPlan(
-      focusWord && focusCueIndex === undefined ? clearWayTo(merged, focusWord) : merged
-    );
+    // it. See clearWayTo. A resumed episode gets the same clear way to its
+    // landing second — see startAtS.
+    const cleared =
+      focusWord && focusCueIndex === undefined ? clearWayTo(merged, focusWord) : merged;
+    setPlan(clearWayFrom(cleared, startAtS));
     // recallOn is listed even though `planned` already folds it in: with
     // LEVELS_ENABLED on, `planned` is true either way, so arming recall
     // mid-session (or the taste reel flipping recallBlanks per slide) would
@@ -648,6 +661,7 @@ export function RecallHost({
     language,
     focusWord,
     focusCueIndex,
+    startAtS,
     staleVersion,
   ]);
 

@@ -88,15 +88,20 @@ export type EpisodeProgress = {
   /** 0..1 of the length, 1 once watched. */
   share: number;
   done: boolean;
+  /** The second the episode will open at — 0 from the top. */
+  atSeconds: number;
 };
 
-/** For the episode list: the line under the thumbnail and the tick. */
+/** For the episode list: the line under the thumbnail, the tick, the
+    "Continue at" second. The same rules as resumeSecondsFor, so the list
+    never promises a second the player will not open at. */
 export function episodeProgress(videoId: string): EpisodeProgress | null {
   const entry = load().videos[videoId];
   if (!entry) return null;
-  if (entry.done) return { share: 1, done: true };
+  if (entry.done) return { share: 1, done: true, atSeconds: 0 };
   if (entry.len <= 0 || entry.at < RESUME_MIN_S) return null;
-  return { share: Math.min(1, entry.at / entry.len), done: false };
+  const share = Math.min(1, entry.at / entry.len);
+  return { share, done: false, atSeconds: share >= WATCHED_SHARE ? 0 : Math.floor(entry.at) };
 }
 
 /**

@@ -50,7 +50,11 @@ export function EpisodeProgressTracker({
     return () => {
       clearInterval(timer);
       offFlush();
-      note();
+      const seconds = read();
+      if (seconds != null) {
+        noteEpisodePosition(shelf, video, seconds);
+        console.log(`[loro:episodes] left "${video.id}" at ${seconds.toFixed(1)}s`);
+      }
     };
   }, [shelf, video, active, anchorTime, anchorAt, isPlaying, rate]);
 

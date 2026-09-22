@@ -34,6 +34,8 @@ export type EpisodeItem = {
   share?: number;
   /** Watched to the end: a full line and "watched" in the meta. */
   done?: boolean;
+  /** The second the episode will resume at — "Continue at 1:33". */
+  atSeconds?: number;
 };
 
 export function CollectionPill({
@@ -163,8 +165,15 @@ export function CollectionMenu({
                         <Text style={styles.episodeMeta}>
                           {i + 1}
                           {len ? ` · ${len}` : ''}
-                          {on ? ' · playing' : ep.done ? ' · watched' : ''}
+                          {on ? ' · playing' : ''}
                         </Text>
+                        {/* Where you are, in words — the line alone was
+                            "not precise enough" (Radek, on device). */}
+                        {ep.done ? (
+                          <Text style={styles.watched}>✓ Watched</Text>
+                        ) : ep.atSeconds != null && ep.atSeconds > 0 ? (
+                          <Text style={styles.resume}>▶ Continue at {clock(ep.atSeconds)}</Text>
+                        ) : null}
                       </View>
                     </Pressable>
                   );
@@ -269,14 +278,16 @@ const styles = StyleSheet.create({
     width: 89,
   },
   track: {
-    backgroundColor: 'rgba(10,13,11,0.55)',
+    backgroundColor: 'rgba(10,13,11,0.7)',
     bottom: 0,
-    height: 3,
+    height: 5,
     left: 0,
     position: 'absolute',
     right: 0,
   },
-  fill: { backgroundColor: '#5ee6a8', height: 3 },
+  fill: { backgroundColor: '#5ee6a8', height: 5 },
+  resume: { color: '#5ee6a8', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  watched: { color: 'rgba(242,245,243,0.6)', fontSize: 12, fontWeight: '700', marginTop: 2 },
   episodeText: { flex: 1 },
   episodeTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
   episodeTitleOn: { color: '#5ee6a8' },

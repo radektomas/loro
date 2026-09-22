@@ -1115,6 +1115,8 @@ function FeedBody({
               : null
         }
         focusCueIndex={walkthrough?.focusCueIndex}
+        // A resumed episode: no blank before the landing second.
+        startAtS={episodes ? resumeAt : 0}
         recallBlanks={walkthrough?.recallBlanks ?? true}
         // Per-clip during the guided run, core's own rules everywhere else.
         levelBlanks={walkthrough ? (walkthrough.levelBlanks ?? false) : true}
