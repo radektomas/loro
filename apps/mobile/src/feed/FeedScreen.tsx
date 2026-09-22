@@ -684,13 +684,16 @@ function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
 }
 
 /**
- * Everything the feed could show. In a DEV build the collections file is
- * merged in (see core/catalog/collectionVideos.ts for why it is not in the
- * published snapshot yet); a release build sees the catalog alone.
+ * Everything the feed could show: the published snapshot plus the shelves,
+ * which ship INSIDE the binary (core/catalog/collectionVideos.ts). The
+ * shelves were dev-only until 2026-09-22, when Radek decided to ship the
+ * Peppa update; they stay out of the published snapshot on purpose — a
+ * 1.4.0 app reads that snapshot and knows nothing of collections, so an
+ * episode in it would land inside the old reels feed. Bundled, an episode
+ * is only ever seen by a build that can shelve it.
  */
 function sourceVideos(): EmbedVideo[] {
   const base = embedsFrom(getCatalog());
-  if (!__DEV__) return base;
   const have = new Set(base.map((v) => v.id));
   return [...base, ...embedsFrom(collectionVideos).filter((v) => !have.has(v.id))];
 }
