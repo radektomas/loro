@@ -124,7 +124,9 @@ async function call(fn: string, args: Record<string, unknown>): Promise<Row[]> {
       const migration =
         fn === 'loro_analytics_loop'
           ? '20260907000000_analytics_loop.sql'
-          : '20260830000000_analytics_retention.sql';
+          : fn === 'loro_analytics_wall' || fn === 'loro_analytics_subscribers'
+            ? '20260924000000_analytics_wall_subscribers.sql'
+            : '20260830000000_analytics_retention.sql';
       throw new Error(`${fn} is missing — apply supabase/migrations/${migration}.`);
     }
     throw new Error(`${fn}: ${error.message}`);
@@ -232,6 +234,145 @@ export async function loadDashboard(
               ? row.sub_status
               : 'none',
         })),
+      },
+    };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// ------------------------------------------------- /analyticsforradek page
+
+/**
+ * THE OWNER'S DASHBOARD (2026-09-24) — the questions Radek asked on 23 Sep
+ * ("did we grow?", "how does the wall convert?", "what did the trialists
+ * do?", "is retention bad?"), each as one block. Two new functions back it
+ * (migration 20260924000000_analytics_wall_subscribers.sql); the rest is
+ * the same daily/retention/dau calls the admin page makes.
+ */
+export type WallWindow = {
+  label: string;
+  from: string;
+  to: string;
+  installs: number;
+  sawWall: number;
+  tapped: number;
+  cancelled: number;
+  failed: number;
+  completed: number;
+};
+
+export type SubscriberRow = {
+  installId: string;
+  boughtAt: string;
+  packageType: string;
+  trial: string | null;
+  appVersion: string;
+  minsBefore: number;
+  daysActiveAfter: number;
+  lastSeenDays: number;
+  videosAfter: number;
+  savedAfter: number;
+  reviewsAfter: number;
+  answersAfter: number;
+};
+
+export type DailyPoint = {
+  day: string;
+  newInstalls: number;
+  paywallViews: number;
+  purchases: number;
+  videosWatched: number;
+};
+
+export type RadekDashboard = {
+  daily: DailyPoint[];
+  windows: WallWindow[];
+  subscribers: SubscriberRow[] | null; // null until the migration is applied
+  retention: Retention;
+  dau: DauPoint[];
+  loadedAt: string;
+};
+
+async function wallWindow(label: string, from: Date, to: Date, allBuilds: boolean): Promise<WallWindow> {
+  const rows = await call('loro_analytics_wall', {
+    p_from: from.toISOString(),
+    p_to: to.toISOString(),
+    p_all_builds: allBuilds,
+  });
+  const r = rows[0] ?? {};
+  return {
+    label,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    installs: num(r.installs),
+    sawWall: num(r.saw_wall),
+    tapped: num(r.tapped),
+    cancelled: num(r.cancelled),
+    failed: num(r.failed),
+    completed: num(r.completed),
+  };
+}
+
+export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<RadekDashboard>> {
+  try {
+    const now = new Date();
+    const dayMs = 864e5;
+    const d = (daysAgo: number) => new Date(now.getTime() - daysAgo * dayMs);
+    const [daily, last14, prev14, last7, retentionRows, dauRows] = await Promise.all([
+      call('loro_analytics_daily', { p_days: 60, p_all_builds: allBuilds }),
+      wallWindow('Last 14 days', d(14), now, allBuilds),
+      wallWindow('14 days before that', d(28), d(14), allBuilds),
+      wallWindow('Last 7 days', d(7), now, allBuilds),
+      call('loro_analytics_retention', { p_all_builds: allBuilds }),
+      call('loro_analytics_dau', { p_days: 30, p_all_builds: allBuilds }),
+    ]);
+    let subscribers: SubscriberRow[] | null = null;
+    try {
+      const rows = await call('loro_analytics_subscribers', { p_all_builds: allBuilds });
+      subscribers = rows.map((r) => ({
+        installId: str(r.install_id),
+        boughtAt: str(r.bought_at),
+        packageType: str(r.package_type) || '?',
+        trial: r.trial ? str(r.trial) : null,
+        appVersion: str(r.app_version),
+        minsBefore: num(r.mins_before),
+        daysActiveAfter: num(r.days_active_after),
+        lastSeenDays: num(r.last_seen_days),
+        videosAfter: num(r.videos_after),
+        savedAfter: num(r.saved_after),
+        reviewsAfter: num(r.reviews_after),
+        answersAfter: num(r.answers_after),
+      }));
+    } catch (err) {
+      // The migration not applied yet: the rest of the page still renders.
+      if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
+    }
+    const rt = retentionRows[0] ?? {};
+    return {
+      ok: true,
+      data: {
+        daily: daily.map((r) => ({
+          day: str(r.day),
+          newInstalls: num(r.new_installs),
+          paywallViews: num(r.paywall_views),
+          purchases: num(r.purchases),
+          videosWatched: num(r.videos_watched),
+        })),
+        windows: [last7, last14, prev14],
+        subscribers,
+        retention: {
+          d1Returned: num(rt.d1_returned),
+          d1Cohort: num(rt.d1_cohort),
+          d3Returned: num(rt.d3_returned),
+          d3Cohort: num(rt.d3_cohort),
+          d7Returned: num(rt.d7_returned),
+          d7Cohort: num(rt.d7_cohort),
+          medianVideos7d: rt.median_videos_7d == null ? null : num(rt.median_videos_7d),
+          dauToday: num(rt.dau_today),
+        },
+        dau: dauRows.map((r) => ({ day: str(r.day), dau: num(r.dau) })),
+        loadedAt: now.toISOString(),
       },
     };
   } catch (err) {
