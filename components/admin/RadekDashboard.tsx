@@ -296,10 +296,33 @@ function Funnel({ w, compare }: { w: WallWindow; compare: WallWindow }) {
 
 // ------------------------------------------------------------- subscribers
 
-function Subscribers({ rows }: { rows: SubscriberRow[] }) {
-  if (rows.length === 0) return <p className="text-sm" style={{ color: DASH.muted }}>Nobody has bought or started a trial yet.</p>;
+function Subscribers({ rows: all }: { rows: SubscriberRow[] }) {
+  const [tab, setTab] = useState<'all' | 'trials' | 'paid'>('all');
+  const rows = all.filter((r) => (tab === 'all' ? true : tab === 'trials' ? Boolean(r.trial) : !r.trial));
+  const tabs = [
+    { key: 'all' as const, label: `All ${all.length}` },
+    { key: 'trials' as const, label: `Trials ${all.filter((r) => r.trial).length}` },
+    { key: 'paid' as const, label: `Paid straight away ${all.filter((r) => !r.trial).length}` },
+  ];
+  const tabBar = (
+    <div className="mb-3 flex w-fit gap-1 rounded-lg p-0.5" style={{ background: '#f2f4f7' }}>
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => setTab(t.key)}
+          className="rounded-md px-3 py-1 text-xs font-semibold"
+          style={tab === t.key ? { background: DASH.card, color: DASH.ink, boxShadow: '0 1px 2px rgba(16,24,40,0.08)' } : { color: DASH.muted }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+  if (all.length === 0) return <p className="text-sm" style={{ color: DASH.muted }}>Nobody has bought or started a trial yet.</p>;
   const head = 'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide';
   return (
+    <div>
+    {tabBar}
     <div className="-mx-5 overflow-x-auto">
       <table className="w-full min-w-[700px] text-left text-sm">
         <thead style={{ color: DASH.faint, background: '#f8f9fb' }}>
@@ -321,7 +344,9 @@ function Subscribers({ rows }: { rows: SubscriberRow[] }) {
             const status =
               r.trial && ageDays < 7
                 ? { text: `Trial · day ${Math.floor(ageDays) + 1} of 7`, bg: '#eef4ff', fg: '#2563eb' }
-                : engaged
+                : r.trial
+                  ? { text: 'Trial ended · check RevenueCat', bg: '#f2f4f7', fg: DASH.muted }
+                  : engaged
                   ? { text: 'Using it', bg: DASH.greenSoft, fg: DASH.green }
                   : { text: 'Went quiet', bg: DASH.redSoft, fg: DASH.red };
             return (
@@ -346,6 +371,7 @@ function Subscribers({ rows }: { rows: SubscriberRow[] }) {
           })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }
@@ -395,6 +421,14 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
   const [w7, w14, wPrev] = data.windows;
   const r = data.retention;
   const subs = data.subscribers ?? [];
+  const inWindow = (iso: string, fromDays: number, toDays: number) => {
+    const age = (Date.now() - new Date(iso).getTime()) / 864e5;
+    return age >= toDays && age < fromDays;
+  };
+  const trials14 = subs.filter((x) => x.trial && inWindow(x.boughtAt, 14, 0)).length;
+  const trialsPrev = subs.filter((x) => x.trial && inWindow(x.boughtAt, 28, 14)).length;
+  const paid14 = subs.filter((x) => !x.trial && inWindow(x.boughtAt, 14, 0)).length;
+  const paidPrev = subs.filter((x) => !x.trial && inWindow(x.boughtAt, 28, 14)).length;
   const activeTrials = subs.filter((s) => s.trial && Date.now() - new Date(s.boughtAt).getTime() < 7 * 864e5).length;
 
   return (
@@ -438,8 +472,22 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
           color={DASH.red}
           caption="of taps, lower is better"
         />
-        <KpiCard label="Trials running" value={fmt.format(activeTrials)} now={activeTrials} before={activeTrials} color="#2563eb" caption={`${subs.length} ever`} />
-        <KpiCard label="Active today" value={fmt.format(r.dauToday)} now={r.dauToday} before={r.dauToday} color="#ea580c" caption="installs with any event" />
+        <KpiCard
+          label="Trials started"
+          value={fmt.format(trials14)}
+          now={trials14}
+          before={trialsPrev}
+          color="#2563eb"
+          caption={`last 14 days · ${activeTrials} running now`}
+        />
+        <KpiCard
+          label="Paid straight away"
+          value={fmt.format(paid14)}
+          now={paid14}
+          before={paidPrev}
+          color={DASH.green}
+          caption="last 14 days, no trial"
+        />
       </div>
 
       {/* THE BIG CHART */}
