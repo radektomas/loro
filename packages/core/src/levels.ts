@@ -402,9 +402,11 @@ export function computeLevelBlankPlan(
   userLevel: number,
   savedWords: SavedWord[],
   language: string,
-  excludeCues: ReadonlySet<number> = new Set()
+  excludeCues: ReadonlySet<number> = new Set(),
+  /** Words already typed right in a blue blank (storage.getLevelKnown). */
+  alsoKnown: ReadonlySet<string> = new Set()
 ): Map<number, LevelBlankWord> {
-  const saved = new Set(savedWords.map((w) => normalizeAnswer(w.text)));
+  const saved = new Set([...savedWords.map((w) => normalizeAnswer(w.text)), ...alsoKnown]);
   const plan = new Map<number, LevelBlankWord>();
   const used = new Set<string>();
   // A long video is budgeted by length and filled window by window, so an

@@ -6,6 +6,7 @@ import {
   type LevelBlankWord,
 } from '@loro/core/levels';
 import { glossText, lookupGloss, normalizeSurface } from '@loro/core/dictionary';
+import { storage } from '@loro/core/storage';
 import { locateBlank, llog, type BlankEntry } from './recall';
 
 /**
@@ -149,7 +150,9 @@ export function buildLevelPlan(
     userLevel,
     savedWords,
     language,
-    excludeCues
+    excludeCues,
+    // Blue words typed right never come back blue (storage.saveLevelWord).
+    new Set(storage.getLevelKnown())
   );
 
   const entries: BlankEntry[] = [];

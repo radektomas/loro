@@ -10,6 +10,7 @@ import {
   demoteLegacyLevelFill,
   grade,
   trainWord,
+  normalizeAnswer,
   initialSrs,
   LEVEL_FILL_BOX,
   MAX_BOX,
@@ -119,6 +120,9 @@ import { getCatalog } from './catalog.ts';
  * touch the local cache only, exactly as before.
  */
 
+/** Newest kept; a heavy user's blue history, well past any real need. */
+const LEVEL_KNOWN_CAP = 5000;
+
 const KEYS = {
   savedWords: 'loro.savedWords',
   watched: 'loro.watchedVideos',
@@ -138,6 +142,7 @@ const KEYS = {
   startLevel: 'loro.startLevel', // CEFR seed from calibration — only seeds order
   levelState: 'loro.levelState', // level fill-in mode: current level + meter
   calibrationKnown: 'loro.calibrationKnown', // words tapped as known in calibration
+  levelKnown: 'loro.levelKnown', // blue blanks typed right: known, kept off the path
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
   savePrompt: 'loro.savePrompt', // account-nudge state — see savePrompt.ts
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
@@ -1267,6 +1272,27 @@ export const storage = {
     }
 
     const now = Date.now();
+    /**
+     * TYPED RIGHT: KNOWN, AND KEPT OFF THE PATH (Radek, 2026-09-26). Since
+     * the Words tab became a path of words to TRAIN, a word the user just
+     * produced cold from a blue blank does not belong on it — it was
+     * landing as "tap to train" beside the words they really did not know.
+     * It moves the level (the caller's applyLevelAnswer) and counts toward
+     * the day; it is remembered only so the blue planner never asks it
+     * again (getLevelKnown). A MISS still saves below: that is a real gap,
+     * and it goes on the path to be trained.
+     */
+    if (wasCorrect) {
+      const key = normalizeAnswer(word.text);
+      const known = storage.getLevelKnown();
+      if (key && !known.includes(key)) {
+        writeJSON(KEYS.levelKnown, [...known, key].slice(-LEVEL_KNOWN_CAP));
+      }
+      noteCorrectToday(now);
+      emitWordsChanged();
+      scheduleProgressPush();
+      return { ok: true };
+    }
     // 'user': a level blank is the user typing a word back from memory in the
     // feed. It is behaviour, not a grant, so it counts toward the gates.
     const base = {
@@ -1571,6 +1597,11 @@ export const storage = {
 
   /** Words the user marked as already-known during CEFR calibration. The
       per-video glossary renders them as known so they never flood "unknown". */
+  /** Blue-blank words typed right (saveLevelWord): not asked blue again. */
+  getLevelKnown(): string[] {
+    return readJSON<string[]>(KEYS.levelKnown, []);
+  },
+
   getCalibrationKnown(): string[] {
     return readJSON<string[]>(KEYS.calibrationKnown, []);
   },
