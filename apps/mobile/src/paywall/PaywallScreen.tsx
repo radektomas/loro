@@ -546,7 +546,7 @@ export function PaywallScreen() {
           </View>
           <View style={styles.benefit}>
             <IconTile glyph="✓" tint="mint" size={34} />
-            <Text style={styles.benefitText}>Every word you tap comes back before you forget it</Text>
+            <Text style={styles.benefitText}>Every word you save, trained until it sticks</Text>
           </View>
           <View style={styles.benefit}>
             <IconTile glyph="★︎" tint="amber" size={34} />

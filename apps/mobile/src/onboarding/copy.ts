@@ -140,7 +140,10 @@ export const HOW_IT_WORKS = {
     so this teaches the mechanic before it interrupts a video. */
 export const BLANKS = {
   title: 'This is how a word comes back.',
-  body: 'It turns into a gap in the subtitles. The video waits for you, you type it, and it carries on.',
+  /** Since 2026-09-26 a saved word comes back only once it is TRAINED in
+      Words; the blue level blanks come from the first video. Both look
+      like this. */
+  body: 'Once you’ve trained a word, it turns into a gap in the subtitles. The video waits for you, you type it, and it carries on.',
   mockSentence: ['Vivo', 'en', '__BLANK__', 'ciudad'],
   mockGloss: 'this',
   cta: 'Entendido',
@@ -299,7 +302,7 @@ export const PLAN_READY = {
   clips: 'Clips at your level from day one, and the feed moves up as you do.',
   /** Row 4. */
   recallHead: 'Nothing you learn slips away',
-  recall: 'Every word you save comes back in a new video right before you would forget it, until it is yours.',
+  recall: 'Train the words you save in a few quick exercises. Then they come back in your videos until they are yours.',
   cta: '¡Vamos!',
 };
 
