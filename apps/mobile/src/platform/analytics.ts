@@ -131,6 +131,7 @@ export type EventName =
   | 'review_ended'        // { source, size, answered, correct, reason, dayDone }
   | 'level_up'            // { tier, name, learned } — the learned-word ladder climbed
   | 'word_learned'        // { learned } — a word crossed into learned (the toast)
+  | 'practice_set'        // { right, early, stepOne } — the Words tab's three-exercise set
   | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
   | 'reminder_permission'; // { state } — iOS's answer, right after the ask
 

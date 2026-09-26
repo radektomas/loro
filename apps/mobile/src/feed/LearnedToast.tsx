@@ -124,6 +124,15 @@ export function LearnedMomentView({
               {raise.learned} learned
               {raise.week > 1 ? ` · ${raise.week} this week` : ''} · tap to see them
             </Text>
+            {raise.opened && (
+              <View style={styles.opened}>
+                <Text style={styles.openedLabel}>Next up</Text>
+                <Text style={styles.openedWord} numberOfLines={1}>
+                  {raise.opened.text}
+                  <Text style={styles.openedMeaning}>  {raise.opened.translation}</Text>
+                </Text>
+              </View>
+            )}
           </Pressable>
           <View style={styles.tail} />
         </Animated.View>
@@ -234,6 +243,17 @@ const styles = StyleSheet.create({
   word: { color: '#06130d', fontSize: 24, fontWeight: '800', marginTop: 2 },
   meaning: { color: 'rgba(6,19,13,0.7)', fontSize: 15, marginTop: 1 },
   count: { color: 'rgba(6,19,13,0.55)', fontSize: 12, fontWeight: '600', marginTop: 8 },
+  /** The path's unlock (roadmap.ts), under the count. */
+  opened: {
+    backgroundColor: 'rgba(6,19,13,0.08)',
+    borderRadius: 10,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  openedLabel: { color: 'rgba(6,19,13,0.55)', fontSize: 10, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' },
+  openedWord: { color: '#06130d', fontSize: 15, fontWeight: '800', marginTop: 1 },
+  openedMeaning: { color: 'rgba(6,19,13,0.6)', fontSize: 13, fontWeight: '600' },
   /** The parrot is 282x420; 150 tall keeps its ratio at ~100 wide. It
       starts past the right edge and settles with its back to it. */
   parrotWrap: { marginLeft: 6, marginRight: -18 },

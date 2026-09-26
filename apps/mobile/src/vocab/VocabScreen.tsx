@@ -13,7 +13,7 @@ import type { SavedWord, Video, WordState } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
 import type { WordOccurrence } from '@loro/core/occurrences';
-import { distinctWords, isLearned, isReady } from '@loro/core/progress';
+import { distinctWords, isLearned, readyWords } from '@loro/core/progress';
 import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
 import { takeRequestedWordsView, type WordsView } from './wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
@@ -21,6 +21,11 @@ import { ReviewPickerSheet } from '../progress/ReviewPicker';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
 import { WordDetailSheet } from './WordDetailSheet';
+import { RoadmapPath } from './RoadmapPath';
+import { PracticeDrill } from './PracticeDrill';
+import { getCatalog } from '@loro/core/catalog';
+import { collectionVideos } from '@loro/core/catalog/collectionVideos';
+import { findWordOccurrences } from '@loro/core/occurrences';
 
 /**
  * VOCAB — port of the web's app/vocab/page.tsx.
@@ -296,6 +301,12 @@ export function VocabScreen({
    * onDismiss instead of racing it.
    */
   const [closing, setClosing] = useState(false);
+  /**
+   * The practice set with no clip in front of it — for a word no video in
+   * the catalog says ("quedemos"). Radek, 2026-09-26: the Words tab never
+   * sends anyone to the feed; before this, a clip-less word did.
+   */
+  const [drillOnly, setDrillOnly] = useState(false);
 
   /**
    * ⚠️ NOTHING NAVIGATES WHILE THE WINDOW IS STILL ON SCREEN.
@@ -320,6 +331,23 @@ export function VocabScreen({
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
+   * Land on "You're here" when the tab opens. The path is long for a heavy
+   * saver (hundreds of words), and the words that matter are the open ones,
+   * not the first stage. Once per visit, so reading further down is never
+   * yanked back; the two refs arrive in either order.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const pathYRef = useRef<number | null>(null);
+  const hereYRef = useRef<number | null>(null);
+  const anchoredRef = useRef(false);
+  const scrollToHere = () => {
+    if (anchoredRef.current || pathYRef.current === null || hereYRef.current === null) return;
+    anchoredRef.current = true;
+    const y = Math.max(0, pathYRef.current + hereYRef.current - 160);
+    scrollRef.current?.scrollTo({ y, animated: false });
+  };
+
+  /**
    * Live in both directions: onWordsChanged catches saves and grades from the
    * feed, and the 60s tick keeps "Ready now" and every forecast honest without
    * a refresh. The tick only runs while the tab is visible — a clock nobody is
@@ -334,6 +362,8 @@ export function VocabScreen({
     // above keeps it current while it is.
     refresh();
     setNow(Date.now());
+    anchoredRef.current = false;
+    scrollToHere();
     const requested = takeRequestedWordsView();
     if (requested) setView(requested);
     const tick = setInterval(() => setNow(Date.now()), 60_000);
@@ -361,6 +391,7 @@ export function VocabScreen({
     setPlaying(null);
     setPicker(false);
     setClosing(false);
+    setDrillOnly(false);
   }, [active]);
 
   // A pending review must not fire into an unmounted screen.
@@ -387,7 +418,6 @@ export function VocabScreen({
         ),
     [words]
   );
-  const earnedCount = useMemo(() => learnedAll.filter(isLearned).length, [learnedAll]);
   const learnedKeys = useMemo(
     () => new Set(learnedAll.map((w) => normalizeAnswer(w.text) || w.text)),
     [learnedAll]
@@ -410,7 +440,6 @@ export function VocabScreen({
     }),
     [rest, learnedAll]
   );
-  const pileRows = piles[view];
   /**
    * SEARCH CROSSES THE PILES. Radek, 2026-09-18: searching only the open
    * pile "was a bit confusing" — you type a word you remember saving and
@@ -426,10 +455,9 @@ export function VocabScreen({
       rows: piles[pile.key].filter((w) => matches(w, needle)),
     })).filter((g) => g.rows.length > 0);
   }, [piles, query]);
-  const onTheWay = piles.saved.length + piles.practice.length;
 
   const dueTotal = useMemo(
-    () => words.filter((w) => isReady(w, now)).length,
+    () => readyWords(words, now).length,
     [words, now]
   );
 
@@ -442,8 +470,7 @@ export function VocabScreen({
   const startReview = () => setPicker('due');
   const dueWords = useMemo(
     () =>
-      words
-        .filter((w) => isReady(w, now))
+      readyWords(words, now)
         .sort(
           (a, b) =>
             Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
@@ -463,6 +490,31 @@ export function VocabScreen({
   };
 
   const openDetail = (word: SavedWord) => setDetail(word);
+
+  /**
+   * TAP A WORD ON THE PATH: train it. The clip that says it opens as
+   * exercise one (the same pick as the word sheet's review: the sentence it
+   * was saved from first), and the set carries on in PracticeDrill. No clip:
+   * the set runs on its own. Never the feed.
+   */
+  const startTraining = (word: SavedWord) => {
+    // The shelves too: a word saved from a Peppa episode is said THERE, and
+    // getCatalog() is the reels feed only — searching it alone made every
+    // Peppa word look clip-less.
+    const catalog = [...getCatalog(), ...collectionVideos];
+    const occurrences = findWordOccurrences(catalog, word.text);
+    const occurrence =
+      occurrences.find(
+        (o) => o.videoId === word.videoId && o.cueIndex === word.cueIndex && o.youtubeId !== null
+      ) ??
+      occurrences.find((o) => o.videoId === word.videoId && o.youtubeId !== null) ??
+      occurrences.find((o) => o.youtubeId !== null) ??
+      null;
+    const video = occurrence ? catalog.find((v) => v.id === occurrence.videoId) ?? null : null;
+    setDetail(word);
+    if (occurrence && video) setPlaying({ occurrence, video, mode: 'review' });
+    else setDrillOnly(true);
+  };
 
   /**
    * REVIEW ONE SPECIFIC WORD — the Words tab pointing the feed at something,
@@ -506,6 +558,7 @@ export function VocabScreen({
     setDetail(null);
     setPlaying(null);
     setPicker(false);
+    setDrillOnly(false);
     const pending = pendingReviewRef.current;
     pendingReviewRef.current = null;
     if (pending) reviewWord(pending.word, pending.preferVideoId, pending.practice);
@@ -550,6 +603,7 @@ export function VocabScreen({
       </View>
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
@@ -566,8 +620,8 @@ export function VocabScreen({
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No words yet</Text>
             <Text style={styles.emptyBody}>
-              Tap any word in a video to save it. Saved words come back as blanks
-              you type from memory.
+              Tap any word in a video to save it. Train it here and it's learned,
+              then it comes back in your videos so it sticks.
             </Text>
             <Pressable
               onPress={onGoToFeed}
@@ -625,87 +679,24 @@ export function VocabScreen({
                 ))
               )
             ) : (
-            <>
-            {/* The piles, below the review card (Radek: "move them below
-                the modal"). Four across, each its count. */}
-            <View style={styles.segments} accessibilityRole="tablist">
-              {PILES.map((pile) => {
-                const on = view === pile.key;
-                return (
-                  <Pressable
-                    key={pile.key}
-                    onPress={() => setView(pile.key)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: on }}
-                    accessibilityLabel={`${pile.label}, ${piles[pile.key].length}`}
-                    style={({ pressed }) => [
-                      styles.segment,
-                      on && styles.segmentOn,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={[styles.segmentCount, on && styles.segmentCountOn]}>
-                      {piles[pile.key].length}
-                    </Text>
-                    <Text style={[styles.segmentText, on && styles.segmentTextOn]} numberOfLines={1}>
-                      {pile.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+            <View
+              onLayout={(e) => {
+                pathYRef.current = e.nativeEvent.layout.y;
+                scrollToHere();
+              }}
+            >
+              {/* THE PATH replaces the four piles on this branch (words-roadmap).
+                  The piles still exist: search groups its results by them. */}
+              <RoadmapPath
+                words={words}
+                onOpen={startTraining}
+                onLongPress={openDetail}
+                onAnchor={(y) => {
+                  hereYRef.current = y;
+                  scrollToHere();
+                }}
+              />
             </View>
-
-            {view === 'learned' && learnedAll.length > 0 && (
-              <View style={styles.learnedCard}>
-                <Text style={styles.reviewCount}>
-                  {learnedAll.length} {learnedAll.length === 1 ? 'word' : 'words'} learned
-                </Text>
-                <Text style={styles.reviewBody}>
-                  {learnedAll.length - earnedCount > 0
-                    ? `${earnedCount} earned from memory, ${learnedAll.length - earnedCount} you already knew. `
-                    : 'Right on different days, from memory. '}
-                  They come back now and then so they stay yours, or bring a few
-                  forward now.
-                </Text>
-                <Pressable
-                  onPress={practise}
-                  accessibilityRole="button"
-                  accessibilityHint="Choose a learned word, then the feed opens on it"
-                  style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
-                >
-                  <Text style={styles.ctaText}>Practise in the feed</Text>
-                </Pressable>
-              </View>
-            )}
-
-            {pileRows.length === 0 ? (
-                <View style={styles.pileEmpty}>
-                  <Text style={styles.emptyTitle}>
-                    {view === 'saved' && 'Nothing waiting'}
-                    {view === 'practice' && 'Nothing in practice yet'}
-                    {view === 'missed' && 'Nothing missed'}
-                    {view === 'learned' && 'Nothing learned yet'}
-                  </Text>
-                  <Text style={styles.emptyBody}>
-                    {view === 'saved' && 'Tap a word in a video to save it.'}
-                    {view === 'practice' &&
-                      'Get a saved word right once, as a blank, and it moves here.'}
-                    {view === 'missed' && 'A word you get wrong lands here until you get it back.'}
-                    {view === 'learned' &&
-                      `Get a word right on two different days, from memory, and it lands here for good.${onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}`}
-                  </Text>
-                </View>
-            ) : (
-              pileRows.map((word) => (
-                <WordRow
-                  key={wordKey(word)}
-                  word={word}
-                  now={now}
-                  onOpen={() => openDetail(word)}
-                />
-              ))
-            )}
-            </>
             )}
           </>
         )}
@@ -731,7 +722,10 @@ export function VocabScreen({
             onClose={() => closeWindow()}
           />
         )}
-        {detail !== null &&
+        {detail !== null && drillOnly && !playing && (
+          <PracticeDrill word={detail} onDone={() => closeWindow()} />
+        )}
+        {detail !== null && !drillOnly &&
           (playing ? (
             <WordVideoPanel
               word={detail}
@@ -765,7 +759,8 @@ export function VocabScreen({
                 if (occurrence && video) {
                   setPlaying({ occurrence, video, mode: 'review' });
                 } else {
-                  closeWindow({ word });
+                  // No clip says it: train it right here. Never the feed.
+                  setDrillOnly(true);
                 }
               }}
               onHear={(occurrence, video) =>
@@ -804,38 +799,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 8,
   },
-  segments: {
-    backgroundColor: 'rgba(242,245,243,0.07)',
-    borderRadius: 14,
-    flexDirection: 'row',
-    marginBottom: 16,
-    padding: 3,
-  },
-  segment: {
-    alignItems: 'center',
-    borderRadius: 11,
-    flex: 1,
-    paddingVertical: 7,
-  },
-  segmentOn: { backgroundColor: '#5ee6a8' },
-  segmentCount: { color: '#f2f5f3', fontSize: 16, fontWeight: '800' },
-  segmentCountOn: { color: '#06130d' },
-  segmentText: { color: 'rgba(242,245,243,0.55)', fontSize: 11, fontWeight: '700', marginTop: 1 },
-  segmentTextOn: { color: 'rgba(6,19,13,0.75)' },
-  pileEmpty: { alignItems: 'center', gap: 6, paddingTop: 28 },
   /** Search results, grouped by pile. */
   group: { marginBottom: 16 },
   groupHead: { alignItems: 'center', flexDirection: 'row', gap: 8, marginBottom: 8, paddingHorizontal: 2 },
   groupLabel: { color: 'rgba(242,245,243,0.55)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
   groupCount: { color: 'rgba(242,245,243,0.35)', fontSize: 11, fontWeight: '700' },
-  learnedCard: {
-    backgroundColor: '#141a17',
-    borderColor: 'rgba(94,230,168,0.25)',
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 18,
-    padding: 18,
-  },
   scroll: { padding: 16, paddingBottom: 32 },
   empty: { alignItems: 'center', gap: 8, paddingTop: 48 },
   emptyTitle: { color: '#f2f5f3', fontSize: 17, fontWeight: '700' },

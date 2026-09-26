@@ -2,6 +2,7 @@ import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { distinctWords, isLearned, learnedThisWeek } from '@loro/core/progress';
 import { normalizeAnswer } from '@loro/core/srs';
+import { nextUp } from '@loro/core/roadmap';
 import { track } from '../platform/analytics';
 
 /**
@@ -27,7 +28,19 @@ export type WordLearnedRaise = {
   learned: number;
   /** Earned this week (Mon..Sun), this one included. */
   week: number;
+  /** The next word on the path (roadmap.nextUp), if there is one. */
+  opened: { text: string; translation: string } | null;
 };
+
+/**
+ * WHAT COMES NEXT after a learn: the next word on the path, word after word
+ * (roadmap.nextUp) — not whichever word the window happened to open at its
+ * far end, which is what this first said and read as a random word.
+ */
+export function openedByLearn(words: readonly SavedWord[]): WordLearnedRaise['opened'] {
+  const next = nextUp(words);
+  return next ? { text: next.word.text, translation: next.word.translation } : null;
+}
 
 const listeners = new Set<(raise: WordLearnedRaise) => void>();
 
@@ -71,6 +84,7 @@ export function raiseWordLearned(word: Pick<SavedWord, 'text' | 'translation'>):
     translation: word.translation,
     learned: learnedTotal(words),
     week: learnedWeek(words),
+    opened: openedByLearn(words),
   };
   track('word_learned', { learned: raise.learned });
   console.log(`[loro:learned] "${word.text}" — ${raise.learned} learned`);
@@ -93,6 +107,7 @@ export function devRaiseWordLearned(): void {
     translation: 'backpack',
     learned: learnedTotal(words) + 1,
     week: learnedWeek(words) + 1,
+    opened: openedByLearn(words) ?? { text: 'maleta', translation: 'suitcase' },
   };
   for (const l of listeners) l(raise);
 }

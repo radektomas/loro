@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video } from '@loro/core/types';
 import { getCatalog } from '@loro/core/catalog';
+import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { normalizeSurface } from '@loro/core/dictionary';
 import {
   EXPLANATION_LANGS,
@@ -141,7 +142,8 @@ export function WordDetailSheet({
    * finished dismissing, so there is nothing to hold over.
    */
   const derived = useMemo(() => {
-    const catalog = getCatalog();
+    // Reels AND the shelves: a word saved from Peppa is said in Peppa.
+    const catalog = [...getCatalog(), ...collectionVideos];
     const sourceVideo = catalog.find((v) => v.id === word.videoId) ?? null;
     const occurrences = findWordOccurrences(catalog, word.text);
     const hearOccurrence = pickReplayOccurrence(

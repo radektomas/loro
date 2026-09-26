@@ -24,11 +24,9 @@ import {
   FeatherBurst,
 } from '../feed/Celebration';
 import { gradeAnswer, recallHaptic } from '../feed/recall';
-import { noteCorrectRecall } from '../platform/notifications';
-import { learnedTotal, learnedWeek, surfaceLearned, type WordLearnedRaise } from '../feed/wordLearned';
-import { LearnedMomentView } from '../feed/LearnedToast';
 import { PLAYER_EMBED_ORIGIN } from '../platform/config';
 import { buildHearItPage } from './hearItPage';
+import { PracticeDrill } from './PracticeDrill';
 
 /**
  * THE WORD, IN A REAL VIDEO — hear it said, then recall it, without leaving
@@ -98,13 +96,16 @@ export function WordVideoPanel({
   const [phase, setPhase] = useState<Phase>('loading');
   const [answer, setAnswer] = useState('');
   const [result, setResult] = useState<AnswerMatch | null>(null);
-  /** This answer crossed the word into learned: Loro says so, from the side
-      (LearnedMomentView), and the moment's end closes the panel. */
-  const [learnedNow, setLearnedNow] = useState<WordLearnedRaise | null>(null);
   /** Raised once the user has committed to answering — 'listen' mode asks. */
   const [reviewing, setReviewing] = useState(mode === 'review');
   /** Bumped to remount the player for "play again". */
   const [take, setTake] = useState(0);
+  /**
+   * The rest of the practice set (PracticeDrill): the clip was exercise one,
+   * and in review these two follow it instead of the window closing. `early`
+   * is whether the clip answer was right but too soon to move the word.
+   */
+  const [drill, setDrill] = useState<{ stepOne: AnswerMatch } | null>(null);
 
   /**
    * The keyboard's height, so the sentence can centre in the space that is
@@ -188,36 +189,31 @@ export function WordVideoPanel({
     Keyboard.dismiss();
     const typed = typedNow ?? answer;
     if (typedNow !== undefined && typedNow !== answer) setAnswer(typedNow);
+    // NOT graded here. The clip is exercise one of the practice set, and the
+    // set decides at its end whether the word is trained (PracticeDrill,
+    // storage.trainWord) — one verdict for three answers, not one per answer.
     const match = gradeAnswer(typed, word);
     const wasCorrect = match !== 'wrong';
-    const wasLearned = surfaceLearned(word.text, storage.getSavedWords());
-    storage.gradeWord(word.text, word.videoId, wasCorrect);
-    const earned = !wasLearned && surfaceLearned(word.text, storage.getSavedWords());
-    if (earned) {
-      const all = storage.getSavedWords();
-      setLearnedNow({
-        text: word.text,
-        translation: word.translation,
-        learned: learnedTotal(all),
-        week: learnedWeek(all),
-      });
-    }
-    if (wasCorrect) {
-      storage.applyRecallLevelCredit();
-      recallHaptic();
-      noteCorrectRecall();
-    }
+    if (wasCorrect) recallHaptic();
     setResult(match);
     setPhase('graded');
-    // A near-miss counts as correct (core's matchAnswer), so it earns the same
-    // exit — only slower, because the corrected spelling is worth reading.
-    // A word just earned hands the exit to the moment instead (below).
-    if (wasCorrect && !earned) {
+    // Right: on to exercise two once Loro has had his moment. Wrong waits for
+    // "Try again" (the correct spelling is on screen), which replays the clip
+    // and asks once more: nothing moves on until it is right.
+    if (wasCorrect) {
       closeTimer.current = setTimeout(
-        onDone,
+        () => setDrill({ stepOne: match }),
         match === 'correct' ? CELEBRATE_MS : CELEBRATE_MS + 700
       );
     }
+  };
+
+  /** Wrong: hear it again, type it again. The set only moves on when right. */
+  const tryAgain = () => {
+    setResult(null);
+    setAnswer('');
+    setReviewing(true);
+    playAgain();
   };
 
   const showPlayer = phase === 'loading' || phase === 'listening';
@@ -235,6 +231,9 @@ export function WordVideoPanel({
 
   const youtubeId = occurrence.youtubeId;
   if (!youtubeId || !cue) return null;
+  if (drill) {
+    return <PracticeDrill word={word} stepOne={drill.stepOne} onDone={onDone} />;
+  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -372,7 +371,7 @@ export function WordVideoPanel({
 
         {phase === 'graded' && result === 'wrong' && (
           <Text style={styles.wrongNote}>
-            It was «{spoken}» — you typed «{answer.trim() || '—'}».
+            It was «{spoken}». You typed «{answer.trim() || '—'}». Hear it again and type it once more.
           </Text>
         )}
 
@@ -408,8 +407,7 @@ export function WordVideoPanel({
             </Pressable>
           )}
           <View style={styles.secondaryRow}>
-            {(phase === 'listening' || phase === 'answering' ||
-              (phase === 'graded' && result === 'wrong')) && (
+            {(phase === 'listening' || phase === 'answering') && (
               <Pressable
                 onPress={playAgain}
                 accessibilityRole="button"
@@ -419,13 +417,28 @@ export function WordVideoPanel({
               </Pressable>
             )}
             <Pressable
-              onPress={phase === 'graded' ? onDone : onClose}
+              onPress={
+                phase === 'graded'
+                  ? result === 'wrong'
+                    ? tryAgain
+                    : () => setDrill({ stepOne: result ?? 'correct' })
+                  : onClose
+              }
               accessibilityRole="button"
-              accessibilityLabel="Back to your words"
-              style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+              accessibilityLabel={
+                phase === 'graded'
+                  ? result === 'wrong'
+                    ? 'Hear it again and type it once more'
+                    : 'Next exercise'
+                  : 'Back to your words'
+              }
+              style={({ pressed }) => [
+                phase === 'graded' ? styles.primaryFlex : styles.secondary,
+                pressed && styles.pressed,
+              ]}
             >
-              <Text style={styles.secondaryLabel}>
-                {phase === 'graded' ? 'Done' : 'Back to the word'}
+              <Text style={phase === 'graded' ? styles.primaryLabel : styles.secondaryLabel}>
+                {phase === 'graded' ? (result === 'wrong' ? 'Try again' : 'Next') : 'Back to the word'}
               </Text>
             </Pressable>
           </View>
@@ -436,13 +449,8 @@ export function WordVideoPanel({
           the frame is gone and the panel is closing, so the reward is the
           screen — see LoroCelebrationCenter's header for why the feed keeps
           the small one. */}
-      {(result === 'correct' || result === 'almost') && !learnedNow && (
+      {(result === 'correct' || result === 'almost') && (
         <LoroCelebrationCenter variant={result} />
-      )}
-      {/* The word was earned: Loro comes in from the side, as in the feed,
-          and the panel closes when the moment ends. */}
-      {learnedNow && (
-        <LearnedMomentView raise={learnedNow} onDone={onDone} onWords={onSeeLearned ?? onDone} />
       )}
     </View>
   );
@@ -549,6 +557,13 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   secondaryLabel: { color: '#f2f5f3', fontSize: 14, fontWeight: '700' },
+  primaryFlex: {
+    alignItems: 'center',
+    backgroundColor: ACCENT,
+    borderRadius: 16,
+    flex: 1,
+    paddingVertical: 13,
+  },
   pressed: { opacity: 0.7 },
   /** The centring pair — grow-only, so a tall sentence plus keyboard simply
       collapses them back to today's top-anchored layout. */
