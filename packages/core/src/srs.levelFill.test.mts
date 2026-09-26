@@ -52,7 +52,14 @@ describe('LEVEL_FILL_BOX', () => {
   });
 
   it('one correct recall from there crosses into known and stamps learnedAt', () => {
-    const fill = word({ box: LEVEL_FILL_BOX, state: 'learning', dueAt: NOW - 1 });
+    // Filled a day ago, due now — the only shape a real fill arrives in
+    // (srs.isEarlyAnswer measures the wait from lastReviewedAt).
+    const fill = word({
+      box: LEVEL_FILL_BOX,
+      state: 'learning',
+      dueAt: NOW - 1,
+      lastReviewedAt: NOW - BOX_INTERVALS_MS[LEVEL_FILL_BOX],
+    });
     const graded = grade(fill, true, NOW + 1);
     assert.equal(graded.state, 'known');
     assert.equal(graded.box, KNOWN_BOX);

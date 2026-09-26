@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { storage } from '@loro/core/storage';
-import { isReady } from '@loro/core/progress';
+import { dueCount } from '@loro/core/progress';
 
 /**
  * HOW MANY WORDS ARE READY — for the bubble on the Words tab.
@@ -20,9 +20,7 @@ import { isReady } from '@loro/core/progress';
 const TICK_MS = 60_000;
 
 function countDue(now = Date.now()): number {
-  let n = 0;
-  for (const w of storage.getSavedWords()) if (isReady(w, now)) n++;
-  return n;
+  return dueCount(storage.getSavedWords(), now);
 }
 
 export function useDueCount(): number {

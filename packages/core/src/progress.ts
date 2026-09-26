@@ -2,6 +2,7 @@ import type { SavedWord } from './types.ts';
 import { normalizeAnswer } from './srs.ts';
 import { normalizeSurface } from './dictionary.ts';
 import { isFunctionWord } from './glossary.ts';
+import { lockedKeys } from './roadmap.ts';
 
 /**
  * Progress metrics derived from saved words. Pure functions only — persistence
@@ -189,8 +190,18 @@ export function isReady(word: SavedWord, now: number = Date.now()): boolean {
   return word.state !== 'new' && word.dueAt <= now;
 }
 
+/**
+ * The ready words of a whole list, minus the ones the roadmap has not
+ * reached (roadmap.ts). Every "N ready" in the apps reads this, so a
+ * locked word is never promised and then not asked.
+ */
+export function readyWords(words: readonly SavedWord[], now: number = Date.now()): SavedWord[] {
+  const locked = lockedKeys(words);
+  return words.filter((w) => isReady(w, now) && !locked.has(normalizeAnswer(w.text)));
+}
+
 export function dueCount(words: SavedWord[], now: number = Date.now()): number {
-  return words.filter((w) => isReady(w, now)).length;
+  return readyWords(words, now).length;
 }
 
 /** Earliest upcoming return strictly in the future; null if none. New
@@ -200,8 +211,9 @@ export function nextDueAt(
   now: number = Date.now()
 ): number | null {
   let next: number | null = null;
+  const locked = lockedKeys(words);
   for (const w of words) {
-    if (w.state === 'new') continue;
+    if (w.state === 'new' || locked.has(normalizeAnswer(w.text))) continue;
     if (w.dueAt > now && (next === null || w.dueAt < next)) next = w.dueAt;
   }
   return next;

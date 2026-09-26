@@ -2,7 +2,7 @@ import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
 import { pickFirstBlankTarget, pickReviewTarget, spokenSurfaces } from '@loro/core/occurrences';
-import { distinctWords, isReady } from '@loro/core/progress';
+import { distinctWords, readyWords } from '@loro/core/progress';
 import { onLearnedFace } from './wordLearned';
 import { normalizeSurface } from '@loro/core/dictionary';
 import { track } from '../platform/analytics';
@@ -54,8 +54,7 @@ export function launchReview(source: ReviewSource): ReviewLaunch {
   const all = storage.getSavedWords();
   const at = Date.now();
   // Most urgent first: slipped words, then earliest due.
-  const due = all
-    .filter((w) => isReady(w, at))
+  const due = readyWords(all, at)
     .sort(
       (a, b) =>
         Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
@@ -160,7 +159,7 @@ export function launchPracticeLearned(
   }
   enableRecallForSession();
   const launch = {
-    due: all.filter((w) => isReady(w, at)).length,
+    due: readyWords(all, at).length,
     landed: found !== null,
     willBlank: found?.landing.willBlank ?? false,
     word: found?.word.text ?? null,
@@ -201,7 +200,7 @@ export function launchReviewOfWord(
   }
   enableRecallForSession();
   const launch: ReviewLaunch = {
-    due: all.filter((w) => isReady(w, at)).length,
+    due: readyWords(all, at).length,
     landed: target !== null,
     willBlank: target?.willBlank ?? false,
     word: word.text,

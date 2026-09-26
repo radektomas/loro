@@ -9,6 +9,7 @@ import {
   BOX_INTERVALS_MS,
   demoteLegacyLevelFill,
   grade,
+  trainWord,
   initialSrs,
   LEVEL_FILL_BOX,
   MAX_BOX,
@@ -1154,6 +1155,25 @@ export const storage = {
       enqueue('upsert', target.text, target.videoId);
     }
     return { ok };
+  },
+
+  /**
+   * The Words tab's practice set passed: the word is learned (srs.trainWord)
+   * and goes live in the feed. Counts toward the day like a correct recall.
+   */
+  trainWord(text: string, videoId: string): { word: SavedWord | null; ok: boolean } {
+    const words = storage.getSavedWords();
+    const target = words.find((w) => w.text === text && w.videoId === videoId);
+    if (!target) return { word: null, ok: false };
+    const trained = trainWord(target);
+    const ok = writeJSON(KEYS.savedWords, words.map((w) => (w === target ? trained : w)));
+    if (ok) {
+      noteCorrectToday(Date.now());
+      emitWordsChanged();
+      enqueue('upsert', text, videoId);
+      scheduleProgressPush();
+    }
+    return { word: trained, ok };
   },
 
   gradeWord(

@@ -30,6 +30,7 @@ export const BOX_INTERVALS_MS = [
 export const MAX_BOX = BOX_INTERVALS_MS.length - 1;
 
 import { isLongVideo, longBlankCount } from './blankBudget.ts';
+import { lockedKeys } from './roadmap.ts';
 
 /** Blank throttling — the feed must never feel like a test. */
 const MAX_BLANKS_PER_VIDEO = 5;
@@ -130,12 +131,51 @@ export function initialSrs(now: number = Date.now()) {
   };
 }
 
-/** Apply one review result and return the rescheduled word. */
+/**
+ * Slack on the spacing check below: a feed blank asked the instant a word
+ * falls due can grade a few ms "early" on a busy thread.
+ */
+const EARLY_SLACK_MS = 5_000;
+
+/**
+ * IS A CORRECT ANSWER RIGHT NOW TOO SOON TO MOVE THE WORD? (Radek,
+ * 2026-09-26: "he can just 3 TIMES open the video and write 3 times in the
+ * same video and thats not much practise".)
+ *
+ * The feed only asks a word when it is due, so it could never answer early.
+ * The Words tab can: it brings a word forward on demand (storage.reviewNow),
+ * which reset the clock too — three writes in a minute made a word
+ * "learned". The spacing IS the learning, so a step up now needs the step's
+ * own interval to have passed since the LAST ANSWER (lastReviewedAt, which
+ * reviewNow does not touch): 1 min after a save or a miss, 10 min, then a
+ * day. A never-answered word has no clock and always moves.
+ */
+export function isEarlyAnswer(word: SavedWord, now: number = Date.now()): boolean {
+  if (word.lastReviewedAt === null) return false;
+  const wait = BOX_INTERVALS_MS[Math.min(Math.max(word.box, 0), MAX_BOX)];
+  return now - word.lastReviewedAt < wait - EARLY_SLACK_MS;
+}
+
+/**
+ * Apply one review result and return the rescheduled word.
+ *
+ * A correct answer that is EARLY (isEarlyAnswer) is practice: the word comes
+ * back unchanged — same box, same schedule, same lastReviewedAt, so practice
+ * never pushes the real review further away. The caller still counts it
+ * toward the day (storage.gradeWord). A wrong answer always counts: missing
+ * a word is information whenever it happens.
+ */
 export function grade(
   word: SavedWord,
   wasCorrect: boolean,
   now: number = Date.now()
 ): SavedWord {
+  // Early: the box, the clock and the stats stay. Only the NEXT ASK moves —
+  // otherwise a word brought forward (reviewNow) or trained (trainWord) would
+  // sit due and be asked on every video until its real step came round.
+  if (wasCorrect && isEarlyAnswer(word, now)) {
+    return { ...word, dueAt: now + BOX_INTERVALS_MS[Math.min(Math.max(word.box, 0), 2)] };
+  }
   if (wasCorrect) {
     const box = Math.min(word.box + 1, MAX_BOX);
     const state = stateForBox(box);
@@ -161,6 +201,42 @@ export function grade(
     dueAt: now + BOX_INTERVALS_MS[0],
     incorrect: word.incorrect + 1,
     lastReviewedAt: now,
+  };
+}
+
+/**
+ * TRAINED — has this word been through the Words tab's practice set (or,
+ * for words saved before that existed, answered anywhere)? A fresh save is
+ * 'new' and stays out of the feed's recall blanks until it is trained
+ * (computeBlankPlan). Radek, 2026-09-26: "the user trains through them and
+ * after that they start showing in the feed for some time so he remembers".
+ */
+export function isTrained(word: SavedWord): boolean {
+  return word.state !== 'new';
+}
+
+/** First trip into the feed after training: soon, so the loop is felt. */
+export const TRAINED_FIRST_ASK_MS = BOX_INTERVALS_MS[1];
+
+/**
+ * The practice set passed: the word is LEARNED (Radek: "when he trains the
+ * word by exercise in the words tab it becomes learned and then he practises
+ * in the feed"). Known box, stamped, and due in the feed in ten minutes.
+ * From there the early rule spaces it: the feed asks it at 10 min, then
+ * daily, and it climbs past the known box only once three days have passed
+ * since training — the feed is where it is kept, not where it is earned.
+ * A word already learned is left alone (practice).
+ */
+export function trainWord(word: SavedWord, now: number = Date.now()): SavedWord {
+  if (word.state === 'known') return word;
+  return {
+    ...word,
+    box: Math.max(word.box, KNOWN_BOX),
+    state: 'known',
+    dueAt: now + TRAINED_FIRST_ASK_MS,
+    correct: word.correct + 1,
+    lastReviewedAt: now,
+    learnedAt: now,
   };
 }
 
@@ -280,7 +356,8 @@ function locateAsked(
 /**
  * Decide which cue positions of `video` become blanks right now.
  * Returns cueIndex -> the word to blank. Rules:
- *  - only due words (dueAt <= now) saved at least 1 minute ago
+ *  - only due words (dueAt <= now) saved at least 1 minute ago, and only
+ *    words the roadmap has opened (roadmap.ts)
  *  - a word is reviewable in ANY video that speaks it, not just the one it
  *    was saved from (see below)
  *  - one blank per cue, and never the same word twice in one video; where
@@ -325,11 +402,17 @@ export function computeBlankPlan(
   // The most urgent due review per distinct word. Saving the same word from
   // two videos creates two entries (storage keys on text+videoId); they are
   // one thing to practise, so they compete rather than both being blanked.
+  //
+  // Words the roadmap has not reached yet are not asked (roadmap.ts). The
+  // asked-for word below is exempt: naming a word is louder than the path.
+  const locked = lockedKeys(allWords);
   const dueByText = new Map<string, SavedWord>();
   for (const w of allWords) {
     if (w.dueAt > now || now - w.savedAt < MIN_AGE_MS) continue;
     const key = normalizeAnswer(w.text);
-    if (!key) continue;
+    // Untrained saves wait for the Words tab (isTrained); locked ones for
+    // the path. The asked-for word below is exempt from both.
+    if (!key || locked.has(key) || !isTrained(w)) continue;
     if (moreUrgent(w, dueByText.get(key))) dueByText.set(key, w);
   }
   const asked = opts.first ? locateAsked(video, allWords, opts.first, now) : null;

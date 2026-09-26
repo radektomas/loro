@@ -20,7 +20,7 @@ import {
   dayKey,
   distinctWords,
   dueCount,
-  isReady,
+  readyWords,
   learnedThisWeek,
   nextDueAt,
   splitFunctionWords,
@@ -843,8 +843,7 @@ export function ProgressScreen({
   const startReview = () => setPicker(true);
   const dueWords = useMemo(
     () =>
-      words
-        .filter((w) => isReady(w, now))
+      readyWords(words, now)
         .sort(
           (a, b) =>
             Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
