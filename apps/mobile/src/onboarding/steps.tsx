@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { LoopStory } from './LoopStory';
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -602,44 +603,14 @@ function Reveal({
 }
 
 function HowItWorksStep({ next, isCurrent }: StepProps) {
+  // THE LOOP, PLAYED (LoopStory): tap a word, train it in Words, it comes
+  // back in your videos. Replaced the picture-plus-four-lines version when
+  // training moved into the Words tab (2026-09-26); the old lines promised
+  // a word "returns days later" on its own, which is no longer the shape.
   return (
     <Screen footer={<PrimaryButton label={HOW_IT_WORKS.cta} onPress={next} />}>
       <Title>{HOW_IT_WORKS.title}</Title>
-      <View style={styles.steps}>
-        {/* Staggered so the three read as a sequence — which is what they
-            are — rather than a wall of text competing with the title. The
-            button is live from the start: the reveal is rhythm, not a gate.
-
-            A timeline, not numbered badges: a dot per step and a rail
-            running to the next, so the sequence is drawn instead of
-            captioned. The rail lives inside its row and reaches down through
-            the text's bottom padding, which is why the container has no gap
-            — a gap would cut the line at every joint. */}
-        {/* ONE PICTURE, THEN FOUR LINES. The picture is the mechanic in
-            a single beat: the line with the word lit, and the saved tag it
-            becomes. Under it, the steps as clean type — a large light
-            numeral and the sentence, nothing boxed. Two earlier cuts (a
-            dot-and-rail timeline with small grey text; four cards each
-            with its own mini picture) were "not visible enough" and then
-            "not pretty at all" (Radek, 2026-09-22). Less, larger, calmer. */}
-        <Reveal active={isCurrent} delay={150}>
-          <View style={styles.howStage}>
-            <LineMock words={['Vivo', 'en', 'esta', 'ciudad']} litIndex={2} />
-            <Text style={styles.stepArrow}>→</Text>
-            <View style={styles.stepSavedTag}>
-              <Text style={styles.stepSavedText}>✓ Saved · this</Text>
-            </View>
-          </View>
-        </Reveal>
-        {HOW_IT_WORKS.steps.map((line, i) => (
-          <Reveal key={line} active={isCurrent} delay={350 + i * 260}>
-            <View style={styles.stepLine}>
-              <Text style={styles.stepNumeral}>{i + 1}</Text>
-              <Text style={styles.stepText}>{line}</Text>
-            </View>
-          </Reveal>
-        ))}
-      </View>
+      <LoopStory isCurrent={isCurrent} />
     </Screen>
   );
 }

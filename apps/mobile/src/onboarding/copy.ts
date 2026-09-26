@@ -124,12 +124,12 @@ export const RESULT = {
 
 /** PORTED (title, app/welcome/page.tsx:534-537) + REWRITTEN (steps, cta). */
 export const HOW_IT_WORKS = {
-  title: 'Save what you don’t know, and it comes back right before you forget it.',
+  title: 'Save it, train it, keep it.',
+  /** Unused since LoopStory (its three lines live there, beside the scenes). */
   steps: [
-    'Watch real clips. Words light up as they’re spoken.',
-    'Tap anything you don’t recognise. That saves it.',
-    'It returns days later, right as it’s about to slip away.',
-    'Or practise your words whenever you want.',
+    'Tap a word you don’t know in a video.',
+    'Train it in Words. A few quick exercises and it’s learned.',
+    'It pops back up in your videos so it sticks.',
   ],
   cta: 'Continuar',
 };
