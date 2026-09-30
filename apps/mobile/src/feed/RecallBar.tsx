@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AUTO_FOCUS_BLANK } from './recall';
 import { useRecallAnswer, useRecallSession } from './RecallHost';
@@ -64,16 +64,44 @@ export function RecallBar() {
     if (!entry) inputRef.current?.blur();
   }, [entry]);
 
+  /**
+   * THE CHECK BUTTON ARRIVES WITH THE FIRST LETTER (2026-09-30 polish:
+   * "the full bar feels a bit oldschool"). A dimmed ✓ sitting there from the
+   * start read as a form; springing it in when there is something to check
+   * reads as the app answering the user.
+   */
+  const canSubmit = answer.trim().length > 0;
+  const ready = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(ready, {
+      toValue: canSubmit ? 1 : 0,
+      friction: 6,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [canSubmit, ready]);
+  // The card rises in when a blank opens rather than appearing.
+  const rise = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    rise.setValue(0);
+    if (!entry) return;
+    Animated.timing(rise, {
+      toValue: 1,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [entry, rise]);
+
   if (!entry) return null;
 
-  const canSubmit = answer.trim().length > 0;
   // The bar is the other half of the blank in the line, so it carries the same
   // accent — a blue blank must not prompt with a green Check button.
   const isLevel = entry.kind === 'level';
   const accent = isLevel ? '#57b3f2' : '#5ee6a8';
 
   return (
-    <View
+    <Animated.View
       onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}
       style={[
         styles.bar,
@@ -94,21 +122,43 @@ export function RecallBar() {
            * gap. Only fall back to the inset when there is no tab bar to sit on.
            */
           paddingBottom:
-            keyboardHeight > 0 || tabBarHeight > 0 ? 10 : insets.bottom + 10,
+            keyboardHeight > 0 || tabBarHeight > 0 ? 8 : insets.bottom + 8,
         },
       ]}
     >
+      {/* THE CARD: floating, rounded, lit faintly in the blank's own colour,
+          instead of a full-width strip under a hairline. The bar's outer
+          geometry (bottom, measured height) is unchanged — only what is
+          drawn inside it. */}
+      {/* The card fades and settles in; the BAR behind it stays solid and
+          still (see styles.bar) — it hides the player's bottom edge while the
+          player slides up out of the keyboard's way. */}
+      <Animated.View
+        style={[
+          styles.card,
+          { borderColor: `${accent}55`, shadowColor: accent },
+          {
+            opacity: rise,
+            transform: [{ scale: rise.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) }],
+          },
+        ]}
+      >
       {/* The prompt is the word's own gloss — meaning -> Spanish, the same
           direction and the same source the web uses for its placeholder
           (SubtitleTrack.tsx:357). The sentence translation stays visible in
           the band below the line; this is the word-level cue. */}
-      <Text style={styles.prompt} numberOfLines={2}>
+      <View style={styles.promptRow}>
         {/* Level blanks say so, because the two ask for different things: a
             green blank is a word YOU chose to learn, a blue one is practice
             at your tier. */}
-        {isLevel && <Text style={{ color: accent }}>Level practice · </Text>}
-        {entry.word.translation}
-      </Text>
+        <View style={[styles.kindChip, { backgroundColor: `${accent}22` }]}>
+          <View style={[styles.kindDot, { backgroundColor: accent }]} />
+          <Text style={[styles.kindText, { color: accent }]}>{isLevel ? 'Level' : 'Your word'}</Text>
+        </View>
+        <Text style={styles.prompt} numberOfLines={2}>
+          {entry.word.translation}
+        </Text>
+      </View>
 
       <View style={styles.row}>
         {/* F3 — hear the line again. Seeks back to the cue's start and plays;
@@ -126,10 +176,22 @@ export function RecallBar() {
             <Text style={styles.replayText}>↺</Text>
           </Pressable>
         )}
+        {/*
+          UNCONTROLLED, keyed by the blank. A controlled input round-trips
+          every keystroke through React state and writes it back into the
+          native field, and on iOS that is the flicker and caret stutter in
+          the typing ("a liiiittle bit janky"). The field owns its text now;
+          onChangeText still reports every change (the slot and the grade
+          read it), and a new blank remounts the field empty — the host
+          clears the answer on the same change (AnswerLayer).
+        */}
         <TextInput
+          key={`${entry.kind}-${entry.cueIndex}-${entry.word.text}`}
           ref={inputRef}
-          value={answer}
+          defaultValue=""
           onChangeText={setAnswer}
+          selectionColor={accent}
+          cursorColor={accent}
           // The event's own text is the native field's content AT the return
           // key — pushed through setAnswer first so the grade reads the full
           // word even when the final keystrokes' change events are still
@@ -157,7 +219,7 @@ export function RecallBar() {
               ? 'Type the level word you just heard'
               : 'Type the missing Spanish word'
           }
-          style={[styles.input, { borderBottomColor: accent }]}
+          style={styles.input}
         />
         {/* ✓ and ✕ sit 8pt apart, and ✕ grades WRONG unconditionally — so
             their hitSlops must not meet in the gap. A symmetric 6pt on both
@@ -165,21 +227,27 @@ export function RecallBar() {
             a tap a few points right of the check mark discarded a correctly
             typed answer as wrong. The slop stays generous on every edge that
             does not face the other button. */}
-        <Pressable
-          onPress={submit}
-          disabled={!canSubmit}
-          accessibilityRole="button"
-          accessibilityLabel="Check answer"
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 2 }}
-          style={({ pressed }) => [
-            styles.check,
-            { backgroundColor: accent },
-            !canSubmit && styles.checkOff,
-            pressed && styles.pressed,
-          ]}
+        <Animated.View
+          style={{
+            opacity: ready.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
+            transform: [{ scale: ready.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }],
+          }}
         >
-          <Text style={styles.checkText}>✓</Text>
-        </Pressable>
+          <Pressable
+            onPress={submit}
+            disabled={!canSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="Check answer"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 2 }}
+            style={({ pressed }) => [
+              styles.check,
+              { backgroundColor: accent },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.checkText}>✓</Text>
+          </Pressable>
+        </Animated.View>
         <Pressable
           onPress={skip}
           accessibilityRole="button"
@@ -190,67 +258,91 @@ export function RecallBar() {
           <Text style={styles.skipText}>✕</Text>
         </Pressable>
       </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  /**
+   * Pinned to the keyboard's top edge, full width, and SOLID — the feed's
+   * own ground. While typing the player slides up out of the way
+   * (LIFT_PLAYER_WHILE_TYPING) and WKWebView repaints as it moves; a
+   * see-through margin around the card showed that repaint as a glitch
+   * "behind" the card (Radek, 2026-09-30). The solid ground hides it, as
+   * the old full-width strip did.
+   */
   bar: {
+    backgroundColor: '#0a0d0b',
     position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: '#111613',
-    borderTopColor: 'rgba(242,245,243,0.12)',
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 10,
+    paddingTop: 8,
   },
+  card: {
+    backgroundColor: '#151c18',
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingBottom: 10,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+  },
+  promptRow: { alignItems: 'center', flexDirection: 'row', gap: 8, marginBottom: 6 },
+  kindChip: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  kindDot: { borderRadius: 999, height: 6, width: 6 },
+  kindText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   prompt: {
-    color: 'rgba(242,245,243,0.6)',
-    fontSize: 13,
+    color: 'rgba(242,245,243,0.72)',
+    flex: 1,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
   },
   row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   input: {
-    backgroundColor: 'rgba(242,245,243,0.08)',
-    borderBottomColor: '#5ee6a8',
-    borderBottomWidth: 2,
-    borderRadius: 8,
     color: '#f2f5f3',
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    paddingHorizontal: 10,
+    fontSize: 21,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    paddingHorizontal: 4,
     paddingVertical: 8,
   },
   check: {
     alignItems: 'center',
-    backgroundColor: '#5ee6a8',
     borderRadius: 999,
-    height: 38,
+    height: 40,
     justifyContent: 'center',
-    width: 38,
+    width: 40,
   },
-  checkOff: { opacity: 0.4 },
-  checkText: { color: '#06130d', fontSize: 17, fontWeight: '800' },
+  checkText: { color: '#06130d', fontSize: 18, fontWeight: '900' },
   skip: {
     alignItems: 'center',
-    backgroundColor: 'rgba(242,245,243,0.10)',
+    backgroundColor: 'rgba(242,245,243,0.08)',
     borderRadius: 999,
-    height: 38,
+    height: 36,
     justifyContent: 'center',
-    width: 38,
+    width: 36,
   },
   replay: {
     alignItems: 'center',
-    backgroundColor: 'rgba(242,245,243,0.10)',
+    backgroundColor: 'rgba(242,245,243,0.08)',
     borderRadius: 999,
-    height: 38,
+    height: 36,
     justifyContent: 'center',
-    width: 38,
+    width: 36,
   },
   replayText: { color: 'rgba(242,245,243,0.75)', fontSize: 18, fontWeight: '700' },
-  skipText: { color: 'rgba(242,245,243,0.6)', fontSize: 15, fontWeight: '700' },
+  skipText: { color: 'rgba(242,245,243,0.55)', fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.6 },
 });

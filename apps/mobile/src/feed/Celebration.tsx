@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   withDelay,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { BRAND } from '../onboarding/brand';
@@ -173,11 +174,48 @@ export function useReduceMotion(): boolean {
  * state="happy", which raises the wing and opens the beak. Of the two bundled
  * bitmaps, the wave is the one that reads as celebrating.
  */
+/**
+ * THREE CELEBRATIONS, TAKING TURNS (Radek, 2026-09-30: "lets make like 3
+ * animations and rotate them so its not so boring"; a single sprung
+ * replacement of the hop was tried the same day and he preferred the
+ * original — so the original stays, as the first of the three).
+ *
+ *   hop   the web's two-hop keyframe, unchanged        ¡Correcto!
+ *   peek  slides in from the edge, waves, slides out   ¡Eso es!
+ *   drop  drops from above, squashes, springs away     ¡Genial!
+ *
+ * One counter for the whole app, advanced per celebration, so consecutive
+ * right answers never repeat the same one. "Almost!" keeps its word in all
+ * three — it is information, not decoration. Every one finishes inside
+ * CELEBRATE_MS, and all three share hopLayer's position, so callers are
+ * unchanged.
+ */
+let celebrationTurn = 0;
+const CORRECT_LABELS = ['¡Correcto!', '¡Eso es!', '¡Genial!'] as const;
+
 export function LoroCelebration({
   variant = 'correct',
 }: {
   variant?: CelebrationVariant;
 }) {
+  // Fixed for this mount: the counter moves once per celebration.
+  const [turn] = useState(() => celebrationTurn++ % 3);
+  const label = variant === 'almost' ? VARIANT.almost.label : CORRECT_LABELS[turn];
+  if (turn === 1) return <PeekCelebration variant={variant} label={label} />;
+  if (turn === 2) return <DropCelebration variant={variant} label={label} />;
+  return <HopCelebration variant={variant} label={label} />;
+}
+
+/** The pill every celebration ends on. */
+function Pill({ variant, label }: { variant: CelebrationVariant; label: string }) {
+  return (
+    <View style={styles.pill}>
+      <Text style={[styles.pillText, { color: VARIANT[variant].color }]}>{label}</Text>
+    </View>
+  );
+}
+
+function HopCelebration({ variant, label }: { variant: CelebrationVariant; label: string }) {
   const reduceMotion = useReduceMotion();
   const lift = useSharedValue(10);
   const scale = useSharedValue(0.4);
@@ -220,11 +258,121 @@ export function LoroCelebration({
   return (
     <Animated.View pointerEvents="none" style={[styles.hopLayer, style]}>
       <Image source={BRAND.parrotWaving} style={styles.parrot} resizeMode="contain" />
-      <View style={styles.pill}>
-        <Text style={[styles.pillText, { color: VARIANT[variant].color }]}>
-          {VARIANT[variant].label}
-        </Text>
-      </View>
+      <Pill variant={variant} label={label} />
+    </Animated.View>
+  );
+}
+
+/**
+ * PEEK: Loro slides in from the right edge of the band, waves (a tilt back
+ * and forth), and slides back out the way he came. The pill fades in beside
+ * him while he waves.
+ */
+function PeekCelebration({ variant, label }: { variant: CelebrationVariant; label: string }) {
+  const reduceMotion = useReduceMotion();
+  const slide = useSharedValue(90);
+  const tilt = useSharedValue(0);
+  const pill = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const ease = Easing.out(Easing.cubic);
+    // in 260 · wave 540 · out 250 = 1050
+    slide.value = withSequence(
+      withTiming(0, { duration: 260, easing: ease }),
+      withDelay(540, withTiming(90, { duration: 250, easing: Easing.in(Easing.cubic) }))
+    );
+    tilt.value = withDelay(
+      260,
+      withSequence(
+        withTiming(-10, { duration: 135, easing: Easing.inOut(Easing.quad) }),
+        withTiming(8, { duration: 135, easing: Easing.inOut(Easing.quad) }),
+        withTiming(-6, { duration: 135, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: 135, easing: Easing.inOut(Easing.quad) })
+      )
+    );
+    pill.value = withSequence(
+      withDelay(200, withTiming(1, { duration: 180, easing: ease })),
+      withDelay(420, withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }))
+    );
+  }, [reduceMotion, slide, tilt, pill]);
+
+  const parrotStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slide.value }, { rotate: `${tilt.value}deg` }],
+  }));
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: pill.value,
+    transform: [{ translateX: 12 - 12 * pill.value }],
+  }));
+
+  if (reduceMotion) return null;
+  return (
+    <View pointerEvents="none" style={[styles.hopLayer, styles.peekLayer]}>
+      <Animated.View style={pillStyle}>
+        <Pill variant={variant} label={label} />
+      </Animated.View>
+      <Animated.View style={parrotStyle}>
+        <Image source={BRAND.parrotWaving} style={styles.parrot} resizeMode="contain" />
+      </Animated.View>
+    </View>
+  );
+}
+
+/**
+ * DROP: Loro falls in from above, squashes as he lands (wider, shorter),
+ * springs back to shape, and after a beat jumps up and away. The pill pops
+ * on the landing.
+ */
+function DropCelebration({ variant, label }: { variant: CelebrationVariant; label: string }) {
+  const reduceMotion = useReduceMotion();
+  const fall = useSharedValue(-46);
+  const squash = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const pill = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    // fall 230 · squash+settle ~300 · hold · jump away 240, inside 1050
+    opacity.value = withSequence(
+      withTiming(1, { duration: 120 }),
+      withDelay(690, withTiming(0, { duration: 240, easing: Easing.in(Easing.quad) }))
+    );
+    fall.value = withSequence(
+      withTiming(0, { duration: 230, easing: Easing.in(Easing.quad) }),
+      withDelay(580, withTiming(-30, { duration: 240, easing: Easing.out(Easing.quad) }))
+    );
+    squash.value = withSequence(
+      withDelay(230, withTiming(1, { duration: 90, easing: Easing.out(Easing.quad) })),
+      withSpring(0, { damping: 8, stiffness: 260 })
+    );
+    pill.value = withSequence(
+      withDelay(250, withSpring(1, { damping: 9, stiffness: 260 })),
+      withDelay(360, withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) }))
+    );
+  }, [reduceMotion, fall, squash, opacity, pill]);
+
+  const layerStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const parrotStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: fall.value + 5 * squash.value },
+      { scaleX: 1 + 0.16 * squash.value },
+      { scaleY: 1 - 0.18 * squash.value },
+    ],
+  }));
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: pill.value,
+    transform: [{ scale: 0.5 + 0.5 * pill.value }],
+  }));
+
+  if (reduceMotion) return null;
+  return (
+    <Animated.View pointerEvents="none" style={[styles.hopLayer, layerStyle]}>
+      <Animated.View style={parrotStyle}>
+        <Image source={BRAND.parrotWaving} style={styles.parrot} resizeMode="contain" />
+      </Animated.View>
+      <Animated.View style={pillStyle}>
+        <Pill variant={variant} label={label} />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -420,6 +568,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   pillText: { fontSize: 12, fontWeight: '700' },
+  /** Peek comes in from the band's edge: flush right, the pill on its left. */
+  peekLayer: { right: 0 },
   /** Fills the caller's screen and centres the stage; the caller mounts it
       absolutely over everything, pointer-transparent. */
   centerLayer: {

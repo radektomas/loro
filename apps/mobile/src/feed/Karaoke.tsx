@@ -1,5 +1,13 @@
 import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated as RNAnimated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type TextStyle,
+} from 'react-native';
 import Animated, {
   cancelAnimation,
   runOnJS,
@@ -577,12 +585,19 @@ function BlankSlot({
           blank as decoration.
         */}
         {answer.length > 0 ? (
-          <Text
-            style={[styles.wordText, styles.blankSlotText, size, { minHeight: size.lineHeight, color }]}
-            numberOfLines={1}
-          >
-            {answer}
-          </Text>
+          /**
+           * LETTER BY LETTER, each one landing (2026-09-30 polish: "make
+           * smoother the filling up of the words"). A letter is its own
+           * element keyed by its position, so typing mounts ONE new letter
+           * and only that one animates in; the ones already there stay put,
+           * and a backspace simply unmounts the last. Native driver, no
+           * layout animation: the slot's width is the same as before.
+           */
+          <View style={[styles.letters, { minHeight: size.lineHeight }]}>
+            {[...answer].map((ch, i) => (
+              <TypedLetter key={i} ch={ch} style={[styles.wordText, styles.blankSlotText, size, { color }]} />
+            ))}
+          </View>
         ) : (
           /**
            * The web's placeholder, ported down to its styling: 0.6em, medium
@@ -606,6 +621,30 @@ function BlankSlot({
         <Rule color={color} dashed={!isLevel} width={ruleWidth} />
       </View>
     </View>
+  );
+}
+
+/** One typed letter: rises a few points and fades in as it lands. */
+function TypedLetter({ ch, style }: { ch: string; style: StyleProp<TextStyle> }) {
+  const v = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    RNAnimated.spring(v, { toValue: 1, friction: 7, tension: 180, useNativeDriver: true }).start();
+  }, [v]);
+  return (
+    <RNAnimated.Text
+      style={[
+        style,
+        {
+          opacity: v,
+          transform: [
+            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) },
+            { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) },
+          ],
+        },
+      ]}
+    >
+      {ch === ' ' ? '\u00a0' : ch}
+    </RNAnimated.Text>
   );
 }
 
@@ -782,6 +821,8 @@ const DASH_GAP = 5;
 const RULE_H = 3;
 
 const styles = StyleSheet.create({
+  /** The typed letters, side by side on the line's baseline. */
+  letters: { alignItems: 'flex-end', flexDirection: 'row' },
   // Matches the web's min-h-[11rem]: sized for the common worst case (a
   // three-line cue plus a two-line translation), not the average.
   /** FIXED, not min — see SIZE_TIERS. Clips at the top (content sits at the
