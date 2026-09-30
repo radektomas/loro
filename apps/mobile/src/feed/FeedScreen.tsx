@@ -1825,9 +1825,6 @@ const Slide = memo(function Slide({
           </View>
           {isActive && <SoundControl />}
         </View>
-        <View style={styles.bandAuthor}>
-          <AuthorLine video={video} />
-        </View>
         <Karaoke
           cues={video.cues}
           language={language}
@@ -1836,6 +1833,15 @@ const Slide = memo(function Slide({
           spotlight={spotlight}
           onWordTap={tapWord}
         />
+        {/* THE ATTRIBUTION, AT THE FOOT (2026-09-30, Radek: under the
+            controls it was "really really visible"). Moved below the
+            subtitles and made quiet, never hidden: CC BY and the embed terms
+            need the channel, the licence and the YouTube link on screen with
+            the video. Same row height as before, so the band — and with it
+            the player frame — does not change size. */}
+        <View style={styles.bandAuthor}>
+          <AuthorLine video={video} quiet />
+        </View>
       </View>
     </View>
   );
@@ -2217,7 +2223,7 @@ const styles = StyleSheet.create({
   },
   /** paddingTop 8 reproduces exactly what the old row's `gap` gave between its
       wrapped lines, so splitting the row did not change the band's height. */
-  bandAuthor: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6 },
+  bandAuthor: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   level: {
     backgroundColor: 'rgba(94,230,168,0.16)',
     borderRadius: 6,

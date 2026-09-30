@@ -72,6 +72,7 @@ import {
   type EntitlementsAuthMode,
 } from './entitlements/state.ts';
 import { requestPaywall } from './entitlements/paywallBus.ts';
+import { countsOnTrip, type LevelKnownWord } from './roadmap.ts';
 import {
   EMPTY_PROGRESS,
   mergeProgress,
@@ -143,6 +144,7 @@ const KEYS = {
   levelState: 'loro.levelState', // level fill-in mode: current level + meter
   calibrationKnown: 'loro.calibrationKnown', // words tapped as known in calibration
   levelKnown: 'loro.levelKnown', // blue blanks typed right: known, kept off the path
+  levelKnownWords: 'loro.levelKnownWords', // ...and the content ones, as blue stops on the trip
   syncQueue: 'loro.syncQueue', // pending remote writes (survives reload)
   savePrompt: 'loro.savePrompt', // account-nudge state — see savePrompt.ts
   syncedUser: 'loro.syncedUser', // whose data the cache currently holds
@@ -973,6 +975,9 @@ async function handleSession(userId: string | null): Promise<void> {
     // would be unioned into this account's log and describe a user who never
     // existed.
     getStorageDriver()?.local.removeItem(KEYS.paywallEvents);
+    // The blue stops on the trip are local and would draw the previous
+    // owner's words on this account's path.
+    getStorageDriver()?.local.removeItem(KEYS.levelKnownWords);
     // Drop the previous owner's tier NOW, synchronously, rather than leaving it
     // to handleEntitlementsAuth below: that call is awaited on a network round
     // trip, and until it lands anything reading the cache would be reading
@@ -1288,6 +1293,17 @@ export const storage = {
       if (key && !known.includes(key)) {
         writeJSON(KEYS.levelKnown, [...known, key].slice(-LEVEL_KNOWN_CAP));
       }
+      // ...and a blue stop on the trip (roadmap.withLevelKnown): it fills the
+      // city the user is in, never the saved list or the ladder.
+      const trip = storage.getLevelKnownWords();
+      if (countsOnTrip(word.text) && !trip.some((t) => normalizeAnswer(t.text) === key)) {
+        writeJSON(
+          KEYS.levelKnownWords,
+          [...trip, { text: word.text, translation: word.translation, videoId: word.videoId, cueIndex: word.cueIndex, at: now }].slice(
+            -LEVEL_KNOWN_CAP
+          )
+        );
+      }
       noteCorrectToday(now);
       emitWordsChanged();
       scheduleProgressPush();
@@ -1600,6 +1616,11 @@ export const storage = {
   /** Blue-blank words typed right (saveLevelWord): not asked blue again. */
   getLevelKnown(): string[] {
     return readJSON<string[]>(KEYS.levelKnown, []);
+  },
+
+  /** Blue-blank words typed right, as stops on the trip (roadmap.withLevelKnown). */
+  getLevelKnownWords(): LevelKnownWord[] {
+    return readJSON<LevelKnownWord[]>(KEYS.levelKnownWords, []);
   },
 
   getCalibrationKnown(): string[] {

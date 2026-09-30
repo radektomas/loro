@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
-import { formatDue } from '@loro/core/srs';
+import { STAGE_SIZE, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { COUNTRIES, Flag } from '../vocab/countries';
 import {
   computeStreaks,
   type Streaks,
@@ -22,7 +23,6 @@ import {
   dueCount,
   readyWords,
   learnedThisWeek,
-  nextDueAt,
   splitFunctionWords,
   weekStrip,
   type DailyCounts,
@@ -737,6 +737,54 @@ function NotificationsSection() {
   );
 }
 
+/**
+ * YOUR TRIP — the Words tab's map in one row (Radek, 2026-09-30): the city
+ * you are in, how far to the next, the countries reached. Counted exactly as
+ * the path draws it (core tripPosition over withLevelKnown's list, blue
+ * stops included), so the two tabs can never disagree. Tap: the map.
+ */
+function TripCard({ words, onOpen }: { words: readonly SavedWord[]; onOpen?: () => void }) {
+  const pos = useMemo(
+    () => tripPosition(withLevelKnown(words, storage.getLevelKnownWords()).words),
+    [words]
+  );
+  const stop = tripStop(pos.stage);
+  const next = tripStop(pos.stage + 1);
+  const info = COUNTRIES[stop.country];
+  return (
+    <Pressable
+      onPress={onOpen}
+      disabled={!onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`You're in ${stop.label}. ${pos.learnedHere} of ${STAGE_SIZE} words to ${next.city}. ${pos.countries} ${pos.countries === 1 ? 'country' : 'countries'} reached.`}
+      accessibilityHint="Opens your trip in Words"
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
+      <View style={styles.tripTop}>
+        {info && <Flag spec={info.flag} height={28} />}
+        <View style={styles.tripText}>
+          <Text style={styles.tripKicker}>YOU'RE IN</Text>
+          <Text style={styles.tripCity} numberOfLines={1} adjustsFontSizeToFit>
+            {stop.label}
+          </Text>
+        </View>
+        <View style={styles.tripPill}>
+          <Text style={styles.tripPillText}>
+            {pos.countries} {pos.countries === 1 ? 'country' : 'countries'}
+          </Text>
+        </View>
+        {onOpen && <Text style={styles.tripChevron}>›</Text>}
+      </View>
+      <View style={styles.tripTrack}>
+        <View style={[styles.tripFill, { width: `${Math.max(3, (pos.learnedHere / STAGE_SIZE) * 100)}%` }]} />
+      </View>
+      <Text style={styles.tripNext}>
+        {pos.learnedHere} of {STAGE_SIZE} to {next.city}
+      </Text>
+    </Pressable>
+  );
+}
+
 export function ProgressScreen({
   active,
   onGoToFeed,
@@ -818,7 +866,6 @@ export function ProgressScreen({
   }, [words]);
 
   const due = useMemo(() => dueCount(words, now), [words, now]);
-  const nextDue = useMemo(() => nextDueAt(words, now), [words, now]);
   const streaks = useMemo(() => computeStreaks(recallDays, now), [recallDays, now]);
   const week = useMemo(
     () => weekStrip(recallDays, now, streaks.frozen),
@@ -919,39 +966,12 @@ export function ProgressScreen({
               />
             </View>
 
-            {/* 4 — reviews */}
+            {/* 4 — the trip: where you are, one tap to the map. It replaced
+                "Ready to review" (Radek, 2026-09-30: the words "shouldn't be
+                on a progress page") — this page reports, the Words tab trains. */}
             <View style={styles.section}>
-              <SectionTitle>Ready to review</SectionTitle>
-              <View style={[styles.card, due > 0 && styles.cardAccent]}>
-                {due > 0 ? (
-                  <>
-                    <Text style={styles.bigNumber}>
-                      {due}{' '}
-                      <Text style={styles.bigNumberUnit}>
-                        {due === 1 ? 'word' : 'words'} ready
-                      </Text>
-                    </Text>
-                    <Text style={styles.cardBody}>
-                      Pick one and the feed opens just before it. The rest
-                      follow as blanks while you watch.
-                    </Text>
-                    <Pressable
-                      onPress={startReview}
-                      accessibilityRole="button"
-                      accessibilityHint="Choose a word, then the feed opens on it"
-                      style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
-                    >
-                      <Text style={styles.ctaText}>Review</Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <Text style={styles.cardBody}>
-                    {nextDue === null
-                      ? 'Nothing scheduled yet — save a word to start.'
-                      : `All caught up. Next review ${formatDue(nextDue, now)}.`}
-                  </Text>
-                )}
-              </View>
+              <SectionTitle>Your trip</SectionTitle>
+              <TripCard words={words} onOpen={onGoToWords} />
             </View>
 
             {/* 5 — level: one row, the ladder on request */}
@@ -1061,6 +1081,27 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   card: { backgroundColor: '#141a17', borderRadius: 18, padding: 16 },
+  tripTop: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  tripText: { flex: 1 },
+  tripKicker: { color: '#5ee6a8', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
+  tripCity: { color: '#f2f5f3', fontSize: 24, fontWeight: '900', letterSpacing: -0.4 },
+  tripPill: {
+    backgroundColor: 'rgba(94,230,168,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  tripPillText: { color: '#5ee6a8', fontSize: 12, fontWeight: '800' },
+  tripChevron: { color: 'rgba(242,245,243,0.35)', fontSize: 26, fontWeight: '300', marginLeft: -4 },
+  tripTrack: {
+    backgroundColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 999,
+    height: 8,
+    marginTop: 14,
+    overflow: 'hidden',
+  },
+  tripFill: { backgroundColor: '#5ee6a8', borderRadius: 999, height: '100%' },
+  tripNext: { color: 'rgba(242,245,243,0.7)', fontSize: 13, fontWeight: '700', marginTop: 8 },
   cardAccent: {
     backgroundColor: 'rgba(94,230,168,0.12)',
     borderColor: 'rgba(94,230,168,0.25)',

@@ -19,15 +19,24 @@ import type { Video } from '@loro/core/types';
  * In the live catalog this is the common path, not an edge case: 203 of 208
  * embeds are CC BY, 5 are standard YouTube licence.
  */
-export function AuthorLine({ video }: { video: Video }) {
+export function AuthorLine({ video, quiet = false }: { video: Video; quiet?: boolean }) {
   const author = video.author;
   if (!author) return null;
+  /**
+   * QUIET (the feed, 2026-09-30 — Radek: it was "really really visible").
+   * Same three links, same always-on-screen placement below the player, just
+   * small and muted in one faint pill at the foot of the band. Hiding it
+   * behind a tap is NOT an option: CC BY attribution and the embed terms
+   * both need it visible beside the video. The Words-tab panel keeps the
+   * full-size line.
+   */
+  const q = quiet;
 
   if (author.kind === 'youtube') {
     return (
-      <View style={styles.row}>
-        <Pressable onPress={() => void Linking.openURL(author.channelUrl)}>
-          <Text style={styles.channel} numberOfLines={1}>
+      <View style={[styles.row, q && styles.quietRow]}>
+        <Pressable onPress={() => void Linking.openURL(author.channelUrl)} hitSlop={6} style={styles.shrink}>
+          <Text style={[styles.channel, q && styles.quietChannel]} numberOfLines={1}>
             {author.channelTitle}
           </Text>
         </Pressable>
@@ -37,11 +46,11 @@ export function AuthorLine({ video }: { video: Video }) {
               void Linking.openURL('https://creativecommons.org/licenses/by/3.0/')
             }
           >
-            <Text style={styles.chip}>CC BY</Text>
+            <Text style={[styles.chip, q && styles.quietChip]}>CC BY</Text>
           </Pressable>
         )}
-        <Pressable onPress={() => void Linking.openURL(author.videoUrl)}>
-          <Text style={styles.watch}>YouTube ↗</Text>
+        <Pressable onPress={() => void Linking.openURL(author.videoUrl)} hitSlop={6}>
+          <Text style={[styles.watch, q && styles.quietWatch]}>YouTube ↗</Text>
         </Pressable>
       </View>
     );
@@ -88,4 +97,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   watch: { color: 'rgba(242,245,243,0.5)', fontSize: 12 },
+  shrink: { flexShrink: 1 },
+  quietRow: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(242,245,243,0.05)',
+    borderRadius: 999,
+    gap: 6,
+    maxWidth: '100%',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  quietChannel: {
+    color: 'rgba(242,245,243,0.45)',
+    fontSize: 11,
+    fontWeight: '600',
+    textDecorationLine: 'none',
+  },
+  quietChip: { color: 'rgba(242,245,243,0.4)', fontSize: 9, paddingHorizontal: 4, paddingVertical: 1 },
+  quietWatch: { color: 'rgba(242,245,243,0.35)', fontSize: 11 },
 });

@@ -1,6 +1,7 @@
 import type { SavedWord } from './types.ts';
 import { distinctWords, isLearned } from './progress.ts';
-import { normalizeAnswer } from './srs.ts';
+import { KNOWN_BOX, normalizeAnswer } from './srs.ts';
+import { normalizeSurface } from './dictionary.ts';
 
 /**
  * THE WORD ROADMAP (Radek, 2026-09-26, branch words-roadmap — an idea on
@@ -97,6 +98,94 @@ export function buildRoadmap(
   );
 }
 
+/**
+ * BLUE WORDS ON THE TRIP (Radek, 2026-09-30: a user saving two words a week
+ * "sits in Madrid for a month"). A blue level blank typed right is a word
+ * the user just produced cold, so it fills the city they are in as a
+ * learned stop, drawn blue so it reads as "you knew this", not "you trained
+ * this". Stored by storage.saveLevelWord (loro.levelKnownWords, local).
+ *
+ * PATH ONLY, on purpose. srs.ts LEVEL_FILL_BOX records why: when blue fills
+ * counted as learned, 43 of one user's 58 "learned" words were typed once
+ * and "de" topped the list — "the hero number was counting keystrokes". So
+ * these never enter the saved list, the ladder (learnedTotal) or the feed's
+ * schedule, and the bare glue ("de", "la" — TRIP_GLUE) never fills a city.
+ */
+export type LevelKnownWord = {
+  text: string;
+  translation: string;
+  videoId: string;
+  cueIndex: number;
+  /** When it was typed right — its place among the learned stops. */
+  at: number;
+};
+
+/**
+ * THE GLUE THAT NEVER FILLS A CITY — articles, pronouns, prepositions,
+ * conjunctions and the unavoidable ser/estar/haber/ir forms. Deliberately
+ * NARROWER than glossary's FUNCTION_WORDS (Radek, 2026-09-30: typed "todo"
+ * right and it "appeared nowhere"): that list is "what the glossary shows
+ * as already known" and carries real vocabulary — todo, mucho, siempre,
+ * nunca, ahora, también, aquí, dónde — which a learner does earn. Keys are
+ * normalizeSurface() forms (lowercase, accents kept).
+ */
+const TRIP_GLUE = new Set([
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
+  'mi', 'mis', 'tu', 'tus', 'su', 'sus',
+  'yo', 'tú', 'él', 'ella', 'ellos', 'ellas', 'usted', 'ustedes',
+  'nosotros', 'nosotras', 'vosotros', 'vosotras',
+  'me', 'te', 'se', 'nos', 'os', 'le', 'les',
+  'y', 'e', 'o', 'u', 'ni', 'que', 'pero', 'si',
+  'a', 'de', 'en', 'con', 'por', 'para',
+  'no', 'sí',
+  'es', 'son', 'soy', 'eres', 'somos', 'era', 'eran', 'fue',
+  'está', 'están', 'estás', 'estoy', 'estamos',
+  'hay', 'he', 'has', 'ha', 'han', 'va', 'van', 'voy', 'vas',
+]);
+
+/** A blue word worth a stop on the trip: anything but the bare glue. */
+export function countsOnTrip(text: string): boolean {
+  const key = normalizeAnswer(text);
+  return key !== '' && !TRIP_GLUE.has(normalizeSurface(text));
+}
+
+/**
+ * The list the PATH is drawn from: the saved words plus a learned stand-in
+ * for each blue word not already saved (a saved word keeps its own row, its
+ * own schedule). `blue` names the stand-ins. They are all done, so they
+ * never take an open slot — the open and locked words are exactly what
+ * buildRoadmap(words) alone gives, which is what the feed gates on.
+ */
+export function withLevelKnown(
+  words: readonly SavedWord[],
+  levelWords: readonly LevelKnownWord[]
+): { words: SavedWord[]; blue: Set<string> } {
+  const saved = new Set(words.map((w) => normalizeAnswer(w.text)));
+  const blue = new Set<string>();
+  const extra: SavedWord[] = [];
+  for (const l of levelWords) {
+    const key = normalizeAnswer(l.text);
+    if (!countsOnTrip(l.text) || saved.has(key) || blue.has(key)) continue;
+    blue.add(key);
+    extra.push({
+      text: l.text,
+      translation: l.translation,
+      videoId: l.videoId,
+      cueIndex: l.cueIndex,
+      source: 'user',
+      savedAt: l.at,
+      state: 'known',
+      box: KNOWN_BOX,
+      dueAt: Number.MAX_SAFE_INTEGER,
+      correct: 1,
+      incorrect: 0,
+      lastReviewedAt: l.at,
+      learnedAt: l.at,
+    });
+  }
+  return { words: [...words, ...extra], blue };
+}
+
 /** The next word on the path: the first open one, where "You're here" sits. */
 export function nextUp(words: readonly SavedWord[]): RoadmapNode | null {
   return buildRoadmap(words).find((n) => n.status === 'open') ?? null;
@@ -133,4 +222,85 @@ export function newlyOpened(
 ): RoadmapNode[] {
   const was = lockedKeys(before);
   return buildRoadmap(after).filter((n) => n.status === 'open' && was.has(n.key));
+}
+
+/**
+ * THE TRIP (Radek, 2026-09-30: stages named "any other way than stage 1-20",
+ * then "make it like a little map"). Each stage of STAGE_SIZE words is a
+ * city on a route through the Spanish-speaking world — Spain first, then
+ * across to the Americas. Past the end the route starts again, numbered
+ * ("Madrid · round 2"), so a heavy saver never runs out of map.
+ */
+export const TRIP: readonly { city: string; country: string }[] = [
+  { city: 'Madrid', country: 'España' },
+  { city: 'Sevilla', country: 'España' },
+  { city: 'Barcelona', country: 'España' },
+  { city: 'Valencia', country: 'España' },
+  { city: 'Granada', country: 'España' },
+  { city: 'Ciudad de México', country: 'México' },
+  { city: 'Oaxaca', country: 'México' },
+  { city: 'Guadalajara', country: 'México' },
+  { city: 'Cancún', country: 'México' },
+  { city: 'La Habana', country: 'Cuba' },
+  { city: 'San Juan', country: 'Puerto Rico' },
+  { city: 'Santo Domingo', country: 'República Dominicana' },
+  { city: 'Ciudad de Guatemala', country: 'Guatemala' },
+  { city: 'San José', country: 'Costa Rica' },
+  { city: 'Panamá', country: 'Panamá' },
+  { city: 'Bogotá', country: 'Colombia' },
+  { city: 'Medellín', country: 'Colombia' },
+  { city: 'Cartagena', country: 'Colombia' },
+  { city: 'Quito', country: 'Ecuador' },
+  { city: 'Lima', country: 'Perú' },
+  { city: 'Cusco', country: 'Perú' },
+  { city: 'La Paz', country: 'Bolivia' },
+  { city: 'Santiago', country: 'Chile' },
+  { city: 'Valparaíso', country: 'Chile' },
+  { city: 'Mendoza', country: 'Argentina' },
+  { city: 'Córdoba', country: 'Argentina' },
+  { city: 'Buenos Aires', country: 'Argentina' },
+  { city: 'Montevideo', country: 'Uruguay' },
+  { city: 'Asunción', country: 'Paraguay' },
+  { city: 'Caracas', country: 'Venezuela' },
+];
+
+/** The stop for stage `index` (0-based): its city, country and round. */
+export function tripStop(index: number): { city: string; country: string; round: number; label: string } {
+  const i = Math.max(0, Math.floor(index));
+  const stop = TRIP[i % TRIP.length];
+  const round = Math.floor(i / TRIP.length) + 1;
+  return { ...stop, round, label: round > 1 ? `${stop.city} · round ${round}` : stop.city };
+}
+
+/**
+ * WHERE THE TRIP IS — the city you are in, what is learned there and how
+ * many countries you have reached. The Words path draws this and Progress
+ * names it (Radek, 2026-09-30: a trip row instead of "ready to review"),
+ * so the rule lives here once: the first city with a word still to train;
+ * with every word learned, a FULL last city means you have arrived in the
+ * next one (empty, waiting for words), a part-filled one means you are
+ * still in it. Pass the path's own list — withLevelKnown's, blue stops
+ * included — so both tabs count the same stops.
+ */
+export function tripPosition(words: readonly SavedWord[]): {
+  stage: number;
+  learnedHere: number;
+  countries: number;
+} {
+  const path = buildRoadmap(words);
+  const stages: RoadmapNode[][] = [];
+  for (let i = 0; i < path.length; i += STAGE_SIZE) stages.push(path.slice(i, i + STAGE_SIZE));
+  const firstOpen = stages.findIndex((nodes) => nodes.some((n) => n.status !== 'done'));
+  const stage =
+    firstOpen >= 0
+      ? firstOpen
+      : stages.length === 0
+        ? 0
+        : stages[stages.length - 1].length >= STAGE_SIZE
+          ? stages.length
+          : stages.length - 1;
+  const learnedHere = (stages[stage] ?? []).filter((n) => n.status === 'done').length;
+  const seen = new Set<string>();
+  for (let i = 0; i <= Math.min(stage, TRIP.length - 1); i++) seen.add(TRIP[i].country);
+  return { stage, learnedHere, countries: seen.size };
 }

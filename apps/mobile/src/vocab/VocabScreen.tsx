@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -21,7 +21,12 @@ import { ReviewPickerSheet } from '../progress/ReviewPicker';
 import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
 import { WordDetailSheet } from './WordDetailSheet';
-import { RoadmapPath } from './RoadmapPath';
+import { RoadmapPath, TRIP_SEEN_KEY, TripPreview } from './RoadmapPath';
+import { CityArrival } from './CityArrival';
+import { LevelBanner } from './LevelBanner';
+import { tierForLearned } from '@loro/core/levels';
+import { learnedTotal } from '../feed/wordLearned';
+import { storageDriver } from '../platform/storage';
 import { PracticeDrill } from './PracticeDrill';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
@@ -307,6 +312,22 @@ export function VocabScreen({
    * sends anyone to the feed; before this, a clip-less word did.
    */
   const [drillOnly, setDrillOnly] = useState(false);
+  const ladder = useMemo(() => tierForLearned(learnedTotal(words)), [words]);
+  /** The ladder banner under the title, opened from the level chip. */
+  const [showLevels, setShowLevels] = useState(false);
+  /** A city arrival waiting to be shown once the window is down (CityArrival). */
+  const [arrival, setArrival] = useState<{ from: number; to: number; empty: boolean } | null>(null);
+  const onArrive = useCallback((from: number, to: number, empty: boolean) => {
+    setArrival((a) => a ?? { from, to, empty });
+  }, []);
+  const closeArrival = () => {
+    if (arrival) {
+      try {
+        storageDriver.local.setItem(TRIP_SEEN_KEY, String(arrival.to));
+      } catch {}
+    }
+    setArrival(null);
+  };
 
   /**
    * ⚠️ NOTHING NAVIGATES WHILE THE WINDOW IS STILL ON SCREEN.
@@ -578,28 +599,25 @@ export function VocabScreen({
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.title}>Words</Text>
-        <View style={styles.search}>
-          <Text style={styles.searchGlyph}>⌕</Text>
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search your words"
-            placeholderTextColor="rgba(242,245,243,0.35)"
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Search your saved words"
-            style={styles.searchInput}
-          />
+        {/* The level, as a chip beside the title: the Progress ladder
+            (words learned), small, so the page itself is the trip. */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Words</Text>
+          <Pressable
+            onPress={() => setShowLevels((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={`Level ${ladder.tier.level}, ${ladder.tier.name}. Show all levels`}
+            hitSlop={8}
+            style={({ pressed }) => [styles.levelChip, pressed && { opacity: 0.75 }]}
+          >
+            <Text style={styles.levelChipNum}>{ladder.tier.level}</Text>
+            <Text style={styles.levelChipName}>{ladder.tier.name}</Text>
+          </Pressable>
         </View>
-        {/* Radek, on device: people do not know a word can be reviewed from
-            this list. One line, where every eye passes on the way to the
-            rows. */}
-        {words.length > 0 && (
-          <Text style={styles.headerHint}>
-            Tap a word to hear it, or to review it right here in its video.
-          </Text>
-        )}
+        {showLevels && <LevelBanner ladder={ladder} onClose={() => setShowLevels(false)} />}
+        {/* No search (Radek, 2026-09-30: "for what is it there now?"). It
+            was for the 200-word wall; the path shows one city at a time and
+            past cities' words live on the map. */}
       </View>
 
       <ScrollView
@@ -616,47 +634,17 @@ export function VocabScreen({
         <SavePromptCard />
 
         {words.length === 0 ? (
-          // Honest empty state — no fabricated sample words.
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No words yet</Text>
-            <Text style={styles.emptyBody}>
-              Tap any word in a video to save it. Train it here and it's learned,
-              then it comes back in your videos so it sticks.
-            </Text>
-            <Pressable
-              onPress={onGoToFeed}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
-            >
-              <Text style={styles.ctaText}>Go to the feed</Text>
-            </Pressable>
-          </View>
+          // Zero words: the trip, waiting to start (TripPreview).
+          <TripPreview onGoToFeed={onGoToFeed} />
         ) : (
           <>
             {/* One line, not a billboard (Radek, 2026-09-18): the count is
                 the schedule's returns only (core isReady), so it is small
                 enough to clear, and the button is the whole call to action. */}
-            {dueTotal > 0 && (
-              <View style={styles.readyStrip}>
-                <View style={styles.readyText}>
-                  <Text style={styles.readyCount}>
-                    {dueTotal} {dueTotal === 1 ? 'word' : 'words'} ready
-                  </Text>
-                  <Text style={styles.readyBody} numberOfLines={1}>
-                    Pick one to review in its video
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={startReview}
-                  accessibilityRole="button"
-                  accessibilityHint="Choose a word, then the feed opens on it"
-                  style={({ pressed }) => [styles.readyCta, pressed && styles.pressed]}
-                >
-                  <Text style={styles.ctaText}>Review</Text>
-                </Pressable>
-              </View>
-            )}
-
+            {/* The "N words ready · Review" strip is gone (Radek, 2026-09-30:
+                "not suiting there at all ... take that away completely"). The
+                Words tab is the path; reviewing happens in the feed, which
+                asks trained words on its own. */}
             {searchGroups !== null ? (
               searchGroups.length === 0 ? (
                 <Text style={styles.noMatch}>No words match “{query.trim()}”.</Text>
@@ -691,6 +679,7 @@ export function VocabScreen({
                 words={words}
                 onOpen={startTraining}
                 onLongPress={openDetail}
+                onArrive={onArrive}
                 onAnchor={(y) => {
                   hereYRef.current = y;
                   scrollToHere();
@@ -701,6 +690,12 @@ export function VocabScreen({
           </>
         )}
       </ScrollView>
+
+      {/* The arrival plays over the list only with the window down, so it is
+          seen, not started behind the practice set that caused it. */}
+      {arrival && active && detail === null && !picker && (
+        <CityArrival from={arrival.from} to={arrival.to} empty={arrival.empty} onDone={closeArrival} />
+      )}
 
       {/* ONE WINDOW. Its contents swap; it never gains a sibling. `visible`
           drops before the contents do, so the slide-out has something to draw
@@ -782,7 +777,30 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 16,
   },
-  title: { color: '#f2f5f3', fontSize: 22, fontWeight: '800', marginBottom: 10 },
+  title: { color: '#f2f5f3', fontSize: 22, fontWeight: '800' },
+  titleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  levelChip: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.12)',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 6,
+    paddingLeft: 4,
+    paddingRight: 10,
+    paddingVertical: 4,
+  },
+  levelChipNum: {
+    backgroundColor: '#5ee6a8',
+    borderRadius: 999,
+    color: '#06130d',
+    fontSize: 12,
+    fontWeight: '900',
+    minWidth: 20,
+    overflow: 'hidden',
+    paddingVertical: 2,
+    textAlign: 'center',
+  },
+  levelChipName: { color: '#5ee6a8', fontSize: 13, fontWeight: '800' },
   search: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.07)',

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS } from './roadmap.ts';
+import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, tripPosition, tripStop, withLevelKnown } from './roadmap.ts';
 import { dueCount, nextDueAt, readyWords } from './progress.ts';
 import { computeBlankPlan, grade, isEarlyAnswer, isTrained, trainWord, TRAINED_FIRST_ASK_MS } from './srs.ts';
 import type { SavedWord, Video } from './types.ts';
@@ -197,5 +197,76 @@ describe('train in Words, keep in the feed', () => {
     assert.equal(w.dueAt, NOW + TRAINED_FIRST_ASK_MS + DAY, 'next ask is a day on, not right away');
     w = grade(w, true, NOW + 3 * DAY); // three days after training: climbs
     assert.equal(w.box, 4);
+  });
+});
+
+describe('the trip', () => {
+  it('names stages by city, Madrid first, and loops with a round', () => {
+    assert.equal(tripStop(0).label, 'Madrid');
+    assert.equal(tripStop(1).city, 'Sevilla');
+    assert.equal(tripStop(TRIP.length).label, 'Madrid · round 2');
+  });
+});
+
+describe('blue words on the trip', () => {
+  const blue = (text: string, at: number) => ({ text, translation: `${text}-en`, videoId: 'vid', cueIndex: 0, at });
+
+  it('a blue word typed right fills the path as a learned stop, marked blue', () => {
+    const saved = [word('perro', 0, learned)];
+    const { words, blue: keys } = withLevelKnown(saved, [blue('gato', NOW)]);
+    const path = buildRoadmap(words);
+    assert.deepEqual(path.map((n) => [n.key, n.status]), [['perro', 'done'], ['gato', 'done']]);
+    assert.ok(keys.has('gato') && !keys.has('perro'));
+  });
+
+  it('function words never fill a city, and a saved word keeps its own row', () => {
+    const { words, blue: keys } = withLevelKnown([word('gato', 0)], [blue('de', NOW), blue('Gato', NOW)]);
+    assert.equal(words.length, 1);
+    assert.equal(keys.size, 0);
+  });
+
+  it('lands where the user is and pushes the words to train into the next city', () => {
+    // 3 learned, 10 to train: the city is 3/10 with the user on the 4th stop.
+    const saved = many(13).map((w, i) => (i < 3 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
+    const { words } = withLevelKnown(saved, [blue('tiempo', NOW)]);
+    const path = buildRoadmap(words);
+    assert.deepEqual(path.slice(0, 5).map((n) => n.key), ['w0', 'w1', 'w2', 'tiempo', 'w3']);
+    // w9 was city 1's last stop; the blue word pushed it to city 2's first.
+    assert.equal(path[STAGE_SIZE].key, 'w9');
+  });
+
+  it('real words the glossary calls "known" still count: todo, siempre', () => {
+    const { blue: keys } = withLevelKnown([], [blue('todo', NOW), blue('siempre', NOW)]);
+    assert.deepEqual([...keys], ['todo', 'siempre']);
+  });
+
+  it('blue stops never move the open window the feed gates on', () => {
+    const saved = many(OPEN_SLOTS + 5);
+    const { words } = withLevelKnown(saved, [blue('gato', NOW), blue('casa', NOW)]);
+    const open = (list: SavedWord[]) => buildRoadmap(list).filter((n) => n.status === 'open').map((n) => n.key);
+    assert.deepEqual(open(words), open(saved));
+  });
+});
+
+describe('tripPosition', () => {
+  it('starts in Madrid with nothing learned', () => {
+    assert.deepEqual(tripPosition([]), { stage: 0, learnedHere: 0, countries: 1 });
+  });
+
+  it('counts what is learned in the city you are in', () => {
+    const words = many(14).map((w, i) => (i < 13 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
+    assert.deepEqual(tripPosition(words), { stage: 1, learnedHere: 3, countries: 1 });
+  });
+
+  it('ten learned and nothing else: you have arrived in the next city', () => {
+    const words = many(10).map((w, i) => ({ ...w, ...learned, learnedAt: NOW - DAY + i }));
+    assert.equal(tripPosition(words).stage, 1);
+    assert.equal(tripPosition(words).learnedHere, 0);
+  });
+
+  it('counts the countries reached, Mexico after five Spanish cities', () => {
+    const words = many(52).map((w, i) => (i < 51 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
+    assert.equal(tripPosition(words).stage, 5);
+    assert.equal(tripPosition(words).countries, 2);
   });
 });

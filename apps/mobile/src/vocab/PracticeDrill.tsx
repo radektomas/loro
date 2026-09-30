@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord } from '@loro/core/types';
 import type { AnswerMatch } from '@loro/core/srs';
-import { normalizeAnswer } from '@loro/core/srs';
+import { levenshtein, normalizeAnswer } from '@loro/core/srs';
+import { findWordOccurrences } from '@loro/core/occurrences';
 import { isDoneOnPath } from '@loro/core/roadmap';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
@@ -50,7 +51,7 @@ const INK = '#f2f5f3';
 const ALMOST = '#f2c14e';
 const WRONG = '#ff8b7a';
 
-type Step = 'meaning' | 'pick' | 'produce' | 'summary';
+type Step = 'meaning' | 'pick' | 'lookalike' | 'sentence' | 'produce' | 'summary';
 
 /** When the feed will ask a freshly trained word (see the header). */
 const FEED_WEEK = ['Later today', 'Tomorrow', 'Day 3', 'Next week'];
@@ -117,6 +118,82 @@ function others(word: SavedWord, all: readonly SavedWord[], field: 'text' | 'tra
   if (out.length < 3) fromVideo(shuffle(videos).slice(0, 6), true);
   if (out.length < 3) fromVideo(shuffle(videos).slice(0, 6), false);
   return out;
+}
+
+/** Every Spanish surface the catalog glosses — built once, for look-alikes. */
+let surfaceIndex: string[] | null = null;
+function allSurfaces(): string[] {
+  if (surfaceIndex) return surfaceIndex;
+  const set = new Set<string>();
+  for (const video of [...getCatalog(), ...collectionVideos]) {
+    for (const [surface, gloss] of Object.entries(video.dictionary)) {
+      if (CONTENT_POS.has(gloss.pos) && surface.length >= 2) set.add(surface);
+    }
+  }
+  surfaceIndex = [...set];
+  return surfaceIndex;
+}
+
+/**
+ * LOOK-ALIKES (Radek, 2026-09-30: exercises two and three were "super
+ * easy"). Three real Spanish words that LOOK like the answer — the closest
+ * spellings in the catalog (planes → planas, plantas, planeas), so picking
+ * it takes knowing the exact word, not recognising a vibe. Where the catalog
+ * has too few near spellings, the ordinary wrong answers fill in.
+ */
+function lookalikes(word: SavedWord, all: readonly SavedWord[]): string[] {
+  const target = normalizeAnswer(word.text);
+  const scored: { s: string; d: number }[] = [];
+  for (const surface of allSurfaces()) {
+    const key = normalizeAnswer(surface);
+    if (!key || key === target) continue;
+    if (Math.abs(key.length - target.length) > 3) continue;
+    const d = levenshtein(key, target);
+    if (d <= Math.max(2, Math.ceil(target.length / 3))) scored.push({ s: surface, d });
+  }
+  const seen = new Set<string>([target]);
+  const out: string[] = [];
+  for (const { s } of shuffle(scored).sort((a, b) => a.d - b.d)) {
+    const key = normalizeAnswer(s);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+    if (out.length === 3) return out;
+  }
+  for (const s of others(word, all, 'text')) {
+    if (out.length === 3) break;
+    if (!seen.has(normalizeAnswer(s))) out.push(s);
+  }
+  return out;
+}
+
+/**
+ * SAME WORD, NEW SENTENCE: a line from ANOTHER video that says this word,
+ * with the word taken out and only that line's translation as the hint.
+ * Using a word somewhere you have not met it is the actual skill. Prefers a
+ * different video from the one the word was saved from (and from its clip),
+ * a line of a readable length; null when the catalog says it nowhere else.
+ */
+type NewSentence = { words: string[]; gap: number; spoken: string; translation: string | null };
+function newSentence(word: SavedWord): NewSentence | null {
+  const videos = [...getCatalog(), ...collectionVideos];
+  const language = storage.getLanguage();
+  const found = findWordOccurrences(videos, word.text).filter(
+    (o) => !(o.videoId === word.videoId && o.cueIndex === word.cueIndex)
+  );
+  const elsewhere = found.filter((o) => o.videoId !== word.videoId);
+  for (const o of shuffle(elsewhere.length > 0 ? elsewhere : found)) {
+    const video = videos.find((v) => v.id === o.videoId);
+    const cue = video?.cues[o.cueIndex];
+    if (!cue || cue.words.length < 3 || cue.words.length > 16) continue;
+    return {
+      words: cue.words.map((w) => w.text),
+      gap: o.wordIndex,
+      spoken: cue.words[o.wordIndex]?.text ?? word.text,
+      translation: cue.translations[language] ?? cue.translations.en ?? null,
+    };
+  }
+  return null;
 }
 
 function Progress({ done }: { done: number }) {
@@ -230,7 +307,16 @@ export function PracticeDrill({
   onDone: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const steps: Step[] = stepOne ? ['meaning', 'produce'] : ['meaning', 'pick', 'produce'];
+  /**
+   * THE SET, HARDER (2026-09-30). With a clip: 1 hear it (the panel),
+   * 2 look-alikes, 3 the word in a new sentence. Without one: meaning,
+   * look-alikes, then say it. A word no other line says gets "say it" for
+   * the new sentence. Typing stays last, so the set ends on "¡Eso es!".
+   */
+  const sentence = useMemo(() => newSentence(word), [word]);
+  const steps: Step[] = stepOne
+    ? ['lookalike', sentence ? 'sentence' : 'produce']
+    : ['meaning', 'lookalike', 'produce'];
   const offset = stepOne ? 1 : 0;
   const [index, setIndex] = useState(0);
   const step: Step = index < steps.length ? steps[index] : 'summary';
@@ -272,6 +358,15 @@ export function PracticeDrill({
     () => (round >= 0 ? shuffle([word.text, ...others(word, all, 'text')]) : []),
     [word, all, round]
   );
+  const lookalikeRight = word.text.toLowerCase();
+  const lookalikeOptions = useMemo(
+    // All lowercase, so a capitalised saved word ("Ella") cannot stand out.
+    () =>
+      round >= 0
+        ? shuffle([lookalikeRight, ...lookalikes(word, all).map((o) => o.toLowerCase())])
+        : [],
+    [word, all, round, lookalikeRight]
+  );
 
   const next = () => {
     setRound(0);
@@ -291,7 +386,10 @@ export function PracticeDrill({
     if (produced !== null) return;
     const answer = textNow ?? typed;
     if (textNow !== undefined) setTyped(textNow);
-    const match = gradeAnswer(answer, word);
+    // The new sentence may say the word in another form of its spelling
+    // (capitalised at a line start); grade against what that line says.
+    const expected = step === 'sentence' && sentence ? { text: sentence.spoken } : word;
+    const match = gradeAnswer(answer, expected);
     setProduced(match);
     if (match === 'wrong') {
       misses.current++;
@@ -318,7 +416,9 @@ export function PracticeDrill({
     const row = storage
       .getSavedWords()
       .find((w) => w.text === word.text && w.videoId === word.videoId);
-    const already = row !== undefined && isDoneOnPath(row);
+    // No saved row: a blue stop on the trip (roadmap.withLevelKnown), known
+    // from a blue blank, or a word removed meanwhile — practice, never train.
+    const already = row === undefined || isDoneOnPath(row);
     if (!already) storage.trainWord(word.text, word.videoId);
     track('practice_set', {
       misses: misses.current,
@@ -355,10 +455,40 @@ export function PracticeDrill({
         </View>
       )}
 
-      {step === 'produce' && (
+      {step === 'lookalike' && (
+        <View style={styles.body}>
+          <Text style={styles.kicker}>{round > 0 ? 'ONE MORE TIME' : 'CAREFUL, THEY LOOK ALIKE'}</Text>
+          <Text style={styles.big}>{word.translation}</Text>
+          <Choices key={`l${round}`} options={lookalikeOptions} right={lookalikeRight} onRight={right} onWrong={wrong} />
+        </View>
+      )}
+
+      {(step === 'produce' || step === 'sentence') && (
         <View style={[styles.body, { paddingBottom: Platform.OS === 'ios' ? keyboard : 0 }]}>
+          {step === 'sentence' && sentence ? (
+            <>
+              <Text style={styles.kicker}>SAME WORD, NEW SENTENCE</Text>
+              <View style={styles.sentence}>
+                {sentence.words.map((w, i) =>
+                  i === sentence.gap ? (
+                    <View key={i} style={[styles.gap, produced && produced !== 'wrong' && styles.gapDone]}>
+                      <Text style={[styles.sentenceWord, { color: produced && produced !== 'wrong' ? MINT : 'transparent' }]}>
+                        {produced && produced !== 'wrong' ? sentence.spoken : sentence.spoken.replace(/./g, 'x')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text key={i} style={styles.sentenceWord}>{w}</Text>
+                  )
+                )}
+              </View>
+              {sentence.translation && <Text style={styles.sentenceHint}>{sentence.translation}</Text>}
+            </>
+          ) : (
+            <>
           <Text style={styles.kicker}>SAY IT IN SPANISH</Text>
           <Text style={styles.big}>{word.translation}</Text>
+            </>
+          )}
           <View style={styles.inputRow}>
             <TextInput
               ref={inputRef}
@@ -371,7 +501,7 @@ export function PracticeDrill({
               autoCorrect={false}
               spellCheck={false}
               returnKeyType="done"
-              placeholder="Type it in Spanish"
+              placeholder={step === 'sentence' ? 'Type the missing word' : 'Type it in Spanish'}
               placeholderTextColor="rgba(242,245,243,0.3)"
               accessibilityLabel={`Type the Spanish for ${word.translation}`}
               style={[
@@ -401,7 +531,7 @@ export function PracticeDrill({
           {produced === 'wrong' && (
             <>
               <Text style={[styles.verdict, { color: WRONG }]}>
-                It's «{word.text}». Type it once more.
+                It's «{step === 'sentence' && sentence ? sentence.spoken : word.text}». Type it once more.
               </Text>
               <Pressable
                 onPress={tryAgain}
@@ -424,11 +554,18 @@ export function PracticeDrill({
             <Text style={styles.kicker}>{finish.already ? 'PRACTICE DONE' : 'LEARNED'}</Text>
             <Text style={styles.big}>{finish.already ? '¡Muy bien!' : '¡Aprendida!'}</Text>
           </PopIn>
-          <PopIn delay={500} from={0.95}>
+          {/* THE WORD, BIG (Radek: "the word is small in some weird punctions
+              ... it should be much more visible"). It is the thing that was
+              learned, so it gets the card, not a place inside a sentence. */}
+          <PopIn delay={380} from={0.7} style={styles.wordCard}>
+            <Text style={styles.wordCardText}>{word.text}</Text>
+            <Text style={styles.wordCardMeaning}>{word.translation}</Text>
+          </PopIn>
+          <PopIn delay={600} from={0.95}>
             <Text style={styles.summaryBody}>
               {finish.already
-                ? `«${word.text}» is already yours. Your videos keep bringing it back.`
-                : `«${word.text}» will now pop up in your videos over the next week. Answer it there and it sticks for good.`}
+                ? 'Already yours. Your videos keep bringing it back.'
+                : 'It will now pop up in your videos over the next week. Answer it there and it sticks for good.'}
             </Text>
           </PopIn>
           {!finish.already && <FeedWeek />}
@@ -514,6 +651,23 @@ const styles = StyleSheet.create({
   eso: { color: MINT, fontSize: 30, fontWeight: '900' },
   loroWrap: { alignSelf: 'center', marginBottom: 14 },
   loro: { height: 140, width: 125 },
+  wordCard: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(94,230,168,0.12)',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  wordCardText: { color: MINT, fontSize: 44, fontWeight: '900', letterSpacing: -0.5 },
+  wordCardMeaning: { color: 'rgba(242,245,243,0.75)', fontSize: 18, fontWeight: '700', marginTop: 2 },
+  sentence: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12, marginTop: 14 },
+  sentenceWord: { color: INK, fontSize: 24, fontWeight: '800', lineHeight: 32 },
+  gap: { borderBottomColor: MINT, borderBottomWidth: 3, minWidth: 56 },
+  gapDone: { backgroundColor: 'rgba(94,230,168,0.12)', borderRadius: 4 },
+  sentenceHint: { color: 'rgba(242,245,243,0.6)', fontSize: 15, lineHeight: 21, marginBottom: 20 },
   summaryBody: { color: 'rgba(242,245,243,0.72)', fontSize: 16, lineHeight: 23, marginTop: -8 },
   week: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 },
   weekRail: {
