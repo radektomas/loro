@@ -24,6 +24,8 @@ import { WordDetailSheet } from './WordDetailSheet';
 import { RoadmapPath, TRIP_SEEN_KEY, TripPreview } from './RoadmapPath';
 import { CityArrival } from './CityArrival';
 import { LevelBanner } from './LevelBanner';
+import { tripStop } from '@loro/core/roadmap';
+import { track } from '../platform/analytics';
 import { tierForLearned } from '@loro/core/levels';
 import { learnedTotal } from '../feed/wordLearned';
 import { storageDriver } from '../platform/storage';
@@ -320,6 +322,23 @@ export function VocabScreen({
   const onArrive = useCallback((from: number, to: number, empty: boolean) => {
     setArrival((a) => a ?? { from, to, empty });
   }, []);
+  // Recorded when the arrival actually plays (it waits for the window to be
+  // down), so the count is cities users SAW themselves reach.
+  const arrivalShown = arrival !== null && active && detail === null && !picker;
+  const trackedArrival = useRef<number | null>(null);
+  useEffect(() => {
+    if (!arrivalShown || !arrival || trackedArrival.current === arrival.to) return;
+    trackedArrival.current = arrival.to;
+    const prev = tripStop(arrival.from);
+    const next = tripStop(arrival.to);
+    track('city_arrived', {
+      stage: arrival.to,
+      city: next.city,
+      country: next.country,
+      newCountry: prev.country !== next.country,
+      empty: arrival.empty,
+    });
+  }, [arrivalShown, arrival]);
   const closeArrival = () => {
     if (arrival) {
       try {
@@ -604,7 +623,10 @@ export function VocabScreen({
         <View style={styles.titleRow}>
           <Text style={styles.title}>Words</Text>
           <Pressable
-            onPress={() => setShowLevels((v) => !v)}
+            onPress={() => {
+              if (!showLevels) track('level_banner_opened', { tier: ladder.tier.name, learned: ladder.have });
+              setShowLevels((v) => !v);
+            }}
             accessibilityRole="button"
             accessibilityLabel={`Level ${ladder.tier.level}, ${ladder.tier.name}. Show all levels`}
             hitSlop={8}

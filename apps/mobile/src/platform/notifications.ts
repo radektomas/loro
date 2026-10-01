@@ -2,6 +2,8 @@ import { AppState, Linking } from 'react-native';
 import type * as NotificationsApi from 'expo-notifications';
 import { storage } from '@loro/core/storage';
 import { computeStreaks, dayKey, dueCount } from '@loro/core/progress';
+import { STAGE_SIZE, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { learnedTotal } from '../feed/wordLearned';
 import { track } from './analytics';
 import { storageDriver } from './storage';
 
@@ -548,10 +550,43 @@ function trialReminderAt(now: number): Date | null {
   return at.getTime() > now ? at : null;
 }
 
+/**
+ * WHAT THE TRIAL BUILT (Radek, 2026-10-01: the reminder should make the
+ * charge "feel earned rather than a surprise"). Not only where to cancel:
+ * the words learned and where the trip has got to, and how close the next
+ * city is. Baked in at schedule time like every other notification's copy —
+ * reconcile() runs on foreground, boot and words-changed, so the numbers are
+ * the ones from the user's last session. Still says where to cancel: the
+ * reminder is the paywall's promise, and it has to stay an honest one.
+ * Nothing learned yet: the plain version, no zero to point at.
+ */
+export function trialReminderBody(
+  learned: number,
+  city: string,
+  stage: number,
+  toNext: number,
+  nextCity: string
+): string {
+  const cancel = 'Not for you? Cancel any time in Settings → Subscriptions.';
+  if (learned <= 0) return `Keep it and nothing changes. ${cancel}`;
+  const words = `${learned} ${learned === 1 ? 'word' : 'words'}`;
+  const where = stage > 0 ? `You've learned ${words} and made it to ${city}.` : `You've learned ${words} in ${city}.`;
+  const next = `${nextCity} is ${toNext} ${toNext === 1 ? 'word' : 'words'} away.`;
+  return `${where} ${next} Keep going, nothing changes. ${cancel}`;
+}
+
 function buildTrialReminderContent(): NotificationsApi.NotificationContentInput {
+  const words = storage.getSavedWords();
+  const pos = tripPosition(withLevelKnown(words, storage.getLevelKnownWords()).words);
   return {
     title: `Your Loro trial ends in ${TRIAL_REMINDER_DAYS_BEFORE} days`,
-    body: 'Keep it and nothing changes. Not for you? Cancel any time in Settings → Subscriptions.',
+    body: trialReminderBody(
+      learnedTotal(words),
+      tripStop(pos.stage).label,
+      pos.stage,
+      Math.max(1, STAGE_SIZE - pos.learnedHere),
+      tripStop(pos.stage + 1).city
+    ),
     data: { route: 'review' satisfies NotifRoute },
   };
 }
