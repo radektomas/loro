@@ -1,11 +1,20 @@
-import { useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Image, LayoutAnimation, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { cleanWord } from '@loro/core/dictionary';
 import { splitFunctionWords, type Streaks, type WeekDay } from '@loro/core/progress';
-import { cityArrivals, STAGE_SIZE, TRIP, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import {
+  buildRoadmap,
+  cityArrivals,
+  STAGE_SIZE,
+  TRIP,
+  tripPosition,
+  tripStop,
+  withLevelKnown,
+  type RoadmapNode,
+} from '@loro/core/roadmap';
 import { TIERS, TIER_LEARNED, tierForLearned } from '@loro/core/levels';
 import { BRAND } from '../onboarding/brand';
 import { COUNTRIES, Flag, flagColours } from '../vocab/countries';
@@ -202,14 +211,44 @@ function shortDay(ms: number): string {
 }
 
 /** A passport stamp: two rings in the flag's colour, the flag, the date. */
-function Stamp({ country, at, size, tilt }: { country: string; at: number | null; size: number; tilt: number }) {
+function Stamp({
+  country,
+  at,
+  size,
+  tilt,
+  selected,
+  dimmed,
+  onPress,
+}: {
+  country: string;
+  at: number | null;
+  size: number;
+  tilt: number;
+  selected: boolean;
+  /** Another stamp is open: this one steps back. */
+  dimmed: boolean;
+  onPress: () => void;
+}) {
   const reached = at !== null;
   const info = COUNTRIES[country];
   const [a] = flagColours(country);
   const r = size / 2 - 2;
+  // The open stamp lifts and straightens, the way you pick one up to read it.
+  const lift = useRef(new Animated.Value(selected ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.spring(lift, { toValue: selected ? 1 : 0, friction: 6, tension: 140, useNativeDriver: true }).start();
+  }, [selected, lift]);
+  const rotate = lift.interpolate({ inputRange: [0, 1], outputRange: [`${reached ? tilt : 0}deg`, '0deg'] });
+  const scale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   return (
-    <View style={[styles.stamp, { width: size }]}>
-      <View style={{ height: size, transform: [{ rotate: `${reached ? tilt : 0}deg` }], width: size }}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: selected }}
+      accessibilityLabel={`${country}${reached ? `, reached ${shortDay(at!)}` : ', not reached yet'}`}
+      style={[styles.stamp, { width: size, opacity: dimmed ? 0.45 : 1 }]}
+    >
+      <Animated.View style={{ height: size, transform: [{ rotate }, { scale }], width: size }}>
         <Svg width={size} height={size}>
           <Circle
             cx={size / 2}
@@ -234,11 +273,114 @@ function Stamp({ country, at, size, tilt }: { country: string; at: number | null
             <Text style={styles.stampUnknown}>?</Text>
           )}
         </View>
-      </View>
-      <Text style={[styles.stampName, reached && styles.stampNameReached]} numberOfLines={1} adjustsFontSizeToFit>
+      </Animated.View>
+      <Text
+        style={[styles.stampName, reached && styles.stampNameReached, selected && styles.stampNameOpen]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
         {country}
       </Text>
-    </View>
+    </Pressable>
+  );
+}
+
+/**
+ * A COUNTRY'S PAGE IN THE PASSPORT (Radek, 2026-10-02: past countries
+ * opened only from the Words map — "put it somehow super smooth in the
+ * passport"). Opens under the stamps when one is tapped: reached, its
+ * cities with the words learned in each and the country's local word;
+ * ahead, a teaser — its cities, how far away it is, the word still hidden.
+ */
+function CountryPage({
+  country,
+  at,
+  firstStage,
+  pos,
+  stages,
+  onOpenMap,
+}: {
+  country: string;
+  at: number | null;
+  firstStage: number;
+  pos: { stage: number; learnedHere: number };
+  stages: RoadmapNode[][];
+  onOpenMap?: () => void;
+}) {
+  const info = COUNTRIES[country];
+  const [a] = flagColours(country);
+  const reached = at !== null;
+  const pop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    pop.setValue(0);
+    Animated.timing(pop, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [country, pop]);
+  const cities = TRIP.map((t, j) => ({ ...t, j })).filter((t) => t.country === country);
+  const wordsAway = Math.max(0, firstStage * STAGE_SIZE - (pos.stage * STAGE_SIZE + pos.learnedHere));
+
+  return (
+    <Animated.View
+      style={[
+        styles.page,
+        { borderColor: reached ? a : 'rgba(242,245,243,0.12)' },
+        { opacity: pop, transform: [{ translateY: pop.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] },
+      ]}
+    >
+      <View style={styles.pageHead}>
+        {info && <Flag spec={info.flag} height={26} muted={!reached} />}
+        <View style={styles.pageHeadText}>
+          <Text style={styles.pageCountry}>{country}</Text>
+          <Text style={styles.pageStatus}>
+            {reached
+              ? `Arrived ${shortDay(at!)}`
+              : `${wordsAway} ${wordsAway === 1 ? 'word' : 'words'} away · reach ${cities[0].city} to open`}
+          </Text>
+        </View>
+      </View>
+
+      {cities.map((c) => {
+        const been = c.j <= pos.stage;
+        const here = c.j === pos.stage;
+        const learned = been ? (stages[c.j] ?? []).filter((n) => n.status === 'done') : [];
+        return (
+          <View key={c.city} style={styles.pageCity}>
+            <View style={styles.pageCityHead}>
+              <View style={[styles.pageDot, been && { backgroundColor: a, borderColor: a }]} />
+              <Text style={[styles.pageCityName, !been && styles.pageCityAhead]}>{c.city}</Text>
+              <Text style={[styles.pageCityCount, here && styles.pageCityHere]}>
+                {here ? "You're here" : been ? `${learned.length}/${STAGE_SIZE}` : 'Closed'}
+              </Text>
+            </View>
+            {learned.length > 0 && (
+              <Text style={styles.pageWords}>{learned.map((n) => cleanWord(n.word.text)).join(' · ')}</Text>
+            )}
+          </View>
+        );
+      })}
+
+      {info && (
+        <View style={styles.pageLocal}>
+          <Text style={styles.pageLocalLabel}>LOCAL WORD</Text>
+          {reached ? (
+            <>
+              <Text style={styles.pageLocalWord}>
+                {info.word}
+                <Text style={styles.pageLocalMeaning}>  {info.meaning}</Text>
+              </Text>
+              <Text style={styles.pageFact}>{info.fact}</Text>
+            </>
+          ) : (
+            <Text style={[styles.pageLocalWord, styles.pageLocalHidden]}>{'?'.repeat(Math.max(4, info.word.length))}</Text>
+          )}
+        </View>
+      )}
+
+      {reached && onOpenMap && (
+        <Pressable onPress={onOpenMap} accessibilityRole="button" hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
+          <Text style={styles.link}>See it on the map ›</Text>
+        </Pressable>
+      )}
+    </Animated.View>
   );
 }
 
@@ -254,6 +396,20 @@ export function PassportSection({ words, onOpen }: { words: readonly SavedWord[]
   const stampAt = (first: number): number | null =>
     first <= pos.stage ? (arrivals[first] ?? arrivals[arrivals.length - 1] ?? Date.now()) : null;
   const reachedCount = COUNTRY_ORDER.filter((c) => c.first <= pos.stage).length;
+  const stages = useMemo(() => {
+    const path = buildRoadmap(trip);
+    const out: RoadmapNode[][] = [];
+    for (let i = 0; i < path.length; i += STAGE_SIZE) out.push(path.slice(i, i + STAGE_SIZE));
+    return out;
+  }, [trip]);
+  /** The stamp that is open, if any. */
+  const [open, setOpen] = useState<string | null>(null);
+  const toggle = (country: string) => {
+    // The page slides in and the stamps below it make room, in one motion.
+    LayoutAnimation.configureNext(LayoutAnimation.create(240, 'easeInEaseOut', 'opacity'));
+    setOpen((o) => (o === country ? null : country));
+  };
+  const openEntry = open ? COUNTRY_ORDER.find((c) => c.country === open) : undefined;
   const size = Math.min(78, Math.floor((width - 32 - 3 * 14) / 4));
 
   return (
@@ -287,9 +443,28 @@ export function PassportSection({ words, onOpen }: { words: readonly SavedWord[]
 
       <View style={styles.stamps}>
         {COUNTRY_ORDER.map((c, i) => (
-          <Stamp key={c.country} country={c.country} at={stampAt(c.first)} size={size} tilt={((i * 37) % 13) - 6} />
+          <Stamp
+            key={c.country}
+            country={c.country}
+            at={stampAt(c.first)}
+            size={size}
+            tilt={((i * 37) % 13) - 6}
+            selected={open === c.country}
+            dimmed={open !== null && open !== c.country}
+            onPress={() => toggle(c.country)}
+          />
         ))}
       </View>
+      {openEntry && (
+        <CountryPage
+          country={openEntry.country}
+          at={stampAt(openEntry.first)}
+          firstStage={openEntry.first}
+          pos={pos}
+          stages={stages}
+          onOpenMap={onOpen}
+        />
+      )}
     </View>
   );
 }
@@ -458,6 +633,27 @@ const styles = StyleSheet.create({
   stampUnknown: { color: 'rgba(242,245,243,0.18)', fontSize: 18, fontWeight: '900' },
   stampName: { color: 'rgba(242,245,243,0.25)', fontSize: 10, fontWeight: '800', marginTop: 5, maxWidth: '100%' },
   stampNameReached: { color: MUTED },
+  stampNameOpen: { color: INK },
+
+  page: { borderLeftWidth: 3, marginTop: 22, paddingLeft: 16 },
+  pageHead: { alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 14 },
+  pageHeadText: { flex: 1 },
+  pageCountry: { color: INK, fontSize: 22, fontWeight: '900' },
+  pageStatus: { color: MUTED, fontSize: 13, fontWeight: '700', marginTop: 1 },
+  pageCity: { marginBottom: 12 },
+  pageCityHead: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  pageDot: { borderColor: 'rgba(242,245,243,0.25)', borderRadius: 999, borderWidth: 2, height: 10, width: 10 },
+  pageCityName: { color: INK, flex: 1, fontSize: 16, fontWeight: '800' },
+  pageCityAhead: { color: FAINT },
+  pageCityCount: { color: FAINT, fontSize: 12, fontVariant: ['tabular-nums'], fontWeight: '800' },
+  pageCityHere: { color: MINT },
+  pageWords: { color: MINT, fontSize: 14, fontWeight: '700', lineHeight: 21, marginLeft: 20, marginTop: 4 },
+  pageLocal: { marginTop: 6 },
+  pageLocalLabel: { color: FAINT, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  pageLocalWord: { color: INK, fontSize: 22, fontWeight: '900', marginTop: 2 },
+  pageLocalMeaning: { color: MUTED, fontSize: 14, fontWeight: '700' },
+  pageLocalHidden: { color: 'rgba(242,245,243,0.22)', letterSpacing: 3 },
+  pageFact: { color: 'rgba(242,245,243,0.72)', fontSize: 14, lineHeight: 20, marginTop: 6 },
 
   body: { color: MUTED, fontSize: 14, lineHeight: 20 },
   bigLine: { color: INK, fontSize: 34, fontVariant: ['tabular-nums'], fontWeight: '900' },
