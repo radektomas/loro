@@ -16,7 +16,7 @@ import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
 import type { WordOccurrence } from '@loro/core/occurrences';
 import { distinctWords, isLearned, readyWords } from '@loro/core/progress';
 import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
-import { takeRequestedWordsView, type WordsView } from './wordsView';
+import { takeRequestedWordsView, takeWordFocus, type WordsView } from './wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
 import { ReviewPickerSheet } from '../progress/ReviewPicker';
 import { SavePromptCard } from '../auth/SavePromptCard';
@@ -380,11 +380,19 @@ export function VocabScreen({
   const scrollRef = useRef<ScrollView>(null);
   const pathYRef = useRef<number | null>(null);
   const hereYRef = useRef<number | null>(null);
+  /** The current word's y, and whether this visit asked to land on it. */
+  const wordYRef = useRef<number | null>(null);
+  const focusWordRef = useRef(false);
   const anchoredRef = useRef(false);
   const scrollToHere = () => {
     if (anchoredRef.current || pathYRef.current === null || hereYRef.current === null) return;
     anchoredRef.current = true;
-    const y = Math.max(0, pathYRef.current + hereYRef.current - 160);
+    const onWord = focusWordRef.current && wordYRef.current !== null;
+    focusWordRef.current = false;
+    // On the word: put it mid-screen, its city sign above it in view.
+    const y = onWord
+      ? Math.max(0, pathYRef.current + (wordYRef.current as number) - 320)
+      : Math.max(0, pathYRef.current + hereYRef.current - 160);
     scrollRef.current?.scrollTo({ y, animated: false });
   };
 
@@ -404,6 +412,7 @@ export function VocabScreen({
     refresh();
     setNow(Date.now());
     anchoredRef.current = false;
+    focusWordRef.current = takeWordFocus();
     scrollToHere();
     const requested = takeRequestedWordsView();
     if (requested) setView(requested);
@@ -703,8 +712,9 @@ export function VocabScreen({
                 onOpen={startTraining}
                 onLongPress={openDetail}
                 onArrive={onArrive}
-                onAnchor={(y) => {
-                  hereYRef.current = y;
+                onAnchor={(signY, wordY) => {
+                  hereYRef.current = signY;
+                  wordYRef.current = wordY;
                   scrollToHere();
                 }}
               />

@@ -1054,7 +1054,8 @@ export function RoadmapPath({
   /** Long press: the word card: hear it, see it explained, remove it. */
   onLongPress: (word: SavedWord) => void;
   /** Y of "You're here" inside this component, once it has laid out. */
-  onAnchor: (y: number) => void;
+  /** The city sign's y and, when there is one, the current word's — both inside this component. */
+  onAnchor: (signY: number, wordY: number | null) => void;
 }) {
   const { width: screenW } = useWindowDimensions();
   // VocabScreen's scroll pads 16 each side.
@@ -1162,9 +1163,10 @@ export function RoadmapPath({
     const h = hereAt.current;
     if (!h) return;
     const s = stageY.current.get(h.stage);
-    // Land on the CITY SIGN, not the word: the sign and the ten words under
-    // it are the view; the map is a short scroll up.
-    if (s !== undefined) onAnchor(s + 150);
+    // The CITY SIGN is where the tab opens (the sign and the ten words under
+    // it are the view); the word's own y is passed too, for a caller that
+    // asked to land on it (wordsView.requestWordFocus).
+    if (s !== undefined) onAnchor(s + 150, s + h.y + HERE_ROW_H / 2);
   };
 
   const renderStage = (nodes: RoadmapNode[], s: number) => {

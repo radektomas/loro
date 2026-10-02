@@ -23,7 +23,7 @@ import {
   weekStrip,
   type DailyCounts,
 } from '@loro/core/progress';
-import { requestWordsView } from '../vocab/wordsView';
+import { requestWordFocus, requestWordsView } from '../vocab/wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
 import {
   formatTime,
@@ -439,7 +439,14 @@ export function ProgressScreen({
               streaks={streaks}
               week={week}
               words={words}
-              onWords={onGoToWords}
+              onWords={
+                onGoToWords
+                  ? () => {
+                      requestWordFocus();
+                      onGoToWords();
+                    }
+                  : undefined
+              }
               onFeed={onGoToFeed}
             />
             <PassportSection words={words} onOpen={onGoToWords} />

@@ -17,3 +17,23 @@ export function takeRequestedWordsView(): WordsView | null {
   requested = null;
   return view;
 }
+
+/**
+ * LAND ON THE WORD, not on the city sign — a one-shot request, like the view
+ * above. The Words tab normally opens on the sign (the city and its ten
+ * words are the view); Progress's "4 words to Barcelona" button asks for
+ * the word you are on, because that is what it sends you to do (Radek,
+ * 2026-10-02: "it should appear on the word and not on the start of the
+ * city").
+ */
+let focusWord = false;
+
+export function requestWordFocus(): void {
+  focusWord = true;
+}
+
+export function takeWordFocus(): boolean {
+  const v = focusWord;
+  focusWord = false;
+  return v;
+}
