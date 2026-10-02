@@ -855,7 +855,7 @@ function Postcard({
   stop,
   side,
 }: {
-  kind: 'welcome' | 'word';
+  kind: 'welcome' | 'word' | 'tag';
   stop: { city: string; country: string };
   side: 'left' | 'right';
 }) {
@@ -900,25 +900,50 @@ function Postcard({
     );
   }
 
-  // A TAPED NOTE: a band in the country's colour, the CITY's two words and
-  // its fact (every city has its own — CITIES — so no two stops read the same).
   const local = localFor(stop.city);
   if (!local) return null;
+
+  if (kind === 'tag') {
+    // A LUGGAGE TAG for the city's SECOND word (Radek, 2026-10-02: the second
+    // word should not share the first one's card — "it doesn't have to be in
+    // the same card"). Its own shape further down the road: a punched hole,
+    // the string, a band in the flag's second colour, what you overheard.
+    const second = local.words[1];
+    return (
+      <View style={row}>
+        <View style={[styles.tagWrap, { transform: [{ rotate: side === 'left' ? '3deg' : '-3deg' }] }]}>
+          <View style={styles.tagString} />
+          <View style={styles.tag}>
+            <View style={styles.tagHole} />
+            <View style={[styles.tagBand, { backgroundColor: b }]} />
+            <View style={styles.tagBody}>
+              <Text style={styles.tagLabel} numberOfLines={1}>
+                OVERHEARD IN {stop.city.toUpperCase()}
+              </Text>
+              <Text style={styles.tagWord}>{second.word}</Text>
+              <Text style={styles.tagMeaning}>{second.meaning}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // A TAPED NOTE: a band in the country's colour, the CITY's first word and
+  // its fact (every city has its own — CITIES — so no two stops read the
+  // same). The second word travels on its own tag (kind 'tag').
+  const first = local.words[0];
   return (
     <View style={row}>
       <View style={[styles.note, { transform: [{ rotate: tilt }] }]}>
         <View style={styles.tape} />
         <View style={[styles.noteBand, { backgroundColor: a }]}>
           <Flag spec={info.flag} height={12} />
-          <Text style={styles.noteBandText}>LOCAL WORDS</Text>
+          <Text style={styles.noteBandText}>LOCAL WORD</Text>
         </View>
         <View style={styles.noteBody}>
-          {local.words.map((w) => (
-            <View key={w.word} style={styles.notePair}>
-              <Text style={styles.noteWord}>{w.word}</Text>
-              <Text style={styles.noteMeaning}>{w.meaning}</Text>
-            </View>
-          ))}
+          <Text style={styles.noteWord}>{first.word}</Text>
+          <Text style={styles.noteMeaning}>{first.meaning}</Text>
           <Text style={styles.noteFact} numberOfLines={4}>
             {local.fact}
           </Text>
@@ -1342,7 +1367,21 @@ export function RoadmapPath({
               side={Math.sin((s * STAGE_SIZE + i + 1.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
+          // The second word's tag near the end of a fuller city, on the
+          // other side of the road from the note.
+          isCurrent && nodes.length >= 8 && i === nodes.length - 1 ? (
+            <Postcard
+              key="tag"
+              kind="tag"
+              stop={stop}
+              side={Math.sin((s * STAGE_SIZE + i + 1.5) * 0.9) >= 0 ? 'right' : 'left'}
+            />
+          ) : null,
         ])}
+        {/* A shorter city: the tag closes the road. */}
+        {isCurrent && nodes.length > 0 && nodes.length < 8 && (
+          <Postcard key="tag-short" kind="tag" stop={stop} side="right" />
+        )}
         {/* A CITY WITH NOTHING TO TRAIN (just arrived, or everything saved
             here is learned): the postcards and Loro still greet you, and he
             says what to do next — save more words, then train them here. */}
@@ -1357,7 +1396,10 @@ export function RoadmapPath({
           />
         )}
         {isCurrent && nodes.length === 0 && (
-          <Postcard key="word-empty" kind="word" stop={stop} side="left" />
+          <>
+            <Postcard key="word-empty" kind="word" stop={stop} side="left" />
+            <Postcard key="tag-empty" kind="tag" stop={stop} side="right" />
+          </>
         )}
         {nodes.length < STAGE_SIZE && hereWord && (
           <Text style={styles.saveMore}>
@@ -1581,7 +1623,6 @@ const styles = StyleSheet.create({
   localBannerRow: { gap: 2, marginTop: 4 },
   localBannerWord: { color: INK, fontSize: 16, fontWeight: '900' },
   localBannerMeaning: { color: MUTED, fontSize: 13, fontWeight: '700' },
-  notePair: { marginBottom: 6 },
   countryFact: { color: 'rgba(242,245,243,0.7)', fontSize: 13, lineHeight: 19, marginTop: 10 },
   pinBox: { alignItems: 'center', height: PIN_BOX, justifyContent: 'center', position: 'absolute', width: PIN_BOX },
   cityLabel: { position: 'absolute', width: 150 },
@@ -1733,6 +1774,36 @@ const styles = StyleSheet.create({
   postHello: { color: '#6b5a3a', fontSize: 14, fontStyle: 'italic', fontWeight: '600', marginTop: 16 },
   postCity: { color: '#1f1a12', fontSize: 26, fontWeight: '900', letterSpacing: -0.4, marginRight: 30 },
   postCountry: { color: '#8a7755', fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginTop: 2 },
+  tagWrap: { alignItems: 'center' },
+  tagString: { backgroundColor: 'rgba(242,235,210,0.45)', height: 18, width: 2 },
+  tag: {
+    backgroundColor: '#e9e1cc',
+    borderRadius: 12,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    width: 200,
+  },
+  tagHole: {
+    backgroundColor: '#0a0d0b',
+    borderColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 12,
+    left: 10,
+    position: 'absolute',
+    top: 10,
+    width: 12,
+    zIndex: 2,
+  },
+  tagBand: { width: 30 },
+  tagBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 12 },
+  tagLabel: { color: 'rgba(20,24,22,0.55)', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  tagWord: { color: '#141816', fontSize: 24, fontWeight: '900', marginTop: 4 },
+  tagMeaning: { color: 'rgba(20,24,22,0.7)', fontSize: 13, fontWeight: '800', marginTop: 1 },
   note: {
     backgroundColor: '#1a2320',
     borderRadius: 14,
