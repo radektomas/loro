@@ -21,7 +21,7 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import type { Gloss, Video, Word } from '@loro/core/types';
-import { glossText, lookupGloss, normalizeSurface } from '@loro/core/dictionary';
+import { glossText, lookupGloss, normalizeSurface, wordForSave } from '@loro/core/dictionary';
 import { storage } from '@loro/core/storage';
 import { track } from '../platform/analytics';
 import { usePlayerApi } from '../player/PlayerHost';
@@ -415,6 +415,11 @@ function useWordSheetController(
     () => (data ? lookupGloss(data.video, data.word.text) : null),
     [data]
   );
+  /**
+   * The word as it is SAVED and shown: no sentence punctuation, lowercase
+   * unless it is a name ("¿Podemos" -> "podemos", "Pig." -> "Pig").
+   */
+  const savedText = data ? wordForSave(data.word.text, gloss) : '';
 
   useEffect(() => {
     if (!data) return;
@@ -423,7 +428,14 @@ function useWordSheetController(
     setSaved(
       storage
         .getSavedWords()
-        .some((w) => w.text === data.word.text && w.videoId === data.video.id)
+        .some(
+          (w) =>
+            w.videoId === data.video.id &&
+            // Before 1.7.1 words were saved as transcribed ("barro."), so the
+            // raw form still counts as already saved.
+            (w.text === wordForSave(data.word.text, lookupGloss(data.video, data.word.text)) ||
+              w.text === data.word.text)
+        )
     );
     setFailed(false);
     // Pause BEFORE the panel appears so the frame the user is reading is the
@@ -447,7 +459,7 @@ function useWordSheetController(
     // last-resort fallback. Saving the sentence as a word's translation would
     // make the SRS prompt unanswerable.
     const { ok } = storage.saveWord({
-      text: data.word.text,
+      text: savedText,
       translation:
         wordGloss ?? cue?.translations[language] ?? cue?.translations.en ?? '',
       videoId: data.video.id,
@@ -464,7 +476,7 @@ function useWordSheetController(
     }
     setFailed(true);
     return false;
-  }, [data, saved, gloss, language]);
+  }, [data, saved, gloss, language, savedText]);
 
   return { saved, failed, gloss, close, saveWord };
 }
@@ -563,7 +575,7 @@ function ModalShell({ data, language, onClose, onSaved }: ShellProps) {
                 // The false branch is the failure path and must stay untouched:
                 // no toast, no close, panel keeps showing the failure line.
                 if (!saveWord()) return;
-                if (data) onSaved(data.word.text, gloss ? glossText(gloss, language) : null);
+                if (data) onSaved(wordForSave(data.word.text, gloss), gloss ? glossText(gloss, language) : null);
                 close();
               }}
             />
@@ -627,7 +639,7 @@ function SheetShell({ data, language, onClose, onSaved }: ShellProps) {
           failed={failed}
           onSave={() => {
             if (!saveWord()) return;
-            if (data) onSaved(data.word.text, gloss ? glossText(gloss, language) : null);
+            if (data) onSaved(wordForSave(data.word.text, gloss), gloss ? glossText(gloss, language) : null);
             sheetRef.current?.dismiss();
           }}
         />
@@ -688,7 +700,7 @@ function WordSheetText({
 
   return (
     <>
-      <Text style={styles.word}>{data.word.text}</Text>
+      <Text style={styles.word}>{wordForSave(data.word.text, lookupGloss(data.video, data.word.text))}</Text>
 
       {wordGloss ? (
         <>

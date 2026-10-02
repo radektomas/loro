@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SavedWord, Video } from '@loro/core/types';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
-import { normalizeSurface } from '@loro/core/dictionary';
+import { cleanWord, normalizeSurface } from '@loro/core/dictionary';
 import {
   EXPLANATION_LANGS,
   type ExplanationLang,
@@ -213,7 +213,7 @@ export function WordDetailSheet({
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
         >
-          <Text style={styles.word}>{word.text}</Text>
+          <Text style={styles.word}>{cleanWord(word.text)}</Text>
           <Text style={styles.translation}>{word.translation}</Text>
 
           {/* The schedule, in the vocab list's own vocabulary. The dot meter
@@ -345,7 +345,7 @@ export function WordDetailSheet({
               onClose();
             }}
             accessibilityRole="button"
-            accessibilityLabel={`Remove ${word.text}`}
+            accessibilityLabel={`Remove ${cleanWord(word.text)}`}
             style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
           >
             <Text style={styles.removeLabel}>Remove from my words</Text>

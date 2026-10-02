@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cleanWord } from '@loro/core/dictionary';
 import {
   Modal,
   Pressable,
@@ -226,7 +227,7 @@ function WordRow({
     >
       <View style={styles.rowTop}>
         <View style={styles.rowText}>
-          <Text style={styles.word}>{word.text}</Text>
+          <Text style={styles.word}>{cleanWord(word.text)}</Text>
           <Text style={styles.translation} numberOfLines={2}>
             {word.translation}
           </Text>

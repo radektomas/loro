@@ -17,7 +17,7 @@ import { findWordOccurrences } from '@loro/core/occurrences';
 import { isDoneOnPath } from '@loro/core/roadmap';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
-import { normalizeSurface } from '@loro/core/dictionary';
+import { cleanWord, normalizeSurface } from '@loro/core/dictionary';
 import { storage } from '@loro/core/storage';
 import { gradeAnswer, recallHaptic } from '../feed/recall';
 import { openedByLearn } from '../feed/wordLearned';
@@ -355,15 +355,15 @@ export function PracticeDrill({
     [word, all, round]
   );
   const wordOptions = useMemo(
-    () => (round >= 0 ? shuffle([word.text, ...others(word, all, 'text')]) : []),
+    () => (round >= 0 ? shuffle([cleanWord(word.text), ...others(word, all, 'text').map(cleanWord)]) : []),
     [word, all, round]
   );
-  const lookalikeRight = word.text.toLowerCase();
+  const lookalikeRight = cleanWord(word.text).toLowerCase();
   const lookalikeOptions = useMemo(
     // All lowercase, so a capitalised saved word ("Ella") cannot stand out.
     () =>
       round >= 0
-        ? shuffle([lookalikeRight, ...lookalikes(word, all).map((o) => o.toLowerCase())])
+        ? shuffle([lookalikeRight, ...lookalikes(word, all).map((o) => cleanWord(o).toLowerCase())])
         : [],
     [word, all, round, lookalikeRight]
   );
@@ -442,7 +442,7 @@ export function PracticeDrill({
       {step === 'meaning' && (
         <View style={styles.body}>
           <Text style={styles.kicker}>{round > 0 ? 'ONE MORE TIME' : 'WHAT DOES IT MEAN?'}</Text>
-          <Text style={styles.big}>{word.text}</Text>
+          <Text style={styles.big}>{cleanWord(word.text)}</Text>
           <Choices key={`m${round}`} options={meaningOptions} right={word.translation} onRight={right} onWrong={wrong} />
         </View>
       )}
@@ -451,7 +451,7 @@ export function PracticeDrill({
         <View style={styles.body}>
           <Text style={styles.kicker}>{round > 0 ? 'ONE MORE TIME' : 'WHICH ONE IS IT?'}</Text>
           <Text style={styles.big}>{word.translation}</Text>
-          <Choices key={`p${round}`} options={wordOptions} right={word.text} onRight={right} onWrong={wrong} />
+          <Choices key={`p${round}`} options={wordOptions} right={cleanWord(word.text)} onRight={right} onWrong={wrong} />
         </View>
       )}
 
@@ -524,14 +524,14 @@ export function PracticeDrill({
           {produced !== null && produced !== 'wrong' && (
             <PopIn from={0.4} style={styles.esoWrap}>
               <Text style={[styles.eso, produced === 'almost' && { color: ALMOST }]}>
-                {produced === 'correct' ? '¡Eso es!' : `¡Casi! «${word.text}»`}
+                {produced === 'correct' ? '¡Eso es!' : `¡Casi! ${cleanWord(word.text)}`}
               </Text>
             </PopIn>
           )}
           {produced === 'wrong' && (
             <>
               <Text style={[styles.verdict, { color: WRONG }]}>
-                It's «{step === 'sentence' && sentence ? sentence.spoken : word.text}». Type it once more.
+                It's {step === 'sentence' && sentence ? cleanWord(sentence.spoken) : cleanWord(word.text)}. Type it once more.
               </Text>
               <Pressable
                 onPress={tryAgain}
@@ -558,7 +558,7 @@ export function PracticeDrill({
               ... it should be much more visible"). It is the thing that was
               learned, so it gets the card, not a place inside a sentence. */}
           <PopIn delay={380} from={0.7} style={styles.wordCard}>
-            <Text style={styles.wordCardText}>{word.text}</Text>
+            <Text style={styles.wordCardText}>{cleanWord(word.text)}</Text>
             <Text style={styles.wordCardMeaning}>{word.translation}</Text>
           </PopIn>
           <PopIn delay={600} from={0.95}>
@@ -573,7 +573,7 @@ export function PracticeDrill({
             <PopIn delay={1900} from={0.9} style={styles.nextCard}>
               <Text style={styles.nextLabel}>NEXT UP</Text>
               <Text style={styles.nextWord}>
-                {finish.next.text}
+                {cleanWord(finish.next.text)}
                 <Text style={styles.nextMeaning}>  {finish.next.translation}</Text>
               </Text>
             </PopIn>

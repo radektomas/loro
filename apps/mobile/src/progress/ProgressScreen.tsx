@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { cleanWord } from '@loro/core/dictionary';
 import {
   AppState,
   DevSettings,
@@ -378,7 +379,7 @@ function LearnedCard({
             </Text>
           </Text>
           <Text style={styles.learnedWords}>
-            {shown.map((w) => w.text).join(' · ')}
+            {shown.map((w) => cleanWord(w.text)).join(' · ')}
             {hidden > 0 && (
               <Text
                 style={styles.learnedMore}

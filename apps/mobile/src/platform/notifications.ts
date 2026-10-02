@@ -1,4 +1,5 @@
 import { AppState, Linking } from 'react-native';
+import { cleanWord } from '@loro/core/dictionary';
 import type * as NotificationsApi from 'expo-notifications';
 import { storage } from '@loro/core/storage';
 import { computeStreaks, dayKey } from '@loro/core/progress';
@@ -459,8 +460,8 @@ function copyContext(
   const local = localFor(here.city, here.country);
   return {
     ...streaks,
-    recall: recallWord ? { text: recallWord.text, meaning: recallWord.translation } : null,
-    toTrain: next && next.word.state === 'new' ? next.word.text : null,
+    recall: recallWord ? { text: cleanWord(recallWord.text), meaning: recallWord.translation } : null,
+    toTrain: next && next.word.state === 'new' ? cleanWord(next.word.text) : null,
     trip: {
       city: here.label,
       stage: pos.stage,

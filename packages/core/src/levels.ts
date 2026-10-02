@@ -1,6 +1,6 @@
 import type { Gloss, SavedWord, Video } from './types.ts';
 import { normalizeAnswer } from './srs.ts';
-import { glossText, lookupGloss, normalizeSurface } from './dictionary.ts';
+import { glossText, isProperName, lookupGloss, normalizeSurface } from './dictionary.ts';
 import { isFunctionWord } from './glossary.ts';
 import { numberWordBand } from './numerals.ts';
 import { cueWindows, isLongVideo, longBlankCount } from './blankBudget.ts';
@@ -323,7 +323,7 @@ export function isLevelBlankable(surface: string, gloss: Gloss | null, band: num
   const pos = gloss.pos.trim().toLowerCase();
   if (JUNK_POS.has(pos) || GLUE_POS.has(pos)) return false;
   if (gloss.note && JUNK_NOTE.test(gloss.note)) return false;
-  if (/^\p{Lu}/u.test(gloss.lemma)) return false;
+  if (isProperName(surface, gloss)) return false;
   if (band === MAX_WORD_LEVEL && !CONTENT_POS.has(pos)) return false;
   return true;
 }

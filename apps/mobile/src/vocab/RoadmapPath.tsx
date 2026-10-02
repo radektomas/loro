@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { cleanWord } from '@loro/core/dictionary';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import type { SavedWord } from '@loro/core/types';
@@ -690,11 +691,11 @@ function CityWords({
                 key={n.key}
                 onPress={() => onPractise(n.word)}
                 accessibilityRole="button"
-                accessibilityLabel={`Practise ${n.word.text}, ${n.word.translation}`}
+                accessibilityLabel={`Practise ${cleanWord(n.word.text)}, ${n.word.translation}`}
                 style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
               >
                 <View style={styles.chipTop}>
-                  <Text style={[styles.chipWord, blue?.has(n.key) && styles.chipWordBlue]}>{n.word.text}</Text>
+                  <Text style={[styles.chipWord, blue?.has(n.key) && styles.chipWordBlue]}>{cleanWord(n.word.text)}</Text>
                   <View style={styles.chipPlay} />
                 </View>
                 <Text style={styles.chipMeaning} numberOfLines={1}>{n.word.translation}</Text>
@@ -974,8 +975,8 @@ function Row({
         : null;
   const a11y =
     status === 'locked'
-      ? `${word.text}. Waiting.`
-      : `${word.text}, ${detail}. Saved ${shortDate(node.savedAt)}.`;
+      ? `${cleanWord(word.text)}. Waiting.`
+      : `${cleanWord(word.text)}, ${detail}. Saved ${shortDate(node.savedAt)}.`;
 
   return (
     <Pressable
@@ -1008,7 +1009,7 @@ function Row({
           ]}
           numberOfLines={1}
         >
-          {word.text}
+          {cleanWord(word.text)}
         </Text>
         {detail !== null && (
           <Text style={[styles.labelDetail, { textAlign: align }]} numberOfLines={1}>
@@ -1092,7 +1093,7 @@ export function RoadmapPath({
   }, [path]);
   const hereNode = path.find((n) => n.status === 'open') ?? null;
   const hereKey = hereNode?.key ?? null;
-  const hereWord = hereNode?.word.text ?? null;
+  const hereWord = hereNode ? cleanWord(hereNode.word.text) : null;
   const stages = useMemo(() => {
     const out: RoadmapNode[][] = [];
     for (let i = 0; i < path.length; i += STAGE_SIZE) out.push(path.slice(i, i + STAGE_SIZE));

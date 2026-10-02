@@ -32,3 +32,52 @@ export function glossText(gloss: Gloss, language: string): string | null {
   const text = gloss.glosses[language] || gloss.glosses.en;
   return text && text.trim() ? text : null;
 }
+
+/**
+ * A NAME, NOT VOCABULARY (Radek, 2026-10-02: "names like Peppa shouldn't be
+ * there to fill up"). Peppa, George, Discovery Kids, Dubai: a blank on one
+ * teaches no Spanish. The glossing model marks most of them ("proper noun"
+ * in the note, a capitalised lemma), but about 250 entries carry a
+ * lowercase lemma and some no note at all ("américa", "iris", "york"), so
+ * the last test is the gloss itself: an English gloss that is just the same
+ * word, capitalised ("peppa" -> "Peppa"), is a name.
+ */
+const NAME_NOTE = /proper|\bname\b|brand/i;
+const NAME_POS = new Set(['name', 'propn', 'proper', 'proper noun']);
+const fold = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+export function isProperName(surface: string, gloss: Gloss | null): boolean {
+  if (!gloss) return false;
+  if (/^\p{Lu}/u.test(gloss.lemma)) return true;
+  if (gloss.note && NAME_NOTE.test(gloss.note)) return true;
+  if (NAME_POS.has(gloss.pos.trim().toLowerCase())) return true;
+  const en = (gloss.glosses.en ?? '').trim();
+  return /^\p{Lu}/u.test(en) && fold(en) === fold(normalizeSurface(surface));
+}
+
+/**
+ * THE WORD, WITHOUT ITS PUNCTUATION (Radek, 2026-10-02: "if there is a word
+ * with a dot and stuff it needs to be just the word"). Transcripts keep the
+ * sentence's punctuation on its words — "barro.", "¿Podemos", "Pig." — about
+ * 2,400 tokens in the feed and a third of the Peppa shelf. Strips it from
+ * both ends and keeps the word's own letters, accents and inner apostrophes
+ * or hyphens. Case is untouched: use wordForSave to also fold a
+ * sentence-initial capital.
+ */
+export function cleanWord(text: string): string {
+  return text.trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+}
+
+/**
+ * The form a tapped word is SAVED as: no punctuation, and lowercase unless
+ * it is a name — "¿Podemos" was only capitalised because it started a
+ * sentence; "Peppa" is capitalised because it is Peppa.
+ */
+export function wordForSave(text: string, gloss: Gloss | null): string {
+  const clean = cleanWord(text);
+  return isProperName(text, gloss) ? clean : clean.toLowerCase();
+}

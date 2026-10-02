@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { cleanWord } from '@loro/core/dictionary';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -112,11 +113,11 @@ export function LearnedMomentView({
           <Pressable
             onPress={() => leave('words')}
             accessibilityRole="button"
-            accessibilityLabel={`${raise.text} learned. ${raise.learned} words learned. Opens your learned words.`}
+            accessibilityLabel={`${cleanWord(raise.text)} learned. ${raise.learned} words learned. Opens your learned words.`}
             style={({ pressed }) => [styles.bubble, pressed && styles.pressed]}
           >
             <Text style={styles.eyebrow}>¡Palabra aprendida!</Text>
-            <Text style={styles.word}>{raise.text}</Text>
+            <Text style={styles.word}>{cleanWord(raise.text)}</Text>
             <Text style={styles.meaning} numberOfLines={2}>
               {raise.translation}
             </Text>
@@ -128,7 +129,7 @@ export function LearnedMomentView({
               <View style={styles.opened}>
                 <Text style={styles.openedLabel}>Next up</Text>
                 <Text style={styles.openedWord} numberOfLines={1}>
-                  {raise.opened.text}
+                  {cleanWord(raise.opened.text)}
                   <Text style={styles.openedMeaning}>  {raise.opened.translation}</Text>
                 </Text>
               </View>

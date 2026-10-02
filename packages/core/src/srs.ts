@@ -31,6 +31,7 @@ export const MAX_BOX = BOX_INTERVALS_MS.length - 1;
 
 import { isLongVideo, longBlankCount } from './blankBudget.ts';
 import { lockedKeys } from './roadmap.ts';
+import { isProperName, lookupGloss } from './dictionary.ts';
 
 /** Blank throttling — the feed must never feel like a test. */
 const MAX_BLANKS_PER_VIDEO = 5;
@@ -450,6 +451,8 @@ export function computeBlankPlan(
       const key = normalizeAnswer(word.text);
       if (!key || used.has(key)) continue;
       const candidate = dueByText.get(key);
+      // A saved name (someone tapped "Peppa") is never blanked: no Spanish to recall.
+      if (candidate && isProperName(word.text, lookupGloss(video, word.text))) continue;
       if (candidate && moreUrgent(candidate, chosen)) {
         chosen = candidate;
         chosenKey = key;
