@@ -119,7 +119,13 @@ export function Shell() {
    */
   useEffect(
     () =>
-      subscribeToNotificationRoute(() => {
+      subscribeToNotificationRoute((route) => {
+        // A trip line (the next city, the local word, the word to train)
+        // lands on the map in Words; everything else on the feed's review.
+        if (route === 'words') {
+          setTab('vocab');
+          return;
+        }
         launchReview('notification');
         setTab('feed');
       }),

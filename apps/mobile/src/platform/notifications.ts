@@ -1,8 +1,11 @@
 import { AppState, Linking } from 'react-native';
 import type * as NotificationsApi from 'expo-notifications';
 import { storage } from '@loro/core/storage';
-import { computeStreaks, dayKey, dueCount } from '@loro/core/progress';
-import { STAGE_SIZE, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { computeStreaks, dayKey } from '@loro/core/progress';
+import { nextUp, STAGE_SIZE, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { distinctWords, isLearned } from '@loro/core/progress';
+import { localFor } from '../vocab/countries';
+import { atRiskCopy, dailyCopy, type CopyContext, type NotifRoute } from './notificationCopy';
 import { learnedTotal } from '../feed/wordLearned';
 import { track } from './analytics';
 import { storageDriver } from './storage';
@@ -199,7 +202,8 @@ const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 const WORDS_DEBOUNCE_MS = 3000;
 
 /** Identifies our own notifications when one is tapped. */
-type NotifRoute = 'review';
+/** Where a tapped notification lands: the feed's review, or the Words tab (the trip). */
+export type { NotifRoute } from './notificationCopy';
 
 // ------------------------------------------------------------- preferences
 
@@ -362,78 +366,6 @@ function completedToday(): boolean {
 
 // -------------------------------------------------------------------- copy
 
-/**
- * Which line of a pool to use today.
- *
- * Day-of-year rather than random: reconcile() runs many times a day and a
- * random pick would rewrite the pending notification's body on every one of
- * them. Deterministic per day means the copy is stable, testable, and still
- * different tomorrow.
- */
-function variantFor(now: number, poolSize: number): number {
-  const date = new Date(now);
-  const yearStart = new Date(date.getFullYear(), 0, 1).getTime();
-  const dayOfYear = Math.floor((date.getTime() - yearStart) / 86_400_000);
-  return ((dayOfYear % poolSize) + poolSize) % poolSize;
-}
-
-/**
- * ENCOURAGING, NEVER GUILT-TRIPPING. A missed day resets the streak quietly and
- * nothing here says otherwise: no "don't lose it", no countdown, no warning
- * tone. The offer is always small, because the honest ask is small.
- *
- * No em dashes in any string below; they read as machine-written.
- */
-const GENERIC_BODIES = [
-  'A few minutes with real Spanish. Your words are waiting.',
-  'Ready when you are. One short session is plenty.',
-  'Your saved words are ready for another look.',
-  'A few words of real Spanish, whenever it suits you.',
-  'Time for a quick one. Nothing heavy.',
-];
-
-/** Only used when the streak is worth naming. See STREAK_MENTION_FLOOR. */
-const STREAK_BODIES = [
-  (n: number) => `${n} days in a row so far. A short session keeps it going.`,
-  (n: number) => `You are on ${n} days. A few minutes is all it takes.`,
-  (n: number) => `${n} day streak. Your words are ready when you are.`,
-  (n: number) => `Day ${n + 1} is there for the taking. One short session.`,
-  (n: number) => `${n} days and counting. Nice work. Ready for a few more?`,
-];
-
-/**
- * The day after a miss the weekly freeze covered (core computeStreaks). Says
- * the miss was fine and that today is the one that counts — not a warning,
- * a reassurance with a small ask attached.
- */
-const FREEZE_BODIES = [
-  (n: number) =>
-    `Yesterday is covered by your weekly streak freeze. ${n} days still stand, and today keeps them.`,
-  (n: number) =>
-    `Your streak freeze took yesterday. ${n} days safe. A few words today keep it that way.`,
-  (n: number) =>
-    `Missed a day? Your weekly freeze had it. ${n} in a row still count. Today is the one that matters.`,
-];
-
-/** The run ended (two misses, or a second miss inside the freeze's week). */
-const RESET_BODIES = [
-  (n: number) => `The ${n} day run ended, and that is fine. A fresh one starts with a few words today.`,
-  (n: number) => `${n} days was a good run. Day one of the next one is here whenever you are.`,
-];
-
-const AT_RISK_BODIES = [
-  'Your daily goal is still open. A few words round off the day.',
-  'A short session rounds off the day. That is the whole ask.',
-  'There is still time for a quick one if you fancy it.',
-  'Two minutes is plenty to finish today.',
-];
-
-/**
- * Below this the number is not worth saying. "1 day in a row" is not a streak,
- * it is a sentence about yesterday, and naming it makes the copy sound like it
- * is counting at the user rather than with them.
- */
-const STREAK_MENTION_FLOOR = 2;
 
 /**
  * THE REMINDER FOR ONE DAY, WRITTEN AHEAD OF TIME.
@@ -456,28 +388,15 @@ function buildReminderContent(
   /** The streak as it stands now — for the reset line, which names it. */
   streakNow: number
 ): NotificationsApi.NotificationContentInput {
-  const words = storage.getSavedWords();
-  const due = dueCount(words, fireAt);
   const then = computeStreaks(storage.getCorrectRecallDays(), fireAt);
   const yesterday = dayKey(calendarDayBefore(fireAt));
-
-  const body =
-    then.frozen.includes(yesterday) && then.current >= 1
-      ? FREEZE_BODIES[variantFor(fireAt, FREEZE_BODIES.length)](then.current)
-      : then.current >= STREAK_MENTION_FLOOR
-        ? STREAK_BODIES[variantFor(fireAt, STREAK_BODIES.length)](then.current)
-        : then.current === 0 && streakNow >= STREAK_MENTION_FLOOR
-          ? RESET_BODIES[variantFor(fireAt, RESET_BODIES.length)](streakNow)
-          : GENERIC_BODIES[variantFor(fireAt, GENERIC_BODIES.length)];
-
-  return {
-    title:
-      due > 0
-        ? `${due} ${due === 1 ? 'word' : 'words'} ready to review`
-        : 'A few minutes of Spanish?',
-    body,
-    data: { route: 'review' satisfies NotifRoute },
-  };
+  const ctx = copyContext(fireAt, {
+    streak: then.current,
+    frozen: then.frozen.includes(yesterday),
+    endedRun: then.current === 0 ? streakNow : 0,
+  });
+  const copy = dailyCopy(ctx, dayNumber(fireAt));
+  return { title: copy.title, body: copy.body, data: { route: copy.route } };
 }
 
 /** Today's reminder, as it would read right now — the test send uses it. */
@@ -503,10 +422,56 @@ function reminderAt(now: number, offset: number, hour: number, minute: number): 
 }
 
 function buildAtRiskContent(now: number): NotificationsApi.NotificationContentInput {
+  const streak = computeStreaks(storage.getCorrectRecallDays(), now).current;
+  const copy = atRiskCopy(copyContext(now, { streak, frozen: false, endedRun: 0 }), dayNumber(now));
+  return { title: copy.title, body: copy.body, data: { route: copy.route } };
+}
+
+/**
+ * The day's number, day-of-year. It picks the day's line. Not random:
+ * reconcile() runs many times a day and a random pick would rewrite the
+ * pending notification's text on every run. Deterministic per day means the
+ * copy is stable all day and still different tomorrow.
+ */
+function dayNumber(ms: number): number {
+  const date = new Date(ms);
+  return Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1).getTime()) / 86_400_000);
+}
+
+/**
+ * THE USER'S OWN MATERIAL for notificationCopy, as of `at`: a learned word to
+ * ask back (a different one each day), the word they are on if it is not
+ * trained yet, and where the trip is, with the city's local word.
+ */
+function copyContext(
+  at: number,
+  streaks: Pick<CopyContext, 'streak' | 'frozen' | 'endedRun'>
+): CopyContext {
+  const words = storage.getSavedWords();
+  const learned = distinctWords(words)
+    .filter(isLearned)
+    .sort((a, b) => a.text.localeCompare(b.text));
+  const recallWord = learned.length > 0 ? learned[dayNumber(at) % learned.length] : null;
+  const next = nextUp(words);
+  const pos = tripPosition(withLevelKnown(words, storage.getLevelKnownWords()).words);
+  const here = tripStop(pos.stage);
+  const after = tripStop(pos.stage + 1);
+  const local = localFor(here.city, here.country);
   return {
-    title: 'Still time today',
-    body: AT_RISK_BODIES[variantFor(now, AT_RISK_BODIES.length)],
-    data: { route: 'review' satisfies NotifRoute },
+    ...streaks,
+    recall: recallWord ? { text: recallWord.text, meaning: recallWord.translation } : null,
+    toTrain: next && next.word.state === 'new' ? next.word.text : null,
+    trip: {
+      city: here.label,
+      stage: pos.stage,
+      learnedHere: pos.learnedHere,
+      toNext: Math.max(1, STAGE_SIZE - pos.learnedHere),
+      nextCity: after.city,
+      nextCountry: after.country,
+      newCountryNext: after.country !== here.country,
+      local: local ? { word: local.word, meaning: local.meaning } : null,
+    },
+    learned: learned.length,
   };
 }
 
@@ -757,9 +722,8 @@ function routeFromResponse(
   response: NotificationsApi.NotificationResponse | null
 ): void {
   const data = response?.notification.request.content.data;
-  if (data && (data as { route?: string }).route === 'review') {
-    deliverRoute('review');
-  }
+  const route = data ? (data as { route?: string }).route : undefined;
+  if (route === 'review' || route === 'words') deliverRoute(route);
 }
 
 // -------------------------------------------------------------------- init
