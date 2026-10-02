@@ -102,20 +102,31 @@ function DayCoin({ day, goalShare }: { day: WeekDay; goalShare: number }) {
 export function TodaySection({
   plan,
   count,
-  due,
   streaks,
   week,
-  onReview,
+  words,
+  onWords,
   onFeed,
 }: {
   plan: Plan;
   count: number;
-  due: number;
   streaks: Streaks;
   week: WeekDay[];
-  onReview: () => void;
+  words: readonly SavedWord[];
+  /** The Words tab — where the next city is. */
+  onWords?: () => void;
   onFeed: () => void;
 }) {
+  /**
+   * THE BUTTON IS THE NEXT CITY, NOT A REVIEW PILE (Radek, 2026-10-02:
+   * "Review 151 words" — "throw the user back into the words ... like x
+   * words to the y city"). A goal a few words away, and the place to go
+   * and do it.
+   */
+  const pos = useMemo(() => tripPosition(withLevelKnown(words, storage.getLevelKnownWords()).words), [words]);
+  const toNext = Math.max(1, STAGE_SIZE - pos.learnedHere);
+  const nextCity = tripStop(pos.stage + 1).city;
+  const tripLabel = `${toNext} ${toNext === 1 ? 'word' : 'words'} to ${nextCity}`;
   const goal = plan.wordsPerDay;
   const done = count >= goal;
   const remaining = Math.max(0, goal - count);
@@ -164,14 +175,12 @@ export function TodaySection({
 
       <Text style={[styles.goalLine, done && styles.goalLineDone]}>{line}</Text>
       <Pressable
-        onPress={due > 0 ? onReview : onFeed}
+        onPress={onWords ?? onFeed}
         accessibilityRole="button"
-        accessibilityHint={due > 0 ? 'Opens the feed on a word that is ready' : 'Opens the feed'}
+        accessibilityHint={onWords ? 'Opens your trip in Words' : 'Opens the feed'}
         style={({ pressed }) => [done ? styles.ctaQuiet : styles.cta, pressed && styles.pressed]}
       >
-        <Text style={done ? styles.ctaQuietText : styles.ctaText}>
-          {due > 0 ? (done ? `Review ${due} more` : `Review ${due} ${due === 1 ? 'word' : 'words'}`) : done ? 'Keep watching' : 'Open the feed'}
-        </Text>
+        <Text style={done ? styles.ctaQuietText : styles.ctaText}>{tripLabel}</Text>
       </Pressable>
     </View>
   );

@@ -19,13 +19,10 @@ import {
   countForDay,
   dayKey,
   distinctWords,
-  dueCount,
-  readyWords,
   learnedThisWeek,
   weekStrip,
   type DailyCounts,
 } from '@loro/core/progress';
-import { launchReview, launchReviewOfWord } from '../feed/launchReview';
 import { requestWordsView } from '../vocab/wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
 import {
@@ -45,7 +42,6 @@ import { SignInCard } from '../auth/SignInCard';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { LegalLinks } from './LegalLinks';
 import { getPlan, type Plan } from './plan';
-import { ReviewPicker } from './ReviewPicker';
 import { LearnedSection, LevelRoad, PassportSection, TodaySection } from './Journal';
 import { tierForLearned } from '@loro/core/levels';
 
@@ -61,22 +57,11 @@ import { tierForLearned } from '@loro/core/levels';
  * a data problem (see LEVEL_FILL_BOX in core/srs.ts); this screen is the
  * other half.
  *
- * WHAT IT IS NOW, top to bottom — the order is the order of the questions a
- * returning user asks:
- *   1. TODAY      how far along today's goal am I, and what do I do next.
- *                 The goal comes from the onboarding "how often" answer
- *                 (plan.ts), which the app collected and then never read.
- *   2. THIS WEEK  the streak and the week strip, against the plan's days.
- *   3. LEARNED    how many words crossed into known this week, and the
- *                 words themselves on one line. Learned means learned
- *                 (core/progress.ts isLearned): right on two different
- *                 days, never "typed once".
- *   4. REVIEW     what is ready, and a button that asks WHICH word, then
- *                 lands on it (ReviewPicker).
- *   5. LEVEL      one row with the meter; the full ladder on request. The
- *                 ladder climbs on WORDS LEARNED (core tierForLearned),
- *                 not on the feed engine's level meter, which stays
- *                 internal — it picks blanks, it is not a rank.
+ * WHAT IT IS NOW (2026-10-02): a travel journal, drawn in Journal.tsx —
+ * today and the week as path coins, the passport of countries reached, the
+ * words learned this week, the level road. No review pile: the one button
+ * is the next city ("4 words to Barcelona") and it opens Words (Radek:
+ * "Review 151 words" should be "x words to the y city").
  * Then the settings the page has always carried. The "Words" state bar that
  * used to close the list (lapsed / new / learning / known, as a segmented
  * bar with a legend) is gone: Radek, 2026-09-07, "I don't read anything
@@ -361,9 +346,6 @@ export function ProgressScreen({
       by re-running onboarding, which reloads the app. */
   const [plan, setPlan] = useState<Plan>(getPlan);
   const [now, setNow] = useState(() => Date.now());
-  /** The review picker's window — see ReviewPicker for why it is the only
-      thing this screen presents, and why nothing navigates while it is up. */
-  const [picker, setPicker] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -390,11 +372,6 @@ export function ProgressScreen({
     };
   }, [active]);
 
-  // Nothing this screen presents may outlive a tab switch — the same
-  // backstop the Words tab keeps for its window (VocabScreen).
-  useEffect(() => {
-    if (!active) setPicker(false);
-  }, [active]);
 
   /**
    * The totals, and they are the Words tab's. `learned` is onLearnedFace
@@ -416,7 +393,6 @@ export function ProgressScreen({
     return { learned, learning };
   }, [words]);
 
-  const due = useMemo(() => dueCount(words, now), [words, now]);
   const streaks = useMemo(() => computeStreaks(recallDays, now), [recallDays, now]);
   const week = useMemo(
     () => weekStrip(recallDays, now, streaks.frozen),
@@ -428,32 +404,6 @@ export function ProgressScreen({
   );
   const learnedWeek = useMemo(() => learnedThisWeek(words, now), [words, now]);
 
-  /**
-   * THE REVIEW BUTTONS ASK WHICH WORD, THEN LAND ON IT. Both of them —
-   * Today's and the Reviews card's — open the picker; the launch runs from
-   * its onLaunch, AFTER the window is gone (never in the same commit as the
-   * tab switch — the frozen-tab lesson from the Words screen). A chosen word
-   * goes through launchReviewOfWord, "most urgent" through launchReview: the
-   * same launchers the Words tab and the reminder tap use. The old
-   * startReview here armed recall and switched tab, which with RECALL_ENABLED
-   * true opened a random video.
-   */
-  const startReview = () => setPicker(true);
-  const dueWords = useMemo(
-    () =>
-      readyWords(words, now)
-        .sort(
-          (a, b) =>
-            Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
-            a.dueAt - b.dueAt
-        ),
-    [words, now]
-  );
-  const launch = (word: SavedWord | null) => {
-    if (word) launchReviewOfWord(word, 'progress');
-    else launchReview('progress');
-    onGoToFeed();
-  };
 
   const empty = words.length === 0 && watchedIds.length === 0;
 
@@ -486,10 +436,10 @@ export function ProgressScreen({
             <TodaySection
               plan={plan}
               count={todayCount}
-              due={due}
               streaks={streaks}
               week={week}
-              onReview={startReview}
+              words={words}
+              onWords={onGoToWords}
               onFeed={onGoToFeed}
             />
             <PassportSection words={words} onOpen={onGoToWords} />
@@ -559,15 +509,6 @@ export function ProgressScreen({
         {__DEV__ && <DevResetRow />}
       </ScrollView>
 
-      {/* ONE WINDOW, outside the scroll. Its `open` drops from onLaunch or a
-          dismissal — never from a tap directly — so a review can never fire
-          into a window that is still being torn down. */}
-      <ReviewPicker
-        open={picker}
-        words={dueWords}
-        onClose={() => setPicker(false)}
-        onLaunch={launch}
-      />
     </View>
   );
 }
