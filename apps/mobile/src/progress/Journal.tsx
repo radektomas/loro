@@ -17,7 +17,7 @@ import {
 } from '@loro/core/roadmap';
 import { TIERS, TIER_LEARNED, tierForLearned } from '@loro/core/levels';
 import { BRAND } from '../onboarding/brand';
-import { COUNTRIES, Flag, flagColours } from '../vocab/countries';
+import { COUNTRIES, Flag, flagColours, localFor } from '../vocab/countries';
 import type { Plan } from './plan';
 
 /**
@@ -351,6 +351,20 @@ function CountryPage({
                 {here ? "You're here" : been ? `${learned.length}/${STAGE_SIZE}` : 'Closed'}
               </Text>
             </View>
+            {/* The city's two local words — the same ones the map shows. */}
+            {localFor(c.city) && (
+              <Text style={styles.pageLocalLine}>
+                {localFor(c.city)!.words.map((w, k) => (
+                  <Text key={w.word}>
+                    {k > 0 ? '   ' : ''}
+                    <Text style={been ? styles.pageLocalWord : styles.pageLocalHidden}>
+                      {been ? w.word : '?'.repeat(Math.max(4, w.word.length))}
+                    </Text>
+                    {been && <Text style={styles.pageLocalMeaning}>{` ${w.meaning}`}</Text>}
+                  </Text>
+                ))}
+              </Text>
+            )}
             {learned.length > 0 && (
               <Text style={styles.pageWords}>{learned.map((n) => cleanWord(n.word.text)).join(' · ')}</Text>
             )}
@@ -358,22 +372,6 @@ function CountryPage({
         );
       })}
 
-      {info && (
-        <View style={styles.pageLocal}>
-          <Text style={styles.pageLocalLabel}>LOCAL WORD</Text>
-          {reached ? (
-            <>
-              <Text style={styles.pageLocalWord}>
-                {info.word}
-                <Text style={styles.pageLocalMeaning}>  {info.meaning}</Text>
-              </Text>
-              <Text style={styles.pageFact}>{info.fact}</Text>
-            </>
-          ) : (
-            <Text style={[styles.pageLocalWord, styles.pageLocalHidden]}>{'?'.repeat(Math.max(4, info.word.length))}</Text>
-          )}
-        </View>
-      )}
 
       {reached && onOpenMap && (
         <Pressable onPress={onOpenMap} accessibilityRole="button" hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
@@ -648,12 +646,10 @@ const styles = StyleSheet.create({
   pageCityCount: { color: FAINT, fontSize: 12, fontVariant: ['tabular-nums'], fontWeight: '800' },
   pageCityHere: { color: MINT },
   pageWords: { color: MINT, fontSize: 14, fontWeight: '700', lineHeight: 21, marginLeft: 20, marginTop: 4 },
-  pageLocal: { marginTop: 6 },
-  pageLocalLabel: { color: FAINT, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  pageLocalWord: { color: INK, fontSize: 22, fontWeight: '900', marginTop: 2 },
-  pageLocalMeaning: { color: MUTED, fontSize: 14, fontWeight: '700' },
-  pageLocalHidden: { color: 'rgba(242,245,243,0.22)', letterSpacing: 3 },
-  pageFact: { color: 'rgba(242,245,243,0.72)', fontSize: 14, lineHeight: 20, marginTop: 6 },
+  pageLocalLine: { lineHeight: 21, marginLeft: 20, marginTop: 4 },
+  pageLocalWord: { color: INK, fontSize: 15, fontWeight: '900' },
+  pageLocalMeaning: { color: MUTED, fontSize: 13, fontWeight: '700' },
+  pageLocalHidden: { color: 'rgba(242,245,243,0.22)', fontSize: 15, fontWeight: '900', letterSpacing: 2 },
 
   body: { color: MUTED, fontSize: 14, lineHeight: 20 },
   bigLine: { color: INK, fontSize: 34, fontVariant: ['tabular-nums'], fontWeight: '900' },

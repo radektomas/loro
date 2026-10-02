@@ -457,7 +457,9 @@ function copyContext(
   const pos = tripPosition(withLevelKnown(words, storage.getLevelKnownWords()).words);
   const here = tripStop(pos.stage);
   const after = tripStop(pos.stage + 1);
-  const local = localFor(here.city, here.country);
+  const local = localFor(here.city);
+  // Two per city: the day picks which one Loro brings up.
+  const localWord = local ? local.words[dayNumber(at) % local.words.length] : null;
   return {
     ...streaks,
     recall: recallWord ? { text: cleanWord(recallWord.text), meaning: recallWord.translation } : null,
@@ -470,7 +472,7 @@ function copyContext(
       nextCity: after.city,
       nextCountry: after.country,
       newCountryNext: after.country !== here.country,
-      local: local ? { word: local.word, meaning: local.meaning } : null,
+      local: localWord,
     },
     learned: learned.length,
   };

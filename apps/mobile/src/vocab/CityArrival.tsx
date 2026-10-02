@@ -45,7 +45,7 @@ export function CityArrival({
   const next = tripStop(to);
   const newCountry = prev.country !== next.country;
   const info = COUNTRIES[next.country];
-  const local = localFor(next.city, next.country);
+  const local = localFor(next.city);
   const after = tripStop(to + 1).city;
 
   const scrim = useRef(new Animated.Value(0)).current;
@@ -117,12 +117,14 @@ export function CityArrival({
         {local && (
           <View style={styles.gift}>
             <Text style={styles.giftLabel}>
-              {newCountry ? 'NEW COUNTRY · ' : ''}LOCAL WORD UNLOCKED
+              {newCountry ? 'NEW COUNTRY · ' : ''}2 LOCAL WORDS UNLOCKED
             </Text>
-            <Text style={styles.giftWord}>
-              {local.word}
-              <Text style={styles.giftMeaning}>  {local.meaning}</Text>
-            </Text>
+            {local.words.map((w) => (
+              <Text key={w.word} style={styles.giftWord}>
+                {w.word}
+                <Text style={styles.giftMeaning}>  {w.meaning}</Text>
+              </Text>
+            ))}
             <Text style={styles.giftFact}>{local.fact}</Text>
           </View>
         )}

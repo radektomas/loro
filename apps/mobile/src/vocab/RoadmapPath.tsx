@@ -626,9 +626,43 @@ function TripMap({
         />
       )}
       {picked && pickedFirst >= 0 && COUNTRIES[picked] && (
-        <CountryCard country={picked} reached={reachedCountries.has(picked)} firstCity={TRIP[pickedFirst].city} />
+        <CountryCard
+          country={picked}
+          reached={reachedCountries.has(picked)}
+          firstCity={TRIP[pickedFirst].city}
+          cityOpen={(j) => stateOf(j) !== 'ahead'}
+        />
       )}
+      {pickedCity === null && !picked && <LocalWords city={TRIP[hereCity].city} open />}
       <Text style={styles.tripHow}>Swipe to see the whole trip. Tap a city to see its words.</Text>
+    </View>
+  );
+}
+
+/**
+ * A CITY'S TWO LOCAL WORDS, as a slim banner (Radek, 2026-10-02: "make a
+ * new little banner in the map ... put 2 local words for each city"). Under
+ * the map it is the city you are in; inside a city's panel, that city's.
+ * A closed city keeps them hidden: something to go and get.
+ */
+function LocalWords({ city, open, compact }: { city: string; open: boolean; compact?: boolean }) {
+  const local = localFor(city);
+  if (!local) return null;
+  const stop = TRIP.find((t) => t.city === city);
+  const [a] = flagColours(stop?.country ?? '');
+  return (
+    <View style={[styles.localBanner, compact && styles.localBannerCompact, { borderLeftColor: open ? a : 'rgba(242,245,243,0.15)' }]}>
+      <Text style={styles.localBannerLabel}>
+        {open ? `LOCAL WORDS · ${city.toUpperCase()}` : `LOCAL WORDS · REACH ${city.toUpperCase()} TO UNLOCK`}
+      </Text>
+      <View style={styles.localBannerRow}>
+        {local.words.map((w) => (
+          <Text key={w.word} style={styles.localBannerWord} numberOfLines={2}>
+            {open ? w.word : '?'.repeat(Math.max(4, w.word.length))}
+            {open && <Text style={styles.localBannerMeaning}>{`  ${w.meaning}`}</Text>}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -705,18 +739,36 @@ function CityWords({
         </>
       )}
       {open && learned.length === 0 && <Text style={styles.countryFact}>Nothing learned here yet.</Text>}
+      <LocalWords city={stop.city} open={open} compact />
     </Animated.View>
   );
 }
 
-/** What a country gives you: its flag, a local word, one fact — or the promise of them. */
-function CountryCard({ country, reached, firstCity }: { country: string; reached: boolean; firstCity: string }) {
+/**
+ * What a country gives you: its flag and, city by city, the two local words
+ * (the same CITIES the arrival, the postcards and the passport read, so the
+ * word on the map and the word in Progress are always the same word). A
+ * city not reached yet keeps its words hidden.
+ */
+function CountryCard({
+  country,
+  reached,
+  firstCity,
+  cityOpen,
+}: {
+  country: string;
+  reached: boolean;
+  firstCity: string;
+  /** Is this TRIP index reached? */
+  cityOpen: (j: number) => boolean;
+}) {
   const info = COUNTRIES[country];
   const pop = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     pop.setValue(0);
     Animated.spring(pop, { toValue: 1, friction: 7, tension: 120, useNativeDriver: true }).start();
   }, [country, pop]);
+  const cities = TRIP.map((t, j) => ({ ...t, j })).filter((t) => t.country === country);
   return (
     <Animated.View
       style={[
@@ -734,18 +786,9 @@ function CountryCard({ country, reached, firstCity }: { country: string; reached
           <Text style={styles.countryStatus}>{reached ? 'Unlocked' : `Reach ${firstCity} to unlock`}</Text>
         </View>
       </View>
-      <View style={styles.localWord}>
-        <Text style={styles.localLabel}>LOCAL WORD</Text>
-        {reached ? (
-          <Text style={styles.localWordText}>
-            {info.word}
-            <Text style={styles.localMeaning}>  {info.meaning}</Text>
-          </Text>
-        ) : (
-          <Text style={[styles.localWordText, styles.localHidden]}>{'?'.repeat(Math.max(4, info.word.length))}</Text>
-        )}
-      </View>
-      {reached && <Text style={styles.countryFact}>{info.fact}</Text>}
+      {cities.map((c) => (
+        <LocalWords key={c.city} city={c.city} open={cityOpen(c.j)} compact />
+      ))}
     </Animated.View>
   );
 }
@@ -857,20 +900,25 @@ function Postcard({
     );
   }
 
-  // A TAPED NOTE: a band in the country's colour, the CITY's word and fact
-  // (every city has its own — CITIES — so no two stops read the same).
-  const local = localFor(stop.city, stop.country) ?? info;
+  // A TAPED NOTE: a band in the country's colour, the CITY's two words and
+  // its fact (every city has its own — CITIES — so no two stops read the same).
+  const local = localFor(stop.city);
+  if (!local) return null;
   return (
     <View style={row}>
       <View style={[styles.note, { transform: [{ rotate: tilt }] }]}>
         <View style={styles.tape} />
         <View style={[styles.noteBand, { backgroundColor: a }]}>
           <Flag spec={info.flag} height={12} />
-          <Text style={styles.noteBandText}>LOCAL WORD</Text>
+          <Text style={styles.noteBandText}>LOCAL WORDS</Text>
         </View>
         <View style={styles.noteBody}>
-          <Text style={styles.noteWord}>{local.word}</Text>
-          <Text style={styles.noteMeaning}>{local.meaning}</Text>
+          {local.words.map((w) => (
+            <View key={w.word} style={styles.notePair}>
+              <Text style={styles.noteWord}>{w.word}</Text>
+              <Text style={styles.noteMeaning}>{w.meaning}</Text>
+            </View>
+          ))}
           <Text style={styles.noteFact} numberOfLines={4}>
             {local.fact}
           </Text>
@@ -1519,6 +1567,21 @@ const styles = StyleSheet.create({
   localWordText: { color: INK, fontSize: 20, fontWeight: '900', marginTop: 2 },
   localMeaning: { color: 'rgba(242,245,243,0.6)', fontSize: 14, fontWeight: '700' },
   localHidden: { color: 'rgba(242,245,243,0.25)', letterSpacing: 3 },
+  localBanner: {
+    backgroundColor: 'rgba(242,245,243,0.04)',
+    borderLeftWidth: 3,
+    borderRadius: 10,
+    marginHorizontal: 12,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  localBannerCompact: { marginHorizontal: 0 },
+  localBannerLabel: { color: 'rgba(242,245,243,0.45)', fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  localBannerRow: { gap: 2, marginTop: 4 },
+  localBannerWord: { color: INK, fontSize: 16, fontWeight: '900' },
+  localBannerMeaning: { color: MUTED, fontSize: 13, fontWeight: '700' },
+  notePair: { marginBottom: 6 },
   countryFact: { color: 'rgba(242,245,243,0.7)', fontSize: 13, lineHeight: 19, marginTop: 10 },
   pinBox: { alignItems: 'center', height: PIN_BOX, justifyContent: 'center', position: 'absolute', width: PIN_BOX },
   cityLabel: { position: 'absolute', width: 150 },
