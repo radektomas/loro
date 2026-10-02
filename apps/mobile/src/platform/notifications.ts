@@ -517,13 +517,13 @@ function trialReminderAt(now: number): Date | null {
 
 /**
  * WHAT THE TRIAL BUILT (Radek, 2026-10-01: the reminder should make the
- * charge "feel earned rather than a surprise"). Not only where to cancel:
- * the words learned and where the trip has got to, and how close the next
- * city is. Baked in at schedule time like every other notification's copy —
- * reconcile() runs on foreground, boot and words-changed, so the numbers are
- * the ones from the user's last session. Still says where to cancel: the
- * reminder is the paywall's promise, and it has to stay an honest one.
- * Nothing learned yet: the plain version, no zero to point at.
+ * charge "feel earned rather than a surprise"). The title says the trial is
+ * ending, which is the promise the paywall makes; the body is what the
+ * trial built: the words learned, where the trip has got to, how close the
+ * next city is. No cancel instructions or "nothing changes" line (Radek,
+ * 2026-10-02: "i dont want this part"). Baked in at schedule time like every
+ * other notification's copy; reconcile() runs on foreground, boot and
+ * words-changed, so the numbers are the user's last session.
  */
 export function trialReminderBody(
   learned: number,
@@ -532,12 +532,11 @@ export function trialReminderBody(
   toNext: number,
   nextCity: string
 ): string {
-  const cancel = 'Not for you? Cancel any time in Settings → Subscriptions.';
-  if (learned <= 0) return `Keep it and nothing changes. ${cancel}`;
+  const next = `${nextCity} is ${toNext} ${toNext === 1 ? 'word' : 'words'} away.`;
+  if (learned <= 0) return `Your trip starts in ${city}. Train a few words and you're on your way to ${nextCity}.`;
   const words = `${learned} ${learned === 1 ? 'word' : 'words'}`;
   const where = stage > 0 ? `You've learned ${words} and made it to ${city}.` : `You've learned ${words} in ${city}.`;
-  const next = `${nextCity} is ${toNext} ${toNext === 1 ? 'word' : 'words'} away.`;
-  return `${where} ${next} Keep going, nothing changes. ${cancel}`;
+  return `${where} ${next}`;
 }
 
 function buildTrialReminderContent(): NotificationsApi.NotificationContentInput {
