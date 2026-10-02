@@ -304,3 +304,27 @@ export function tripPosition(words: readonly SavedWord[]): {
   for (let i = 0; i <= Math.min(stage, TRIP.length - 1); i++) seen.add(TRIP[i].country);
   return { stage, learnedHere, countries: seen.size };
 }
+
+/**
+ * WHEN EACH CITY WAS REACHED, for Progress's passport (Radek, 2026-10-02:
+ * "make the progress page as nice as we did the words page"). Nothing
+ * stores an arrival, and nothing needs to: the path is drawn done-first in
+ * the order words were learned, so city s opened the moment its previous
+ * city's tenth word did. City 0 is the first save. Index = stage, up to and
+ * including the one you are in; null where there is no date to give (no
+ * words yet). Same list rule as tripPosition: pass withLevelKnown's.
+ */
+export function cityArrivals(words: readonly SavedWord[]): (number | null)[] {
+  const path = buildRoadmap(words);
+  const { stage } = tripPosition(words);
+  const doneAt = (n: RoadmapNode) => n.word.learnedAt ?? n.word.lastReviewedAt ?? n.savedAt;
+  const out: (number | null)[] = [];
+  for (let s = 0; s <= stage; s++) {
+    if (s === 0) out.push(path.length ? Math.min(...path.map((n) => n.savedAt)) : null);
+    else {
+      const last = path[s * STAGE_SIZE - 1];
+      out.push(last && last.status === 'done' ? doneAt(last) : null);
+    }
+  }
+  return out;
+}

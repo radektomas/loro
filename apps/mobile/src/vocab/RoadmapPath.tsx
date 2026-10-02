@@ -4,7 +4,7 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, useWindowDim
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import type { SavedWord } from '@loro/core/types';
 import { BRAND } from '../onboarding/brand';
-import { COUNTRIES, Flag, localFor } from './countries';
+import { COUNTRIES, Flag, flagColours, localFor } from './countries';
 import { CITY_XY, COUNTRY_LABEL, LANDS, MAP_H as GEO_H, MAP_W as GEO_W, OCEAN_X } from './tripMapData';
 import { storageDriver } from '../platform/storage';
 import { storage } from '@loro/core/storage';
@@ -751,19 +751,6 @@ function CountryCard({ country, reached, firstCity }: { country: string; reached
 }
 
 /** Two main colours of a country's flag, skipping white. */
-function flagColours(country: string): [string, string] {
-  const f = COUNTRIES[country]?.flag;
-  const all = [
-    ...(f?.stripes?.map((st) => st.color) ?? []),
-    ...(f?.quarters ?? []),
-    f?.triangle,
-    f?.canton?.color,
-    f?.dot,
-  ].filter((c): c is string => !!c && c.toUpperCase() !== '#FFFFFF');
-  const first = all[0] ?? MINT;
-  const second = all.find((c) => c !== first) ?? first;
-  return [first, second];
-}
 
 function hexA(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);

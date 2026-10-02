@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, tripPosition, tripStop, withLevelKnown } from './roadmap.ts';
+import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, cityArrivals, tripPosition, tripStop, withLevelKnown } from './roadmap.ts';
 import { dueCount, nextDueAt, readyWords } from './progress.ts';
 import { computeBlankPlan, grade, isEarlyAnswer, isTrained, trainWord, TRAINED_FIRST_ASK_MS } from './srs.ts';
 import type { SavedWord, Video } from './types.ts';
@@ -268,5 +268,19 @@ describe('tripPosition', () => {
     const words = many(52).map((w, i) => (i < 51 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
     assert.equal(tripPosition(words).stage, 5);
     assert.equal(tripPosition(words).countries, 2);
+  });
+});
+
+describe('cityArrivals', () => {
+  it('nothing saved: Madrid, with no date yet', () => {
+    assert.deepEqual(cityArrivals([]), [null]);
+  });
+
+  it('a city is reached when the last city\'s tenth word was learned', () => {
+    const words = many(12).map((w, i) => (i < 10 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
+    const at = cityArrivals(words);
+    assert.equal(at.length, 2);
+    assert.equal(at[0], words[0].savedAt);
+    assert.equal(at[1], NOW - DAY + 9);
   });
 });

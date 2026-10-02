@@ -320,3 +320,18 @@ export const CITIES: Record<string, { word: string; meaning: string; fact: strin
 export function localFor(city: string, country: string): { word: string; meaning: string; fact: string } | null {
   return CITIES[city] ?? COUNTRIES[country] ?? null;
 }
+
+/** A country's two strongest flag colours (white skipped), for tints, coasts and stamps. */
+export function flagColours(country: string): [string, string] {
+  const f = COUNTRIES[country]?.flag;
+  const all = [
+    ...(f?.stripes?.map((st) => st.color) ?? []),
+    ...(f?.quarters ?? []),
+    f?.triangle,
+    f?.canton?.color,
+    f?.dot,
+  ].filter((c): c is string => !!c && c.toUpperCase() !== '#FFFFFF');
+  const first = all[0] ?? '#5ee6a8';
+  const second = all.find((c) => c !== first) ?? first;
+  return [first, second];
+}
