@@ -347,12 +347,26 @@ export function LevelRoad({ learned }: { learned: number }) {
     <View style={styles.section}>
       <Heading>LEVEL</Heading>
       <View style={styles.road}>
+        {/* ONE track behind all six, not a link per rung: a link drawn by
+            rung i sat ON TOP of rung i-1 (later siblings paint over earlier
+            ones) and cut through its number. The mint runs from the first
+            rung to yours, and on toward the next as the words come. */}
+        <View pointerEvents="none" style={[styles.roadTrack, { left: `${50 / TIERS.length}%`, right: `${50 / TIERS.length}%` }]} />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.roadTrackOn,
+            {
+              left: `${50 / TIERS.length}%`,
+              width: `${((tier.level - 1 + (next ? meter / 100 : 0)) * 100) / TIERS.length}%`,
+            },
+          ]}
+        />
         {TIERS.map((t, i) => {
           const held = t.level < tier.level;
           const here = t.level === tier.level;
           return (
             <View key={t.level} style={styles.rung}>
-              {i > 0 && <View style={[styles.rungLink, (held || here) && styles.rungLinkOn]} />}
               {here && <Image source={BRAND.parrot} resizeMode="contain" style={styles.roadLoro} />}
               <View style={[styles.rungDot, held && styles.rungDotHeld, here && styles.rungDotHere]}>
                 <Text style={[styles.rungNum, (held || here) && styles.rungNumOn]}>{t.level}</Text>
@@ -446,8 +460,8 @@ const styles = StyleSheet.create({
 
   road: { flexDirection: 'row', marginBottom: 18, marginTop: 26 },
   rung: { alignItems: 'center', flex: 1 },
-  rungLink: { backgroundColor: 'rgba(242,245,243,0.12)', height: 3, position: 'absolute', right: '50%', top: 14, width: '100%' },
-  rungLinkOn: { backgroundColor: MINT },
+  roadTrack: { backgroundColor: 'rgba(242,245,243,0.12)', borderRadius: 2, height: 4, position: 'absolute', top: 13 },
+  roadTrackOn: { backgroundColor: MINT, borderRadius: 2, height: 4, position: 'absolute', top: 13 },
   roadLoro: { height: 34, position: 'absolute', top: -34, width: 24 },
   rungDot: {
     alignItems: 'center',

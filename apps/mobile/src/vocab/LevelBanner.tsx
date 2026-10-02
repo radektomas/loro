@@ -53,12 +53,24 @@ export function LevelBanner({ ladder, onClose }: { ladder: LearnedTier; onClose:
         </Text>
 
         <View style={styles.steps}>
+          {/* One track behind all six (a link per step painted over the
+              previous step's number), mint up to yours and on toward the next. */}
+          <View pointerEvents="none" style={[styles.track2, { left: `${50 / TIERS.length}%`, right: `${50 / TIERS.length}%` }]} />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.track2On,
+              {
+                left: `${50 / TIERS.length}%`,
+                width: `${((tier.level - 1 + (next ? meter / 100 : 0)) * 100) / TIERS.length}%`,
+              },
+            ]}
+          />
           {TIERS.map((t, i) => {
             const held = t.level < tier.level;
             const here = t.level === tier.level;
             return (
               <View key={t.level} style={styles.step}>
-                {i > 0 && <View style={[styles.link, (held || here) && styles.linkOn]} />}
                 <View style={[styles.dot, held && styles.dotHeld, here && styles.dotHere]}>
                   <Text style={[styles.dotNum, (held || here) && styles.dotNumOn]}>{t.level}</Text>
                 </View>
@@ -103,15 +115,14 @@ const styles = StyleSheet.create({
   toNext: { color: MUTED, fontSize: 13, fontWeight: '700', marginTop: 6 },
   steps: { flexDirection: 'row', marginTop: 14 },
   step: { alignItems: 'center', flex: 1 },
-  link: {
+  track2: {
     backgroundColor: 'rgba(242,245,243,0.12)',
-    height: 2,
+    borderRadius: 2,
+    height: 3,
     position: 'absolute',
-    right: '50%',
-    top: DOT / 2 - 1,
-    width: '100%',
+    top: DOT / 2 - 1.5,
   },
-  linkOn: { backgroundColor: MINT },
+  track2On: { backgroundColor: MINT, borderRadius: 2, height: 3, position: 'absolute', top: DOT / 2 - 1.5 },
   dot: {
     alignItems: 'center',
     backgroundColor: '#1b2320',
