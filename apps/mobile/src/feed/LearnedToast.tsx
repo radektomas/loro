@@ -58,6 +58,17 @@ export type MomentContent = {
   a11y: string;
 };
 
+/** The word-learned moment, short enough for the small bubble. */
+function learnedTabContent(raise: WordLearnedRaise): MomentContent {
+  return {
+    eyebrow: '¡Palabra aprendida!',
+    word: cleanWord(raise.text),
+    meaning: raise.translation,
+    foot: `${raise.learned} learned · tap to see them`,
+    a11y: `${cleanWord(raise.text)} learned. ${raise.learned} words learned. Opens your learned words.`,
+  };
+}
+
 /** The word-learned moment, as bubble content. */
 function learnedContent(raise: WordLearnedRaise): MomentContent {
   return {
@@ -237,15 +248,131 @@ export function MomentView({
   );
 }
 
+/**
+ * THE SMALL ONE, FROM THE WORDS TAB (Radek, 2026-10-04: "still too big ...
+ * he will pop up from there [the Words button] and be smaller"). The feed's
+ * moments: a small Loro rises out of the middle tab with a compact bubble
+ * pointing down at it — the word went THERE — while the video plays on
+ * above, untouched and undimmed. Tap the bubble for Words; otherwise he
+ * dips back into the tab.
+ */
+const TAB_MOMENT_MS = 3200;
+const RISE = 58;
+
+export function TabMomentView({
+  content,
+  onDone,
+  onWords,
+}: {
+  content: MomentContent;
+  onDone: () => void;
+  onWords?: () => void;
+}) {
+  const rise = useSharedValue(0);
+  const pop = useSharedValue(0);
+  const bob = useSharedValue(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leavingRef = useRef<Leave | null>(null);
+
+  const finish = useCallback(() => {
+    const how = leavingRef.current ?? 'done';
+    leavingRef.current = null;
+    if (how === 'words' && onWords) onWords();
+    else onDone();
+  }, [onDone, onWords]);
+
+  const leave = useCallback(
+    (how: Leave) => {
+      if (leavingRef.current) return;
+      leavingRef.current = how;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      cancelAnimation(bob);
+      pop.value = withTiming(0, { duration: 150, easing: Easing.in(Easing.cubic) });
+      rise.value = withDelay(
+        90,
+        withTiming(0, { duration: 240, easing: Easing.in(Easing.cubic) }, (done) => {
+          if (done) runOnJS(finish)();
+        })
+      );
+    },
+    [rise, pop, bob, finish]
+  );
+
+  useEffect(() => {
+    leavingRef.current = null;
+    rise.value = 0;
+    pop.value = 0;
+    bob.value = 0;
+    rise.value = withSpring(1, { damping: 15, stiffness: 160 });
+    pop.value = withDelay(200, withSpring(1, { damping: 14, stiffness: 210 }));
+    bob.value = withDelay(
+      650,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0, { duration: 600, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1
+      )
+    );
+    timer.current = setTimeout(() => leave('done'), TAB_MOMENT_MS);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+      cancelAnimation(bob);
+    };
+  }, [content, rise, pop, bob, leave]);
+
+  const loroStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - rise.value) * RISE - bob.value * 3 }, { rotate: `${bob.value * 3 - 1.5}deg` }],
+  }));
+  const bubbleStyle = useAnimatedStyle(() => ({
+    opacity: pop.value,
+    transform: [{ translateY: (1 - pop.value) * 10 }, { scale: 0.8 + pop.value * 0.2 }],
+  }));
+
+  return (
+    <View style={styles.tabLayer} pointerEvents="box-none">
+      <Animated.View style={[styles.tabBubbleWrap, bubbleStyle]}>
+        <Pressable
+          onPress={() => leave('words')}
+          accessibilityRole="button"
+          accessibilityLabel={content.a11y}
+          style={({ pressed }) => [styles.tabBubble, pressed && styles.pressed]}
+        >
+          <Text style={styles.tabEyebrow}>{content.eyebrow}</Text>
+          <Text style={styles.tabWord} numberOfLines={1}>
+            {content.word}
+          </Text>
+          <Text style={styles.tabLine} numberOfLines={2}>
+            {content.meaning}
+          </Text>
+          <Text style={styles.tabFoot}>{content.foot}</Text>
+        </Pressable>
+        <View style={styles.tabTail} />
+      </Animated.View>
+      {/* A clip at the bottom edge, so he comes OUT of the tab, not through it. */}
+      <View style={styles.tabClip} pointerEvents="none">
+        <Animated.View style={loroStyle}>
+          <Image source={BRAND.parrot} style={styles.tabLoro} resizeMode="contain" />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
 /** The feed's host: the bus, the tab gate, and the player yield. */
 export function LearnedToast({
   active,
   onObscurePlayer,
   onGoToWords,
   bandTop,
+  fromTab,
 }: {
   /** The band's top: given, the moments sit under the video and it keeps playing. */
   bandTop?: number | null;
+  /** The small moment, rising from the Words tab (TabMomentView). The video plays on. */
+  fromTab?: boolean;
   /** Only the visible feed shows it — the Words tab's flashcard has its
       own host, and a raise from there must not pause and replay a hidden
       feed player. */
@@ -285,7 +412,7 @@ export function LearnedToast({
   const open = raise !== null || trip !== null;
   // Under the video (bandTop known), the video plays on: nothing to hide,
   // nothing to pause. Without it, the old contract: yield and pause.
-  const inBand = bandTop !== undefined && bandTop !== null;
+  const inBand = fromTab || (bandTop !== undefined && bandTop !== null);
   useEffect(() => {
     if (inBand) return;
     onObscurePlayer(open);
@@ -320,6 +447,11 @@ export function LearnedToast({
     }
   }, [api, onGoToWords, trip]);
 
+  if (fromTab) {
+    const content = raise ? learnedTabContent(raise) : tripContent;
+    if (!content) return null;
+    return <TabMomentView content={content} onDone={done} onWords={raise ? words : tripWords} />;
+  }
   if (raise) return <LearnedMomentView raise={raise} onDone={done} onWords={words} bandTop={bandTop} />;
   if (tripContent) return <MomentView content={tripContent} onDone={done} onWords={tripWords} bandTop={bandTop} />;
   return null;
@@ -340,6 +472,33 @@ const styles = StyleSheet.create({
   },
   /** In the band: near its top, just under the video. */
   stageBand: { top: 14 },
+  /** The small moment: the bottom of the feed, centred over the Words tab. */
+  tabLayer: { alignItems: 'center', bottom: 0, left: 0, position: 'absolute', right: 0 },
+  tabBubbleWrap: { alignItems: 'center', marginBottom: -2 },
+  tabBubble: {
+    backgroundColor: '#f2f5f3',
+    borderRadius: 16,
+    maxWidth: 236,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+  },
+  tabEyebrow: { color: '#1d9a63', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
+  tabWord: { color: '#0a0d0b', fontSize: 17, fontWeight: '900', marginTop: 1 },
+  tabLine: { color: 'rgba(10,13,11,0.7)', fontSize: 12, fontWeight: '700', lineHeight: 16, marginTop: 2 },
+  tabFoot: { color: 'rgba(10,13,11,0.45)', fontSize: 10, fontWeight: '800', marginTop: 4 },
+  tabTail: {
+    backgroundColor: '#f2f5f3',
+    height: 12,
+    marginTop: -6,
+    transform: [{ rotate: '45deg' }],
+    width: 12,
+  },
+  tabClip: { alignItems: 'center', height: 50, overflow: 'hidden', width: 60 },
+  tabLoro: { height: 50, marginTop: 4, width: 34 },
   bubbleWrap: { alignItems: 'flex-end', flexDirection: 'row', flexShrink: 1, marginLeft: 20 },
   bubble: {
     backgroundColor: '#f2f5f3',
