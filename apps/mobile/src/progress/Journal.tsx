@@ -18,6 +18,11 @@ import {
   type RoadmapNode,
 } from '@loro/core/roadmap';
 import { TIERS, TIER_LEARNED, tierForLearned } from '@loro/core/levels';
+import { isDoneOnPath } from '@loro/core/roadmap';
+import { normalizeAnswer } from '@loro/core/srs';
+import { spokenCounts, understanding } from '@loro/core/understanding';
+import { getCatalog } from '@loro/core/catalog';
+import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { BRAND } from '../onboarding/brand';
 import { COUNTRIES, Flag, flagColours, localFor } from '../vocab/countries';
 import type { Plan } from './plan';
@@ -193,6 +198,76 @@ export function TodaySection({
       >
         <Text style={done ? styles.ctaQuietText : styles.ctaText}>{tripLabel}</Text>
       </Pressable>
+    </View>
+  );
+}
+
+// ------------------------------------------------------- WHAT YOU UNDERSTAND
+
+/** How often each word is spoken in the catalog — computed once per catalog. */
+let countsCache: { size: number; counts: Map<string, number> } | null = null;
+function catalogCounts(): Map<string, number> {
+  const videos = [...getCatalog(), ...collectionVideos];
+  if (!countsCache || countsCache.size !== videos.length) {
+    countsCache = { size: videos.length, counts: spokenCounts(videos) };
+  }
+  return countsCache.counts;
+}
+
+/** Monday 00:00 of this week, local time — the same week Progress draws. */
+function weekStart(now: number): number {
+  const d = new Date(now);
+  const back = (d.getDay() + 6) % 7;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - back).getTime();
+}
+
+/**
+ * SHOW LEARNING, NOT ACTIVITY (Radek, 2026-10-03). "You watched 12 videos"
+ * is activity; this is what the words bought: every moment in Loro's videos
+ * spoken with a word you now know (core understanding — glue and names not
+ * counted), what this week added, and the new word that pays off the most.
+ */
+export function UnderstandSection({ words, now }: { words: readonly SavedWord[]; now: number }) {
+  const result = useMemo(() => {
+    const trip = withLevelKnown(words, storage.getLevelKnownWords()).words;
+    const known = new Map<string, number>();
+    const shown = new Map<string, string>();
+    for (const w of trip) {
+      if (!isDoneOnPath(w)) continue;
+      const key = normalizeAnswer(w.text);
+      if (!key) continue;
+      const at = w.learnedAt ?? w.lastReviewedAt ?? 0;
+      known.set(key, Math.min(known.get(key) ?? at, at));
+      shown.set(key, cleanWord(w.text));
+    }
+    // Blue blanks typed right before blue stops existed: known, no date.
+    for (const key of storage.getLevelKnown()) if (!known.has(key)) known.set(key, 0);
+    const u = understanding(catalogCounts(), known, weekStart(now));
+    return { ...u, bestText: u.bestNew ? (shown.get(u.bestNew.key) ?? u.bestNew.key) : null };
+  }, [words, now]);
+
+  const added = result.moments - result.momentsBefore;
+  return (
+    <View style={styles.section}>
+      <Heading>WHAT YOU UNDERSTAND NOW</Heading>
+      {result.moments === 0 ? (
+        <Text style={styles.body}>
+          Learn your first word and see how often it comes up in real Spanish. Even one word shows up dozens of times.
+        </Text>
+      ) : (
+        <>
+          <Text style={styles.bigLine}>
+            {result.moments.toLocaleString('en-US')}
+            <Text style={styles.bigUnit}> moments in Loro's videos you'd now catch</Text>
+          </Text>
+          {added > 0 && <Text style={styles.understandAdded}>+{added.toLocaleString('en-US')} this week</Text>}
+          {result.bestNew && result.bestText && (
+            <Text style={styles.understandBest}>
+              <Text style={styles.understandWord}>{result.bestText}</Text> alone comes up {result.bestNew.count} times.
+            </Text>
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -684,5 +759,8 @@ const styles = StyleSheet.create({
   rungNameHere: { color: INK },
   rungNeed: { color: 'rgba(242,245,243,0.22)', fontSize: 9, fontWeight: '700', marginTop: 2 },
   levelName: { color: INK, fontSize: 22, fontWeight: '900' },
+  understandAdded: { color: MINT, fontSize: 15, fontWeight: '900', marginTop: 4 },
+  understandBest: { color: MUTED, fontSize: 14, fontWeight: '700', lineHeight: 20, marginTop: 8 },
+  understandWord: { color: MINT, fontWeight: '900' },
   levelMeaning: { color: MUTED, fontSize: 13, fontWeight: '700' },
 });

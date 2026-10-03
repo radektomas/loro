@@ -42,7 +42,7 @@ import { SignInCard } from '../auth/SignInCard';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { LegalLinks } from './LegalLinks';
 import { getPlan, type Plan } from './plan';
-import { LearnedSection, LevelRoad, PassportSection, TodaySection } from './Journal';
+import { LearnedSection, LevelRoad, PassportSection, TodaySection, UnderstandSection } from './Journal';
 import { tierForLearned } from '@loro/core/levels';
 
 /**
@@ -449,6 +449,7 @@ export function ProgressScreen({
               }
               onFeed={onGoToFeed}
             />
+            <UnderstandSection words={words} now={now} />
             <PassportSection words={words} onOpen={onGoToWords} />
             <LearnedSection
               week={learnedWeek}
