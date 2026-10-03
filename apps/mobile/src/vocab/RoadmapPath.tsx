@@ -1259,6 +1259,11 @@ export function RoadmapPath({
     const toNext = Math.max(0, size - learned);
     const stop = tripStop(s);
     const info = COUNTRIES[stop.country];
+    // The local note sits after the middle word; Loro keeps a word between
+    // himself and it, so the two never stack.
+    const noteAt = nodes.length >= 3 ? Math.floor((nodes.length - 1) / 2) : nodes.length - 1;
+    let mascotAt = Math.min(3, nodes.length - 1);
+    if (mascotAt === noteAt + 1) mascotAt = Math.min(nodes.length - 1, noteAt + 2);
     return (
       <View
         key={`city-${s}`}
@@ -1302,7 +1307,7 @@ export function RoadmapPath({
               side={Math.sin((cityStart(s) + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
-          isCurrent && hereWord && i === Math.min(3, nodes.length - 1) ? (
+          isCurrent && hereWord && i === mascotAt ? (
             <Mascot
               key="loro"
               side={Math.sin((cityStart(s) + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
@@ -1332,9 +1337,10 @@ export function RoadmapPath({
               report();
             }}
           />,
-          // ...and the country's local word further down — after the 7th
-          // word, or after the last one while the city is still filling up.
-          isCurrent && i === Math.min(6, nodes.length - 1) ? (
+          // ...and the city's local word in the MIDDLE of its words, however
+          // many there are (Radek, 2026-10-04: "always kinda in the middle,
+          // even when it's only 7").
+          isCurrent && i === noteAt ? (
             <Postcard
               key="word"
               kind="word"
