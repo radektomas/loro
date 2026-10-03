@@ -632,27 +632,6 @@ export function VocabScreen({
             (words learned), small, so the page itself is the trip. */}
         <View style={styles.titleRow}>
           <Text style={styles.title}>Words</Text>
-          <View style={styles.headChips}>
-          {/* HOW MANY CAN BE REVIEWED (Radek, 2026-10-04: "a small pill
-              showing how many words the user can review"). The same count
-              as the Words tab's bubble. A tap trains the most urgent one —
-              slipped first, then the longest waiting — right here, the same
-              set a tap on the path starts. Never the feed. */}
-          {dueTotal > 0 && dueWords.length > 0 && (
-            <Pressable
-              onPress={() => {
-                track('words_review_pill', { due: dueTotal });
-                startTraining(dueWords[0]);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${dueTotal} ${dueTotal === 1 ? 'word' : 'words'} to review. Train now`}
-              hitSlop={8}
-              style={({ pressed }) => [styles.reviewPill, pressed && { opacity: 0.75 }]}
-            >
-              <Text style={styles.reviewPillNum}>{dueTotal > 99 ? '99+' : dueTotal}</Text>
-              <Text style={styles.reviewPillText}>to review</Text>
-            </Pressable>
-          )}
           <Pressable
             onPress={() => {
               if (!showLevels) track('level_banner_opened', { tier: ladder.tier.name, learned: ladder.have });
@@ -666,7 +645,6 @@ export function VocabScreen({
             <Text style={styles.levelChipNum}>{ladder.tier.level}</Text>
             <Text style={styles.levelChipName}>{ladder.tier.name}</Text>
           </Pressable>
-          </View>
         </View>
         {showLevels && <LevelBanner ladder={ladder} onClose={() => setShowLevels(false)} />}
         {/* No search (Radek, 2026-09-30: "for what is it there now?"). It
@@ -856,21 +834,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   levelChipName: { color: '#5ee6a8', fontSize: 13, fontWeight: '800' },
-  headChips: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  /** Quieter than the level chip beside it: a count, not a badge of rank. */
-  reviewPill: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(242,245,243,0.08)',
-    borderColor: 'rgba(242,245,243,0.14)',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  reviewPillNum: { color: '#f2f5f3', fontSize: 13, fontVariant: ['tabular-nums'], fontWeight: '900' },
-  reviewPillText: { color: 'rgba(242,245,243,0.7)', fontSize: 13, fontWeight: '700' },
   search: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.07)',
