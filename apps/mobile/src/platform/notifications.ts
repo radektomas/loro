@@ -6,7 +6,19 @@ import { computeStreaks, dayKey } from '@loro/core/progress';
 import { nextUp, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
 import { distinctWords, isLearned } from '@loro/core/progress';
 import { localFor } from '../vocab/countries';
-import { atRiskCopy, dailyCopy, type CopyContext, type NotifRoute } from './notificationCopy';
+import {
+  atRiskCopy,
+  dailyCopy,
+  localLine,
+  loroLine,
+  recallLine,
+  streakLine,
+  trainLine,
+  tripLine,
+  type CopyContext,
+  type NotifCopy,
+  type NotifRoute,
+} from './notificationCopy';
 import { learnedTotal } from '../feed/wordLearned';
 import { track } from './analytics';
 import { storageDriver } from './storage';
@@ -804,6 +816,70 @@ export async function sendTestNotification(): Promise<void> {
           seconds: 5,
           repeats: false,
         },
+      });
+    },
+    undefined
+  );
+}
+
+// --------------------------------------------------------------------- dev
+
+export type DevNotifKind =
+  | 'recall'
+  | 'train'
+  | 'trip'
+  | 'newCountry'
+  | 'welcome'
+  | 'local'
+  | 'loro'
+  | 'streak'
+  | 'freeze'
+  | 'newRun'
+  | 'evening'
+  | 'trial';
+
+/** Each tap moves to the next version of a line, so every variant can be seen. */
+let devTap = 0;
+
+/**
+ * DEV: send one notification of a given kind, three seconds from now, built
+ * from the user's own words and trip like the real ones (Radek, 2026-10-04:
+ * "so I don't have to go through the steps"). Where the user has no material
+ * yet (no learned word, nothing to train) a sample word stands in.
+ */
+export async function devSendNotification(kind: DevNotifKind): Promise<void> {
+  const now = Date.now();
+  const day = dayNumber(now) + devTap++;
+  const ctx = copyContext(now, { streak: 5, frozen: false, endedRun: 0 });
+  const recall = ctx.recall ?? { text: 'esposa', meaning: 'wife' };
+  const trip = { ...ctx.trip, local: ctx.trip.local ?? { word: '¡vale!', meaning: 'OK, sure' } };
+  const copies: Record<Exclude<DevNotifKind, 'trial'>, () => NotifCopy | null> = {
+    recall: () => recallLine(recall, day),
+    train: () => trainLine(ctx.toTrain ?? 'quedemos', trip, day),
+    trip: () => tripLine({ ...trip, newCountryNext: false, learnedHere: Math.max(1, trip.learnedHere) }, day),
+    newCountry: () =>
+      tripLine({ ...trip, city: 'Granada', nextCity: 'Ciudad de México', nextCountry: 'México', newCountryNext: true }, day),
+    welcome: () => tripLine({ ...trip, stage: Math.max(1, trip.stage), learnedHere: 0, newCountryNext: false }, day),
+    local: () => localLine(trip, day),
+    loro: () => loroLine(day),
+    streak: () => streakLine(5, day),
+    freeze: () => dailyCopy({ ...ctx, frozen: true, streak: 5 }, day),
+    newRun: () => dailyCopy({ ...ctx, streak: 0, endedRun: 6 }, day),
+    evening: () => atRiskCopy(ctx, day),
+  };
+  let content: NotificationsApi.NotificationContentInput;
+  if (kind === 'trial') content = buildTrialReminderContent();
+  else {
+    const copy = copies[kind]();
+    if (!copy) return;
+    content = { title: copy.title, body: copy.body, data: { route: copy.route } };
+  }
+  await withSeam(
+    'devSendNotification',
+    async (api) => {
+      await api.scheduleNotificationAsync({
+        content,
+        trigger: { type: api.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 3, repeats: false },
       });
     },
     undefined

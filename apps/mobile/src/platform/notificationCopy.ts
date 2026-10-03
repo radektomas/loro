@@ -62,7 +62,7 @@ const words = (n: number) => `${n} ${n === 1 ? 'word' : 'words'}`;
 // ------------------------------------------------------------- the pools
 
 /** Ask a learned word back. Opens the feed, where it comes back as a blank. */
-function recallLine(w: { text: string; meaning: string }, day: number): NotifCopy {
+export function recallLine(w: { text: string; meaning: string }, day: number): NotifCopy {
   const lines: [string, string][] = [
     [`¿Te acuerdas de ${w.text}?`, 'Loro does. Two minutes in your videos and you will too.'],
     [`Quick one: ${w.text}`, 'You learned it. Loro wants to see if it stuck.'],
@@ -74,7 +74,7 @@ function recallLine(w: { text: string; meaning: string }, day: number): NotifCop
 }
 
 /** The word they are on. Opens Words, where tapping it trains it. */
-function trainLine(w: string, t: CopyContext['trip'], day: number): NotifCopy {
+export function trainLine(w: string, t: CopyContext['trip'], day: number): NotifCopy {
   const lines: [string, string][] = [
     [`${w} is waiting for you`, `Three quick exercises and it is yours. ${t.nextCity} is ${words(t.toNext)} away.`],
     [`Today's word: ${w}`, `Train it in Words. Every word gets you closer to ${t.nextCity}.`],
@@ -85,7 +85,7 @@ function trainLine(w: string, t: CopyContext['trip'], day: number): NotifCopy {
 }
 
 /** The trip itself. Opens Words, on the map. */
-function tripLine(t: CopyContext['trip'], day: number): NotifCopy {
+export function tripLine(t: CopyContext['trip'], day: number): NotifCopy {
   if (t.newCountryNext) {
     const lines: [string, string][] = [
       [`Next stop: ${t.nextCountry}`, `Finish ${t.city} and you fly to ${t.nextCity}. New country, new local word.`],
@@ -111,7 +111,7 @@ function tripLine(t: CopyContext['trip'], day: number): NotifCopy {
 }
 
 /** The city's local word, from the postcard. Opens Words. */
-function localLine(t: CopyContext['trip'], day: number): NotifCopy | null {
+export function localLine(t: CopyContext['trip'], day: number): NotifCopy | null {
   if (!t.local) return null;
   const { word, meaning } = t.local;
   const lines: [string, string][] = [
@@ -123,7 +123,7 @@ function localLine(t: CopyContext['trip'], day: number): NotifCopy | null {
 }
 
 /** Loro being Loro. Opens the feed. */
-function loroLine(day: number): NotifCopy {
+export function loroLine(day: number): NotifCopy {
   const lines: [string, string][] = [
     ['Squawk. Spanish time.', 'Real people, real Spanish, a few minutes. Loro is ready when you are.'],
     ['Loro is bored', 'He has been watching Spanish videos alone. Join him?'],
@@ -134,7 +134,7 @@ function loroLine(day: number): NotifCopy {
   return { title, body, route: 'review' };
 }
 
-function streakLine(n: number, day: number): NotifCopy {
+export function streakLine(n: number, day: number): NotifCopy {
   const lines: [string, string][] = [
     [`${n} days in a row`, 'Loro is impressed. A short session keeps it going.'],
     [`Day ${n + 1} is right there`, 'A few words does it. Loro is counting with you.'],

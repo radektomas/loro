@@ -4,6 +4,7 @@ import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
 import { devRaiseWordLearned } from '../feed/wordLearned';
 import { devRaiseTripMoment } from '../feed/tripMoments';
+import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { storageDriver } from './storage';
 
@@ -138,6 +139,19 @@ export function installDevMenu(): void {
     { name: '★ Loro · Trip: first blue word', run: () => devRaiseTripMoment('firstBlue') },
     { name: '★ Loro · Trip: 1 word to the next city', run: () => devRaiseTripMoment('oneAway') },
     { name: '★ Loro · Trip: city reached', run: () => devRaiseTripMoment('arrived') },
+    /** Every notification kind, sent 3 s after the tap; tap again for the next version. */
+    { name: '◆ Notif · Ask a learned word back', run: () => void devSendNotification('recall') },
+    { name: '◆ Notif · Word to train', run: () => void devSendNotification('train') },
+    { name: '◆ Notif · Next city', run: () => void devSendNotification('trip') },
+    { name: '◆ Notif · Next country', run: () => void devSendNotification('newCountry') },
+    { name: '◆ Notif · Arrived in an empty city', run: () => void devSendNotification('welcome') },
+    { name: '◆ Notif · Local word', run: () => void devSendNotification('local') },
+    { name: '◆ Notif · Loro being Loro', run: () => void devSendNotification('loro') },
+    { name: '◆ Notif · Streak', run: () => void devSendNotification('streak') },
+    { name: '◆ Notif · Streak freeze used', run: () => void devSendNotification('freeze') },
+    { name: '◆ Notif · Streak ended, new run', run: () => void devSendNotification('newRun') },
+    { name: '◆ Notif · Evening nudge', run: () => void devSendNotification('evening') },
+    { name: '◆ Notif · Trial ends in 2 days', run: () => void devSendNotification('trial') },
     /**
      * THE DEFAULT FIRST RUN, AND IT ENDS AT THE WALL.
      *
