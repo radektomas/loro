@@ -857,7 +857,7 @@ function Postcard({
   stop,
   side,
 }: {
-  kind: 'welcome' | 'word' | 'tag';
+  kind: 'welcome' | 'word' | 'overheard';
   stop: { city: string; country: string };
   side: 'left' | 'right';
 }) {
@@ -905,35 +905,39 @@ function Postcard({
   const local = localFor(stop.city);
   if (!local) return null;
 
-  if (kind === 'tag') {
-    // A LUGGAGE TAG for the city's SECOND word (Radek, 2026-10-02: the second
-    // word should not share the first one's card — "it doesn't have to be in
-    // the same card"). Its own shape further down the road: a punched hole,
-    // the string, a band in the flag's second colour, what you overheard.
+  if (kind === 'overheard') {
+    // OVERHEARD, IN THE MIDDLE OF YOUR WORDS (Radek, 2026-10-04: "not the
+    // same vibe as the first one but more built in the page, and in the
+    // middle of the words"). No paper, no tilt, no shadow: a line painted
+    // across the road between two stops — a rule in the flag's colours,
+    // the word in Spanish quotes, its meaning. It sits on the page itself,
+    // so the taped note stays the one souvenir and this reads as the city
+    // talking while you walk through it.
     const second = local.words[1];
     return (
-      <View style={row}>
-        <View style={[styles.tagWrap, { transform: [{ rotate: side === 'left' ? '3deg' : '-3deg' }] }]}>
-          <View style={styles.tagString} />
-          <View style={styles.tag}>
-            <View style={styles.tagHole} />
-            <View style={[styles.tagBand, { backgroundColor: b }]} />
-            <View style={styles.tagBody}>
-              <Text style={styles.tagLabel} numberOfLines={1}>
-                OVERHEARD IN {stop.city.toUpperCase()}
-              </Text>
-              <Text style={styles.tagWord}>{second.word}</Text>
-              <Text style={styles.tagMeaning}>{second.meaning}</Text>
-            </View>
-          </View>
+      <View style={styles.heard} accessible accessibilityLabel={`Overheard in ${stop.city}: ${second.word}, ${second.meaning}`}>
+        <View style={styles.heardRule}>
+          <View style={[styles.heardDot, { backgroundColor: a }]} />
+          <View style={[styles.heardLine, { backgroundColor: a }]} />
+          <Text style={styles.heardLabel} numberOfLines={1}>
+            OVERHEARD IN {stop.city.toUpperCase()}
+          </Text>
+          <View style={[styles.heardLine, { backgroundColor: b }]} />
+          <View style={[styles.heardDot, { backgroundColor: b }]} />
         </View>
+        <Text style={styles.heardWord}>
+          <Text style={styles.heardQuote}>« </Text>
+          {second.word}
+          <Text style={styles.heardQuote}> »</Text>
+        </Text>
+        <Text style={styles.heardMeaning}>{second.meaning}</Text>
       </View>
     );
   }
 
   // A TAPED NOTE: a band in the country's colour, the CITY's first word and
   // its fact (every city has its own — CITIES — so no two stops read the
-  // same). The second word travels on its own tag (kind 'tag').
+  // same). The second word is overheard mid-road (kind 'overheard').
   const first = local.words[0];
   return (
     <View style={row}>
@@ -1370,20 +1374,14 @@ export function RoadmapPath({
               side={Math.sin((cityStart(s) + i + 1.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
-          // The second word's tag near the end of a fuller city, on the
-          // other side of the road from the note.
-          isCurrent && nodes.length >= 8 && i === nodes.length - 1 ? (
-            <Postcard
-              key="tag"
-              kind="tag"
-              stop={stop}
-              side={Math.sin((cityStart(s) + i + 1.5) * 0.9) >= 0 ? 'right' : 'left'}
-            />
+          // The city's second word, overheard in the MIDDLE of its words.
+          isCurrent && nodes.length >= 3 && i === Math.floor(nodes.length / 2) - 1 ? (
+            <Postcard key="overheard" kind="overheard" stop={stop} side="left" />
           ) : null,
         ])}
-        {/* A shorter city: the tag closes the road. */}
-        {isCurrent && nodes.length > 0 && nodes.length < 8 && (
-          <Postcard key="tag-short" kind="tag" stop={stop} side="right" />
+        {/* Too few words for a middle: it closes the road instead. */}
+        {isCurrent && nodes.length > 0 && nodes.length < 3 && (
+          <Postcard key="overheard-short" kind="overheard" stop={stop} side="left" />
         )}
         {/* A CITY WITH NOTHING TO TRAIN (just arrived, or everything saved
             here is learned): the postcards and Loro still greet you, and he
@@ -1401,7 +1399,7 @@ export function RoadmapPath({
         {isCurrent && nodes.length === 0 && (
           <>
             <Postcard key="word-empty" kind="word" stop={stop} side="left" />
-            <Postcard key="tag-empty" kind="tag" stop={stop} side="right" />
+            <Postcard key="overheard-empty" kind="overheard" stop={stop} side="left" />
           </>
         )}
         {nodes.length < size && hereWord && (
@@ -1777,36 +1775,22 @@ const styles = StyleSheet.create({
   postHello: { color: '#6b5a3a', fontSize: 14, fontStyle: 'italic', fontWeight: '600', marginTop: 16 },
   postCity: { color: '#1f1a12', fontSize: 26, fontWeight: '900', letterSpacing: -0.4, marginRight: 30 },
   postCountry: { color: '#8a7755', fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginTop: 2 },
-  tagWrap: { alignItems: 'center' },
-  tagString: { backgroundColor: 'rgba(242,235,210,0.45)', height: 18, width: 2 },
-  tag: {
-    backgroundColor: '#e9e1cc',
-    borderRadius: 12,
-    flexDirection: 'row',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    width: 200,
+  heard: { alignItems: 'center', paddingHorizontal: 28, paddingVertical: 18 },
+  heardRule: { alignItems: 'center', alignSelf: 'stretch', flexDirection: 'row', gap: 8 },
+  heardDot: { borderRadius: 2, height: 5, transform: [{ rotate: '45deg' }], width: 5 },
+  heardLine: { flex: 1, height: 1, opacity: 0.55 },
+  heardLabel: { color: 'rgba(242,245,243,0.5)', fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
+  heardWord: {
+    color: '#f2f5f3',
+    fontSize: 26,
+    fontStyle: 'italic',
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    marginTop: 10,
+    textAlign: 'center',
   },
-  tagHole: {
-    backgroundColor: '#0a0d0b',
-    borderColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 999,
-    borderWidth: 2,
-    height: 12,
-    left: 10,
-    position: 'absolute',
-    top: 10,
-    width: 12,
-    zIndex: 2,
-  },
-  tagBand: { width: 30 },
-  tagBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 12 },
-  tagLabel: { color: 'rgba(20,24,22,0.55)', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
-  tagWord: { color: '#141816', fontSize: 24, fontWeight: '900', marginTop: 4 },
-  tagMeaning: { color: 'rgba(20,24,22,0.7)', fontSize: 13, fontWeight: '800', marginTop: 1 },
+  heardQuote: { color: 'rgba(242,245,243,0.35)', fontStyle: 'normal', fontWeight: '600' },
+  heardMeaning: { color: 'rgba(242,245,243,0.6)', fontSize: 14, fontWeight: '700', marginTop: 2, textAlign: 'center' },
   note: {
     backgroundColor: '#1a2320',
     borderRadius: 14,
