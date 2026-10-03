@@ -13,11 +13,8 @@ import { cueWindows, isLongVideo, longBlankCount } from './blankBudget.ts';
  * storage.ts, the blank UI is the same one typed recall uses
  * (components/SubtitleTrack.tsx).
  *
- * The video dictionaries carry no CEFR/frequency field, so levels are
- * approximated from hand-cut Spanish frequency bands: band 1 is pure function
- * words plus day-one basics, bands 2-4 step down the frequency list, and
- * anything unlisted is band 5 (rare). Both the surface form and the gloss
- * lemma are checked, so "vine" finds "venir"'s band.
+ * A word's level is its CEFR level (A1-C2 as bands 1-6, see bandOf), looked
+ * up by surface form and by the gloss lemma, so "vine" finds "venir"'s band.
  */
 
 /**
@@ -90,12 +87,10 @@ export function tierForLearned(learned: number): LearnedTier {
 }
 
 /**
- * Word difficulty bands stay 1-5 (5 = rare/unlisted) even though the user
- * ladder now tops out at 6 — Nativo is a terminal badge earned by clearing
- * the rare band, not a band with words of its own. Keeping this separate from
- * MAX_USER_LEVEL leaves blank selection exactly as it was.
+ * Word bands are the six CEFR levels, one per tier: Guiri asks A1 words,
+ * Nativo C2. Unlisted words have no band and are never asked.
  */
-const MAX_WORD_LEVEL = 5;
+const MAX_WORD_LEVEL = 6;
 
 export type LevelState = {
   /** 1..MAX_USER_LEVEL — the band currently being blanked in the feed. */
@@ -184,110 +179,22 @@ export function applyRecallLevelCredit(state: LevelState): LevelAnswerResult {
 }
 
 // ---------------------------------------------------------------------------
-// Frequency bands. Keys are normalizeSurface() forms (lowercase, accents
-// kept). Membership is approximate by design — the meter self-corrects.
-
-/** Day-one words beyond the function-word list: greetings, core nouns, and
-    the highest-frequency verb forms a beginner meets immediately. */
-const LEVEL_1_EXTRAS = new Set([
-  'hola', 'gracias', 'adiós', 'chau', 'vale', 'claro',
-  'bueno', 'buena', 'buenos', 'buenas', 'día', 'días', 'hoy', 'ayer',
-  'casa', 'agua', 'gente', 'cosa', 'cosas', 'tiempo', 'vida', 'mundo',
-  'amigo', 'amiga', 'amigos', 'amigas', 'hombre', 'mujer', 'favor',
-  'ser', 'estar', 'tener', 'tengo', 'tienes', 'tiene', 'tenemos',
-  'hacer', 'hago', 'haces', 'hace', 'ir', 'quiero', 'quieres', 'quiere',
-  'ver', 'veo', 'ves', 'saber', 'sé', 'sabes', 'sabe',
-]);
-
-/** Roughly the top ~1000: everyday verbs, people, time and place words. */
-const LEVEL_2_WORDS = new Set([
-  'decir', 'digo', 'dice', 'dices', 'poder', 'puedo', 'puedes', 'puede',
-  'venir', 'vengo', 'viene', 'vine', 'dar', 'doy', 'poner', 'pongo',
-  'salir', 'salgo', 'llegar', 'llego', 'llega', 'pasar', 'pasa', 'pasó',
-  'quedar', 'quedamos', 'quedemos', 'hablar', 'hablo', 'hablas',
-  'comer', 'como', 'beber', 'vivir', 'vivo', 'vives', 'trabajar',
-  'jugar', 'juega', 'conocer', 'conozco', 'llamar', 'llamo', 'llama',
-  'mirar', 'mira', 'escuchar', 'escucha', 'entender', 'entiendo',
-  'esperar', 'espera', 'comprar', 'dormir', 'pensar', 'pienso', 'creer', 'creo',
-  'año', 'años', 'semana', 'mes', 'meses', 'fin', 'mañana', 'tarde', 'noche',
-  'hora', 'horas', 'minuto', 'momento', 'ciudad', 'pueblo', 'país', 'calle',
-  'coche', 'carro', 'tren', 'dinero', 'familia', 'padre', 'madre', 'papá',
-  'mamá', 'hijo', 'hija', 'hijos', 'hermano', 'hermana', 'niño', 'niña',
-  'chico', 'chica', 'escuela', 'clase', 'nombre', 'trabajo', 'comida',
-  'verdad', 'pregunta', 'respuesta', 'palabra', 'lugar',
-  'grande', 'pequeño', 'pequeña', 'nuevo', 'nueva', 'viejo', 'vieja',
-  'joven', 'primero', 'primera', 'último', 'última', 'importante',
-  'fácil', 'difícil', 'feliz', 'triste', 'cansado', 'cansada',
-  'rápido', 'lento', 'cerca', 'lejos', 'arriba', 'abajo', 'dentro', 'fuera',
-  'antes', 'después', 'luego', 'pronto', 'todavía', 'aún', 'casi',
-  'juntos', 'juntas', 'vez', 'veces', 'vamos',
-]);
-
-/** Mid-frequency: travel, leisure, body, weather, common -ar/-er/-ir verbs. */
-const LEVEL_3_WORDS = new Set([
-  'vacaciones', 'hotel', 'playa', 'viaje', 'viajar', 'avión', 'aeropuerto',
-  'selección', 'partido', 'equipo', 'fútbol', 'ganar', 'perder',
-  'encontrar', 'encuentro', 'buscar', 'busco', 'sentir', 'siento',
-  'parecer', 'parece', 'seguir', 'sigo', 'sigue', 'empezar', 'empiezo',
-  'terminar', 'termina', 'necesitar', 'necesito', 'gustar', 'gusta',
-  'encantar', 'encanta', 'preferir', 'prefiero', 'prefiere',
-  'recordar', 'recuerdo', 'olvidar', 'olvido', 'aprender', 'aprendo',
-  'enseñar', 'estudiar', 'estudio', 'leer', 'leo', 'escribir', 'escribo',
-  'llevar', 'llevo', 'traer', 'traigo', 'vender', 'pagar', 'pago',
-  'abrir', 'abro', 'cerrar', 'cierro', 'cambiar', 'cambio', 'usar', 'uso',
-  'probar', 'pruebo', 'intentar', 'intento',
-  'tranquilo', 'tranquila', 'tranquilos', 'tranquilas',
-  'lleno', 'llena', 'vacío', 'vacía', 'caro', 'cara', 'barato', 'barata',
-  'bonito', 'bonita', 'feo', 'fea', 'fuerte', 'mismo', 'misma',
-  'diferente', 'propio', 'propia', 'seguro', 'segura',
-  'posible', 'imposible', 'quizás', 'quizá',
-  'edificio', 'tienda', 'mercado', 'restaurante', 'bar', 'cocina',
-  'habitación', 'puerta', 'ventana', 'cuerpo', 'cabeza', 'mano', 'ojos',
-  'salud', 'médico', 'música', 'película', 'historia', 'noticia', 'idioma',
-  'ejemplo', 'problema', 'razón', 'idea', 'manera', 'forma', 'sitio',
-  'viento', 'lluvia', 'sol', 'frío', 'calor',
-]);
-
-/** Lower-frequency: abstract nouns, B2-flavoured adjectives and connectors. */
-const LEVEL_4_WORDS = new Set([
-  'paisaje', 'acuerdo', 'mejorar', 'desarrollar', 'lograr', 'conseguir',
-  'aumentar', 'disminuir', 'sociedad', 'gobierno', 'empresa', 'proyecto',
-  'experiencia', 'conocimiento', 'costumbre', 'cultura', 'ambiente',
-  'medida', 'nivel', 'época', 'superficie', 'herramienta',
-  'comportamiento', 'actitud', 'ventaja', 'desventaja', 'riesgo',
-  'desafío', 'recurso', 'meta', 'propósito', 'desarrollo', 'crecimiento',
-  'entorno', 'requisito', 'destreza', 'asequible', 'imprescindible',
-  'cotidiano', 'cotidiana', 'disponible', 'actual', 'anterior',
-  'siguiente', 'semejante', 'distinto', 'distinta', 'complejo', 'compleja',
-  'sencillo', 'sencilla', 'apenas', 'incluso', 'además', 'embargo',
-  'mediante', 'respecto', 'duda', 'esfuerzo', 'éxito', 'fracaso', 'apoyo',
-  'fuente', 'tema', 'asunto', 'detalle', 'entrevista', 'informe',
-  'investigación', 'resultado', 'proceso', 'sistema',
-]);
+// Word levels.
 
 /**
- * A word's band. The measured table (catalog/wordBands.ts — how many of
- * Loro's creators say it) is the source; the hand lists above only ever make
- * a word EASIER, because the catalog is small enough that a plainly basic
- * word ("hijo", "beber") can rank low just by being rarely filmed.
+ * A word's band IS its CEFR level (Radek, 2026-10-04: "IT NEEDS TO BE
+ * SPANISH LEVELS"): 1 A1 · 2 A2 · 3 B1 · 4 B2 · 5 C1 · 6 C2 — the level a
+ * standard Spanish course teaches it at, per lemma, from
+ * catalog/wordBands.ts (scripts/build-word-bands.mts). The bands used to be
+ * ~450 hand-picked words with everything else "rare", which is how a user
+ * two days in was asked "sonda = catheter".
  *
  * Function words and number words have NO band: neither is ever a blue
  * blank (isLevelBlankable), and a band would only invite one.
  */
 function bandOf(surface: string): number | null {
   if (isFunctionWord(surface) || numberWordBand(surface) !== null) return null;
-  const measured = WORD_BANDS[surface] ?? null;
-  const hand = LEVEL_1_EXTRAS.has(surface)
-    ? 1
-    : LEVEL_2_WORDS.has(surface)
-      ? 2
-      : LEVEL_3_WORDS.has(surface)
-        ? 3
-        : LEVEL_4_WORDS.has(surface)
-          ? 4
-          : null;
-  if (measured !== null && hand !== null) return Math.min(measured, hand);
-  return measured ?? hand;
+  return WORD_BANDS[surface] ?? null;
 }
 
 /** In a band at all — a word no band lists is never asked as a blue blank. */
@@ -296,9 +203,10 @@ function isBanded(surface: string, lemma?: string | null): boolean {
 }
 
 /**
- * Level of a word: 1 (most common) .. MAX_WORD_LEVEL (rare / unlisted).
- * The lemma (from the video dictionary) rescues conjugated forms the band
- * lists don't spell out — the easier of the two readings wins.
+ * Level of a word: 1 (A1) .. MAX_WORD_LEVEL (C2). The lemma (from the video
+ * dictionary) rescues conjugated forms the table does not list — the easier
+ * of the two readings wins. Unlisted reads as the top, but an unlisted word
+ * is never asked (isLevelBlankable), so that only labels scripted blanks.
  */
 export function wordLevel(surface: string, lemma?: string | null): number {
   const bySurface = bandOf(surface);
@@ -311,9 +219,9 @@ export function wordLevel(surface: string, lemma?: string | null): number {
 // Blank planning
 
 /**
- * IS THIS A WORD WORTH PRACTISING? Unlisted words are band 5 by definition,
- * and at the top of the ladder band 5 is asked for FIRST — so with no gate
- * the first unlisted word of a cue was blanked, and in Peppa that is
+ * IS THIS A WORD WORTH PRACTISING? Unlisted words used to be band 5, and at
+ * the top of the ladder band 5 was asked for FIRST — so with no gate the
+ * first unlisted word of a cue was blanked, and in Peppa that was
  * "Pig", "Peppa", "George", "eh" (Radek, 2026-09-22: "the blue blank words
  * are super weird … it needs to be very good Spanish words based on the
  * level"; and in reels "you fill up eh as a level word, which seems
@@ -388,18 +296,14 @@ const MIN_CUE_GAP = 2;
  * The bands to draw blanks from, best first, for a user at `userLevel`.
  *
  * The exact band always wins — that is what "practice at your level" means —
- * but it cannot be the only source. The bands are hand-cut and wildly uneven
- * against real footage: band 4 covers 0.7% of the catalog's word tokens, so
- * asking only for band 4 leaves 58% of videos with NO blue words at all, and
- * band 6 does not exist (MAX_WORD_LEVEL is 5, the ladder goes to 6), so a
- * Nativo saw zero on EVERY video. Both were silent — a video with no
- * matching word simply renders nothing.
+ * but it cannot be the only source. Real footage is uneven across levels —
+ * a short clip may hold no B2 word at all, and C2 words are rare anywhere —
+ * and a video with no matching word silently renders no blue words.
  *
  * So the exact band is a preference, not a filter: each further step out is
  * only reached once the closer ones have nothing left to offer in this
  * video. Easier before harder at equal distance, because an easy blank costs
- * a moment while a rare one (band 5 is everything unlisted — names, slang,
- * technical words) can be genuinely unanswerable. Levelling self-corrects
+ * a moment while a harder one can be genuinely unanswerable. Levelling self-corrects
  * the rest: filling easier blanks climbs the meter toward the band where
  * the user's real level has material.
  */

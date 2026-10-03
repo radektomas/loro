@@ -13,17 +13,17 @@ import type { Cue, Gloss, SavedWord, Video } from './types.ts';
 import { WORD_BANDS } from './catalog/wordBands.ts';
 
 /**
- * Band anchors used by the fixtures below. Picked from the real bands
- * (catalog/wordBands.ts, plus the hand lists) so the tests exercise the
+ * Band anchors used by the fixtures below — A2 toalla, B1 lograr, B2
+ * calzado, C1 vejiga — picked from the real CEFR table (catalog/wordBands.ts) so the tests exercise the
  * shipped data rather than a parallel universe. Asserted below, so a
  * regenerated table that moves one of these fails loudly here instead of
  * silently weakening every test that builds on it.
  */
 const BAND_1 = 'casa';
-const BAND_2 = 'playa';
-const BAND_3 = 'hotel';
-const BAND_4 = 'isla';
-const BAND_5 = 'toalla';
+const BAND_2 = 'toalla';
+const BAND_3 = 'lograr';
+const BAND_4 = 'calzado';
+const BAND_5 = 'vejiga';
 
 const gloss = (lemma: string): Gloss => ({
   lemma,
@@ -243,7 +243,7 @@ describe('tierForLearned — the ladder on words learned', () => {
   });
 });
 
-/** A distinct real band-5 word per index — only banded words are ever asked. */
+/** A distinct real band-5 (C1) word per index — only banded words are ever asked. */
 const BAND_5_WORDS = Object.keys(WORD_BANDS).filter((w) => WORD_BANDS[w] === 5 && w !== BAND_5);
 const letters = (i: number): string => BAND_5_WORDS[i];
 
