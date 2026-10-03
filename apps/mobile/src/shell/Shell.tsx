@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useState, type ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { subscribeToNotificationRoute } from '../platform/notifications';
 import { track } from '../platform/analytics';
@@ -8,7 +8,7 @@ import { FeedScreen } from '../feed/FeedScreen';
 import { VocabScreen } from '../vocab/VocabScreen';
 import { ProgressScreen } from '../progress/ProgressScreen';
 import { FeedIcon, ProgressIcon, WordsIcon } from './TabIcons';
-import { TabBarHeightContext } from './tabBar';
+import { TabBarHeightContext, subscribeToWordsTabPulse } from './tabBar';
 import { useDueCount } from './useDueCount';
 import { storage } from '@loro/core/storage';
 import { getPlan } from '../progress/plan';
@@ -85,6 +85,39 @@ export function Shell() {
   const goToWords = useCallback(() => setTab('vocab'), []);
   /** The bubble on the Words tab — see useDueCount for what it counts. */
   const due = useDueCount();
+
+  /**
+   * A saved word landing in the tab (the feed's save chip, pulseWordsTab):
+   * the icon bounces and a "+1" floats up off it. Two values so a second
+   * save mid-bounce restarts both cleanly.
+   */
+  const bounce = useRef(new Animated.Value(0)).current;
+  const plusOne = useRef(new Animated.Value(0)).current;
+  useEffect(
+    () =>
+      subscribeToWordsTabPulse(() => {
+        bounce.stopAnimation();
+        plusOne.stopAnimation();
+        bounce.setValue(0);
+        plusOne.setValue(0);
+        Animated.sequence([
+          Animated.timing(bounce, {
+            toValue: 1,
+            duration: 130,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.spring(bounce, { toValue: 0, friction: 4, tension: 160, useNativeDriver: true }),
+        ]).start();
+        Animated.timing(plusOne, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      }),
+    [bounce, plusOne]
+  );
 
   /**
    * Core earns the streak day when today's tally reaches the goal (storage
@@ -178,7 +211,39 @@ export function Shell() {
                   inside the icon, and label weight — so it survives a
                   colour-blind reading. */}
               <View>
-                <entry.Icon color={selected ? ACTIVE : INACTIVE} active={selected} />
+                {entry.key === 'vocab' && (
+                  <Animated.Text
+                    pointerEvents="none"
+                    style={[
+                      styles.plusOne,
+                      {
+                        opacity: plusOne.interpolate({
+                          inputRange: [0, 0.12, 0.65, 1],
+                          outputRange: [0, 1, 1, 0],
+                        }),
+                        transform: [
+                          { translateY: plusOne.interpolate({ inputRange: [0, 1], outputRange: [2, -16] }) },
+                        ],
+                      },
+                    ]}
+                  >
+                    +1
+                  </Animated.Text>
+                )}
+                <Animated.View
+                  style={
+                    entry.key === 'vocab'
+                      ? {
+                          transform: [
+                            { scale: bounce.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] }) },
+                            { translateY: bounce.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) },
+                          ],
+                        }
+                      : undefined
+                  }
+                >
+                  <entry.Icon color={selected ? ACTIVE : INACTIVE} active={selected} />
+                </Animated.View>
                 {/* The due bubble, Words tab only. A ring in the bar's own
                     colour keeps it legible over the mint of a selected icon.
                     Capped at 99+ so a long-absent user's number still fits. */}
@@ -237,4 +302,13 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#06130d', fontSize: 10, fontWeight: '800', lineHeight: 14 },
   labelOn: { color: ACTIVE, fontWeight: '800' },
+  /** Floats up off the Words icon when a saved word lands; left of the due bubble. */
+  plusOne: {
+    color: ACTIVE,
+    fontSize: 13,
+    fontWeight: '900',
+    left: -22,
+    position: 'absolute',
+    top: -12,
+  },
 });

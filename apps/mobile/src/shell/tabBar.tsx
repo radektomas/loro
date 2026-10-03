@@ -21,3 +21,23 @@ import { createContext, useContext } from 'react';
 export const TabBarHeightContext = createContext(0);
 
 export const useTabBarHeight = () => useContext(TabBarHeightContext);
+
+/**
+ * A WORD JUST LANDED IN WORDS (Radek, 2026-10-04: the save badge sat on the
+ * subtitles). The feed's save chip drops into the Words tab and calls this
+ * as it lands; the shell bounces the tab and shows "+1". A plain bus, not
+ * context, for the same import-cycle reason as above: the chip lives deep in
+ * the feed, the tab in Shell.
+ */
+const wordsTabListeners = new Set<() => void>();
+
+export function pulseWordsTab(): void {
+  for (const listener of wordsTabListeners) listener();
+}
+
+export function subscribeToWordsTabPulse(listener: () => void): () => void {
+  wordsTabListeners.add(listener);
+  return () => {
+    wordsTabListeners.delete(listener);
+  };
+}

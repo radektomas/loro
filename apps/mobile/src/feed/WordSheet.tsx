@@ -12,7 +12,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { BRAND } from '../onboarding/brand';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetBackdrop,
@@ -23,6 +22,7 @@ import {
 import type { Gloss, Video, Word } from '@loro/core/types';
 import { glossText, lookupGloss, normalizeSurface, wordForSave } from '@loro/core/dictionary';
 import { noteWordSaved } from './tripMoments';
+import { pulseWordsTab } from '../shell/tabBar';
 import { storage } from '@loro/core/storage';
 import { track } from '../platform/analytics';
 import { usePlayerApi } from '../player/PlayerHost';
@@ -207,27 +207,31 @@ export function WordSheet(props: WordSheetProps) {
 }
 
 /**
- * ~1010ms end to end, none of it blocking — the panel has already closed and
- * the video is already playing when this starts.
- *
- * Compare the recall celebration it is derived from: 350ms snap + 600ms bloom +
- * 650ms feather burst, held for 1200ms (SubtitleTrack.tsx celebrationTimer).
+ * ~1.3s end to end, none of it blocking — the panel has already closed and
+ * the video is already playing when this starts. Only the first ~0.6s sits on
+ * the band; after that the chip is on its way down.
  */
 const BADGE_IN_MS = 140;
 const BADGE_SNAP_MS = 180;
 const BADGE_SETTLE_MS = 120;
-/** Long enough to read a word and its meaning — the pill it replaced held
-    650ms and Radek never saw it. */
-const BADGE_HOLD_MS = 1600;
+/** Long enough to see which word it is — the sheet just showed it in full. */
+const BADGE_HOLD_MS = 280;
+/** The little lift before the drop: anticipation, so the fall reads as a throw. */
+const BADGE_LIFT_MS = 110;
+const BADGE_FALL_MS = 480;
+/** Reduced motion: no flight, a fade that holds long enough to read. */
+const BADGE_STILL_HOLD_MS = 1100;
 const BADGE_OUT_MS = 200;
 /** The overshoot peak. The web's loro-snap starts at 1.25; this is a quarter of
     that excursion, which is the whole "scaled down, not ported" decision in one
     number. */
 const BADGE_PEAK = 1.04;
 const BADGE_FROM = 0.86;
+/** How far below the feed's bottom edge the Words icon sits (bar padding + half the icon). */
+const TAB_ICON_BELOW = 18;
 
 /**
- * The save confirmation.
+ * The save confirmation: the word drops into the Words tab.
  *
  * DRIVEN BY THE VERIFIED RESULT, NEVER BY THE TAP. It is rendered only from
  * `savedWord`, which is only ever set on the true branch of `saveWord()` — and
@@ -237,32 +241,25 @@ const BADGE_FROM = 0.86;
  * failure line; there is no path from a tap to this component.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * WHY THE TOP OF THE BAND AND NOT THE BOTTOM OF THE SCREEN.
+ * WHY IT FLIES (Radek, 2026-10-04: make it nicer, and stop it blocking the
+ * subtitles). The card before this held ~2s at the top of the band — the
+ * first place the eye lands coming back off the video, and also exactly
+ * where the next subtitle line is. Now a small chip pops there for a beat,
+ * then drops into the Words tab, which bounces and shows "+1" (Shell, via
+ * pulseWordsTab). It covers the subtitles for about half a second, and it
+ * SHOWS where words go instead of saying it: the same tab Loro's moments
+ * rise out of. The Words tab is the middle one, so the fall is straight down.
  *
- * The previous version was anchored above the home indicator. That kept it
- * clear of the player, which was the point, but it put the confirmation exactly
- * where the panel had just slid away to — the eye has already left. The top of
- * the band is the first thing crossed coming back off the video, and it is
- * still structurally below the player, so the embed rule holds for the same
- * reason the band itself does rather than by arithmetic.
+ * The chip goes BEHIND the tab bar as it arrives — the bar is painted after
+ * the screens — so it disappears into the tab rather than over it.
  *
- * `bandTop` is MEASURED, not derived from the player box. Sitting a fixed
- * offset under box.top + box.height would put this in the letterbox gap on a
- * device where the 9:16 box is narrower than its area — technically not over
- * the WebView, but inside the region reserved for it, which is not a line worth
- * standing near. If the measurement has not landed yet, nothing renders.
+ * `bandTop` is MEASURED, not derived from the player box, and the chip starts
+ * below it, so it never touches the frame; the fall only goes further down.
+ * If the measurement has not landed yet, nothing renders.
  * ─────────────────────────────────────────────────────────────────────────
  *
- * THE MOTION IS THE RECALL CELEBRATION, SCALED DOWN. Kept: the overshoot snap
- * (Easing.back is loro-snap's cubic-bezier(0.3,1.4,0.4,1) in RN terms) and the
- * accent + check. Dropped: the seven-feather burst, the mascot hop, the
- * text-shadow bloom. Those mark a moment the user earned; a save is lighter and
- * far more frequent, and spending the celebration on it devalues the one that
- * matters.
- *
- * REDUCED MOTION DEGRADES TO A FADE, matching what globals.css does for
- * .animate-correct under prefers-reduced-motion — colour and copy carry the
- * message, the scale drops out entirely.
+ * REDUCED MOTION: no flight and no scale — a fade in place, held long enough
+ * to read, and the tab still gets its "+1".
  *
  * pointerEvents="none" so it cannot eat a tap on the chips underneath; it is a
  * readout, not a control, and there is nothing to dismiss.
@@ -279,7 +276,17 @@ function SavedBadge({
   const word = note?.word ?? null;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(BADGE_FROM)).current;
+  const fall = useRef(new Animated.Value(0)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
+  /** The feed's height (the fall's floor) and the chip's own, both measured. */
+  const floor = useRef(0);
+  const chipHeight = useRef(40);
+  const bandTopRef = useRef(bandTop);
+  bandTopRef.current = bandTop;
+  /** The fall in points, set when the flight starts; `fall` scales it. */
+  const fallDistance = useRef(new Animated.Value(0)).current;
+  const landingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const translateY = useMemo(() => Animated.multiply(fall, fallDistance), [fall, fallDistance]);
 
   useEffect(() => {
     let alive = true;
@@ -299,77 +306,130 @@ function SavedBadge({
   useEffect(() => {
     if (!word) return;
     opacity.setValue(0);
+    fall.setValue(0);
     scale.setValue(reduceMotion ? 1 : BADGE_FROM);
 
-    const entrance = reduceMotion
-      ? Animated.timing(opacity, {
-          toValue: 1,
-          duration: BADGE_IN_MS,
-          useNativeDriver: true,
-        })
-      : Animated.parallel([
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: BADGE_IN_MS,
+    if (reduceMotion) {
+      const still = Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: BADGE_IN_MS, useNativeDriver: true }),
+        Animated.delay(BADGE_STILL_HOLD_MS),
+        Animated.timing(opacity, { toValue: 0, duration: BADGE_OUT_MS, useNativeDriver: true }),
+      ]);
+      pulseWordsTab();
+      still.start(({ finished }) => {
+        if (finished) onDone();
+      });
+      return () => still.stop();
+    }
+
+    // The distance is read when the fall starts, not now: the chip's height
+    // is measured on its first layout, which lands during the pop.
+    let flight: Animated.CompositeAnimation | null = null;
+    const pop = Animated.sequence([
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: BADGE_IN_MS, useNativeDriver: true }),
+        // Easing.back overshoots past the target and settles — the RN
+        // expression of loro-snap's spring curve, at a quarter the excursion.
+        Animated.sequence([
+          Animated.timing(scale, {
+            toValue: BADGE_PEAK,
+            duration: BADGE_SNAP_MS,
+            easing: Easing.out(Easing.back(2)),
             useNativeDriver: true,
           }),
-          // Easing.back overshoots past the target and settles — the RN
-          // expression of loro-snap's spring curve, at a quarter the excursion.
-          Animated.sequence([
-            Animated.timing(scale, {
-              toValue: BADGE_PEAK,
-              duration: BADGE_SNAP_MS,
-              easing: Easing.out(Easing.back(2)),
-              useNativeDriver: true,
-            }),
-            Animated.timing(scale, {
-              toValue: 1,
-              duration: BADGE_SETTLE_MS,
-              easing: Easing.out(Easing.quad),
-              useNativeDriver: true,
-            }),
-          ]),
-        ]);
-
-    const animation = Animated.sequence([
-      entrance,
+          Animated.timing(scale, {
+            toValue: 1,
+            duration: BADGE_SETTLE_MS,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
       Animated.delay(BADGE_HOLD_MS),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: BADGE_OUT_MS,
-        useNativeDriver: true,
-      }),
     ]);
-    // Clearing the word on completion is what unmounts this — the timer is the
-    // animation's own, so there is no setTimeout to leak. `finished` is false
-    // when stop() ran below, and clearing then would fight the save that
-    // interrupted us.
-    animation.start(({ finished }) => {
-      if (finished) onDone();
+    pop.start(({ finished }) => {
+      if (!finished) return;
+      const top = (bandTopRef.current ?? 0) + 8;
+      const distance = Math.max(
+        80,
+        floor.current + TAB_ICON_BELOW - (top + chipHeight.current / 2)
+      );
+      // `fall` runs 0 → 1 through a small lift (negative) and then the drop.
+      flight = Animated.sequence([
+        Animated.timing(fall, {
+          toValue: -0.04,
+          duration: BADGE_LIFT_MS,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(fall, {
+            toValue: 1,
+            duration: BADGE_FALL_MS,
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 0.32,
+            duration: BADGE_FALL_MS,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.delay(BADGE_FALL_MS - 140),
+            Animated.timing(opacity, { toValue: 0, duration: 140, useNativeDriver: true }),
+          ]),
+        ]),
+      ]);
+      fallDistance.setValue(distance);
+      // The tab answers a beat before the chip is fully gone, so the two read
+      // as one motion: in it goes, up it bounces.
+      const landing = setTimeout(pulseWordsTab, BADGE_LIFT_MS + BADGE_FALL_MS - 90);
+      landingTimer.current = landing;
+      flight.start(({ finished: landed }) => {
+        if (landed) onDone();
+      });
     });
-    return () => animation.stop();
-  }, [word, opacity, scale, reduceMotion, onDone]);
+    return () => {
+      pop.stop();
+      flight?.stop();
+      if (landingTimer.current) clearTimeout(landingTimer.current);
+    };
+  }, [word, opacity, scale, fall, fallDistance, reduceMotion, onDone]);
 
   if (!word || bandTop === null) return null;
 
   /**
-   * A CARD, NOT A PILL (Radek, 2026-09-22: "now it's just an almost
-   * invisible pill — make it more visible and more pleasant"). Loro's head
-   * on the left, the word large with its meaning under it, and a mint
-   * "Saved" tag: the same three facts the Words tab will show for it, so
-   * the card reads as "it went in there". Still a readout — pointer-
-   * transparent, below the player, gone on its own.
+   * A CHIP, NOT A CARD: the word and its meaning, and a mint check — the
+   * same facts the Words tab will show for it. Small enough to fall into a
+   * tab icon without looking like a whole card is being posted through it.
    */
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.badgeLayer, { top: bandTop + 8, opacity }]}
-    >
-      <Animated.View style={[styles.badgeCard, { transform: [{ scale }] }]}>
-        <View style={styles.badgeLoro}>
-          <Image source={BRAND.parrot} style={styles.badgeParrot} resizeMode="contain" />
-        </View>
-        <View style={styles.badgeText}>
+    <>
+      {/* Measures the feed, which is where the tab bar begins. */}
+      <View
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+        onLayout={(event) => {
+          floor.current = event.nativeEvent.layout.height;
+        }}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.badgeLayer,
+          { top: bandTop + 8, opacity, transform: [{ translateY }] },
+        ]}
+      >
+        <Animated.View
+          style={[styles.badgeChip, { transform: [{ scale }] }]}
+          onLayout={(event) => {
+            chipHeight.current = event.nativeEvent.layout.height;
+          }}
+        >
+          <View style={styles.badgeCheck}>
+            <Text style={styles.badgeCheckText}>✓</Text>
+          </View>
           <Text style={styles.badgeWord} numberOfLines={1}>
             {word}
           </Text>
@@ -378,12 +438,9 @@ function SavedBadge({
               {note.translation}
             </Text>
           ) : null}
-        </View>
-        <View style={styles.badgeTag}>
-          <Text style={styles.badgeTagText}>✓ Saved</Text>
-        </View>
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
+    </>
   );
 }
 
@@ -873,47 +930,33 @@ const styles = StyleSheet.create({
       MEASURED band edge — never a constant, and never derived from the player
       box. See the note on SavedBadge. */
   badgeLayer: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  badgeCard: {
+  badgeChip: {
     alignItems: 'center',
     backgroundColor: '#141a17',
-    borderColor: 'rgba(94,230,168,0.35)',
-    borderRadius: 18,
-    borderWidth: 1,
-    elevation: 8,
-    flexDirection: 'row',
-    gap: 12,
-    maxWidth: '90%',
-    minWidth: '70%',
-    paddingLeft: 10,
-    paddingRight: 12,
-    paddingVertical: 10,
-    shadowColor: '#5ee6a8',
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-  },
-  /** The whole parrot, small, on a soft mint tile. A round crop on the
-      head was tried first and Radek called it weird — at 44pt the crop
-      landed on the big glassy eye, cut by the circle's edge. The full
-      character reads at this size; a crop does not. */
-  badgeLoro: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(94,230,168,0.14)',
-    borderRadius: 14,
-    height: 52,
-    justifyContent: 'center',
-    width: 52,
-  },
-  /** 282x420 art at 46 tall is ~31 wide; contain keeps the ratio. */
-  badgeParrot: { height: 46, width: 40 },
-  badgeText: { flex: 1 },
-  badgeWord: { color: '#f2f5f3', fontSize: 19, fontWeight: '800', letterSpacing: -0.2 },
-  badgeMeaning: { color: 'rgba(242,245,243,0.62)', fontSize: 13, fontWeight: '600', marginTop: 1 },
-  badgeTag: {
-    backgroundColor: 'rgba(94,230,168,0.16)',
+    borderColor: 'rgba(94,230,168,0.4)',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderWidth: 1,
+    elevation: 6,
+    flexDirection: 'row',
+    gap: 8,
+    maxWidth: '80%',
+    paddingLeft: 6,
+    paddingRight: 14,
+    paddingVertical: 6,
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 3, width: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
   },
-  badgeTagText: { color: '#5ee6a8', fontSize: 12, fontWeight: '800' },
+  badgeCheck: {
+    alignItems: 'center',
+    backgroundColor: '#5ee6a8',
+    borderRadius: 999,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  badgeCheckText: { color: '#06130d', fontSize: 13, fontWeight: '900' },
+  badgeWord: { color: '#f2f5f3', flexShrink: 0, fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
+  badgeMeaning: { color: 'rgba(242,245,243,0.6)', flexShrink: 1, fontSize: 13, fontWeight: '600' },
 });

@@ -15,9 +15,9 @@ import { track } from '../platform/analytics';
  *   oneAway    a blue blank left one word to the next city.          once per city
  *   arrived    a blue blank completed the city.                      once per city
  *
- * RARE ON PURPOSE. The moment pauses and hides the video (nothing may be
- * drawn over a playing YouTube embed), so every one costs a couple of
- * seconds of watching. Never two within a minute, never two on one video;
+ * RARE ON PURPOSE. The moment is a small Loro rising from the Words tab
+ * while the video plays on (LearnedToast's TabMomentView), but it still pulls
+ * the eye off the video. Never two within a minute, never two on one video;
  * a moment the throttle swallows is not marked shown, so it can come later.
  * Training in Words needs none of this: the map is right there.
  */
@@ -42,8 +42,9 @@ const KEY_FIRST_BLUE = 'loro.mobile.momentFirstBlue';
 const KEY_CITY = 'loro.mobile.momentCity';
 
 const GAP_MS = 60_000;
-/** The save badge holds ~2.2 s after the sheet closes; the first-word moment follows it. */
-const AFTER_SAVE_BADGE_MS = 2400;
+/** The save chip drops into the Words tab ~1.2 s after the sheet closes
+    (WordSheet SavedBadge); Loro rises out of that tab just after it lands. */
+const AFTER_SAVE_BADGE_MS = 1500;
 
 const listeners = new Set<(m: TripMoment) => void>();
 let lastAt = 0;
