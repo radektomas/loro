@@ -225,6 +225,24 @@ export function nextUp(words: readonly SavedWord[]): RoadmapNode | null {
 }
 
 /**
+ * THE NUMBER ON THE WORDS TAB (Radek, 2026-10-04: "in the down bar a small
+ * pill with a number of the words to review"). The bubble used to count only
+ * scheduled returns (progress.dueCount), and a saved word nobody has trained
+ * yet is not a return — so for most people it read 0 and never showed, while
+ * Words held a dozen words waiting. Now: every word open on the path (ready
+ * to train), plus every learned word whose review has come round. Distinct
+ * words, never a locked one.
+ */
+export function waitingInWords(words: readonly SavedWord[], now: number = Date.now()): number {
+  let n = 0;
+  for (const node of buildRoadmap(words)) {
+    if (node.status === 'open') n++;
+    else if (node.status === 'done' && node.word.state !== 'new' && node.word.dueAt <= now) n++;
+  }
+  return n;
+}
+
+/**
  * The surfaces the path has not reached yet. Cached per list identity —
  * the blank planner calls this on every slide with the same array.
  */

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, CITY_SIZES, cityArrivals, citySize, cityStart, splitCities, tripPosition, tripStop, withLevelKnown } from './roadmap.ts';
+import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, CITY_SIZES, cityArrivals, citySize, cityStart, splitCities, tripPosition, tripStop, waitingInWords, withLevelKnown } from './roadmap.ts';
 import { dueCount, nextDueAt, readyWords } from './progress.ts';
 import { computeBlankPlan, grade, isEarlyAnswer, isTrained, trainWord, TRAINED_FIRST_ASK_MS } from './srs.ts';
 import type { SavedWord, Video } from './types.ts';
@@ -303,5 +303,26 @@ describe('cityArrivals', () => {
     assert.equal(at.length, 2);
     assert.equal(at[0], words[0].savedAt);
     assert.equal(at[1], NOW - DAY + 4);
+  });
+});
+
+describe('waitingInWords — the Words tab number', () => {
+  it('counts untrained words waiting on the path, which dueCount does not', () => {
+    const fresh = [word('a', 0, { state: 'new', dueAt: NOW + DAY }), word('b', 1, { state: 'new', dueAt: NOW + DAY })];
+    assert.equal(dueCount(fresh, NOW), 0);
+    assert.equal(waitingInWords(fresh, NOW), 2);
+  });
+
+  it('adds learned words whose review is due, not the ones still resting', () => {
+    const list = [
+      word('a', 0, { ...learned, dueAt: NOW - 1 }),
+      word('b', 1, { ...learned, dueAt: NOW + DAY }),
+      word('c', 2, { state: 'new' }),
+    ];
+    assert.equal(waitingInWords(list, NOW), 2);
+  });
+
+  it('never counts a locked word', () => {
+    assert.equal(waitingInWords(many(OPEN_SLOTS + 5), NOW), OPEN_SLOTS);
   });
 });

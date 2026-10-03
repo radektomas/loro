@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { storage } from '@loro/core/storage';
-import { dueCount } from '@loro/core/progress';
+import { waitingInWords } from '@loro/core/roadmap';
 
 /**
  * HOW MANY WORDS ARE READY — for the bubble on the Words tab.
@@ -19,8 +19,14 @@ import { dueCount } from '@loro/core/progress';
  */
 const TICK_MS = 60_000;
 
+/**
+ * Since 2026-10-04 (Radek: "in the down bar a small pill with a number of
+ * the words to review") it counts what Words actually holds for you: words
+ * open on the path to train, plus learned words due back (roadmap
+ * waitingInWords). Scheduled returns alone read 0 for almost everyone.
+ */
 function countDue(now = Date.now()): number {
-  return dueCount(storage.getSavedWords(), now);
+  return waitingInWords(storage.getSavedWords(), now);
 }
 
 export function useDueCount(): number {

@@ -202,7 +202,7 @@ export function Shell() {
               accessibilityState={{ selected }}
               accessibilityLabel={
                 entry.key === 'vocab' && due > 0
-                  ? `${entry.label}, ${due} ready to review`
+                  ? `${entry.label}, ${due} to review`
                   : entry.label
               }
               style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
@@ -250,7 +250,7 @@ export function Shell() {
                 {entry.key === 'vocab' && due > 0 && (
                   <View
                     style={styles.badge}
-                    accessibilityLabel={`${due} ready to review`}
+                    accessibilityLabel={`${due} to review`}
                   >
                     <Text style={styles.badgeText}>{due > 99 ? '99+' : due}</Text>
                   </View>
@@ -287,20 +287,22 @@ const styles = StyleSheet.create({
   tab: { alignItems: 'center', flex: 1, gap: 4, paddingVertical: 4 },
   tabPressed: { opacity: 0.6 },
   label: { color: INACTIVE, fontSize: 11, fontWeight: '600' },
+  /** The pill on Words: how many words wait there (useDueCount). */
   badge: {
     alignItems: 'center',
     backgroundColor: ACTIVE,
     borderColor: '#0d110f',
     borderRadius: 999,
     borderWidth: 2,
+    height: 20,
     justifyContent: 'center',
-    minWidth: 20,
-    paddingHorizontal: 4,
+    minWidth: 26,
+    paddingHorizontal: 6,
     position: 'absolute',
-    right: -14,
-    top: -9,
+    right: -22,
+    top: -8,
   },
-  badgeText: { color: '#06130d', fontSize: 10, fontWeight: '800', lineHeight: 14 },
+  badgeText: { color: '#06130d', fontSize: 11, fontVariant: ['tabular-nums'], fontWeight: '900', lineHeight: 13 },
   labelOn: { color: ACTIVE, fontWeight: '800' },
   /** Floats up off the Words icon when a saved word lands; left of the due bubble. */
   plusOne: {
