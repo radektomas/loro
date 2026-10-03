@@ -136,6 +136,7 @@ export type EventName =
   // THE TRIP (1.7.1): does anyone get past Madrid, and is the ladder looked at?
   | 'city_arrived'        // { stage, city, country, newCountry, empty } — the arrival played
   | 'level_banner_opened' // { tier, learned } — the level chip on Words was tapped open
+  | 'trip_moment'         // { kind } — Loro told a trip milestone in the feed (feed/tripMoments)
   | 'reminder_permission'; // { state } — iOS's answer, right after the ask
 
 type Props = Record<string, string | number | boolean | null | undefined>;

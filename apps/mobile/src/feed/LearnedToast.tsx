@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cleanWord } from '@loro/core/dictionary';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -11,8 +11,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BRAND } from '../onboarding/brand';
 import { usePlayerApi } from '../player/PlayerHost';
-import { requestWordsView } from '../vocab/wordsView';
+import { requestWordFocus, requestWordsView } from '../vocab/wordsView';
 import { subscribeToWordLearned, type WordLearnedRaise } from './wordLearned';
+import { subscribeToTripMoment, type TripMoment } from './tripMoments';
 
 /**
  * THE WORD-LEARNED MOMENT — Loro comes in from the side and says it.
@@ -43,12 +44,48 @@ const OUT_MS = 260;
 type Leave = 'done' | 'words';
 
 /** The moment itself: animation, hold, and the two taps. Host-agnostic. */
+/** What the bubble says. The word-learned moment and the trip moments share one view. */
+export type MomentContent = {
+  eyebrow: string;
+  word: string;
+  meaning: string;
+  foot: string;
+  opened?: { text: string; translation: string } | null;
+  a11y: string;
+};
+
+/** The word-learned moment, as bubble content. */
+function learnedContent(raise: WordLearnedRaise): MomentContent {
+  return {
+    eyebrow: '¡Palabra aprendida!',
+    word: cleanWord(raise.text),
+    meaning: raise.translation,
+    foot: `${raise.learned} learned${raise.week > 1 ? ` · ${raise.week} this week` : ''} · tap to see them`,
+    opened: raise.opened,
+    a11y: `${cleanWord(raise.text)} learned. ${raise.learned} words learned. Opens your learned words.`,
+  };
+}
+
 export function LearnedMomentView({
   raise,
   onDone,
   onWords,
 }: {
   raise: WordLearnedRaise;
+  onDone: () => void;
+  onWords?: () => void;
+}) {
+  const content = useMemo(() => learnedContent(raise), [raise]);
+  return <MomentView content={content} onDone={onDone} onWords={onWords} />;
+}
+
+/** Loro from the side with a bubble: the animation, the hold, the two taps. */
+export function MomentView({
+  content,
+  onDone,
+  onWords,
+}: {
+  content: MomentContent;
   /** The moment ended on its own or by a tap on the dim: carry on. */
   onDone: () => void;
   /** The bubble was tapped: show the learned words. Absent = same as done. */
@@ -90,7 +127,7 @@ export function LearnedMomentView({
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [raise, slide, bubble, leave]);
+  }, [content, slide, bubble, leave]);
 
   const dimStyle = useAnimatedStyle(() => ({ opacity: slide.value * 0.55 }));
   const parrotStyle = useAnimatedStyle(() => ({
@@ -113,24 +150,21 @@ export function LearnedMomentView({
           <Pressable
             onPress={() => leave('words')}
             accessibilityRole="button"
-            accessibilityLabel={`${cleanWord(raise.text)} learned. ${raise.learned} words learned. Opens your learned words.`}
+            accessibilityLabel={content.a11y}
             style={({ pressed }) => [styles.bubble, pressed && styles.pressed]}
           >
-            <Text style={styles.eyebrow}>¡Palabra aprendida!</Text>
-            <Text style={styles.word}>{cleanWord(raise.text)}</Text>
-            <Text style={styles.meaning} numberOfLines={2}>
-              {raise.translation}
+            <Text style={styles.eyebrow}>{content.eyebrow}</Text>
+            <Text style={styles.word}>{content.word}</Text>
+            <Text style={styles.meaning} numberOfLines={3}>
+              {content.meaning}
             </Text>
-            <Text style={styles.count}>
-              {raise.learned} learned
-              {raise.week > 1 ? ` · ${raise.week} this week` : ''} · tap to see them
-            </Text>
-            {raise.opened && (
+            <Text style={styles.count}>{content.foot}</Text>
+            {content.opened && (
               <View style={styles.opened}>
                 <Text style={styles.openedLabel}>Next up</Text>
                 <Text style={styles.openedWord} numberOfLines={1}>
-                  {cleanWord(raise.opened.text)}
-                  <Text style={styles.openedMeaning}>  {raise.opened.translation}</Text>
+                  {cleanWord(content.opened.text)}
+                  <Text style={styles.openedMeaning}>  {content.opened.translation}</Text>
                 </Text>
               </View>
             )}
@@ -167,6 +201,8 @@ export function LearnedToast({
 }) {
   const api = usePlayerApi();
   const [raise, setRaise] = useState<WordLearnedRaise | null>(null);
+  /** A trip milestone (tripMoments). A word-learned moment wins if both arrive. */
+  const [trip, setTrip] = useState<TripMoment | null>(null);
   const activeRef = useRef(active);
   activeRef.current = active;
 
@@ -177,8 +213,22 @@ export function LearnedToast({
       }),
     []
   );
+  useEffect(
+    () =>
+      subscribeToTripMoment((next) => {
+        if (activeRef.current) setTrip((cur) => cur ?? next);
+      }),
+    []
+  );
+  const tripContent = useMemo<MomentContent | null>(
+    () =>
+      trip
+        ? { eyebrow: trip.eyebrow, word: trip.word, meaning: trip.line, foot: trip.foot, a11y: `${trip.eyebrow} ${trip.word}. ${trip.line}` }
+        : null,
+    [trip]
+  );
 
-  const open = raise !== null;
+  const open = raise !== null || trip !== null;
   useEffect(() => {
     onObscurePlayer(open);
     if (open) api.pause();
@@ -187,6 +237,7 @@ export function LearnedToast({
 
   const done = useCallback(() => {
     setRaise(null);
+    setTrip(null);
     api.play();
   }, [api]);
   const words = useCallback(() => {
@@ -199,8 +250,21 @@ export function LearnedToast({
     }
   }, [api, onGoToWords]);
 
-  if (!raise) return null;
-  return <LearnedMomentView raise={raise} onDone={done} onWords={words} />;
+  /** A trip moment's tap: Words, on the word you are on or on the city. */
+  const tripWords = useCallback(() => {
+    const land = trip?.land;
+    setTrip(null);
+    if (onGoToWords) {
+      if (land === 'word') requestWordFocus();
+      onGoToWords();
+    } else {
+      api.play();
+    }
+  }, [api, onGoToWords, trip]);
+
+  if (raise) return <LearnedMomentView raise={raise} onDone={done} onWords={words} />;
+  if (tripContent) return <MomentView content={tripContent} onDone={done} onWords={tripWords} />;
+  return null;
 }
 
 const styles = StyleSheet.create({

@@ -3,6 +3,7 @@ import { devRaiseDayDone } from '../feed/dayDone';
 import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
 import { devRaiseWordLearned } from '../feed/wordLearned';
+import { devRaiseTripMoment } from '../feed/tripMoments';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { storageDriver } from './storage';
 
@@ -133,6 +134,10 @@ export function installDevMenu(): void {
         "so i can see it right away and not search it like a crazy man").
         Open the Feed tab, then tap. */
     { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
+    { name: '★ Loro · Trip: first word saved', run: () => devRaiseTripMoment('firstSave') },
+    { name: '★ Loro · Trip: first blue word', run: () => devRaiseTripMoment('firstBlue') },
+    { name: '★ Loro · Trip: 1 word to the next city', run: () => devRaiseTripMoment('oneAway') },
+    { name: '★ Loro · Trip: city reached', run: () => devRaiseTripMoment('arrived') },
     /**
      * THE DEFAULT FIRST RUN, AND IT ENDS AT THE WALL.
      *

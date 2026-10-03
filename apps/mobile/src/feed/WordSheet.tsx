@@ -22,6 +22,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import type { Gloss, Video, Word } from '@loro/core/types';
 import { glossText, lookupGloss, normalizeSurface, wordForSave } from '@loro/core/dictionary';
+import { noteWordSaved } from './tripMoments';
 import { storage } from '@loro/core/storage';
 import { track } from '../platform/analytics';
 import { usePlayerApi } from '../player/PlayerHost';
@@ -184,8 +185,10 @@ export function WordSheet(props: WordSheetProps) {
     (word: string, translation: string | null) => {
       setSavedWord({ word, translation });
       notify?.(word);
+      // The first word ever: Loro says where it went, once the badge is gone.
+      noteWordSaved(word, props.data?.video.id ?? null);
     },
-    [notify]
+    [notify, props.data]
   );
   const handleToastDone = useCallback(() => setSavedWord(null), []);
 

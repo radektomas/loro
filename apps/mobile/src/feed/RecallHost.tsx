@@ -13,6 +13,7 @@ import { Keyboard, Platform } from 'react-native';
 import { runOnJS, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import type { Video } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
+import { noteBlueRight, tripSnapshot } from './tripMoments';
 import { tierFor } from '@loro/core/levels';
 import { dueCount } from '@loro/core/progress';
 import type { AnswerMatch } from '@loro/core/srs';
@@ -988,6 +989,8 @@ export function RecallHost({
          * The meter is read BEFORE the calls so the log can show the move.
          */
         const before = storage.getLevelState();
+        // Where the trip stood, so a blue answer that moves it can be told (tripMoments).
+        const tripBefore = wasCorrect ? tripSnapshot() : null;
         storage.saveLevelWord(
           {
             text: entry.word.text,
@@ -998,6 +1001,7 @@ export function RecallHost({
           wasCorrect
         );
         const result = storage.applyLevelAnswer(wasCorrect);
+        if (tripBefore) noteBlueRight(entry.word.text, entry.word.videoId, tripBefore);
         llog(
           `grade "${entry.word.text}" (band ${entry.word.level}) ` +
             `${wasCorrect ? 'CORRECT' : 'WRONG'} -> ` +
