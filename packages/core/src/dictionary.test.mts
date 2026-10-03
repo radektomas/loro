@@ -34,7 +34,7 @@ describe('isProperName', () => {
 
   it('keeps names out of blue blanks', () => {
     assert.equal(isLevelBlankable('york', g('york', 'York'), 3), false);
-    assert.equal(isLevelBlankable('charco', g('charco', 'puddle'), 3), true);
+    assert.equal(isLevelBlankable('playa', g('playa', 'beach'), 3), true);
   });
 });
 

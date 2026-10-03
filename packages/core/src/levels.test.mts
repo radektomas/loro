@@ -10,20 +10,20 @@ import {
   wordLevel,
 } from './levels.ts';
 import type { Cue, Gloss, SavedWord, Video } from './types.ts';
+import { WORD_BANDS } from './catalog/wordBands.ts';
 
 /**
- * Band anchors used by the fixtures below. Picked from the real band lists so
- * the tests exercise the shipped data rather than a parallel universe:
- *   band 1 'casa', band 2 'trabajo', band 3 'hotel', band 4 'lograr',
- *   band 5 'zzqqxx' (unlisted ⇒ rare). Asserted below, so a future edit to
- *   the lists that moves one of these fails loudly here instead of silently
- *   weakening every test that builds on it.
+ * Band anchors used by the fixtures below. Picked from the real bands
+ * (catalog/wordBands.ts, plus the hand lists) so the tests exercise the
+ * shipped data rather than a parallel universe. Asserted below, so a
+ * regenerated table that moves one of these fails loudly here instead of
+ * silently weakening every test that builds on it.
  */
 const BAND_1 = 'casa';
-const BAND_2 = 'trabajo';
+const BAND_2 = 'playa';
 const BAND_3 = 'hotel';
-const BAND_4 = 'lograr';
-const BAND_5 = 'zzqqxx';
+const BAND_4 = 'isla';
+const BAND_5 = 'toalla';
 
 const gloss = (lemma: string): Gloss => ({
   lemma,
@@ -243,12 +243,13 @@ describe('tierForLearned — the ladder on words learned', () => {
   });
 });
 
-/** A unique all-letter word per index — the planner blanks letters only. */
-const letters = (i: number): string => 'zq' + 'abcdefghijklmnopqrstuvwxyz'[i % 26] + 'abcdefghij'[Math.floor(i / 26)];
+/** A distinct real band-5 word per index — only banded words are ever asked. */
+const BAND_5_WORDS = Object.keys(WORD_BANDS).filter((w) => WORD_BANDS[w] === 5 && w !== BAND_5);
+const letters = (i: number): string => BAND_5_WORDS[i];
 
 describe('computeLevelBlankPlan — long videos', () => {
   // 200 one-second cues: a 200s video, well over LONG_VIDEO_S. Every cue
-  // offers one unlisted (band 5) word, so a band-5 user can be asked
+  // offers one distinct band-5 word, so a band-5 user can be asked
   // anywhere — the question is WHERE the planner chooses to ask.
   const long = video(Array.from({ length: 200 }, (_, i) => [FILLER_WORD, letters(i)]));
 
@@ -303,11 +304,20 @@ describe('computeLevelBlankPlan — only real vocabulary', () => {
     assert.equal(computeLevelBlankPlan(v, 5, [], 'en').get(2)?.text, BAND_5);
   });
 
-  it('trusts an unlisted word only when it is a content word', () => {
-    const v = withDict(video([filler, filler, ['zzqqyy', BAND_5], filler]), {
-      zzqqyy: OTHER_UNLISTED,
+  it('never asks a word no band lists, nor a number', () => {
+    const v = withDict(video([filler, filler, ['zzqqyy', 'doscientos'], filler]), {
+      zzqqyy: { lemma: 'zzqqyy', pos: 'noun', note: null, glosses: { en: 'catheter' } },
+      doscientos: { lemma: 'doscientos', pos: 'num', note: null, glosses: { en: '200' } },
     });
-    assert.equal(computeLevelBlankPlan(v, 5, [], 'en').get(2)?.text, BAND_5);
+    assert.equal(computeLevelBlankPlan(v, 5, [], 'en').size, 0);
+  });
+
+  it('never asks grammar glue or a pronoun', () => {
+    const v = withDict(video([filler, filler, ['te', 'lo'], filler]), {
+      te: { lemma: 'te', pos: 'pron', note: null, glosses: { en: 'you' } },
+      lo: { lemma: 'lo', pos: 'pron', note: null, glosses: { en: 'it' } },
+    });
+    assert.equal(computeLevelBlankPlan(v, 1, [], 'en').size, 0);
   });
 
   it('plans nothing rather than a name when a cue offers only names', () => {

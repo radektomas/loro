@@ -31,7 +31,8 @@
     "sweep-embeds": "node scripts/sweep-embeds.mts",
     "probe-captions": "node scripts/probe-captions.mts",
     "taste-candidates": "node scripts/taste-candidates.mts",
-    "score-videos": "node scripts/score-videos.mts"
+    "score-videos": "node scripts/score-videos.mts",
+    "word-bands": "node scripts/build-word-bands.mts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

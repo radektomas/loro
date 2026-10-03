@@ -3,6 +3,7 @@ import { normalizeAnswer } from './srs.ts';
 import { glossText, isProperName, lookupGloss, normalizeSurface } from './dictionary.ts';
 import { isFunctionWord } from './glossary.ts';
 import { numberWordBand } from './numerals.ts';
+import { WORD_BANDS } from './catalog/wordBands.ts';
 import { cueWindows, isLongVideo, longBlankCount } from './blankBudget.ts';
 
 /**
@@ -264,16 +265,34 @@ const LEVEL_4_WORDS = new Set([
   'investigación', 'resultado', 'proceso', 'sistema',
 ]);
 
+/**
+ * A word's band. The measured table (catalog/wordBands.ts — how many of
+ * Loro's creators say it) is the source; the hand lists above only ever make
+ * a word EASIER, because the catalog is small enough that a plainly basic
+ * word ("hijo", "beber") can rank low just by being rarely filmed.
+ *
+ * Function words and number words have NO band: neither is ever a blue
+ * blank (isLevelBlankable), and a band would only invite one.
+ */
 function bandOf(surface: string): number | null {
-  if (isFunctionWord(surface) || LEVEL_1_EXTRAS.has(surface)) return 1;
-  // Number words, since captions spell numerals out (numerals.ts): small
-  // numbers low, big numbers high — see numberWordBand.
-  const number = numberWordBand(surface);
-  if (number !== null) return number;
-  if (LEVEL_2_WORDS.has(surface)) return 2;
-  if (LEVEL_3_WORDS.has(surface)) return 3;
-  if (LEVEL_4_WORDS.has(surface)) return 4;
-  return null;
+  if (isFunctionWord(surface) || numberWordBand(surface) !== null) return null;
+  const measured = WORD_BANDS[surface] ?? null;
+  const hand = LEVEL_1_EXTRAS.has(surface)
+    ? 1
+    : LEVEL_2_WORDS.has(surface)
+      ? 2
+      : LEVEL_3_WORDS.has(surface)
+        ? 3
+        : LEVEL_4_WORDS.has(surface)
+          ? 4
+          : null;
+  if (measured !== null && hand !== null) return Math.min(measured, hand);
+  return measured ?? hand;
+}
+
+/** In a band at all — a word no band lists is never asked as a blue blank. */
+function isBanded(surface: string, lemma?: string | null): boolean {
+  return bandOf(surface) !== null || (lemma ? bandOf(normalizeSurface(lemma)) !== null : false);
 }
 
 /**
@@ -299,8 +318,8 @@ export function wordLevel(surface: string, lemma?: string | null): number {
  * are super weird … it needs to be very good Spanish words based on the
  * level"; and in reels "you fill up eh as a level word, which seems
  * unprofessional"). The gloss knows what the word is: a proper noun by its
- * note or its capitalised lemma, a filler by its part of speech or note,
- * and an unlisted word is trusted only when it is a content word.
+ * note or its capitalised lemma, a filler by its part of speech or note.
+ * Since 2026-10-04 an unlisted word is never trusted at all (see below).
  */
 const FILLER_WORDS = new Set([
   'eh', 'ah', 'oh', 'uh', 'um', 'mm', 'mmm', 'hmm', 'ay', 'uy', 'ey', 'ja',
@@ -310,12 +329,12 @@ const FILLER_WORDS = new Set([
 ]);
 const JUNK_POS = new Set(['interj', 'name', 'propn', 'proper noun', 'proper', 'phrase', 'abbr']);
 const JUNK_NOTE = /proper|\bname\b|interj|exclam|filler|onomat|hesitat|expressive|brand|sound/i;
-const CONTENT_POS = new Set(['noun', 'verb', 'adj', 'adv', 'num', 'number']);
+const CONTENT_POS = new Set(['noun', 'verb', 'adj', 'adv']);
 /** Grammar glue — "de", "la", "y" — is not vocabulary to practise; its gloss
     ("of") makes a poor prompt and a blank on it teaches nothing. */
 const GLUE_POS = new Set(['det', 'prep', 'conj', 'aux', 'poss', 'preposition', 'contracted', 'contr']);
 
-export function isLevelBlankable(surface: string, gloss: Gloss | null, band: number): boolean {
+export function isLevelBlankable(surface: string, gloss: Gloss | null, _band: number): boolean {
   const key = normalizeSurface(surface);
   if (FILLER_WORDS.has(key)) return false;
   if (!/^[\p{L}]+$/u.test(key)) return false;
@@ -324,7 +343,15 @@ export function isLevelBlankable(surface: string, gloss: Gloss | null, band: num
   if (JUNK_POS.has(pos) || GLUE_POS.has(pos)) return false;
   if (gloss.note && JUNK_NOTE.test(gloss.note)) return false;
   if (isProperName(surface, gloss)) return false;
-  if (band === MAX_WORD_LEVEL && !CONTENT_POS.has(pos)) return false;
+  // Radek, 2026-10-04: "numbers it shouldn't be at all" and "super bad hard
+  // words". Real vocabulary only — a noun, verb, adjective or adverb, never
+  // grammar glue or a pronoun ("te = you", "lo = it"), never a number word
+  // or a gloss that is a digit ("diez = 10"), and only a word the band
+  // table knows, so a one-video word ("sonda = catheter") is never asked.
+  if (!CONTENT_POS.has(pos)) return false;
+  if (isFunctionWord(key)) return false;
+  if (numberWordBand(key) !== null || /\d/.test(glossText(gloss, 'en') ?? '')) return false;
+  if (!isBanded(key, gloss.lemma)) return false;
   return true;
 }
 
