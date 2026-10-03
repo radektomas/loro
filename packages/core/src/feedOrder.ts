@@ -87,12 +87,11 @@ export function orderVideosForLevel(
  * (verified through the same computeBlankPlan the slide will run, so a
  * video is never lifted on the strength of merely speaking a word the caps
  * would drop), then everything else. Order within each group is the
- * caller's — pass an already shuffled list and it stays shuffled.
+ * caller's — pass an already ranked list and it stays ranked.
  *
  * Bounded on purpose. The lift exists so a review session has a next
- * video; it is not a return to unseen-first or level ordering, both of
- * which the mobile feed dropped deliberately (FeedScreen.orderFeed). Past
- * `max` the feed is the feed.
+ * video; past `max` the feed is the feed (on mobile, core/feedRank's
+ * unseen-first, score-weighted order — FeedScreen.orderFeed).
  */
 export const REVIEW_LIFT_MAX = 8;
 

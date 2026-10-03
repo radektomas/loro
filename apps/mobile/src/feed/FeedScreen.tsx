@@ -26,6 +26,8 @@ import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { REELS, collectionOf, findCollection, isEpisodes } from '@loro/core/collections';
 import { liftDueBlock } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
+import { rankFeed } from '@loro/core/feedRank';
+import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
 import { subscribeDevVideo } from '../platform/devMenu';
 import { trackOnce } from '../platform/analytics';
@@ -639,49 +641,22 @@ function EmptyFeed() {
 }
 
 /**
- * Fisher-Yates. Local because core's copy is module-private to feedOrder.ts —
- * it is used there to seed the tie-break and is not exported, and reaching into
- * core to export it would be a change to a package this checkpoint does not
- * touch. Unbiased, unlike sort(() => Math.random() - 0.5).
- */
-function shuffled(list: EmbedVideo[]): EmbedVideo[] {
-  const out = [...list];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
-/**
- * The feed's order for this session: A STRAIGHT SHUFFLE, every launch.
+ * The feed's order for this session: THE RANKED FEED (core/feedRank;
+ * Radek, 2026-10-03: "unseen videos first, but good unseen videos").
  *
- * WHAT THIS USED TO DO, and why it changed. The order was core's
- * orderVideosForLevel — unwatched videos first, then sorted by distance from
- * the calibrated CEFR band, shuffled only WITHIN those ties. It was random on
- * paper and predictable in the hand: with most of the catalog at one level and
- * unwatched, the buckets are lopsided, so the same pool kept surfacing at the
- * top and the feed felt like it opened in the same place every time.
+ * Unseen before seen, strictly; within each, a weighted shuffle by how
+ * everyone watched each video (feedScores), so strong videos lead far more
+ * often but the order still changes every launch; videos the data benched
+ * go last. It replaced a flat shuffle that could open on yesterday's video
+ * and met the worst clips as often as the best (median watched 24%, 22%
+ * skipped inside three seconds, measured 2026-10-03).
  *
- * A flat shuffle is the most different-every-time this can be, which is what
- * was asked for. Two things are knowingly given up:
- *
- *   LEVEL MATCHING. A beginner can now open on a B2 clip. The level meter and
- *   the near-miss tier still adapt, but the FEED no longer leans toward the
- *   calibrated band at all.
- *   UNSEEN-FIRST. Already-watched videos can appear anywhere, including first.
- *
- * Both are one call away if the feed starts feeling wrong — the core function
- * is untouched and still ordered the web's feed the old way. This is a mobile
- * decision only.
- *
- * Nothing here is persisted, deliberately. A fresh order per session is the
- * point, and feedOrder.ts says so in its own header — a remembered shuffle
- * reproduces the "same videos every time" complaint one step later.
+ * Nothing here is persisted: a fresh order per session is still the point.
  */
 function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
-  if (list.length > 0) feedLog(`order: shuffling ${list.length}`);
-  return shuffled(list);
+  if (list.length > 0) feedLog(`order: ranking ${list.length}`);
+  refreshFeedScores();
+  return rankFeed(list, { watchedIds: new Set(storage.getWatchedVideoIds()), scores: getFeedScores() });
 }
 
 /**
