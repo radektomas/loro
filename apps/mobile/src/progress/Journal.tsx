@@ -353,18 +353,13 @@ function CountryPage({
                 {here ? "You're here" : been ? `${learned.length}/${citySize(c.j)}` : 'Closed'}
               </Text>
             </View>
-            {/* The city's two local words — the same ones the map shows. */}
+            {/* The city's local word — the same one the map shows. */}
             {localFor(c.city) && (
               <Text style={styles.pageLocalLine}>
-                {localFor(c.city)!.words.map((w, k) => (
-                  <Text key={w.word}>
-                    {k > 0 ? '   ' : ''}
-                    <Text style={been ? styles.pageLocalWord : styles.pageLocalHidden}>
-                      {been ? w.word : '?'.repeat(Math.max(4, w.word.length))}
-                    </Text>
-                    {been && <Text style={styles.pageLocalMeaning}>{` ${w.meaning}`}</Text>}
-                  </Text>
-                ))}
+                <Text style={been ? styles.pageLocalWord : styles.pageLocalHidden}>
+                  {been ? localFor(c.city)!.word.word : '?'.repeat(Math.max(4, localFor(c.city)!.word.word.length))}
+                </Text>
+                {been && <Text style={styles.pageLocalMeaning}>{` ${localFor(c.city)!.word.meaning}`}</Text>}
               </Text>
             )}
             {learned.length > 0 && (

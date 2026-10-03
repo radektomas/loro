@@ -285,227 +285,137 @@ const styles = StyleSheet.create({
  */
 export type LocalWord = { word: string; meaning: string };
 
-export const CITIES: Record<string, { words: [LocalWord, LocalWord]; fact: string }> = {
+export const CITIES: Record<string, { word: LocalWord; fact: string }> = {
   Madrid: {
-    words: [
-      { word: '¡vale!', meaning: 'OK, sure' },
-      { word: 'chulo', meaning: 'cool, nice (Madrid slang)' },
-    ],
+    word: { word: '¡vale!', meaning: 'OK, sure' },
     fact: 'Botín, open since 1725, is said to be the oldest restaurant in the world.',
   },
   Sevilla: {
-    words: [
-      { word: '¡illo!', meaning: 'hey, mate (Andalusian)' },
-      { word: 'miarma', meaning: 'my dear (from "mi alma")' },
-    ],
+    word: { word: '¡illo!', meaning: 'hey, mate (Andalusian)' },
     fact: 'Seville’s cathedral is the largest Gothic cathedral in the world.',
   },
   Barcelona: {
-    words: [
-      { word: 'bon dia', meaning: 'good morning (in Catalan, spoken there too)' },
-      { word: 'adéu', meaning: 'bye (in Catalan)' },
-    ],
+    word: { word: 'bon dia', meaning: 'good morning (in Catalan, spoken there too)' },
     fact: 'Gaudí’s Sagrada Família has been under construction since 1882.',
   },
   Valencia: {
-    words: [
-      { word: 'horchata', meaning: 'a cold tiger-nut drink' },
-      { word: 'falla', meaning: 'a giant figure burned in March' },
-    ],
+    word: { word: 'horchata', meaning: 'a cold tiger-nut drink' },
     fact: 'Paella was born here, cooked over a fire in the rice fields.',
   },
   Granada: {
-    words: [
-      { word: 'tapa', meaning: 'a small snack' },
-      { word: 'carmen', meaning: 'a house with a walled garden' },
-    ],
+    word: { word: 'tapa', meaning: 'a small snack' },
     fact: 'In Granada a free tapa usually comes with every drink you order.',
   },
   'Ciudad de México': {
-    words: [
-      { word: '¿qué onda?', meaning: 'what’s up?' },
-      { word: 'chilango', meaning: 'someone from Mexico City' },
-    ],
+    word: { word: '¿qué onda?', meaning: 'what’s up?' },
     fact: 'It is one of the cities with the most museums in the world.',
   },
   Oaxaca: {
-    words: [
-      { word: 'mole', meaning: 'a rich chilli and chocolate sauce' },
-      { word: 'tlayuda', meaning: 'a big crispy tortilla with toppings' },
-    ],
+    word: { word: 'mole', meaning: 'a rich chilli and chocolate sauce' },
     fact: 'Oaxaca is known as the land of the seven moles.',
   },
   Guadalajara: {
-    words: [
-      { word: 'tapatío', meaning: 'someone from Guadalajara' },
-      { word: 'tejuino', meaning: 'a cold fermented corn drink' },
-    ],
+    word: { word: 'tapatío', meaning: 'someone from Guadalajara' },
     fact: 'Mariachi music and tequila both come from the region around it.',
   },
   Cancún: {
-    words: [
-      { word: 'playa', meaning: 'beach' },
-      { word: 'cenote', meaning: 'a natural pool in the rock' },
-    ],
+    word: { word: 'playa', meaning: 'beach' },
     fact: 'Cancún was a quiet sand island until it was built as a resort in the 1970s.',
   },
   'La Habana': {
-    words: [
-      { word: '¿qué bolá?', meaning: 'what’s up? (Cuban)' },
-      { word: 'asere', meaning: 'buddy (Cuban)' },
-    ],
+    word: { word: '¿qué bolá?', meaning: 'what’s up? (Cuban)' },
     fact: 'The Malecón, Havana’s seafront wall, runs for about 8 km.',
   },
   'San Juan': {
-    words: [
-      { word: '¡wepa!', meaning: 'yay! (Puerto Rican)' },
-      { word: 'boricua', meaning: 'Puerto Rican' },
-    ],
+    word: { word: '¡wepa!', meaning: 'yay! (Puerto Rican)' },
     fact: 'Old San Juan’s blue cobblestones are said to have come as ballast on Spanish ships.',
   },
   'Santo Domingo': {
-    words: [
-      { word: '¿qué lo que?', meaning: 'what’s up? (Dominican)' },
-      { word: 'un chin', meaning: 'a little bit (Dominican)' },
-    ],
+    word: { word: '¿qué lo que?', meaning: 'what’s up? (Dominican)' },
     fact: 'Merengue music was born in the Dominican Republic.',
   },
   'Ciudad de Guatemala': {
-    words: [
-      { word: '¡qué chilero!', meaning: 'how cool! (Guatemalan)' },
-      { word: 'patojo', meaning: 'kid (Guatemalan)' },
-    ],
+    word: { word: '¡qué chilero!', meaning: 'how cool! (Guatemalan)' },
     fact: 'The city is ringed by volcanoes, and some of them are still active.',
   },
   'San José': {
-    words: [
-      { word: 'tuanis', meaning: 'cool (Costa Rican)' },
-      { word: 'pura vida', meaning: 'all good, the Costa Rican motto' },
-    ],
+    word: { word: 'tuanis', meaning: 'cool (Costa Rican)' },
     fact: 'Addresses are often given by landmarks, like “100 metres north of the church”.',
   },
   Panamá: {
-    words: [
-      { word: '¿qué xopá?', meaning: 'what’s up? (Panamanian)' },
-      { word: 'pelao', meaning: 'kid (Panamanian)' },
-    ],
+    word: { word: '¿qué xopá?', meaning: 'what’s up? (Panamanian)' },
     fact: 'Panama City has a rainforest park inside its city limits.',
   },
   Bogotá: {
-    words: [
-      { word: '¡qué oso!', meaning: 'how embarrassing!' },
-      { word: 'rolo', meaning: 'someone from Bogotá' },
-    ],
+    word: { word: '¡qué oso!', meaning: 'how embarrassing!' },
     fact: 'Every Sunday, over 100 km of streets close to cars for the Ciclovía.',
   },
   Medellín: {
-    words: [
-      { word: 'parce', meaning: 'buddy' },
-      { word: 'paisa', meaning: 'someone from Medellín' },
-    ],
+    word: { word: 'parce', meaning: 'buddy' },
     fact: 'It is called the City of Eternal Spring for its mild weather all year.',
   },
   Cartagena: {
-    words: [
-      { word: '¡ajá!', meaning: 'the coast’s all-purpose “well…” / “so…”' },
-      { word: 'champeta', meaning: 'the coast’s dance music' },
-    ],
+    word: { word: '¡ajá!', meaning: 'the coast’s all-purpose “well…” / “so…”' },
     fact: 'Its old town is ringed by stone walls built to keep out pirates.',
   },
   Quito: {
-    words: [
-      { word: '¡achachay!', meaning: 'brr, it’s cold! (from Kichwa)' },
-      { word: '¡arrarray!', meaning: 'ouch, it’s hot! (from Kichwa)' },
-    ],
+    word: { word: '¡achachay!', meaning: 'brr, it’s cold! (from Kichwa)' },
     fact: 'At about 2,850 metres, Quito is one of the highest capitals in the world.',
   },
   Lima: {
-    words: [
-      { word: 'pata', meaning: 'friend (Peruvian)' },
-      { word: 'chamba', meaning: 'work, a job (Peruvian)' },
-    ],
+    word: { word: 'pata', meaning: 'friend (Peruvian)' },
     fact: 'Ceviche, raw fish “cooked” in lime juice, is Lima’s pride.',
   },
   Cusco: {
-    words: [
-      { word: '¡achalay!', meaning: 'how lovely! (from Quechua)' },
-      { word: 'chicha', meaning: 'a corn drink' },
-    ],
+    word: { word: '¡achalay!', meaning: 'how lovely! (from Quechua)' },
     fact: 'Cusco was the capital of the Inca Empire.',
   },
   'La Paz': {
-    words: [
-      { word: '¡jallalla!', meaning: 'cheers, long live! (from Aymara)' },
-      { word: 'api', meaning: 'a hot purple corn drink' },
-    ],
+    word: { word: '¡jallalla!', meaning: 'cheers, long live! (from Aymara)' },
     fact: 'Cable cars are part of everyday public transport in La Paz.',
   },
   Santiago: {
-    words: [
-      { word: '¿cachai?', meaning: 'get it? (Chilean)' },
-      { word: 'al tiro', meaning: 'right away (Chilean)' },
-    ],
+    word: { word: '¿cachai?', meaning: 'get it? (Chilean)' },
     fact: 'On a clear day the snowy Andes rise right behind the city.',
   },
   Valparaíso: {
-    words: [
-      { word: 'cerro', meaning: 'hill' },
-      { word: 'ascensor', meaning: 'the funicular up the hills' },
-    ],
+    word: { word: 'cerro', meaning: 'hill' },
     fact: 'Century-old funicular lifts still carry people up its steep hills.',
   },
   Mendoza: {
-    words: [
-      { word: 'bodega', meaning: 'winery' },
-      { word: 'acequia', meaning: 'the water channels along the streets' },
-    ],
+    word: { word: 'bodega', meaning: 'winery' },
     fact: 'Mendoza makes most of Argentina’s wine, especially Malbec.',
   },
   Córdoba: {
-    words: [
-      { word: 'fernet', meaning: 'the city’s favourite drink, with cola' },
-      { word: 'cuarteto', meaning: 'the city’s dance music' },
-    ],
+    word: { word: 'fernet', meaning: 'the city’s favourite drink, with cola' },
     fact: 'Its university, founded in 1613, is one of the oldest in the Americas.',
   },
   'Buenos Aires': {
-    words: [
-      { word: '¡che!', meaning: 'hey! (Argentinian)' },
-      { word: 'laburo', meaning: 'work (Argentinian)' },
-    ],
+    word: { word: '¡che!', meaning: 'hey! (Argentinian)' },
     fact: 'Tango was born in the port neighbourhoods of Buenos Aires.',
   },
   Montevideo: {
-    words: [
-      { word: 'bo', meaning: 'hey, you (Uruguayan)' },
-      { word: 'mate', meaning: 'the herbal tea everyone carries' },
-    ],
+    word: { word: 'bo', meaning: 'hey, you (Uruguayan)' },
     fact: 'Its riverside promenade, the Rambla, runs for about 22 km.',
   },
   Asunción: {
-    words: [
-      { word: '¿mba’éichapa?', meaning: 'how are you? (in Guaraní)' },
-      { word: 'tereré', meaning: 'cold mate, the national drink' },
-    ],
+    word: { word: '¿mba’éichapa?', meaning: 'how are you? (in Guaraní)' },
     fact: 'Founded in 1537, it is one of the oldest cities in South America.',
   },
   Caracas: {
-    words: [
-      { word: '¡epa!', meaning: 'hey there!' },
-      { word: 'chamo', meaning: 'buddy (Venezuelan)' },
-    ],
+    word: { word: '¡epa!', meaning: 'hey there!' },
     fact: 'The green Mount Ávila rises right above the city.',
   },
 };
 
 /**
- * A CITY'S TWO LOCAL WORDS AND ITS FACT (Radek, 2026-10-02: "if we have 2
- * to each city its cooler" — and the passport's word did not match the
- * map's). THE ONE SOURCE for every local word in the app: the arrival, the
- * postcard, the map's banner and city panel, the passport, the
- * notifications. The country-level word in COUNTRIES is no longer shown.
+ * A CITY'S LOCAL WORD AND ITS FACT. THE ONE SOURCE for every local word in
+ * the app: the arrival, the postcard, the map's banner and city panel, the
+ * passport, the notifications. The country-level word in COUNTRIES is no
+ * longer shown. ONE word per city (Radek, 2026-10-04, after two weeks of
+ * two: "one word is better" — a second word took attention from the path).
  */
-export function localFor(city: string): { words: [LocalWord, LocalWord]; fact: string } | null {
+export function localFor(city: string): { word: LocalWord; fact: string } | null {
   return CITIES[city] ?? null;
 }
 

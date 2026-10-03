@@ -117,14 +117,12 @@ export function CityArrival({
         {local && (
           <View style={styles.gift}>
             <Text style={styles.giftLabel}>
-              {newCountry ? 'NEW COUNTRY · ' : ''}2 LOCAL WORDS UNLOCKED
+              {newCountry ? 'NEW COUNTRY · ' : ''}LOCAL WORD UNLOCKED
             </Text>
-            {local.words.map((w) => (
-              <Text key={w.word} style={styles.giftWord}>
-                {w.word}
-                <Text style={styles.giftMeaning}>  {w.meaning}</Text>
-              </Text>
-            ))}
+            <Text style={styles.giftWord}>
+              {local.word.word}
+              <Text style={styles.giftMeaning}>  {local.word.meaning}</Text>
+            </Text>
             <Text style={styles.giftFact}>{local.fact}</Text>
           </View>
         )}
