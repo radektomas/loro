@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cleanWord } from '@loro/core/dictionary';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
@@ -857,7 +857,7 @@ function Postcard({
   stop,
   side,
 }: {
-  kind: 'welcome' | 'word' | 'overheard';
+  kind: 'welcome' | 'word';
   stop: { city: string; country: string };
   side: 'left' | 'right';
 }) {
@@ -905,39 +905,9 @@ function Postcard({
   const local = localFor(stop.city);
   if (!local) return null;
 
-  if (kind === 'overheard') {
-    // OVERHEARD, IN THE MIDDLE OF YOUR WORDS (Radek, 2026-10-04: "not the
-    // same vibe as the first one but more built in the page, and in the
-    // middle of the words"). No paper, no tilt, no shadow: a line painted
-    // across the road between two stops — a rule in the flag's colours,
-    // the word in Spanish quotes, its meaning. It sits on the page itself,
-    // so the taped note stays the one souvenir and this reads as the city
-    // talking while you walk through it.
-    const second = local.words[1];
-    return (
-      <View style={styles.heard} accessible accessibilityLabel={`Overheard in ${stop.city}: ${second.word}, ${second.meaning}`}>
-        <View style={styles.heardRule}>
-          <View style={[styles.heardDot, { backgroundColor: a }]} />
-          <View style={[styles.heardLine, { backgroundColor: a }]} />
-          <Text style={styles.heardLabel} numberOfLines={1}>
-            OVERHEARD IN {stop.city.toUpperCase()}
-          </Text>
-          <View style={[styles.heardLine, { backgroundColor: b }]} />
-          <View style={[styles.heardDot, { backgroundColor: b }]} />
-        </View>
-        <Text style={styles.heardWord}>
-          <Text style={styles.heardQuote}>« </Text>
-          {second.word}
-          <Text style={styles.heardQuote}> »</Text>
-        </Text>
-        <Text style={styles.heardMeaning}>{second.meaning}</Text>
-      </View>
-    );
-  }
-
   // A TAPED NOTE: a band in the country's colour, the CITY's first word and
   // its fact (every city has its own — CITIES — so no two stops read the
-  // same). The second word is overheard mid-road (kind 'overheard').
+  // same). The second word is overheard beside a stop (Overheard).
   const first = local.words[0];
   return (
     <View style={row}>
@@ -996,6 +966,71 @@ export function TripPreview({ onGoToFeed }: { onGoToFeed: () => void }) {
   );
 }
 
+/**
+ * OVERHEARD (Radek, 2026-10-04: the city's second word, "not the same vibe
+ * as the first one but more built in the page … in the middle of the words",
+ * and then: "the path of words needs to be the MAIN THING"). So it takes no
+ * room of its own: a small speech bubble in the empty half of the road beside
+ * one stop, its tail pointing off the edge of the screen — someone just out
+ * of frame said it as you walked past. Muted, small, never pressable; the
+ * word stop next to it stays the thing to look at.
+ */
+function Overheard({ stop, edge }: { stop: { city: string; country: string }; edge: 'left' | 'right' }) {
+  const local = localFor(stop.city);
+  if (!local) return null;
+  const second = local.words[1];
+  const [a] = flagColours(stop.country);
+  return (
+    <View accessible accessibilityLabel={`Overheard in ${stop.city}: ${second.word}, ${second.meaning}`}>
+      <View style={[styles.overheard, { borderColor: `${a}66` }]}>
+        {/* The tail, toward the screen edge: whoever said it is out of frame. */}
+        <View
+          style={[
+            styles.overheardTail,
+            { borderColor: `${a}66` },
+            edge === 'right' ? { right: -5, borderLeftWidth: 0, borderBottomWidth: 0 } : { left: -5, borderRightWidth: 0, borderTopWidth: 0 },
+          ]}
+        />
+        <Text style={styles.overheardWord} numberOfLines={1} adjustsFontSizeToFit>
+          {second.word}
+        </Text>
+        <Text style={styles.overheardMeaning} numberOfLines={2}>
+          {second.meaning}
+        </Text>
+      </View>
+      <Text style={[styles.overheardBy, { textAlign: edge === 'right' ? 'right' : 'left' }]} numberOfLines={1}>
+        overheard in {stop.city}
+      </Text>
+    </View>
+  );
+}
+
+/** The bubble needs this much empty road beside a stop. */
+const OVERHEARD_MIN_W = 104;
+
+/**
+ * Which row of the current city carries Overheard: in its middle half, the
+ * stop that leaves the widest empty side (the road swings, so the room
+ * beside a coin varies), never the "you're here" row. -1 when no row in the
+ * middle has room — then the city simply has no bubble; its two words are
+ * still in the banner under the map.
+ */
+function overheardRow(nodes: readonly RoadmapNode[], start: number, width: number, hereKey: string | null): number {
+  if (nodes.length < 3) return -1;
+  const swing = Math.min(70, width * 0.18);
+  let best = -1;
+  let room = OVERHEARD_MIN_W - 1;
+  for (let i = Math.floor(nodes.length / 4); i < Math.ceil((nodes.length * 3) / 4); i++) {
+    if (nodes[i].key === hereKey) continue;
+    const side = width / 2 - Math.abs(Math.sin((start + i) * 0.9) * swing) - COIN_W / 2 - 20;
+    if (side > room) {
+      room = side;
+      best = i;
+    }
+  }
+  return best;
+}
+
 function Row({
   node,
   index,
@@ -1006,7 +1041,10 @@ function Row({
   onHereLayout,
   blue,
   disabled,
+  aside,
 }: {
+  /** Drawn in the empty half of the road beside this stop (Overheard); told which screen edge it faces. */
+  aside?: (edge: 'left' | 'right') => ReactNode;
   /** A word in a closed city: drawn, not pressable. */
   disabled?: boolean;
   node: RoadmapNode;
@@ -1065,6 +1103,20 @@ function Row({
         {here && <View style={styles.halo} />}
         <Coin node={node} here={here} blue={blue} />
       </View>
+      {aside && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.aside,
+            { top: coinTop + 4 },
+            labelLeft
+              ? { alignItems: 'flex-end', left: coinLeft + COIN_W + 10, right: 10 }
+              : { alignItems: 'flex-start', left: 10, width: coinLeft - 20 },
+          ]}
+        >
+          {aside(labelLeft ? 'right' : 'left')}
+        </View>
+      )}
       <View style={[styles.label, labelBox, { top: coinTop + 10 }]}>
         <Text
           style={[
@@ -1291,6 +1343,7 @@ export function RoadmapPath({
     const toNext = Math.max(0, size - learned);
     const stop = tripStop(s);
     const info = COUNTRIES[stop.country];
+    const overheardAt = isCurrent ? overheardRow(nodes, cityStart(s), width, hereKey) : -1;
     return (
       <View
         key={`city-${s}`}
@@ -1356,6 +1409,7 @@ export function RoadmapPath({
             here={node.key === hereKey}
             blue={trip.blue.has(node.key)}
             width={width}
+            aside={i === overheardAt ? (edge) => <Overheard stop={stop} edge={edge} /> : undefined}
             onOpen={() => onOpen(node.word)}
             // A blue stop is not a saved word: no card to remove it from.
             onLongPress={() => (trip.blue.has(node.key) ? onOpen : onLongPress)(node.word)}
@@ -1374,15 +1428,7 @@ export function RoadmapPath({
               side={Math.sin((cityStart(s) + i + 1.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
-          // The city's second word, overheard in the MIDDLE of its words.
-          isCurrent && nodes.length >= 3 && i === Math.floor(nodes.length / 2) - 1 ? (
-            <Postcard key="overheard" kind="overheard" stop={stop} side="left" />
-          ) : null,
         ])}
-        {/* Too few words for a middle: it closes the road instead. */}
-        {isCurrent && nodes.length > 0 && nodes.length < 3 && (
-          <Postcard key="overheard-short" kind="overheard" stop={stop} side="left" />
-        )}
         {/* A CITY WITH NOTHING TO TRAIN (just arrived, or everything saved
             here is learned): the postcards and Loro still greet you, and he
             says what to do next — save more words, then train them here. */}
@@ -1397,10 +1443,7 @@ export function RoadmapPath({
           />
         )}
         {isCurrent && nodes.length === 0 && (
-          <>
-            <Postcard key="word-empty" kind="word" stop={stop} side="left" />
-            <Postcard key="overheard-empty" kind="overheard" stop={stop} side="left" />
-          </>
+          <Postcard key="word-empty" kind="word" stop={stop} side="left" />
         )}
         {nodes.length < size && hereWord && (
           <Text style={styles.saveMore}>
@@ -1775,22 +1818,28 @@ const styles = StyleSheet.create({
   postHello: { color: '#6b5a3a', fontSize: 14, fontStyle: 'italic', fontWeight: '600', marginTop: 16 },
   postCity: { color: '#1f1a12', fontSize: 26, fontWeight: '900', letterSpacing: -0.4, marginRight: 30 },
   postCountry: { color: '#8a7755', fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginTop: 2 },
-  heard: { alignItems: 'center', paddingHorizontal: 28, paddingVertical: 18 },
-  heardRule: { alignItems: 'center', alignSelf: 'stretch', flexDirection: 'row', gap: 8 },
-  heardDot: { borderRadius: 2, height: 5, transform: [{ rotate: '45deg' }], width: 5 },
-  heardLine: { flex: 1, height: 1, opacity: 0.55 },
-  heardLabel: { color: 'rgba(242,245,243,0.5)', fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
-  heardWord: {
-    color: '#f2f5f3',
-    fontSize: 26,
-    fontStyle: 'italic',
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    marginTop: 10,
-    textAlign: 'center',
+  aside: { position: 'absolute' },
+  overheard: {
+    backgroundColor: 'rgba(242,245,243,0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    maxWidth: 150,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  heardQuote: { color: 'rgba(242,245,243,0.35)', fontStyle: 'normal', fontWeight: '600' },
-  heardMeaning: { color: 'rgba(242,245,243,0.6)', fontSize: 14, fontWeight: '700', marginTop: 2, textAlign: 'center' },
+  /** Opaque: the bubble's 5% wash composited over the page (#0a0d0b). */
+  overheardTail: {
+    backgroundColor: '#161917',
+    borderWidth: 1,
+    height: 9,
+    position: 'absolute',
+    top: 12,
+    transform: [{ rotate: '45deg' }],
+    width: 9,
+  },
+  overheardWord: { color: 'rgba(242,245,243,0.85)', fontSize: 14, fontStyle: 'italic', fontWeight: '800' },
+  overheardMeaning: { color: 'rgba(242,245,243,0.5)', fontSize: 11, fontWeight: '700', marginTop: 1 },
+  overheardBy: { color: 'rgba(242,245,243,0.32)', fontSize: 9, fontWeight: '800', letterSpacing: 0.6, marginTop: 3, paddingHorizontal: 4 },
   note: {
     backgroundColor: '#1a2320',
     borderRadius: 14,
