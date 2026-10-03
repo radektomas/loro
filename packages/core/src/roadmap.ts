@@ -23,8 +23,41 @@ import { normalizeSurface } from './dictionary.ts';
 /** How many not-yet-done words are open at once. */
 export const OPEN_SLOTS = 20;
 
-/** Words per stage on the path — a heading every this many nodes. */
+/** Words per city on the path, from the third city on. */
 export const STAGE_SIZE = 10;
+
+/**
+ * THE FIRST CITIES ARE SHORT (Radek, 2026-10-03). Measured: trial users
+ * saved about nine words in their week and not one reached a second city,
+ * so the trip's best moment — the flight, the flag, two new local words —
+ * never happened inside the trial. Madrid is 5 words and Sevilla 7, so the
+ * first arrival lands in the first session and the second soon after; every
+ * city after that is STAGE_SIZE. Games front-load their wins the same way.
+ */
+export const CITY_SIZES: readonly number[] = [5, 7];
+
+/** How many words city `stage` holds (0 = Madrid). */
+export function citySize(stage: number): number {
+  return CITY_SIZES[stage] ?? STAGE_SIZE;
+}
+
+/** Where city `stage` starts on the path: the words of every city before it. */
+export function cityStart(stage: number): number {
+  let n = 0;
+  for (let i = 0; i < stage; i++) n += citySize(i);
+  return n;
+}
+
+/** The path cut into cities, each its own size. THE one place cities are cut. */
+export function splitCities<T>(path: readonly T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0, s = 0; i < path.length; s++) {
+    const n = citySize(s);
+    out.push(path.slice(i, i + n));
+    i += n;
+  }
+  return out;
+}
 
 export type RoadmapStatus = 'done' | 'open' | 'locked';
 
@@ -226,7 +259,7 @@ export function newlyOpened(
 
 /**
  * THE TRIP (Radek, 2026-09-30: stages named "any other way than stage 1-20",
- * then "make it like a little map"). Each stage of STAGE_SIZE words is a
+ * then "make it like a little map"). Each stage (citySize words) is a
  * city on a route through the Spanish-speaking world — Spain first, then
  * across to the Americas. Past the end the route starts again, numbered
  * ("Madrid · round 2"), so a heavy saver never runs out of map.
@@ -285,24 +318,25 @@ export function tripStop(index: number): { city: string; country: string; round:
 export function tripPosition(words: readonly SavedWord[]): {
   stage: number;
   learnedHere: number;
+  /** Words this city holds (citySize) — 5 in Madrid, 7 in Sevilla, then 10. */
+  size: number;
   countries: number;
 } {
   const path = buildRoadmap(words);
-  const stages: RoadmapNode[][] = [];
-  for (let i = 0; i < path.length; i += STAGE_SIZE) stages.push(path.slice(i, i + STAGE_SIZE));
+  const stages = splitCities(path);
   const firstOpen = stages.findIndex((nodes) => nodes.some((n) => n.status !== 'done'));
   const stage =
     firstOpen >= 0
       ? firstOpen
       : stages.length === 0
         ? 0
-        : stages[stages.length - 1].length >= STAGE_SIZE
+        : stages[stages.length - 1].length >= citySize(stages.length - 1)
           ? stages.length
           : stages.length - 1;
   const learnedHere = (stages[stage] ?? []).filter((n) => n.status === 'done').length;
   const seen = new Set<string>();
   for (let i = 0; i <= Math.min(stage, TRIP.length - 1); i++) seen.add(TRIP[i].country);
-  return { stage, learnedHere, countries: seen.size };
+  return { stage, learnedHere, size: citySize(stage), countries: seen.size };
 }
 
 /**
@@ -310,7 +344,7 @@ export function tripPosition(words: readonly SavedWord[]): {
  * "make the progress page as nice as we did the words page"). Nothing
  * stores an arrival, and nothing needs to: the path is drawn done-first in
  * the order words were learned, so city s opened the moment its previous
- * city's tenth word did. City 0 is the first save. Index = stage, up to and
+ * city's last word did. City 0 is the first save. Index = stage, up to and
  * including the one you are in; null where there is no date to give (no
  * words yet). Same list rule as tripPosition: pass withLevelKnown's.
  */
@@ -322,7 +356,7 @@ export function cityArrivals(words: readonly SavedWord[]): (number | null)[] {
   for (let s = 0; s <= stage; s++) {
     if (s === 0) out.push(path.length ? Math.min(...path.map((n) => n.savedAt)) : null);
     else {
-      const last = path[s * STAGE_SIZE - 1];
+      const last = path[cityStart(s) - 1];
       out.push(last && last.status === 'done' ? doneAt(last) : null);
     }
   }

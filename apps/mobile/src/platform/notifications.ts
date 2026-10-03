@@ -3,7 +3,7 @@ import { cleanWord } from '@loro/core/dictionary';
 import type * as NotificationsApi from 'expo-notifications';
 import { storage } from '@loro/core/storage';
 import { computeStreaks, dayKey } from '@loro/core/progress';
-import { nextUp, STAGE_SIZE, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { nextUp, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
 import { distinctWords, isLearned } from '@loro/core/progress';
 import { localFor } from '../vocab/countries';
 import { atRiskCopy, dailyCopy, type CopyContext, type NotifRoute } from './notificationCopy';
@@ -468,7 +468,7 @@ function copyContext(
       city: here.label,
       stage: pos.stage,
       learnedHere: pos.learnedHere,
-      toNext: Math.max(1, STAGE_SIZE - pos.learnedHere),
+      toNext: Math.max(1, pos.size - pos.learnedHere),
       nextCity: after.city,
       nextCountry: after.country,
       newCountryNext: after.country !== here.country,
@@ -551,7 +551,7 @@ function buildTrialReminderContent(): NotificationsApi.NotificationContentInput 
       learnedTotal(words),
       tripStop(pos.stage).label,
       pos.stage,
-      Math.max(1, STAGE_SIZE - pos.learnedHere),
+      Math.max(1, pos.size - pos.learnedHere),
       tripStop(pos.stage + 1).city
     ),
     data: { route: 'review' satisfies NotifRoute },

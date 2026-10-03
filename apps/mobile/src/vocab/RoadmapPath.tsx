@@ -18,7 +18,9 @@ import { learnedTotal } from '../feed/wordLearned';
 import {
   buildRoadmap,
   OPEN_SLOTS,
-  STAGE_SIZE,
+  citySize,
+  cityStart,
+  splitCities,
   TRIP,
   tripStop,
   withLevelKnown,
@@ -274,7 +276,7 @@ function TripMap({
   stops: number;
   current: number;
   leftHere: number;
-  /** Words in the current stage — the last one can be short of STAGE_SIZE. */
+  /** Words the current city holds (core citySize: 5, 7, then 10). */
   stageLen: number;
 }) {
   const scroll = useRef<ScrollView>(null);
@@ -962,7 +964,7 @@ export function TripPreview({ onGoToFeed }: { onGoToFeed: () => void }) {
   const info = COUNTRIES['España'];
   return (
     <View style={styles.preview}>
-      <TripMap stages={[[]]} stops={1} current={0} leftHere={STAGE_SIZE} stageLen={STAGE_SIZE} onPractise={() => {}} />
+      <TripMap stages={[[]]} stops={1} current={0} leftHere={citySize(0)} stageLen={citySize(0)} onPractise={() => {}} />
       <View style={styles.sign}>
         <View style={styles.signTop}>
           {info && <Flag spec={info.flag} height={26} />}
@@ -971,11 +973,11 @@ export function TripPreview({ onGoToFeed }: { onGoToFeed: () => void }) {
             <Text style={styles.signCountry}>España · your first stop</Text>
           </View>
           <Text style={styles.signCount}>
-            0<Text style={styles.signCountOf}>/{STAGE_SIZE}</Text>
+            0<Text style={styles.signCountOf}>/{citySize(0)}</Text>
           </Text>
         </View>
         <View style={styles.signTrack} />
-        <Text style={styles.signNext}>10 words to Sevilla</Text>
+        <Text style={styles.signNext}>{citySize(0)} words to Sevilla</Text>
       </View>
       <Postcard kind="welcome" stop={tripStop(0)} side="right" />
       <Mascot side="left" line="¡Hola! Tap a word you don’t know in any video. It lands here, and our trip begins!" />
@@ -1157,7 +1159,7 @@ export function RoadmapPath({
   const hereWord = hereNode ? cleanWord(hereNode.word.text) : null;
   const stages = useMemo(() => {
     const out: RoadmapNode[][] = [];
-    for (let i = 0; i < path.length; i += STAGE_SIZE) out.push(path.slice(i, i + STAGE_SIZE));
+    out.push(...splitCities(path));
     return out;
   }, [path]);
 
@@ -1174,7 +1176,7 @@ export function RoadmapPath({
       ? firstOpen
       : stages.length === 0
         ? 0
-        : stages[stages.length - 1].length >= STAGE_SIZE
+        : stages[stages.length - 1].length >= citySize(stages.length - 1)
           ? stages.length
           : stages.length - 1;
   /** The stages the map draws: an empty city you have just arrived in counts. */
@@ -1281,7 +1283,8 @@ export function RoadmapPath({
      * always TEN words, however many happen to be saved in it so far.
      */
     const learned = done;
-    const toNext = Math.max(0, STAGE_SIZE - learned);
+    const size = citySize(s);
+    const toNext = Math.max(0, size - learned);
     const stop = tripStop(s);
     const info = COUNTRIES[stop.country];
     return (
@@ -1304,11 +1307,11 @@ export function RoadmapPath({
             </View>
             <Text style={styles.signCount}>
               {learned}
-              <Text style={styles.signCountOf}>/{STAGE_SIZE}</Text>
+              <Text style={styles.signCountOf}>/{size}</Text>
             </Text>
           </View>
           <View style={styles.signTrack}>
-            <View style={[styles.signFill, { width: `${Math.max(3, (learned / STAGE_SIZE) * 100)}%` }]} />
+            <View style={[styles.signFill, { width: `${Math.max(3, (learned / size) * 100)}%` }]} />
           </View>
           <Text style={styles.signNext}>
             {toNext === 0
@@ -1324,13 +1327,13 @@ export function RoadmapPath({
               key="welcome"
               kind="welcome"
               stop={stop}
-              side={Math.sin((s * STAGE_SIZE + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
+              side={Math.sin((cityStart(s) + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
           isCurrent && hereWord && i === Math.min(3, nodes.length - 1) ? (
             <Mascot
               key="loro"
-              side={Math.sin((s * STAGE_SIZE + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
+              side={Math.sin((cityStart(s) + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
               line={
                 hereWord ? (
                   <>
@@ -1345,7 +1348,7 @@ export function RoadmapPath({
           <Row
             key={node.key}
             node={node}
-            index={s * STAGE_SIZE + i}
+            index={cityStart(s) + i}
             here={node.key === hereKey}
             blue={trip.blue.has(node.key)}
             width={width}
@@ -1364,7 +1367,7 @@ export function RoadmapPath({
               key="word"
               kind="word"
               stop={stop}
-              side={Math.sin((s * STAGE_SIZE + i + 1.5) * 0.9) >= 0 ? 'left' : 'right'}
+              side={Math.sin((cityStart(s) + i + 1.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
           // The second word's tag near the end of a fuller city, on the
@@ -1374,7 +1377,7 @@ export function RoadmapPath({
               key="tag"
               kind="tag"
               stop={stop}
-              side={Math.sin((s * STAGE_SIZE + i + 1.5) * 0.9) >= 0 ? 'right' : 'left'}
+              side={Math.sin((cityStart(s) + i + 1.5) * 0.9) >= 0 ? 'right' : 'left'}
             />
           ) : null,
         ])}
@@ -1401,9 +1404,9 @@ export function RoadmapPath({
             <Postcard key="tag-empty" kind="tag" stop={stop} side="right" />
           </>
         )}
-        {nodes.length < STAGE_SIZE && hereWord && (
+        {nodes.length < size && hereWord && (
           <Text style={styles.saveMore}>
-            Save {STAGE_SIZE - nodes.length} more {STAGE_SIZE - nodes.length === 1 ? 'word' : 'words'} in your videos to fill {stop.city}.
+            Save {size - nodes.length} more {size - nodes.length === 1 ? 'word' : 'words'} in your videos to fill {stop.city}.
           </Text>
         )}
       </View>
@@ -1426,7 +1429,7 @@ export function RoadmapPath({
   const nextStop = tripStop(current + 1);
   const nextInfo = COUNTRIES[nextStop.country];
   const nextNodes = mapStages[current + 1] ?? [];
-  const toOpen = Math.max(0, STAGE_SIZE - learnedNow);
+  const toOpen = Math.max(0, citySize(current) - learnedNow);
 
   /**
    * THE PAGE, SIMPLE (Radek, 2026-09-30: "look at it with the eye of a new
@@ -1443,8 +1446,8 @@ export function RoadmapPath({
           stages={mapStages}
           stops={mapStages.length}
           current={current}
-          leftHere={STAGE_SIZE - learnedNow}
-          stageLen={STAGE_SIZE}
+          leftHere={citySize(current) - learnedNow}
+          stageLen={citySize(current)}
         />
       )}
 
@@ -1484,7 +1487,7 @@ export function RoadmapPath({
           <Row
             key={node.key}
             node={{ ...node, status: 'locked' }}
-            index={(current + 1) * STAGE_SIZE + i}
+            index={cityStart(current + 1) + i}
             here={false}
             width={width}
             disabled

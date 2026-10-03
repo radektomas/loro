@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, cityArrivals, tripPosition, tripStop, withLevelKnown } from './roadmap.ts';
+import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, CITY_SIZES, cityArrivals, citySize, cityStart, splitCities, tripPosition, tripStop, withLevelKnown } from './roadmap.ts';
 import { dueCount, nextDueAt, readyWords } from './progress.ts';
 import { computeBlankPlan, grade, isEarlyAnswer, isTrained, trainWord, TRAINED_FIRST_ASK_MS } from './srs.ts';
 import type { SavedWord, Video } from './types.ts';
@@ -249,25 +249,46 @@ describe('blue words on the trip', () => {
 });
 
 describe('tripPosition', () => {
-  it('starts in Madrid with nothing learned', () => {
-    assert.deepEqual(tripPosition([]), { stage: 0, learnedHere: 0, countries: 1 });
+  const learnedFirst = (n: number, total: number) =>
+    many(total).map((w, i) => (i < n ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
+
+  it('starts in Madrid, a 5-word city, with nothing learned', () => {
+    assert.deepEqual(tripPosition([]), { stage: 0, learnedHere: 0, size: 5, countries: 1 });
+  });
+
+  it('the first arrival takes 5 words: Madrid is short on purpose', () => {
+    const pos = tripPosition(learnedFirst(5, 8));
+    assert.equal(pos.stage, 1);
+    assert.equal(pos.size, 7);
+    assert.equal(pos.learnedHere, 0);
   });
 
   it('counts what is learned in the city you are in', () => {
-    const words = many(14).map((w, i) => (i < 13 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
-    assert.deepEqual(tripPosition(words), { stage: 1, learnedHere: 3, countries: 1 });
+    // 5 in Madrid, 3 of Sevilla's 7.
+    const pos = tripPosition(learnedFirst(8, 14));
+    assert.deepEqual([pos.stage, pos.learnedHere, pos.size], [1, 3, 7]);
   });
 
-  it('ten learned and nothing else: you have arrived in the next city', () => {
-    const words = many(10).map((w, i) => ({ ...w, ...learned, learnedAt: NOW - DAY + i }));
-    assert.equal(tripPosition(words).stage, 1);
-    assert.equal(tripPosition(words).learnedHere, 0);
+  it('a full last city with nothing open: you have arrived in the next one', () => {
+    const pos = tripPosition(learnedFirst(12, 12)); // Madrid 5 + Sevilla 7
+    assert.deepEqual([pos.stage, pos.learnedHere, pos.size], [2, 0, 10]);
   });
 
-  it('counts the countries reached, Mexico after five Spanish cities', () => {
-    const words = many(52).map((w, i) => (i < 51 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
-    assert.equal(tripPosition(words).stage, 5);
-    assert.equal(tripPosition(words).countries, 2);
+  it('from the third city on, cities are ten', () => {
+    assert.deepEqual(CITY_SIZES, [5, 7]);
+    assert.equal(citySize(2), STAGE_SIZE);
+    assert.equal(cityStart(2), 12);
+    assert.equal(cityStart(5), 42);
+  });
+
+  it('counts the countries reached, Mexico after the five Spanish cities', () => {
+    const pos = tripPosition(learnedFirst(cityStart(5) + 1, cityStart(5) + 2));
+    assert.equal(pos.stage, 5);
+    assert.equal(pos.countries, 2);
+  });
+
+  it('splitCities cuts the path the same way', () => {
+    assert.deepEqual(splitCities([...Array(15).keys()]).map((c) => c.length), [5, 7, 3]);
   });
 });
 
@@ -276,11 +297,11 @@ describe('cityArrivals', () => {
     assert.deepEqual(cityArrivals([]), [null]);
   });
 
-  it('a city is reached when the last city\'s tenth word was learned', () => {
-    const words = many(12).map((w, i) => (i < 10 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
+  it('a city is reached when the last city\'s last word was learned', () => {
+    const words = many(7).map((w, i) => (i < 5 ? { ...w, ...learned, learnedAt: NOW - DAY + i } : w));
     const at = cityArrivals(words);
     assert.equal(at.length, 2);
     assert.equal(at[0], words[0].savedAt);
-    assert.equal(at[1], NOW - DAY + 9);
+    assert.equal(at[1], NOW - DAY + 4);
   });
 });

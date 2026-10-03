@@ -8,7 +8,9 @@ import { splitFunctionWords, type Streaks, type WeekDay } from '@loro/core/progr
 import {
   buildRoadmap,
   cityArrivals,
-  STAGE_SIZE,
+  cityStart,
+  citySize,
+  splitCities,
   TRIP,
   tripPosition,
   tripStop,
@@ -133,7 +135,7 @@ export function TodaySection({
    * and do it.
    */
   const pos = useMemo(() => tripPosition(withLevelKnown(words, storage.getLevelKnownWords()).words), [words]);
-  const toNext = Math.max(1, STAGE_SIZE - pos.learnedHere);
+  const toNext = Math.max(1, pos.size - pos.learnedHere);
   const nextCity = tripStop(pos.stage + 1).city;
   const tripLabel = `${toNext} ${toNext === 1 ? 'word' : 'words'} to ${nextCity}`;
   const goal = plan.wordsPerDay;
@@ -303,7 +305,7 @@ function CountryPage({
   country: string;
   at: number | null;
   firstStage: number;
-  pos: { stage: number; learnedHere: number };
+  pos: { stage: number; learnedHere: number; size: number };
   stages: RoadmapNode[][];
   onOpenMap?: () => void;
 }) {
@@ -316,7 +318,7 @@ function CountryPage({
     Animated.timing(pop, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
   }, [country, pop]);
   const cities = TRIP.map((t, j) => ({ ...t, j })).filter((t) => t.country === country);
-  const wordsAway = Math.max(0, firstStage * STAGE_SIZE - (pos.stage * STAGE_SIZE + pos.learnedHere));
+  const wordsAway = Math.max(0, cityStart(firstStage) - (cityStart(pos.stage) + pos.learnedHere));
 
   return (
     <Animated.View
@@ -348,7 +350,7 @@ function CountryPage({
               <View style={[styles.pageDot, been && { backgroundColor: a, borderColor: a }]} />
               <Text style={[styles.pageCityName, !been && styles.pageCityAhead]}>{c.city}</Text>
               <Text style={[styles.pageCityCount, here && styles.pageCityHere]}>
-                {here ? "You're here" : been ? `${learned.length}/${STAGE_SIZE}` : 'Closed'}
+                {here ? "You're here" : been ? `${learned.length}/${citySize(c.j)}` : 'Closed'}
               </Text>
             </View>
             {/* The city's two local words — the same ones the map shows. */}
@@ -397,7 +399,7 @@ export function PassportSection({ words, onOpen }: { words: readonly SavedWord[]
   const stages = useMemo(() => {
     const path = buildRoadmap(trip);
     const out: RoadmapNode[][] = [];
-    for (let i = 0; i < path.length; i += STAGE_SIZE) out.push(path.slice(i, i + STAGE_SIZE));
+    out.push(...splitCities(path));
     return out;
   }, [trip]);
   /** The stamp that is open, if any. */
@@ -417,7 +419,7 @@ export function PassportSection({ words, onOpen }: { words: readonly SavedWord[]
         onPress={onOpen}
         disabled={!onOpen}
         accessibilityRole="button"
-        accessibilityLabel={`You're in ${stop.label}. ${pos.learnedHere} of ${STAGE_SIZE} words to ${next.city}.`}
+        accessibilityLabel={`You're in ${stop.label}. ${pos.learnedHere} of ${pos.size} words to ${next.city}.`}
         accessibilityHint="Opens your trip in Words"
         style={({ pressed }) => [styles.here, pressed && styles.pressed]}
       >
@@ -432,10 +434,10 @@ export function PassportSection({ words, onOpen }: { words: readonly SavedWord[]
           {onOpen && <Text style={styles.chevron}>›</Text>}
         </View>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: `${Math.max(3, (pos.learnedHere / STAGE_SIZE) * 100)}%` }]} />
+          <View style={[styles.fill, { width: `${Math.max(3, (pos.learnedHere / pos.size) * 100)}%` }]} />
         </View>
         <Text style={styles.hereNext}>
-          {pos.learnedHere} of {STAGE_SIZE} to {next.city}
+          {pos.learnedHere} of {pos.size} to {next.city}
         </Text>
       </Pressable>
 
