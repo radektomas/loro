@@ -1310,15 +1310,16 @@ function FeedBody({
               before the paywall. Not rendering them cannot be defeated. */}
           {!walkthrough && (
             <>
-              {/* A word earned (wordLearned.ts): Loro in from the side over
-                  the frame area — the player yielded and paused underneath,
-                  like the cards, because nothing is drawn over a playing
-                  frame. Before the cards in paint order, so any card raised
-                  at the same moment covers it. */}
+              {/* A word earned (wordLearned.ts) or a trip milestone
+                  (tripMoments.ts): Loro in from the side, in the band UNDER
+                  the video, which keeps playing — nothing is drawn over a
+                  playing frame. Before the cards in paint order, so any card
+                  raised at the same moment covers it. */}
               <LearnedToast
                 active={active}
                 onObscurePlayer={setPromptObscured}
                 onGoToWords={onGoToWords}
+                bandTop={bandTop}
               />
               {/* Raised by RecallHost after the first correct answer's
                   celebration, and silent every other time. Last child so it

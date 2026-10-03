@@ -2,10 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cleanWord } from '@loro/core/dictionary';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
+  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -70,13 +74,15 @@ export function LearnedMomentView({
   raise,
   onDone,
   onWords,
+  bandTop,
 }: {
   raise: WordLearnedRaise;
   onDone: () => void;
   onWords?: () => void;
+  bandTop?: number | null;
 }) {
   const content = useMemo(() => learnedContent(raise), [raise]);
-  return <MomentView content={content} onDone={onDone} onWords={onWords} />;
+  return <MomentView content={content} onDone={onDone} onWords={onWords} bandTop={bandTop} />;
 }
 
 /** Loro from the side with a bubble: the animation, the hold, the two taps. */
@@ -84,8 +90,17 @@ export function MomentView({
   content,
   onDone,
   onWords,
+  bandTop,
 }: {
   content: MomentContent;
+  /**
+   * Where the feed's band starts (FeedScreen's measured bandTop). Given, the
+   * moment lives in the band UNDER the video and the video keeps playing
+   * (Radek, 2026-10-04: "make it so the video doesn't stop") — nothing may
+   * be drawn over a playing YouTube player, so it stays below it. Absent
+   * (the Words tab's flashcard), it sits mid-screen as before.
+   */
+  bandTop?: number | null;
   /** The moment ended on its own or by a tap on the dim: carry on. */
   onDone: () => void;
   /** The bubble was tapped: show the learned words. Absent = same as done. */
@@ -93,6 +108,13 @@ export function MomentView({
 }) {
   const slide = useSharedValue(0); // 0 = off the right edge, 1 = in
   const bubble = useSharedValue(0);
+  /** The dark layer, faded in first so nothing below changes with a cut. */
+  const dim = useSharedValue(0);
+  /** Idle bob while he talks, so he is never a sticker. */
+  const bob = useSharedValue(0);
+  /** The little hop as he leaves. */
+  const hop = useSharedValue(0);
+  const inBand = bandTop !== undefined && bandTop !== null;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leavingRef = useRef<Leave | null>(null);
 
@@ -109,29 +131,58 @@ export function MomentView({
       leavingRef.current = how;
       if (timer.current) clearTimeout(timer.current);
       timer.current = null;
-      bubble.value = withTiming(0, { duration: OUT_MS * 0.6 });
-      slide.value = withTiming(0, { duration: OUT_MS }, (done) => {
-        if (done) runOnJS(finish)();
-      });
+      // The bubble folds first, he hops, then slides away; the dark layer
+      // goes with him.
+      cancelAnimation(bob);
+      bubble.value = withTiming(0, { duration: 160, easing: Easing.in(Easing.cubic) });
+      hop.value = withSequence(withTiming(1, { duration: 130, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 170 }));
+      dim.value = withDelay(120, withTiming(0, { duration: OUT_MS }));
+      slide.value = withDelay(
+        110,
+        withTiming(0, { duration: OUT_MS, easing: Easing.in(Easing.cubic) }, (done) => {
+          if (done) runOnJS(finish)();
+        })
+      );
     },
-    [bubble, slide, finish]
+    [bubble, slide, dim, hop, bob, finish]
   );
 
   useEffect(() => {
     leavingRef.current = null;
     slide.value = 0;
     bubble.value = 0;
-    slide.value = withSpring(1, { damping: 16, stiffness: 170 });
-    bubble.value = withDelay(120, withSpring(1, { damping: 14, stiffness: 200 }));
+    dim.value = 0;
+    hop.value = 0;
+    bob.value = 0;
+    // The calm first: the layer fades in, THEN Loro arrives — a softer spring,
+    // less swing — and the bubble pops just after him.
+    dim.value = withTiming(1, { duration: 160 });
+    slide.value = withDelay(110, withSpring(1, { damping: 18, stiffness: 140 }));
+    bubble.value = withDelay(260, withSpring(1, { damping: 15, stiffness: 190 }));
+    bob.value = withDelay(
+      700,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 650, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0, { duration: 650, easing: Easing.inOut(Easing.quad) })
+        ),
+        -1
+      )
+    );
     timer.current = setTimeout(() => leave('done'), LEARNED_MOMENT_MS);
     return () => {
       if (timer.current) clearTimeout(timer.current);
+      cancelAnimation(bob);
     };
-  }, [content, slide, bubble, leave]);
+  }, [content, slide, bubble, dim, bob, hop, leave]);
 
-  const dimStyle = useAnimatedStyle(() => ({ opacity: slide.value * 0.55 }));
+  const dimStyle = useAnimatedStyle(() => ({ opacity: dim.value * (inBand ? 0.8 : 0.55) }));
   const parrotStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: (1 - slide.value) * 180 }, { rotate: `${(1 - slide.value) * -8}deg` }],
+    transform: [
+      { translateX: (1 - slide.value) * 180 },
+      { translateY: -bob.value * 5 - hop.value * 12 },
+      { rotate: `${(1 - slide.value) * -4 + bob.value * 2}deg` },
+    ],
   }));
   const bubbleStyle = useAnimatedStyle(() => ({
     opacity: bubble.value,
@@ -139,13 +190,13 @@ export function MomentView({
   }));
 
   return (
-    <View style={styles.layer}>
+    <View style={[styles.layer, inBand && { top: bandTop as number }]}>
       {/* A tap anywhere ends the moment and whatever was happening carries on. */}
       <Pressable style={StyleSheet.absoluteFill} onPress={() => leave('done')} accessibilityLabel="Continue">
         <Animated.View style={[StyleSheet.absoluteFill, styles.dim, dimStyle]} />
       </Pressable>
 
-      <View style={styles.stage} pointerEvents="box-none">
+      <View style={[styles.stage, inBand && styles.stageBand]} pointerEvents="box-none">
         <Animated.View style={[styles.bubbleWrap, bubbleStyle]}>
           <Pressable
             onPress={() => leave('words')}
@@ -191,7 +242,10 @@ export function LearnedToast({
   active,
   onObscurePlayer,
   onGoToWords,
+  bandTop,
 }: {
+  /** The band's top: given, the moments sit under the video and it keeps playing. */
+  bandTop?: number | null;
   /** Only the visible feed shows it — the Words tab's flashcard has its
       own host, and a raise from there must not pause and replay a hidden
       feed player. */
@@ -229,17 +283,21 @@ export function LearnedToast({
   );
 
   const open = raise !== null || trip !== null;
+  // Under the video (bandTop known), the video plays on: nothing to hide,
+  // nothing to pause. Without it, the old contract: yield and pause.
+  const inBand = bandTop !== undefined && bandTop !== null;
   useEffect(() => {
+    if (inBand) return;
     onObscurePlayer(open);
     if (open) api.pause();
     return () => onObscurePlayer(false);
-  }, [open, onObscurePlayer, api]);
+  }, [open, onObscurePlayer, api, inBand]);
 
   const done = useCallback(() => {
     setRaise(null);
     setTrip(null);
-    api.play();
-  }, [api]);
+    if (!inBand) api.play();
+  }, [api, inBand]);
   const words = useCallback(() => {
     setRaise(null);
     if (onGoToWords) {
@@ -262,8 +320,8 @@ export function LearnedToast({
     }
   }, [api, onGoToWords, trip]);
 
-  if (raise) return <LearnedMomentView raise={raise} onDone={done} onWords={words} />;
-  if (tripContent) return <MomentView content={tripContent} onDone={done} onWords={tripWords} />;
+  if (raise) return <LearnedMomentView raise={raise} onDone={done} onWords={words} bandTop={bandTop} />;
+  if (tripContent) return <MomentView content={tripContent} onDone={done} onWords={tripWords} bandTop={bandTop} />;
   return null;
 }
 
@@ -280,6 +338,8 @@ const styles = StyleSheet.create({
     right: 0,
     top: '34%',
   },
+  /** In the band: near its top, just under the video. */
+  stageBand: { top: 14 },
   bubbleWrap: { alignItems: 'flex-end', flexDirection: 'row', flexShrink: 1, marginLeft: 20 },
   bubble: {
     backgroundColor: '#f2f5f3',
