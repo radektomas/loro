@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -7,6 +7,8 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -132,10 +134,15 @@ export function ChoiceCard({
   multi,
   onPress,
   icon,
+  iconOn,
 }: {
   label: string;
   body?: string;
   selected?: boolean;
+  /** The icon's selected face. Given, the two cross-fade on the card's own
+      clock and the tile pops — instead of the tile snapping while the card
+      fades (Radek, 2026-10-06: "the picking feels a bit janky"). */
+  iconOn?: ReactNode;
   /** A tile on the left (art.tsx IconTile) — the colour these cards were
       missing (2026-09-22). */
   icon?: ReactNode;
@@ -158,12 +165,25 @@ export function ChoiceCard({
   const reduced = useReducedMotion();
   const sel = useSharedValue(on ? 1 : 0);
   const press = useSharedValue(0);
+  const pop = useSharedValue(1);
+  const wasOn = useRef(on);
   useEffect(() => {
     sel.value = withTiming(on ? 1 : 0, {
       duration: reduced ? 0 : 220,
       easing: Easing.out(Easing.cubic),
     });
-  }, [on, reduced, sel]);
+    // A little lift on the way in only; letting go is quiet.
+    if (on && !wasOn.current && !reduced) {
+      pop.value = withSequence(
+        withTiming(1.14, { duration: 110, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 9, stiffness: 260 })
+      );
+    }
+    wasOn.current = on;
+  }, [on, reduced, sel, pop]);
+  const iconOffStyle = useAnimatedStyle(() => ({ opacity: 1 - sel.value }));
+  const iconOnStyle = useAnimatedStyle(() => ({ opacity: sel.value }));
+  const iconPop = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   const card = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(sel.value, [0, 1], [CARD, CHOICE_ON_BG]),
     borderColor: interpolateColor(sel.value, [0, 1], [CHOICE_OFF_BORDER, CHOICE_ON_BORDER]),
@@ -194,7 +214,14 @@ export function ChoiceCard({
     >
       <Animated.View style={[styles.choice, card]}>
         <View style={styles.choiceRow}>
-          {icon}
+          {iconOn ? (
+            <Animated.View style={iconPop}>
+              <Animated.View style={iconOffStyle}>{icon}</Animated.View>
+              <Animated.View style={[StyleSheet.absoluteFill, iconOnStyle]}>{iconOn}</Animated.View>
+            </Animated.View>
+          ) : (
+            icon
+          )}
           <View style={styles.choiceText}>
             <Animated.Text style={[styles.choiceLabel, labelStyle]}>{label}</Animated.Text>
             {body && <Text style={styles.choiceBody}>{body}</Text>}

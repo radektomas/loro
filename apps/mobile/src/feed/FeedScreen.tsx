@@ -842,18 +842,6 @@ function FeedBody({
   }, [collection]);
   /** Today's goal, for the dots beside the pill. Moves with every answer. */
   const today = useTodayProgress();
-  // A refreshed feed starts at its top too — the same remount.
-  const firstRefreshRef = useRef(true);
-  useEffect(() => {
-    if (firstRefreshRef.current) {
-      firstRefreshRef.current = false;
-      return;
-    }
-    mountIndexRef.current = 0;
-    jumpTargetRef.current = null;
-    setActiveIndex(0);
-    setListGeneration((g) => g + 1);
-  }, [refreshKey]);
   /**
    * …AND AN EPISODE SHELF THEN MOVES TO ITS LAST EPISODE. The new shelf's
    * list arrives a render after the shelf id (FeedScreen rebuilds it in an
@@ -883,6 +871,22 @@ function FeedBody({
   }, [videos, episodes, collection]);
   /** The index a jump is waiting on — see applyViewableIndex. */
   const jumpTargetRef = useRef<number | null>(null);
+  /**
+   * A REFRESHED FEED STARTS AT ITS TOP, IN THE SAME RENDER AS THE NEW LIST.
+   * This was an effect first, and that was a bug Radek felt ("the refresh
+   * made my app bug"): the new list rendered once with the OLD index, so the
+   * player loaded whatever video now sat at that index, then the effect moved
+   * to 0 and it loaded again. Adjusting state during render (React's derived-
+   * state pattern) throws that render away before anything commits.
+   */
+  const [seenRefresh, setSeenRefresh] = useState(refreshKey);
+  if (seenRefresh !== refreshKey) {
+    setSeenRefresh(refreshKey);
+    mountIndexRef.current = 0;
+    jumpTargetRef.current = null;
+    setActiveIndex(0);
+    setListGeneration((g) => g + 1);
+  }
   /**
    * A SWIPE IS IN FLIGHT — finger down OR still settling. Both halves matter,
    * and the second one is what this used to get wrong.

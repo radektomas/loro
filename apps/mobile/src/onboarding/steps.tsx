@@ -245,15 +245,18 @@ function HookStep({ next, isCurrent }: StepProps) {
  * disk is worse than no answer: it looks like an answer.
  */
 function MotivationStep({ state, update, next }: StepProps) {
-  const toggle = (id: string) => {
-    const chosen = state.motivation.includes(id)
-      ? state.motivation.filter((value) => value !== id)
-      : [...state.motivation, id];
-    update({ motivation: chosen });
-  };
+  /**
+   * PICKED LOCALLY, COMMITTED ON CONTINUAR. Every onboarding screen is
+   * mounted at once, so patching the flow state on each tap re-rendered all
+   * of them and the card animation stuttered (Radek, 2026-10-06: "janky").
+   */
+  const [picked, setPicked] = useState<string[]>(state.motivation);
+  const toggle = (id: string) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]));
 
   const commit = () => {
-    if (state.motivation.length > 0) setMotivation(state.motivation);
+    update({ motivation: picked });
+    if (picked.length > 0) setMotivation(picked);
     next();
   };
 
@@ -263,7 +266,7 @@ function MotivationStep({ state, update, next }: StepProps) {
       <Body>{MOTIVATION.body}</Body>
       <View style={styles.choices}>
         {MOTIVATION.options.map((option) => {
-          const on = state.motivation.includes(option.id);
+          const on = picked.includes(option.id);
           const art = MOTIVATION_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
           return (
             <ChoiceCard
@@ -272,7 +275,8 @@ function MotivationStep({ state, update, next }: StepProps) {
               label={option.label}
               body={option.body}
               selected={on}
-              icon={<IconTile glyph={art.glyph} tint={art.tint} on={on} />}
+              icon={<IconTile glyph={art.glyph} tint={art.tint} />}
+              iconOn={<IconTile glyph={art.glyph} tint={art.tint} on />}
               onPress={() => toggle(option.id)}
             />
           );
@@ -291,15 +295,14 @@ function MotivationStep({ state, update, next }: StepProps) {
  * ranking on its next ordering (feed/topics.ts, core feedRank).
  */
 function TopicsStep({ state, update, next }: StepProps) {
-  const toggle = (id: string) => {
-    const chosen = state.topics.includes(id)
-      ? state.topics.filter((value) => value !== id)
-      : [...state.topics, id];
-    update({ topics: chosen });
-  };
+  // Picked locally for the same reason as MotivationStep.
+  const [picked, setPicked] = useState<string[]>(state.topics);
+  const toggle = (id: string) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]));
   const commit = () => {
-    if (state.topics.length > 0) setLikedTopics(state.topics);
-    olog(`topics=[${state.topics.join(', ')}]`);
+    update({ topics: picked });
+    if (picked.length > 0) setLikedTopics(picked);
+    olog(`topics=[${picked.join(', ')}]`);
     next();
   };
   return (
@@ -308,7 +311,7 @@ function TopicsStep({ state, update, next }: StepProps) {
       <Body>{TOPICS.body}</Body>
       <View style={styles.choices}>
         {TOPICS.options.map((option) => {
-          const on = state.topics.includes(option.id);
+          const on = picked.includes(option.id);
           const art = TOPIC_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
           return (
             <ChoiceCard
@@ -316,7 +319,8 @@ function TopicsStep({ state, update, next }: StepProps) {
               multi
               label={option.label}
               selected={on}
-              icon={<IconTile glyph={art.glyph} tint={art.tint} on={on} size={38} />}
+              icon={<IconTile glyph={art.glyph} tint={art.tint} size={38} />}
+              iconOn={<IconTile glyph={art.glyph} tint={art.tint} on size={38} />}
               onPress={() => toggle(option.id)}
             />
           );
