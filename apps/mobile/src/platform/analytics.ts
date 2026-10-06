@@ -133,6 +133,7 @@ export type EventName =
   | 'word_learned'        // { learned } — a word crossed into learned (the toast)
   | 'practice_set'        // { right, early, stepOne } — the Words tab's three-exercise set
   | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
+  | 'feed_refreshed'      // { how: 'button' | 'pull', fresh } — the reels feed was re-ranked on demand
   // THE TRIP (1.7.1): does anyone get past Madrid, and is the ladder looked at?
   | 'city_arrived'        // { stage, city, country, newCountry, empty } — the arrival played
   | 'level_banner_opened' // { tier, learned } — the level chip on Words was tapped open

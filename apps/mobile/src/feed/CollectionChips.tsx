@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { COLLECTIONS, REELS, findCollection, isEpisodes } from '@loro/core/collections';
 
 /**
@@ -50,6 +50,8 @@ export function CollectionPill({
   topInset,
   open,
   onPress,
+  onRefresh,
+  refreshing = false,
 }: {
   selected: string;
   /** "3/25" on an episode shelf — where you are in the list. */
@@ -57,8 +59,22 @@ export function CollectionPill({
   topInset: number;
   open: boolean;
   onPress: () => void;
+  /** The reels shelf only: a fresh order on demand (FeedScreen refreshFeed). */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const label = findCollection(selected).label;
+  /** One full turn per refresh: it spins while the new order is built. */
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!refreshing) return;
+    spin.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 700, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [refreshing, spin]);
   return (
     <View style={[styles.strip, { paddingTop: topInset, height: topInset + CHIP_ROW_H }]}>
       <Pressable
@@ -73,6 +89,29 @@ export function CollectionPill({
         {detail && <Text style={styles.pillDetail}>· {detail}</Text>}
         <Text style={styles.pillChevron}>{open ? '▴' : '▾'}</Text>
       </Pressable>
+      {/* REFRESH (Radek, 2026-10-06: "a possibility to refresh the feed").
+          In the top strip, never over the player: a pull on the list itself
+          moves the slides but not the YouTube player above them. */}
+      {onRefresh && (
+        <Pressable
+          onPress={onRefresh}
+          disabled={refreshing}
+          accessibilityRole="button"
+          accessibilityLabel="New videos"
+          accessibilityHint="Shuffles in videos you have not seen yet"
+          hitSlop={10}
+          style={({ pressed }) => [styles.refresh, { top: topInset + (CHIP_ROW_H - 34) / 2 }, pressed && styles.pressed]}
+        >
+          <Animated.Text
+            style={[
+              styles.refreshGlyph,
+              { transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] },
+            ]}
+          >
+            ↻
+          </Animated.Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -257,6 +296,19 @@ const styles = StyleSheet.create({
     top: 0,
     zIndex: 5,
   },
+  refresh: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(242,245,243,0.1)',
+    borderColor: 'rgba(242,245,243,0.14)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 16,
+    width: 34,
+  },
+  refreshGlyph: { color: '#f2f5f3', fontSize: 18, fontWeight: '700', lineHeight: 20 },
   pill: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.1)',

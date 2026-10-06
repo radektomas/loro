@@ -30,7 +30,7 @@ import { rankFeed } from '@loro/core/feedRank';
 import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
 import { subscribeDevVideo } from '../platform/devMenu';
-import { trackOnce } from '../platform/analytics';
+import { track, trackOnce } from '../platform/analytics';
 import {
   usePlayerApi,
   usePlayerBox,
@@ -402,6 +402,40 @@ export function FeedScreen({
   );
 
   /**
+   * REFRESH ON DEMAND (Radek, 2026-10-06: "a possibility to refresh the
+   * feed"). Asks for the newest catalog (the pointer is a ~100-byte GET;
+   * capped so a dead network cannot hang the spinner), then re-ranks the
+   * whole reels shelf from scratch: unseen first — what you just watched
+   * drops behind everything new — good first, a different order each time.
+   * FeedBody lands the new list on its first slide (refreshKey).
+   */
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refreshingRef = useRef(false);
+  const refreshFeed = useCallback(async (how: 'button' | 'pull') => {
+    if (refreshingRef.current || reelRef.current || collectionRef.current !== REELS) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    const started = Date.now();
+    const before = new Set((orderedRef.current ?? []).map((v) => v.id));
+    await Promise.race([refreshCatalog(), new Promise((r) => setTimeout(r, REFRESH_WAIT_MS))]);
+    const next = listFor(REELS, sourceVideos());
+    // Long enough to read as "something happened", never a wait.
+    const rest = REFRESH_MIN_MS - (Date.now() - started);
+    if (rest > 0) await new Promise((r) => setTimeout(r, rest));
+    if (collectionRef.current === REELS && next.length > 0) {
+      orderedRef.current = next;
+      setVideos(next);
+      setRefreshKey((k) => k + 1);
+    }
+    const fresh = next.filter((v) => !before.has(v.id)).length;
+    track('feed_refreshed', { how, fresh });
+    feedLog(`refresh (${how}): ${next.length} re-ranked, ${fresh} new to this session`);
+    refreshingRef.current = false;
+    setRefreshing(false);
+  }, []);
+
+  /**
    * A REVIEW LAUNCH RE-CUTS THE FEED AROUND ITS LANDING (2026-09-07).
    *
    * The settled order is append-only for a user who is scrolling it — but a
@@ -553,12 +587,22 @@ export function FeedScreen({
       collection={collection}
       episodes={episodes}
       showChips={!reel}
+      refreshing={refreshing}
+      refreshKey={refreshKey}
+      onRefresh={reel || collection !== REELS ? undefined : refreshFeed}
       onAreaLayout={onAreaLayout}
       onGoToProgress={onGoToProgress}
       onGoToWords={onGoToWords}
     />
   );
 }
+
+/** A refresh waits this long for the catalog pointer before re-ranking what it has. */
+const REFRESH_WAIT_MS = 3000;
+/** ...and spins at least this long, so the tap visibly did something. */
+const REFRESH_MIN_MS = 600;
+/** How far past the top the first slide must be pulled to refresh. */
+const PULL_REFRESH_PX = 70;
 
 /** How long the quick case gets before EmptyFeed admits something is wrong. */
 const SLOW_HINT_MS = 6000;
@@ -701,7 +745,15 @@ function FeedBody({
   onAreaLayout,
   onGoToProgress,
   onGoToWords,
+  onRefresh,
+  refreshing = false,
+  refreshKey = 0,
 }: {
+  /** The reels shelf's refresh (button and pull); absent elsewhere. */
+  onRefresh?: (how: 'button' | 'pull') => void;
+  refreshing?: boolean;
+  /** Bumped by each refresh: the new list lands on its first slide. */
+  refreshKey?: number;
   videos: EmbedVideo[];
   box: Omit<PlayerBox, 'visible'> | null;
   bandTop: number | null;
@@ -755,6 +807,18 @@ function FeedBody({
     setListGeneration((g) => g + 1);
     landOnLastRef.current = true;
   }, [collection]);
+  // A refreshed feed starts at its top too — the same remount.
+  const firstRefreshRef = useRef(true);
+  useEffect(() => {
+    if (firstRefreshRef.current) {
+      firstRefreshRef.current = false;
+      return;
+    }
+    mountIndexRef.current = 0;
+    jumpTargetRef.current = null;
+    setActiveIndex(0);
+    setListGeneration((g) => g + 1);
+  }, [refreshKey]);
   /**
    * …AND AN EPISODE SHELF THEN MOVES TO ITS LAST EPISODE. The new shelf's
    * list arrives a render after the shelf id (FeedScreen rebuilds it in an
@@ -1136,6 +1200,8 @@ function FeedBody({
               topInset={insets.top}
               open={menuOpen}
               onPress={() => setMenuOpen((o) => !o)}
+              onRefresh={onRefresh ? () => onRefresh('button') : undefined}
+              refreshing={refreshing}
             />
           )}
           {showChips && menuOpen && (
@@ -1263,7 +1329,13 @@ function FeedBody({
                 jumpTargetRef.current = null;
                 swipe.onBeginDrag();
               }}
-              onScrollEndDrag={swipe.onEndDrag}
+              onScrollEndDrag={(event) => {
+                // Pulled down past the first slide and let go: a refresh.
+                if (onRefresh && activeIndex === 0 && event.nativeEvent.contentOffset.y < -PULL_REFRESH_PX) {
+                  onRefresh('pull');
+                }
+                swipe.onEndDrag();
+              }}
               onMomentumScrollBegin={swipe.onMomentumBegin}
               onMomentumScrollEnd={swipe.onSettled}
             />
