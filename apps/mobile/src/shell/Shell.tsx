@@ -13,6 +13,7 @@ import { useDueCount } from './useDueCount';
 import { storage } from '@loro/core/storage';
 import { getPlan } from '../progress/plan';
 import { initLevelUp } from '../feed/levelUp';
+import { SharePreviewHost } from '../share/SharePreview';
 
 /**
  * The app shell: three tabs, hand-rolled.
@@ -263,6 +264,7 @@ export function Shell() {
           );
         })}
       </View>
+      {__DEV__ && <SharePreviewHost />}
     </View>
     </TabBarHeightContext.Provider>
   );

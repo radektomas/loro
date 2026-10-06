@@ -4,6 +4,7 @@ import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
 import { devRaiseWordLearned } from '../feed/wordLearned';
 import { devRaiseTripMoment } from '../feed/tripMoments';
+import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { storageDriver } from './storage';
@@ -134,6 +135,7 @@ export function installDevMenu(): void {
     /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
         "so i can see it right away and not search it like a crazy man").
         Open the Feed tab, then tap. */
+    { name: '★ Share · City card for Stories (preview)', run: () => devShowCityCard() },
     { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     { name: '★ Loro · Trip: first word saved', run: () => devRaiseTripMoment('firstSave') },
     { name: '★ Loro · Trip: first blue word', run: () => devRaiseTripMoment('firstBlue') },
