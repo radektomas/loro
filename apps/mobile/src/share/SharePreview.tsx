@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { CityShareCard, type CityCardWord } from './CityShareCard';
+import { CARD_ENTER } from './PostcardLayer';
 
 /**
  * DEV PREVIEW OF THE CITY CARD (Radek, 2026-10-06: judge the look before the
@@ -50,16 +52,23 @@ export function SharePreviewHost() {
   // As big as the screen allows at 9:16, with room for the hint.
   const cardW = Math.min(width - 40, ((height - 120) * 9) / 16);
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={() => setData(null)}>
-      <Pressable style={styles.scrim} onPress={() => setData(null)}>
-        <CityShareCard {...data} width={cardW} />
-        <Text style={styles.hint}>Preview · tap to close</Text>
-      </Pressable>
+    <Modal visible transparent animationType="none" onRequestClose={() => setData(null)}>
+      <Animated.View entering={FadeIn.duration(260)} style={styles.fill}>
+        <Pressable style={styles.scrim} onPress={() => setData(null)}>
+          <Animated.View entering={CARD_ENTER}>
+            <CityShareCard {...data} width={cardW} />
+          </Animated.View>
+          <Animated.Text entering={FadeIn.duration(320).delay(380)} style={styles.hint}>
+            Preview · tap to close
+          </Animated.Text>
+        </Pressable>
+      </Animated.View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   scrim: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', flex: 1, justifyContent: 'center' },
   hint: { color: 'rgba(242,245,243,0.5)', fontSize: 12, fontWeight: '700', marginTop: 14 },
 });

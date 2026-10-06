@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { track } from '../platform/analytics';
 import { CityShareCard } from './CityShareCard';
@@ -16,6 +16,12 @@ import { postcardFor } from './cardData';
  * handed to the iOS share sheet, which carries Instagram, Messages and
  * "Save Image" — one button covers sharing and saving.
  */
+/** How the card arrives, shared with the dev preview so both feel the same. */
+export const CARD_ENTER = FadeInDown.duration(520)
+  .delay(80)
+  .easing(Easing.out(Easing.cubic))
+  .withInitialValues({ transform: [{ translateY: 28 }] });
+
 export function PostcardLayer({ stage, onClose }: { stage: number; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -51,16 +57,22 @@ export function PostcardLayer({ stage, onClose }: { stage: number; onClose: () =
 
   return (
     <Animated.View
-      entering={FadeIn.duration(220)}
-      exiting={FadeOut.duration(180)}
+      entering={FadeIn.duration(260).easing(Easing.out(Easing.quad))}
+      exiting={FadeOut.duration(200)}
       style={[styles.layer, { paddingBottom: insets.bottom + 16, paddingTop: insets.top + 12 }]}
     >
-      <Animated.View entering={ZoomIn.springify().damping(16)} style={[styles.frame, { borderRadius: (cardW / 360) * 22 }]}>
+      {/* A slow, settled rise, not a pop (Radek, 2026-10-06: "I don't like
+          the show up animation" — the springy zoom bounced). The card drifts
+          up and in; the buttons follow once it has landed. */}
+      <Animated.View
+        entering={CARD_ENTER}
+        style={[styles.frame, { borderRadius: (cardW / 360) * 22 }]}
+      >
         <View ref={shot} collapsable={false}>
           <CityShareCard {...data} width={cardW} rounded={false} />
         </View>
       </Animated.View>
-      <View style={styles.actions}>
+      <Animated.View entering={FadeIn.duration(320).delay(380)} style={styles.actions}>
         {failed && <Text style={styles.failed}>Couldn't make the image. Try again.</Text>}
         <Pressable
           onPress={share}
@@ -72,7 +84,7 @@ export function PostcardLayer({ stage, onClose }: { stage: number; onClose: () =
         <Pressable onPress={onClose} accessibilityRole="button" hitSlop={8} style={styles.secondary}>
           <Text style={styles.secondaryText}>Done</Text>
         </Pressable>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
