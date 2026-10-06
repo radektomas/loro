@@ -12,7 +12,12 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
   cancelAnimation,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -30,7 +35,7 @@ import { storage } from '@loro/core/storage';
 import { rankFeed } from '@loro/core/feedRank';
 import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
-import { getLikedTopics, setLikedTopics } from './topics';
+import { getLikedTopics, subscribeToLikedTopics } from './topics';
 import { subscribeDevVideo } from '../platform/devMenu';
 import { track, trackOnce } from '../platform/analytics';
 import {
@@ -438,6 +443,20 @@ export function FeedScreen({
   }, []);
 
   /**
+   * TOPICS CHANGED IN SETTINGS (Progress): the reels re-rank the next time the
+   * feed is on screen — the change is felt on arrival, not mid-video.
+   */
+  const topicsDirtyRef = useRef(false);
+  useEffect(() => subscribeToLikedTopics(() => {
+    topicsDirtyRef.current = true;
+  }), []);
+  useEffect(() => {
+    if (!active || !topicsDirtyRef.current) return;
+    topicsDirtyRef.current = false;
+    void refreshFeed('topics');
+  }, [active, refreshFeed]);
+
+  /**
    * A REVIEW LAUNCH RE-CUTS THE FEED AROUND ITS LANDING (2026-09-07).
    *
    * The settled order is append-only for a user who is scrolling it — but a
@@ -810,25 +829,6 @@ function FeedBody({
   useEffect(() => {
     if (!active) setMenuOpen(false);
   }, [active]);
-  /**
-   * The reels' topics, editable in the menu. Saved on every tap; the feed is
-   * re-ranked once, when the menu closes, so a few taps cost one reshuffle.
-   */
-  const [likedTopics, setLikedTopicsState] = useState<string[]>(getLikedTopics);
-  const topicsDirtyRef = useRef(false);
-  const toggleTopic = (id: string) => {
-    setLikedTopicsState((prev) => {
-      const next = prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id];
-      setLikedTopics(next);
-      return next;
-    });
-    topicsDirtyRef.current = true;
-  };
-  useEffect(() => {
-    if (menuOpen || !topicsDirtyRef.current) return;
-    topicsDirtyRef.current = false;
-    onRefresh?.('topics');
-  }, [menuOpen, onRefresh]);
   // An episode shelf opens on the episode it was last on (episodeProgress.ts).
   const [activeIndex, setActiveIndex] = useState(() =>
     episodes ? landingIndexFor(collection, videos) : 0
@@ -1289,8 +1289,6 @@ function FeedBody({
                   : null
               }
               activeIndex={activeIndex}
-              likedTopics={collection === REELS ? likedTopics : undefined}
-              onToggleTopic={collection === REELS ? toggleTopic : undefined}
               onPickEpisode={(shelfId, index) => {
                 setMenuOpen(false);
                 if (shelfId === collection) {
@@ -2075,36 +2073,59 @@ function SoundControl() {
     }
   }, [api, status.muted]);
 
-  if (!status.muted) {
-    return (
-      <Pressable
-        onPress={toggle}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel="Sound on. Tap to mute."
-        style={({ pressed }) => [
-          styles.soundSlot,
-          styles.soundToggle,
-          pressed && styles.soundPressed,
-        ]}
-      >
-        <SoundIcon on color="rgba(242,245,243,0.9)" size={14} />
-      </Pressable>
-    );
-  }
+  /**
+   * ONE CONTROL THAT MORPHS (Radek, 2026-10-06: "make the mute/unmute button
+   * more smooth, it looks weird"). It used to be two different components
+   * swapped on the state flip — a mint pill, then a grey circle — so it
+   * jumped. Now it is one pill: the colour eases mint <-> quiet, the label
+   * fades and the width settles (a layout transition), and the two icons
+   * cross-fade, all on one 260 ms clock.
+   */
+  const muted = useSharedValue(status.muted ? 1 : 0);
+  useEffect(() => {
+    muted.value = withTiming(status.muted ? 1 : 0, { duration: 260, easing: Easing.out(Easing.cubic) });
+  }, [status.muted, muted]);
+  const pillStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(muted.value, [0, 1], ['rgba(242,245,243,0.10)', '#5ee6a8']),
+    shadowOpacity: muted.value * 0.35,
+  }));
+  const offIcon = useAnimatedStyle(() => ({ opacity: muted.value }));
+  const onIcon = useAnimatedStyle(() => ({ opacity: 1 - muted.value }));
 
   return (
-    <Animated.View style={[styles.soundSlot, pulseStyle]}>
+    <Animated.View style={[styles.soundSlot, pulseStyle]} layout={LinearTransition.duration(260)}>
       <Pressable
         onPress={toggle}
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel="Turn on sound"
-        accessibilityHint="Plays this video with sound"
-        style={({ pressed }) => [styles.soundPrompt, pressed && styles.soundPressed]}
+        accessibilityLabel={status.muted ? 'Turn on sound' : 'Sound on. Tap to mute.'}
+        accessibilityHint={status.muted ? 'Plays this video with sound' : undefined}
       >
-        <SoundIcon on={false} color="#06130d" size={14} />
-        <Text style={styles.soundPromptText}>Tap for sound</Text>
+        {({ pressed }) => (
+          <Animated.View
+            layout={LinearTransition.duration(260)}
+            style={[styles.soundPill, pillStyle, pressed && styles.soundPressed]}
+          >
+            <Animated.View style={styles.soundIcons}>
+              <Animated.View style={[styles.soundIconLayer, onIcon]}>
+                <SoundIcon on color="rgba(242,245,243,0.92)" size={14} />
+              </Animated.View>
+              <Animated.View style={[styles.soundIconLayer, offIcon]}>
+                <SoundIcon on={false} color="#06130d" size={14} />
+              </Animated.View>
+            </Animated.View>
+            {status.muted && (
+              <Animated.Text
+                entering={FadeIn.duration(200).delay(60)}
+                exiting={FadeOut.duration(120)}
+                style={styles.soundPromptText}
+                numberOfLines={1}
+              >
+                Tap for sound
+              </Animated.Text>
+            )}
+          </Animated.View>
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -2355,33 +2376,22 @@ const styles = StyleSheet.create({
    * text. It is the only filled-mint element in the band while it shows, and
    * it stops existing the moment sound is on, so it can afford to shout.
    */
-  soundPrompt: {
+  soundPill: {
     alignItems: 'center',
-    backgroundColor: '#5ee6a8',
     borderRadius: 999,
     flexDirection: 'row',
     gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    shadowColor: '#5ee6a8',
-    shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-  },
-  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800', letterSpacing: 0.2 },
-  /**
-   * Sound is already on, so this is not a prompt — it is the way back to
-   * muted, and nothing more. Quiet by design; minWidth keeps a lone glyph from
-   * being a sliver of a tap target.
-   */
-  soundToggle: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(242,245,243,0.10)',
-    borderRadius: 999,
     height: 30,
     justifyContent: 'center',
-    width: 34,
+    minWidth: 36,
+    paddingHorizontal: 10,
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 0, width: 0 },
+    shadowRadius: 8,
   },
+  soundIcons: { height: 14, width: 17 },
+  soundIconLayer: { left: 0, position: 'absolute', top: 0 },
+  soundPromptText: { color: '#06130d', fontSize: 12, fontWeight: '800', letterSpacing: 0.2 },
   soundPressed: { opacity: 0.7 },
   /** Quiet, like soundToggle — replay is a convenience, not a call to action. */
   replayCue: {

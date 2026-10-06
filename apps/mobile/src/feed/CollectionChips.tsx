@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { COLLECTIONS, REELS, findCollection, isEpisodes } from '@loro/core/collections';
-import { TOPICS } from '../onboarding/copy';
 
 /**
  * THE SHELF PILL AND ITS MENU.
@@ -183,12 +182,7 @@ export function CollectionMenu({
   episodesFor,
   activeIndex,
   onPickEpisode,
-  likedTopics,
-  onToggleTopic,
 }: {
-  /** The reels' "for you" topics (onboarding 'topics'), editable here. */
-  likedTopics?: string[];
-  onToggleTopic?: (id: string) => void;
   selected: string;
   topInset: number;
   onClose: () => void;
@@ -214,35 +208,6 @@ export function CollectionMenu({
       {/* The dim closes it — the same gesture every sheet answers to. */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.menu, { top: topInset + CHIP_ROW_H + 4 }]}>
-        {/* YOUR TOPICS (Radek, 2026-10-06: "somebody would like to change it
-            sometimes ... so it actually works"). The same six as onboarding;
-            each tap saves, and closing the menu re-ranks the reels. */}
-        {likedTopics && onToggleTopic && (
-          <View style={styles.topics}>
-            <Text style={styles.topicsHead}>YOUR TOPICS</Text>
-            <View style={styles.topicChips}>
-              {TOPICS.options.map((t) => {
-                const on = likedTopics.includes(t.id);
-                return (
-                  <Pressable
-                    key={t.id}
-                    onPress={() => onToggleTopic(t.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: on }}
-                    style={({ pressed }) => [styles.topicChip, on && styles.topicChipOn, pressed && styles.pressed]}
-                  >
-                    <Text style={[styles.topicChipText, on && styles.topicChipTextOn]}>
-                      {TOPICS.short[t.id] ?? t.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={styles.topicsFoot}>
-              {likedTopics.length > 0 ? 'More of these in your reels, and a bit of everything else.' : 'Pick any to see more of them.'}
-            </Text>
-          </View>
-        )}
         {shelves.map((c) => {
           const list = isEpisodes(c.id) ? episodesFor(c.id) : null;
           const unfolded = browsing === c.id;
@@ -382,21 +347,6 @@ const styles = StyleSheet.create({
     top: 0,
     zIndex: 5,
   },
-  topics: { borderBottomColor: 'rgba(242,245,243,0.08)', borderBottomWidth: 1, paddingBottom: 12, paddingHorizontal: 14, paddingTop: 12 },
-  topicsHead: { color: 'rgba(242,245,243,0.5)', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
-  topicChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 9 },
-  topicChip: {
-    backgroundColor: 'rgba(242,245,243,0.07)',
-    borderColor: 'rgba(242,245,243,0.12)',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  topicChipOn: { backgroundColor: 'rgba(94,230,168,0.16)', borderColor: 'rgba(94,230,168,0.6)' },
-  topicChipText: { color: 'rgba(242,245,243,0.8)', fontSize: 13, fontWeight: '700' },
-  topicChipTextOn: { color: '#5ee6a8' },
-  topicsFoot: { color: 'rgba(242,245,243,0.45)', fontSize: 12, fontWeight: '600', marginTop: 9 },
   refresh: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.1)',

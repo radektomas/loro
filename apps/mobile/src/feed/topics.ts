@@ -7,10 +7,21 @@ import { storageDriver } from '../platform/storage';
  */
 const KEY = 'loro.mobile.topics';
 
+const listeners = new Set<() => void>();
+
 export function setLikedTopics(ids: string[]): void {
   try {
     storageDriver.local.setItem(KEY, JSON.stringify(ids));
   } catch {}
+  for (const l of listeners) l();
+}
+
+/** The feed listens, so a change made in Settings re-ranks the reels. */
+export function subscribeToLikedTopics(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 /** Always an array; anything unreadable is "no preference" — a plain ranked feed. */

@@ -1,91 +1,30 @@
-import { StyleSheet, View } from 'react-native';
+import Svg, { Line, Path } from 'react-native-svg';
 
 /**
- * A speaker, drawn from Views — the same reasoning as TabIcons: no icon
- * library (react-native-svg is a native module and not in the binary), and
- * the emoji speakers 🔇/🔊 the band used to show come from the system emoji
- * font, in full colour, at whatever weight Apple drew them — a sticker
- * next to type. This is a glyph: one colour, 2px strokes, crisp at any
- * density.
- *
- * ON:  a body (small rect + cone) and two sound waves, arcs to the right.
- * OFF: the same body and a slash across it.
+ * A speaker, in SVG (Radek, 2026-10-06: the sound button "looks weird"). It
+ * used to be built from Views and border tricks, because react-native-svg was
+ * not in the binary then; it is now (since 1.7.0), so it is a real glyph:
+ * a rounded speaker body, two soft waves when on, a clean slash when off.
+ * One colour, round caps, drawn on a 24-unit grid.
  */
-export function SoundIcon({
-  on,
-  color,
-  size = 14,
-}: {
-  on: boolean;
-  color: string;
-  size?: number;
-}) {
-  const u = size / 14; // everything below is drawn on a 14pt grid
+export function SoundIcon({ on, color, size = 14 }: { on: boolean; color: string; size?: number }) {
   return (
-    <View style={[styles.box, { height: 14 * u, width: 16 * u }]}>
-      {/* the body: a rect for the driver, a cone opening to the right */}
-      <View
-        style={[
-          styles.rect,
-          { backgroundColor: color, height: 6 * u, width: 3.5 * u, left: 0, top: 4 * u },
-        ]}
-      />
-      <View
-        style={[
-          styles.cone,
-          {
-            borderRightColor: color,
-            borderRightWidth: 5 * u,
-            borderTopWidth: 6.5 * u,
-            borderBottomWidth: 6.5 * u,
-            left: 3.5 * u,
-            top: 0.5 * u,
-          },
-        ]}
+    <Svg width={size * (17 / 14)} height={size} viewBox="0 0 24 20">
+      <Path
+        d="M2.5 7.2c0-.7.5-1.2 1.2-1.2h3.1l4.6-3.7c.7-.6 1.6 0 1.6.8v13.8c0 .9-.9 1.4-1.6.8L6.8 14H3.7c-.7 0-1.2-.5-1.2-1.2z"
+        fill={color}
       />
       {on ? (
         <>
-          <View
-            style={[
-              styles.wave,
-              { borderRightColor: color, borderWidth: 1.6 * u, height: 6 * u, width: 3.5 * u, left: 9.6 * u, top: 4 * u, borderRadius: 4 * u },
-            ]}
-          />
-          <View
-            style={[
-              styles.wave,
-              { borderRightColor: color, borderWidth: 1.6 * u, height: 11 * u, width: 6 * u, left: 10.4 * u, top: 1.5 * u, borderRadius: 7 * u },
-            ]}
-          />
+          <Path d="M16.2 7.1c.9.8 1.4 1.8 1.4 2.9s-.5 2.1-1.4 2.9" stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
+          <Path d="M18.9 4.3c1.7 1.5 2.6 3.5 2.6 5.7s-.9 4.2-2.6 5.7" stroke={color} strokeWidth={2} strokeLinecap="round" fill="none" />
         </>
       ) : (
-        <View
-          style={[
-            styles.slash,
-            { backgroundColor: color, height: 1.8 * u, width: 15 * u, left: 0.5 * u, top: 6 * u },
-          ]}
-        />
+        <>
+          <Line x1={16.5} y1={7} x2={22} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
+          <Line x1={22} y1={7} x2={16.5} y2={13} stroke={color} strokeWidth={2} strokeLinecap="round" />
+        </>
       )}
-    </View>
+    </Svg>
   );
 }
-
-const styles = StyleSheet.create({
-  box: { position: 'relative' },
-  rect: { borderRadius: 1, position: 'absolute' },
-  cone: {
-    borderBottomColor: 'transparent',
-    borderTopColor: 'transparent',
-    height: 0,
-    position: 'absolute',
-    width: 0,
-  },
-  /** An arc: a bordered box showing only its right edge. */
-  wave: {
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-    borderTopColor: 'transparent',
-    position: 'absolute',
-  },
-  slash: { borderRadius: 999, position: 'absolute', transform: [{ rotate: '-40deg' }] },
-});

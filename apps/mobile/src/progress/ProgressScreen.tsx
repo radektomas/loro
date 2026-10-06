@@ -41,6 +41,10 @@ import { resetForColdStart } from '../onboarding/flow';
 import { SignInCard } from '../auth/SignInCard';
 import { DeleteAccountCard } from '../auth/DeleteAccountCard';
 import { LegalLinks } from './LegalLinks';
+import { getLikedTopics, setLikedTopics } from '../feed/topics';
+import { TOPICS } from '../onboarding/copy';
+import { TINTS } from '../onboarding/art';
+import { track } from '../platform/analytics';
 import { getPlan, type Plan } from './plan';
 import { LearnedSection, LevelRoad, PassportSection, TodaySection } from './Journal';
 import { tierForLearned } from '@loro/core/levels';
@@ -174,6 +178,69 @@ function DevNotificationRow() {
     is two or three taps rather than a scrub. */
 const TIME_STEP_MINUTES = 30;
 const MINUTES_IN_DAY = 24 * 60;
+
+/**
+ * YOUR FEED (Radek, 2026-10-06: change the onboarding topics any time — in
+ * Settings, not in the feed's shelf menu, which felt like a weird place).
+ * The same six topics, in their onboarding colours. Each tap saves; the
+ * reels re-rank the next time the Feed tab is opened (feed/topics.ts bus).
+ */
+function TopicsSection() {
+  const [liked, setLiked] = useState<string[]>(getLikedTopics);
+  const toggle = (id: string) => {
+    const next = liked.includes(id) ? liked.filter((t) => t !== id) : [...liked, id];
+    setLiked(next);
+    setLikedTopics(next);
+    track('topics_changed', { topics: next.join(',') });
+  };
+  return (
+    <View style={styles.section}>
+      <SectionTitle>Your feed</SectionTitle>
+      <View style={styles.card}>
+        <Text style={styles.notifTitle}>What you love watching</Text>
+        <Text style={styles.notifBody}>
+          {liked.length > 0
+            ? 'Two in every five reels come from these. Everything else still shows up.'
+            : 'Pick any and your reels lean that way.'}
+        </Text>
+        <View style={styles.topicChips}>
+          {TOPICS.options.map((t) => {
+            const on = liked.includes(t.id);
+            const colour = TOPIC_TINT[t.id] ?? '#5ee6a8';
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => toggle(t.id)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+                style={({ pressed }) => [
+                  styles.topicChip,
+                  on && { backgroundColor: `${colour}24`, borderColor: `${colour}99` },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={[styles.topicChipText, on && { color: colour }]}>
+                  {on ? '✓ ' : ''}
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** The onboarding tiles' colours (onboarding/steps.tsx TOPIC_ART + art.tsx TINTS). */
+const TOPIC_TINT: Record<string, string> = {
+  travel: TINTS.sky,
+  food: TINTS.amber,
+  love: TINTS.rose,
+  money: TINTS.mint,
+  funny: TINTS.violet,
+  mind: TINTS.mint,
+};
 
 /**
  * The notification settings, and the app's only place to change them.
@@ -482,6 +549,7 @@ export function ProgressScreen({
           <Text style={styles.settingsTitle}>SETTINGS</Text>
         </View>
         <NotificationsSection />
+        <TopicsSection />
 
         {/* Outside the empty/populated split for the same reason as the reset
             row: the offer to back up progress is worth making whether or not
@@ -826,6 +894,16 @@ const styles = StyleSheet.create({
       row on a narrow device. */
   notifLabel: { flex: 1 },
   notifTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
+  topicChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  topicChip: {
+    backgroundColor: 'rgba(242,245,243,0.06)',
+    borderColor: 'rgba(242,245,243,0.12)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  topicChipText: { color: 'rgba(242,245,243,0.85)', fontSize: 13, fontWeight: '700' },
   notifBody: {
     color: 'rgba(242,245,243,0.55)',
     fontSize: 12,
