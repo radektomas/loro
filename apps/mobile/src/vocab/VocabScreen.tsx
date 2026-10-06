@@ -23,6 +23,8 @@ import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
 import { WordDetailSheet } from './WordDetailSheet';
 import { RoadmapPath, TRIP_SEEN_KEY, TripPreview } from './RoadmapPath';
+import { PostcardLayer } from '../share/PostcardLayer';
+import { subscribeToPostcard } from '../share/postcardBus';
 import { CityArrival } from './CityArrival';
 import { LevelBanner } from './LevelBanner';
 import { tripStop } from '@loro/core/roadmap';
@@ -318,6 +320,9 @@ export function VocabScreen({
   const ladder = useMemo(() => tierForLearned(learnedTotal(words)), [words]);
   /** The ladder banner under the title, opened from the level chip. */
   const [showLevels, setShowLevels] = useState(false);
+  /** A past city's postcard, opened from its panel on the trip map. */
+  const [postcard, setPostcard] = useState<number | null>(null);
+  useEffect(() => subscribeToPostcard(setPostcard), []);
   /** A city arrival waiting to be shown once the window is down (CityArrival). */
   const [arrival, setArrival] = useState<{ from: number; to: number; empty: boolean } | null>(null);
   const onArrive = useCallback((from: number, to: number, empty: boolean) => {
@@ -728,6 +733,9 @@ export function VocabScreen({
           seen, not started behind the practice set that caused it. */}
       {arrival && active && detail === null && !picker && (
         <CityArrival from={arrival.from} to={arrival.to} empty={arrival.empty} onDone={closeArrival} />
+      )}
+      {postcard !== null && active && detail === null && !picker && (
+        <PostcardLayer stage={postcard} onClose={() => setPostcard(null)} />
       )}
 
       {/* ONE WINDOW. Its contents swap; it never gains a sibling. `visible`

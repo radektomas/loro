@@ -7,6 +7,8 @@ import { BRAND } from '../onboarding/brand';
 import { COUNTRIES, Flag, flagColours, localFor } from './countries';
 import { CITY_XY, COUNTRY_LABEL, LANDS, MAP_H as GEO_H, MAP_W as GEO_W, OCEAN_X } from './tripMapData';
 import { storageDriver } from '../platform/storage';
+import { track } from '../platform/analytics';
+import { requestPostcard } from '../share/postcardBus';
 import { storage } from '@loro/core/storage';
 
 /** The last city the Words tab celebrated arriving in (CityArrival). */
@@ -715,6 +717,22 @@ function CityWords({
                 : `${learned.length} words learned here`}
           </Text>
         </View>
+        {/* Every city you have arrived at keeps its postcard (Radek,
+            2026-10-06). Madrid is where the trip starts, so it has none. */}
+        {open && stopIndex >= 1 && (
+          <Pressable
+            onPress={() => {
+              track('postcard_opened', { stage: stopIndex, from: 'map' });
+              requestPostcard(stopIndex);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Your postcard from ${stop.city}`}
+            hitSlop={6}
+            style={({ pressed }) => [styles.postcardChip, pressed && styles.pressed]}
+          >
+            <Text style={styles.postcardChipText}>Postcard</Text>
+          </Pressable>
+        )}
       </View>
       {open && learned.length > 0 && (
         <>
@@ -1462,6 +1480,14 @@ export function RoadmapPath({
 }
 
 const styles = StyleSheet.create({
+  postcardChip: {
+    borderColor: 'rgba(94,230,168,0.45)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  postcardChipText: { color: MINT, fontSize: 13, fontWeight: '800' },
   pressed: { opacity: 0.75 },
   level: {
     alignItems: 'center',
