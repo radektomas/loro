@@ -62,6 +62,29 @@ const PAGE_TEMPLATE = `<!doctype html>
   var player = null, playerReady = false;
   var playing = false;
   /**
+   * THE VIDEO A LOAD ASKED FOR, until the player is really on it. Between
+   * loadVideoById and the new video's metadata, getCurrentTime() and state
+   * events still describe the OUTGOING video — and while that one was
+   * playing, the sampler re-anchored RN to ITS clock (e.g. 4.9s) under the
+   * new video's id. A blue blank at 4.3s in the new video then "fired",
+   * paused the load at 0:00 and re-seated six times into a black frame
+   * (Radek, 2026-10-06, refreshing the feed mid-video). So until the player
+   * reports the requested id, its time and states are ignored. Capped, so an
+   * id that never reads back cannot freeze the clock.
+   */
+  var expectId = null;
+  var expectSince = 0;
+  var EXPECT_MAX_MS = 4000;
+  function staleVideo() {
+    if (!expectId) return false;
+    if (now() - expectSince > EXPECT_MAX_MS) { expectId = null; return false; }
+    try {
+      var d = player && player.getVideoData ? player.getVideoData() : null;
+      if (d && d.video_id === expectId) { expectId = null; return false; }
+    } catch (err) { expectId = null; return false; }
+    return true;
+  }
+  /**
    * THE SOUND STATE LIVES HERE, not in RN, and that is deliberate.
    *
    * The player is created muted (playerVars.mute = 1) because gesture-free
@@ -371,6 +394,7 @@ const PAGE_TEMPLATE = `<!doctype html>
      * the next read here disagrees and corrects it within 250ms.
      */
     postMuted();
+    if (staleVideo()) return;
     if (pendingSeek) {
       var ps = pendingSeek;
       var raw = readFinite();
@@ -429,6 +453,9 @@ const PAGE_TEMPLATE = `<!doctype html>
       // karaoke does not spend the first frames highlighting line one.
       var startAt = (typeof c.start === 'number' && isFinite(c.start) && c.start > 0) ? c.start : 0;
       anchorTime = startAt; anchorAt = now(); lastRaw = -1; pendingSeek = null;
+      // Not playing until THIS video says so (see expectId).
+      playing = false;
+      expectId = c.videoId; expectSince = now();
       // A new video gets a fresh re-assert budget: the standing rate has to be
       // put back once per load, and a refusal by the LAST video must not spend
       // this one's allowance.
