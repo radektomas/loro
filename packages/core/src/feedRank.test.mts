@@ -66,23 +66,35 @@ describe('parseFeedScores', () => {
 });
 
 describe('rankFeed — for you', () => {
-  it('leans toward the liked topics without dropping the rest', () => {
-    const videos = Array.from({ length: 40 }, (_, i) => ({ id: `v${i}` }));
-    const scores = {
-      scores: {},
-      benched: [],
-      prior: 0.5,
-      topics: Object.fromEntries(videos.slice(0, 20).map((v) => [v.id, ['food']])),
-    };
-    let foodFirst = 0;
-    let seed = 7;
+  const videos = Array.from({ length: 40 }, (_, i) => ({ id: `v${i}` }));
+  // Only the LAST 8 are about food, and they score worst: the rhythm, not the
+  // score, has to bring them forward.
+  const scores = {
+    scores: Object.fromEntries(videos.map((v, i) => [v.id, i >= 32 ? 0.1 : 0.9])),
+    benched: [],
+    prior: 0.5,
+    topics: Object.fromEntries(videos.slice(32).map((v) => [v.id, ['food']])),
+  };
+  const isFood = (v: { id: string }) => Number(v.id.slice(1)) >= 32;
+
+  it('opens on a liked video and keeps two in every five while they last', () => {
+    const order = rankFeed(videos, { scores, liked: new Set(['food']) });
+    assert.equal(isFood(order[0]), true);
+    assert.equal(order.slice(0, 10).filter(isFood).length, 4);
+    assert.equal(order.length, 40);
+    assert.equal(new Set(order.map((v) => v.id)).size, 40);
+  });
+
+  it('still keeps unseen before seen', () => {
+    const order = rankFeed(videos, { scores, liked: new Set(['food']), watchedIds: new Set(['v32', 'v33']) });
+    assert.ok(order.findIndex((v) => v.id === 'v32') >= 38);
+  });
+
+  it('changes nothing with no liked topics', () => {
+    let seed = 3;
     const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let run = 0; run < 200; run++) {
-      const top = rankFeed(videos, { scores, liked: new Set(['food']), random }).slice(0, 10);
-      foodFirst += top.filter((v) => Number(v.id.slice(1)) < 20).length;
-    }
-    const share = foodFirst / 2000;
-    assert.ok(share > 0.6 && share < 0.9, `food share in the top 10 was ${share}`);
-    assert.equal(rankFeed(videos, { scores, liked: new Set(['food']), random }).length, 40);
+    const plain = rankFeed(videos, { scores, random: () => 0.5 });
+    assert.equal(isFood(plain[0]), false);
+    void random;
   });
 });

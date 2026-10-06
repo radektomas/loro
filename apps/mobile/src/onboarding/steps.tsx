@@ -1136,8 +1136,14 @@ function PlanBuildStep({ state, next, isCurrent }: StepProps) {
   // The slider's untouched default is the honest stand-in if it ever is.
   const goalMonths = state.goalMonths ?? DEFAULT_MONTHS;
   const goalDate = targetLabel(goalMonths);
+  // The feed they asked for, said back (Radek, 2026-10-06: put the feed
+  // preference in the plan). No topics picked: the line it always was.
+  const feedFor = topicPhrase(state.topics);
   const lines = [
-    { label: 'Clips', text: PLAN_BUILD.clips },
+    {
+      label: 'Clips',
+      text: feedFor ? `Real clips at your level, with more ${feedFor}` : PLAN_BUILD.clips,
+    },
     {
       label: 'Pace',
       text: pace ? `${pace.label} · ${pace.body.replace(/\.$/, '')}` : PLAN_BUILD.paceFallback,
@@ -1299,6 +1305,13 @@ function paceLine(frequency: string | null): string | null {
   }
 }
 
+/** The picked topics as a phrase — "food", "food and travel", "food, travel and money and work". */
+function topicPhrase(topics: string[]): string | null {
+  const names = TOPICS.options.filter((o) => topics.includes(o.id)).map((o) => TOPICS.short[o.id] ?? o.label.toLowerCase());
+  if (names.length === 0) return null;
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 /** The reasons from screen 2, read back in the second person. */
 const WHY_CLAUSE: Record<string, string> = {
   travel: 'so you can actually talk when you get there',
@@ -1333,6 +1346,7 @@ function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
   const goalDate = targetLabel(state.goalMonths ?? DEFAULT_MONTHS);
   const level = state.derived ?? 'A1';
   const why = whyLine(state.motivation);
+  const feedFor = topicPhrase(state.topics);
   const rows = [
     {
       label: 'Pace',
@@ -1356,7 +1370,11 @@ function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
     { label: rows[0].label, head: rows[0].head, tint: 'mint' },
     { label: rows[1].label, head: rows[1].head, tint: 'sky' },
     { label: rows[2].label, head: rows[2].head, tint: 'amber' },
-    { label: rows[3].label, head: rows[3].head, tint: 'violet' },
+    // Picked topics take the fourth tile: their feed is more theirs than
+    // the recall line, which the plan screen before has already said.
+    feedFor
+      ? { label: 'Feed', head: `More ${feedFor}`, tint: 'violet' as Tint }
+      : { label: rows[3].label, head: rows[3].head, tint: 'violet' },
   ];
   return (
     <Screen footer={<PrimaryButton label={PLAN_READY.cta} onPress={leave} />}>

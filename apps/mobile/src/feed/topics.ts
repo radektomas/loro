@@ -2,7 +2,7 @@ import { storageDriver } from '../platform/storage';
 
 /**
  * THE TOPICS THE USER LIKES WATCHING (onboarding 'topics' step; Radek,
- * 2026-10-06). The feed leans toward them (core feedRank TOPIC_BONUS) and
+ * 2026-10-06). The feed leans toward them (core feedRank: 2 of every 5 videos) and
  * still shows everything else. Ids match scripts/tag-topics.mts TOPIC_IDS.
  */
 const KEY = 'loro.mobile.topics';

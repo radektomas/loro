@@ -68,6 +68,15 @@ export const TOPICS = {
     { id: 'mind', label: 'Health, sport and mind' },
   ],
   cta: 'Continuar',
+  /** How each topic is named when the plan says it back ("more food and travel"). */
+  short: {
+    travel: 'travel',
+    food: 'food',
+    love: 'love and family',
+    money: 'money and work',
+    funny: 'funny everyday stuff',
+    mind: 'health and mind',
+  } as Record<string, string>,
 };
 
 // ----------------------------------------------------------- 3. self-assess

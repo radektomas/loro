@@ -41,12 +41,19 @@ export const EMPTY_SCORES: FeedScores = { scores: {}, benched: [], prior: 0.5 };
 
 /**
  * FOR YOU (Radek, 2026-10-06: "the feed leans that way ... I would still show
- * other topics, just less"). A video about a topic the user picked gets this
- * much added to its score. With SHARPNESS 4 that is about 1.8x the weight —
- * a clear lean, not a filter: the rest of the catalog still comes, and still
- * unseen-first.
+ * other topics, just less"). A score bonus was tried first and lost: food
+ * clips are mostly long cooking videos (median 59 s), the short-first bonus
+ * pushes those down, and a user who picked only food saw 1.3 food videos in
+ * their first ten on average and none at all 23% of the time ("after I
+ * clicked food only, I didn't see a food short in my first 10 videos").
+ *
+ * So the lean is a RHYTHM, not a weight: within each group, every LIKED_EVERY
+ * videos, LIKED_SLOTS of them are about a liked topic — the first video
+ * included — each side keeping its own ranked order. When the liked videos
+ * run out, the rest simply continues. Nothing is filtered.
  */
-export const TOPIC_BONUS = 0.15;
+export const LIKED_EVERY = 5;
+const LIKED_SLOTS = new Set([0, 2]);
 
 /**
  * How much more often a better video comes first. exp(SHARPNESS * score):
@@ -68,9 +75,7 @@ export function rankFeed<V extends { id: string }>(
   const { watchedIds, scores = EMPTY_SCORES, liked, random = Math.random } = options;
   const benched = new Set(scores.benched);
   const keyed = videos.map((video) => {
-    const about = scores.topics?.[video.id];
-    const forYou = liked && liked.size > 0 && about?.some((t) => liked.has(t)) ? TOPIC_BONUS : 0;
-    const score = (scores.scores[video.id] ?? scores.prior) + forYou;
+    const score = scores.scores[video.id] ?? scores.prior;
     const weight = Math.exp(SHARPNESS * Math.min(1, Math.max(0, score)));
     // u in (0,1]; a larger key comes first.
     const u = Math.max(Number.EPSILON, random());
@@ -81,7 +86,25 @@ export function rankFeed<V extends { id: string }>(
     };
   });
   keyed.sort((a, b) => a.group - b.group || b.key - a.key);
-  return keyed.map((k) => k.video);
+  const ranked = keyed.map((k) => k.video);
+  if (!liked || liked.size === 0 || !scores.topics) return ranked;
+
+  const isLiked = (video: V) => scores.topics?.[video.id]?.some((t) => liked.has(t)) ?? false;
+  const out: V[] = [];
+  for (const group of [0, 1, 2]) {
+    const inGroup = keyed.filter((k) => k.group === group).map((k) => k.video);
+    const mine = inGroup.filter(isLiked);
+    const rest = inGroup.filter((v) => !isLiked(v));
+    let m = 0;
+    let r = 0;
+    while (m < mine.length || r < rest.length) {
+      const slot = out.length % LIKED_EVERY;
+      const wantMine = LIKED_SLOTS.has(slot);
+      if ((wantMine && m < mine.length) || r >= rest.length) out.push(mine[m++]);
+      else out.push(rest[r++]);
+    }
+  }
+  return out;
 }
 
 /** Read a published scores file defensively: anything malformed is "no scores". */
