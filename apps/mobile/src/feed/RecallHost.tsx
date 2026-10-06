@@ -216,8 +216,16 @@ export function RecallHost({
   quiet = false,
   onYieldPlayer,
   resetKey = 0,
+  suspended = false,
   children,
 }: {
+  /**
+   * A FEED REFRESH IS IN FLIGHT: no hold may engage. The old video plays on
+   * for the second the new order takes, and a blank stopping it just before
+   * the list is swapped out from under it lagged the whole feed (Radek,
+   * 2026-10-06). The plan stays drawn; only the hold is off.
+   */
+  suspended?: boolean;
   /**
    * BUMPED BY A FEED REFRESH: replan from nothing. A refresh rebuilds the
    * list under a blank that may be HELD — video paused, bar up — and when
@@ -422,7 +430,7 @@ export function RecallHost({
       is this host's. */
   const recallOn = recallActive && recallBlanks;
   const planned = (recallOn || levelsOn) && owns && video !== null;
-  const armed = planned && active;
+  const armed = planned && active && !suspended;
 
   const [plan, setPlan] = useState(EMPTY_PLAN);
   const [results, setResults] = useState<Map<number, AnswerMatch>>(new Map());

@@ -1243,6 +1243,7 @@ function FeedBody({
         quiet={Boolean(walkthrough)}
         onYieldPlayer={setPlayerCovered}
         resetKey={refreshKey}
+        suspended={refreshing}
       >
         <View
           style={styles.root}
