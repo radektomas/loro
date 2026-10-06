@@ -215,8 +215,18 @@ export function RecallHost({
   onBlankResolved,
   quiet = false,
   onYieldPlayer,
+  resetKey = 0,
   children,
 }: {
+  /**
+   * BUMPED BY A FEED REFRESH: replan from nothing. A refresh rebuilds the
+   * list under a blank that may be HELD — video paused, bar up — and when
+   * the new order happened to open on the same video (same object, so the
+   * plan's own deps saw no change) the old hold survived into the reloaded
+   * player and fought it: the blank stuck on screen and the feed froze
+   * (Radek, 2026-10-06). A new plan runs the full reset below.
+   */
+  resetKey?: number;
   /** The ACTIVE slide's video, or null. Not gated on the tab — see `planned`. */
   video: (Video & { youtubeId: string }) | null;
   /** Is the feed the visible tab? Gates the hold, never the plan. */
@@ -664,6 +674,7 @@ export function RecallHost({
     focusCueIndex,
     startAtS,
     staleVersion,
+    resetKey,
   ]);
 
   /**

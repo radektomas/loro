@@ -419,14 +419,20 @@ export function FeedScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const refreshingRef = useRef(false);
-  const refreshFeed = useCallback(async (how: 'button' | 'topics') => {
+  const refreshFeed = useCallback(async (how: 'button' | 'topics', onScreenId?: string | null) => {
     if (refreshingRef.current || reelRef.current || collectionRef.current !== REELS) return;
     refreshingRef.current = true;
     setRefreshing(true);
     const started = Date.now();
     const before = new Set((orderedRef.current ?? []).map((v) => v.id));
     await Promise.race([refreshCatalog(), new Promise((r) => setTimeout(r, REFRESH_WAIT_MS))]);
-    const next = listFor(REELS, sourceVideos());
+    const ranked = listFor(REELS, sourceVideos());
+    // The video on screen never opens the fresh list: "new reels" that
+    // start with the one you were watching read as nothing happened.
+    const next =
+      onScreenId && ranked[0]?.id === onScreenId
+        ? [...ranked.filter((v) => v.id !== onScreenId), ranked[0]]
+        : ranked;
     // Long enough to read as "something happened", never a wait.
     const rest = REFRESH_MIN_MS - (Date.now() - started);
     if (rest > 0) await new Promise((r) => setTimeout(r, rest));
@@ -800,7 +806,7 @@ function FeedBody({
   refreshKey = 0,
 }: {
   /** The reels shelf's refresh (button and pull); absent elsewhere. */
-  onRefresh?: (how: 'button' | 'topics') => void;
+  onRefresh?: (how: 'button' | 'topics', onScreenId?: string | null) => void;
   refreshing?: boolean;
   /** Bumped by each refresh: the new list lands on its first slide. */
   refreshKey?: number;
@@ -1236,6 +1242,7 @@ function FeedBody({
         // The guided run raises no asks of its own. See RecallHost's `quiet`.
         quiet={Boolean(walkthrough)}
         onYieldPlayer={setPlayerCovered}
+        resetKey={refreshKey}
       >
         <View
           style={styles.root}
@@ -1256,7 +1263,7 @@ function FeedBody({
               topInset={insets.top}
               open={menuOpen}
               onPress={() => setMenuOpen((o) => !o)}
-              onRefresh={onRefresh ? () => onRefresh('button') : undefined}
+              onRefresh={onRefresh ? () => onRefresh('button', activeVideoId) : undefined}
               refreshing={refreshing}
               today={today}
             />
