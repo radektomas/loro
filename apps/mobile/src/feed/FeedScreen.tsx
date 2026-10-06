@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  AppState,
   Image,
   LayoutChangeEvent,
   Pressable,
@@ -597,6 +598,32 @@ export function FeedScreen({
   );
 }
 
+/**
+ * Today's correct answers and the goal, kept current: an answer changes the
+ * words (storage.onWordsChanged), and midnight or a day away is caught on
+ * foreground.
+ */
+function useTodayProgress(): { count: number; goal: number } {
+  const read = () => ({ count: storage.getTodayCorrect(), goal: storage.getDailyGoal() });
+  const [today, setToday] = useState(read);
+  useEffect(() => {
+    const refresh = () =>
+      setToday((prev) => {
+        const next = read();
+        return next.count === prev.count && next.goal === prev.goal ? prev : next;
+      });
+    const unsub = storage.onWordsChanged(refresh);
+    const app = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => {
+      unsub();
+      app.remove();
+    };
+  }, []);
+  return today;
+}
+
 /** A refresh waits this long for the catalog pointer before re-ranking what it has. */
 const REFRESH_WAIT_MS = 3000;
 /** ...and spins at least this long, so the tap visibly did something. */
@@ -807,6 +834,8 @@ function FeedBody({
     setListGeneration((g) => g + 1);
     landOnLastRef.current = true;
   }, [collection]);
+  /** Today's goal, for the dots beside the pill. Moves with every answer. */
+  const today = useTodayProgress();
   // A refreshed feed starts at its top too — the same remount.
   const firstRefreshRef = useRef(true);
   useEffect(() => {
@@ -1202,6 +1231,7 @@ function FeedBody({
               onPress={() => setMenuOpen((o) => !o)}
               onRefresh={onRefresh ? () => onRefresh('button') : undefined}
               refreshing={refreshing}
+              today={today}
             />
           )}
           {showChips && menuOpen && (

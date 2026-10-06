@@ -52,7 +52,10 @@ export function CollectionPill({
   onPress,
   onRefresh,
   refreshing = false,
+  today,
 }: {
+  /** Today's correct answers against the plan's goal — the dots. */
+  today?: { count: number; goal: number };
   selected: string;
   /** "3/25" on an episode shelf — where you are in the list. */
   detail?: string;
@@ -89,6 +92,7 @@ export function CollectionPill({
         {detail && <Text style={styles.pillDetail}>· {detail}</Text>}
         <Text style={styles.pillChevron}>{open ? '▴' : '▾'}</Text>
       </Pressable>
+      {today && <DayDots count={today.count} goal={today.goal} topInset={topInset} />}
       {/* REFRESH (Radek, 2026-10-06: "a possibility to refresh the feed").
           In the top strip, never over the player: a pull on the list itself
           moves the slides but not the YouTube player above them. */}
@@ -112,6 +116,53 @@ export function CollectionPill({
           </Animated.Text>
         </Pressable>
       )}
+    </View>
+  );
+}
+
+/**
+ * TODAY, IN THE FEED (Radek, 2026-10-06: "small dots filling up ... next to
+ * the pills"). The daily goal lives on Progress, but the feed is where the
+ * words come right, so it fills here too: one dot per word of the plan's
+ * goal (3, 5 or 10), each popping mint as an answer lands. Full, they all
+ * glow — the session has its finish line. Read-only, like the ring it
+ * mirrors (Journal DayCoin).
+ */
+function DayDots({ count, goal, topInset }: { count: number; goal: number; topInset: number }) {
+  const n = Math.max(1, Math.min(10, goal));
+  const filled = Math.min(n, count);
+  const done = count >= goal;
+  const pop = useRef(new Animated.Value(1)).current;
+  const last = useRef(filled);
+  useEffect(() => {
+    if (filled > last.current) {
+      pop.setValue(0);
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 180, useNativeDriver: true }).start();
+    }
+    last.current = filled;
+  }, [filled, pop]);
+  return (
+    <View
+      accessible
+      accessibilityLabel={done ? `Today's goal done: ${count} words` : `${filled} of ${goal} words today`}
+      style={[styles.dots, { top: topInset, height: CHIP_ROW_H }]}
+    >
+      {Array.from({ length: n }, (_, i) => {
+        const on = i < filled;
+        const newest = on && i === filled - 1;
+        return (
+          <Animated.View
+            key={i}
+            style={[
+              styles.dot,
+              n > 5 && styles.dotSmall,
+              on && styles.dotOn,
+              done && styles.dotDone,
+              newest && { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] }) }] },
+            ]}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -307,6 +358,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     width: 34,
+  },
+  dots: { alignItems: 'center', flexDirection: 'row', gap: 4, left: 18, position: 'absolute' },
+  dot: { backgroundColor: 'rgba(242,245,243,0.18)', borderRadius: 999, height: 7, width: 7 },
+  dotSmall: { height: 6, width: 6 },
+  dotOn: { backgroundColor: '#5ee6a8' },
+  dotDone: {
+    backgroundColor: '#5ee6a8',
+    shadowColor: '#5ee6a8',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
   refreshGlyph: { color: '#f2f5f3', fontSize: 18, fontWeight: '700', lineHeight: 20 },
   pill: {
