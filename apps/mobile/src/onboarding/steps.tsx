@@ -1722,7 +1722,8 @@ const styles = StyleSheet.create({
   choices: { marginTop: 18 },
   topicGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
   topicCell: { width: '48.5%' },
-  topicTile: { alignItems: 'flex-start', borderRadius: 20, borderWidth: 1, gap: 12, minHeight: 116, padding: 14 },
+  /** One fixed size for every tile: a two-line label must not make its square taller than its neighbour. */
+  topicTile: { alignItems: 'flex-start', borderRadius: 20, borderWidth: 1, height: 128, justifyContent: 'space-between', padding: 14 },
   topicTick: {
     alignItems: 'center',
     borderRadius: 999,
