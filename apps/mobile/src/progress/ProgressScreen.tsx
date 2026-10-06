@@ -197,7 +197,16 @@ const MINUTES_IN_DAY = 24 * 60;
  */
 function TopicsSection() {
   const [liked, setLiked] = useState<string[]>(getLikedTopics);
+  /**
+   * A tap saves at once, so the only thing missing was being TOLD so
+   * (Radek, 2026-10-06: "does it really work when you click it?"). The line's
+   * room is always reserved and only its opacity moves: a line that appeared
+   * would push the card taller, the jump the tiles were rebuilt to avoid.
+   */
+  const savedShown = useSharedValue(0);
+  const savedStyle = useAnimatedStyle(() => ({ opacity: savedShown.value }));
   const toggle = (id: string) => {
+    savedShown.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
     const next = liked.includes(id) ? liked.filter((t) => t !== id) : [...liked, id];
     setLiked(next);
     setLikedTopics(next);
@@ -225,6 +234,9 @@ function TopicsSection() {
             />
           ))}
         </View>
+        <Animated.Text style={[styles.topicSaved, savedStyle]}>
+          Saved. Your reels update when you go back to the feed.
+        </Animated.Text>
       </View>
     </View>
   );
@@ -986,6 +998,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 20,
   },
+  topicSaved: { color: '#5ee6a8', fontSize: 12, fontWeight: '600', lineHeight: 16, marginTop: 12 },
   topicTickMark: { color: '#06130d', fontSize: 11, fontWeight: '900' },
   topicChipText: { flex: 1, fontSize: 13, fontWeight: '700', lineHeight: 17 },
   notifBody: {
