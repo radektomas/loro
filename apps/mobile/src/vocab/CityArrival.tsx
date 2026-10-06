@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tripStop } from '@loro/core/roadmap';
 import { BRAND } from '../onboarding/brand';
 import { COUNTRIES, Flag, localFor } from './countries';
+import { PostcardLayer } from '../share/PostcardLayer';
+import { track } from '../platform/analytics';
 
 /**
  * ARRIVING IN A NEW CITY (Radek, 2026-09-30: the next city is closed "and
@@ -52,6 +54,7 @@ export function CityArrival({
   const fly = useRef(new Animated.Value(0)).current;
   const land = useRef(new Animated.Value(0)).current;
   const gift = useRef(new Animated.Value(0)).current;
+  const [postcard, setPostcard] = useState(false);
 
   useEffect(() => {
     Animated.sequence([
@@ -131,6 +134,17 @@ export function CityArrival({
             ? `You finished ${prev.city}! Save new words in your videos, then train them here to reach ${after}.`
             : `You finished ${prev.city}. Your next words are waiting here.`}
         </Text>
+        {/* The postcard of the leg you just travelled, to keep or post. */}
+        <Pressable
+          onPress={() => {
+            track('postcard_opened', { stage: to });
+            setPostcard(true);
+          }}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.postcardButton, pressed && { opacity: 0.75 }]}
+        >
+          <Text style={styles.postcardText}>See your postcard</Text>
+        </Pressable>
         <Pressable
           onPress={onDone}
           accessibilityRole="button"
@@ -139,6 +153,7 @@ export function CityArrival({
           <Text style={styles.ctaText}>¡Vamos!</Text>
         </Pressable>
       </Animated.View>
+      {postcard && <PostcardLayer stage={to} onClose={() => setPostcard(false)} />}
     </Animated.View>
   );
 }
@@ -203,8 +218,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: MINT,
     borderRadius: 16,
-    marginTop: 18,
+    marginTop: 10,
     paddingVertical: 15,
   },
+  postcardButton: {
+    alignItems: 'center',
+    borderColor: 'rgba(94,230,168,0.45)',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 18,
+    paddingVertical: 14,
+  },
+  postcardText: { color: MINT, fontSize: 16, fontWeight: '800' },
   ctaText: { color: '#06130d', fontSize: 17, fontWeight: '900' },
 });

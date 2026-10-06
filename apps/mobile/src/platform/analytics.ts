@@ -133,6 +133,8 @@ export type EventName =
   | 'word_learned'        // { learned } — a word crossed into learned (the toast)
   | 'practice_set'        // { right, early, stepOne } — the Words tab's three-exercise set
   | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
+  | 'postcard_opened'     // { stage } — the arrival postcard was opened
+  | 'postcard_shared'     // { stage, action, to } — the share sheet closed; to = the app it went to
   | 'topics_changed'      // { topics } — the feed topics edited in Progress settings
   | 'feed_refreshed'      // { how: 'button' | 'pull', fresh } — the reels feed was re-ranked on demand
   // THE TRIP (1.7.1): does anyone get past Madrid, and is the ladder looked at?

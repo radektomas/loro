@@ -135,7 +135,8 @@ export function installDevMenu(): void {
     /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
         "so i can see it right away and not search it like a crazy man").
         Open the Feed tab, then tap. */
-    { name: '★ Share · City card for Stories (preview)', run: () => devShowCityCard() },
+    { name: '★ Share · Postcard, city to city (Bogotá → Medellín)', run: () => devShowCityCard('city') },
+    { name: '★ Share · Postcard, country to country (Cartagena → Quito)', run: () => devShowCityCard('country') },
     { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
     { name: '★ Loro · Trip: first word saved', run: () => devRaiseTripMoment('firstSave') },
     { name: '★ Loro · Trip: first blue word', run: () => devRaiseTripMoment('firstBlue') },

@@ -1,20 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { storage } from '@loro/core/storage';
-import { cleanWord } from '@loro/core/dictionary';
-import { buildRoadmap, cityArrivals, splitCities, tripPosition, withLevelKnown } from '@loro/core/roadmap';
 import { CityShareCard, type CityCardWord } from './CityShareCard';
 
 /**
  * DEV PREVIEW OF THE CITY CARD (Radek, 2026-10-06: judge the look before the
- * share flow is built). The dev menu raises it; it draws the card for the
- * city you are in, from your own trip. Still in Madrid, or nothing learned
- * there yet: Sevilla with a few sample words, so the look can be judged on
- * a fresh install. Tap anywhere to close.
+ * share flow is built). Two fixed test postcards from the dev menu, one per
+ * kind of arrival (Radek: "give me 2 test postcards ... city to city and
+ * country to country"): Bogotá to Medellín inside Colombia, and Cartagena
+ * to Quito across a border. Sample words, so they look the same on any
+ * install. Tap anywhere to close.
  */
-const listeners = new Set<() => void>();
-export function devShowCityCard(): void {
-  for (const l of listeners) l();
+export type TestCard = 'city' | 'country';
+const listeners = new Set<(kind: TestCard) => void>();
+export function devShowCityCard(kind: TestCard): void {
+  for (const l of listeners) l(kind);
 }
 
 const SAMPLE: CityCardWord[] = [
@@ -23,29 +22,25 @@ const SAMPLE: CityCardWord[] = [
   { word: 'gente', meaning: 'people' },
   { word: 'hoy', meaning: 'today' },
   { word: 'vida', meaning: 'life' },
+  { word: 'camino', meaning: 'way' },
+  { word: 'barrio', meaning: 'neighbourhood' },
+  { word: 'fiesta', meaning: 'party' },
+  { word: 'cerca', meaning: 'near' },
+  { word: 'lleno', meaning: 'full' },
 ];
 
-function cardData() {
-  const trip = withLevelKnown(storage.getSavedWords(), storage.getLevelKnownWords()).words;
-  const pos = tripPosition(trip);
-  const stage = Math.max(1, pos.stage);
-  const cities = splitCities(buildRoadmap(trip));
-  const before = (cities[stage - 1] ?? []).filter((n) => n.status === 'done');
-  const words = before.map((n) => ({ word: cleanWord(n.word.text), meaning: n.word.translation }));
-  const learnedTotal = cities.flat().filter((n) => n.status === 'done').length;
-  return {
-    stage,
-    words: words.length > 0 ? words : SAMPLE,
-    arrivedAt: cityArrivals(trip)[stage] ?? Date.now(),
-    learnedTotal: Math.max(learnedTotal, words.length > 0 ? 0 : 12),
-  };
+/** TRIP indexes: Medellín (from Bogotá) and Quito (from Cartagena). */
+const TEST_STAGE: Record<TestCard, number> = { city: 16, country: 18 };
+
+function cardData(kind: TestCard) {
+  return { stage: TEST_STAGE[kind], words: SAMPLE, arrivedAt: Date.now(), learnedTotal: 164 };
 }
 
 export function SharePreviewHost() {
   const [data, setData] = useState<ReturnType<typeof cardData> | null>(null);
   const { width, height } = useWindowDimensions();
   useEffect(() => {
-    const show = () => setData(cardData());
+    const show = (kind: TestCard) => setData(cardData(kind));
     listeners.add(show);
     return () => {
       listeners.delete(show);

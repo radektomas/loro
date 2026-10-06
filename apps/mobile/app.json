@@ -13,7 +13,8 @@
       "bundleIdentifier": "app.getloro",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "Loro saves your trip postcards to your photos when you ask it to."
       }
     },
     "extra": {
