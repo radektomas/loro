@@ -1,29 +1,42 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient, Path, Polyline, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { TRIP, tripStop } from '@loro/core/roadmap';
 import { BRAND } from '../onboarding/brand';
 import { COUNTRIES, Flag, flagColours } from '../vocab/countries';
+import { CITY_XY, LANDS, MAP_H } from '../vocab/tripMapData';
 
 /**
- * THE CITY CARD FOR STORIES (Radek, 2026-10-06: "this would be a cool
- * feature, but it needs to be fucking pretty and vibes smooth").
+ * THE CITY CARD FOR STORIES (Radek, 2026-10-06: "it needs to be fucking
+ * pretty and vibes smooth"; then, on the first draft: "doesn't look bad but
+ * I want a more smooth aesthetic look so people want to share it").
  *
- * A 9:16 poster, drawn at `width` and laid out in units of width/360 so it
- * renders identically at preview size and at export size (1080 wide).
- * Night-green ground with a mint glow and a glow in the flag's colour; the
- * arrival set big; the Words page's postcard (airmail edge in the flag's
- * colours, flag stamp, dated postmark) carrying the words that got you
- * there; the route so far as a line of stops; Loro waving at the foot.
+ * Second draft, quieter and more editorial — the Strava-route idea:
+ *   - a smooth gradient tinted by the country's flag, one soft glow, nothing
+ *     else on the ground (the dotted grid and the paper postcard are gone);
+ *   - the city set in Didot, the iOS display serif, "¡Llegué a" in Georgia
+ *     italic — real typography at zero cost, both ship with iOS;
+ *   - the COUNTRY'S REAL OUTLINE (the trip map's Natural Earth shapes) with
+ *     your route through it glowing mint, the city you reached haloed;
+ *   - the words that got you there on one frosted panel;
+ *   - a postmark with the date, and Loro small at the foot.
  *
- * Nothing here is invented: the city, the date, the words and the route are
- * the user's own trip. No emoji.
+ * Laid out in units of width/360, so the preview and the 1080-wide export are
+ * the same picture. Everything on it is the user's own trip. No emoji.
  */
 export type CityCardWord = { word: string; meaning: string };
 
-const NIGHT = '#07110d';
 const MINT = '#5ee6a8';
-const CREAM = '#f1e8d4';
-const INK = '#1f1a12';
+const WHITE = '#f6f3ec';
+const DISPLAY = 'Didot';
+const SERIF = 'Georgia';
+const SANS = 'Avenir Next';
+
+/** Mix a hex colour toward a base, for a flag-tinted but calm ground. */
+function mix(hex: string, base: string, t: number): string {
+  const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [a, b] = [p(hex), p(base)];
+  return `#${a.map((v, i) => Math.round(b[i] + (v - b[i]) * t).toString(16).padStart(2, '0')).join('')}`;
+}
 
 export function CityShareCard({
   stage,
@@ -32,222 +45,179 @@ export function CityShareCard({
   learnedTotal,
   width,
 }: {
-  /** The city just reached (TRIP index). */
   stage: number;
-  /** Learned in the city before it — what got you here. Up to six are shown. */
   words: CityCardWord[];
   arrivedAt: number;
   learnedTotal: number;
   width: number;
 }) {
   const u = width / 360;
+  const px = (n: number) => Math.round(n * u * 10) / 10;
   const height = Math.round((width * 16) / 9);
   const stop = tripStop(stage);
-  const next = tripStop(stage + 1);
   const info = COUNTRIES[stop.country];
-  const [a, b] = flagColours(stop.country);
-  const date = new Date(arrivedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).toUpperCase();
-  const route = TRIP.slice(Math.max(0, stage - 3), stage + 1).map((t) => t.city);
-  const shown = words.slice(0, 6);
-  const px = (n: number) => Math.round(n * u * 10) / 10;
+  const [a] = flagColours(stop.country);
+  const top = mix(a, '#0a0f0d', 0.18);
+  const bottom = mix(a, '#050807', 0.42);
+  const d = new Date(arrivedAt);
+  const day = d.toLocaleDateString('es-ES', { day: 'numeric' });
+  const month = d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '').toUpperCase();
+  const citiesSoFar = stage + 1;
+  const shown = words.slice(0, 4);
+
+  // The country's outline, fitted into the map box, and your route through it.
+  const land = LANDS.find((l) => l.country === stop.country);
+  const mapW = px(304);
+  const mapH = px(168);
+  const here = TRIP.slice(0, stage + 1).filter((t) => t.country === stop.country).map((t) => CITY_XY[t.city]).filter(Boolean);
+  const all = TRIP.filter((t) => t.country === stop.country).map((t) => CITY_XY[t.city]).filter(Boolean);
+  const pad = 14;
+  const vbX = land ? land.x0 - pad : 0;
+  const vbW = land ? land.x1 - land.x0 + pad * 2 : 300;
+  const scale = Math.min(mapW / vbW, mapH / MAP_H);
+  const r = (n: number) => n / scale; // screen px -> map units
 
   return (
-    <View style={{ backgroundColor: NIGHT, borderRadius: px(18), height, overflow: 'hidden', width }}>
-      {/* The ground: two soft glows, a faint dotted grid like a map sheet. */}
+    <View style={{ borderRadius: px(22), height, overflow: 'hidden', width }}>
       <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
         <Defs>
-          <RadialGradient id="mint" cx="18%" cy="12%" r="65%">
-            <Stop offset="0" stopColor={MINT} stopOpacity={0.28} />
+          <LinearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={top} />
+            <Stop offset="1" stopColor={bottom} />
+          </LinearGradient>
+          <RadialGradient id="glow" cx="50%" cy="46%" r="45%">
+            <Stop offset="0" stopColor={MINT} stopOpacity={0.16} />
             <Stop offset="1" stopColor={MINT} stopOpacity={0} />
           </RadialGradient>
-          <RadialGradient id="flag" cx="92%" cy="78%" r="70%">
-            <Stop offset="0" stopColor={a} stopOpacity={0.3} />
-            <Stop offset="1" stopColor={a} stopOpacity={0} />
-          </RadialGradient>
         </Defs>
-        <Rect x={0} y={0} width={width} height={height} fill="url(#mint)" />
-        <Rect x={0} y={0} width={width} height={height} fill="url(#flag)" />
-        {Array.from({ length: 15 }, (_, row) =>
-          Array.from({ length: 9 }, (_, col) => (
-            <Circle
-              key={`${row}-${col}`}
-              cx={px(20 + col * 40)}
-              cy={px(20 + row * 42)}
-              r={px(1)}
-              fill="#f2f5f3"
-              opacity={0.07}
-            />
-          ))
-        )}
+        <Rect x={0} y={0} width={width} height={height} fill="url(#ground)" />
+        <Rect x={0} y={0} width={width} height={height} fill="url(#glow)" />
       </Svg>
 
-      {/* Eyebrow */}
-      <View style={[styles.row, { left: px(28), position: 'absolute', top: px(34), gap: px(8) }]}>
-        <View style={{ backgroundColor: MINT, borderRadius: 99, height: px(6), width: px(6) }} />
-        <Text style={[styles.eyebrow, { fontSize: px(10.5), letterSpacing: px(2) }]}>MY SPANISH TRIP</Text>
-      </View>
-
-      {/* The arrival, set big */}
-      <View style={{ left: px(28), position: 'absolute', right: px(28), top: px(70) }}>
-        <Text style={[styles.hello, { fontSize: px(26) }]}>¡Llegué a</Text>
-        <Text style={[styles.city, { fontSize: px(64), letterSpacing: px(-2), lineHeight: px(70) }]} numberOfLines={1} adjustsFontSizeToFit>
-          {stop.city}!
-        </Text>
-        <View style={[styles.row, { gap: px(10), marginTop: px(8) }]}>
-          {info && <Flag spec={info.flag} height={px(16)} />}
-          <Text style={[styles.country, { fontSize: px(12), letterSpacing: px(3) }]}>{stop.country.toUpperCase()}</Text>
+      {/* Header: brand left, postmark right */}
+      <View style={[styles.row, { justifyContent: 'space-between', left: px(26), position: 'absolute', right: px(26), top: px(28) }]}>
+        <Text style={[styles.kicker, { fontSize: px(10), letterSpacing: px(2.4) }]}>LORO · TRIP LOG</Text>
+        <View style={[styles.postmark, { borderWidth: px(1), height: px(46), width: px(46) }]}>
+          <Text style={[styles.postDay, { fontSize: px(15) }]}>{day}</Text>
+          <Text style={[styles.postMonth, { fontSize: px(7.5), letterSpacing: px(1.2) }]}>{month}</Text>
         </View>
       </View>
 
-      {/* The postcard, with the words that got you here */}
+      {/* The arrival */}
+      <View style={{ left: px(26), position: 'absolute', right: px(26), top: px(76) }}>
+        <Text style={[styles.hello, { fontSize: px(22) }]}>¡Llegué a</Text>
+        <Text
+          style={[styles.city, { fontSize: px(62), lineHeight: px(68), marginTop: px(-2) }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {stop.city}
+        </Text>
+        <View style={[styles.row, { gap: px(8), marginTop: px(6) }]}>
+          {info && <Flag spec={info.flag} height={px(11)} />}
+          <Text style={[styles.country, { fontSize: px(10.5), letterSpacing: px(2.6) }]}>{stop.country.toUpperCase()}</Text>
+        </View>
+      </View>
+
+      {/* The country, and your route through it */}
+      {land && (
+        <View style={{ alignItems: 'center', left: 0, position: 'absolute', right: 0, top: px(206) }}>
+          <Svg width={mapW} height={mapH} viewBox={`${vbX} 0 ${vbW} ${MAP_H}`}>
+            <G>
+              <Path d={land.d} fill={WHITE} fillOpacity={0.07} stroke={WHITE} strokeOpacity={0.35} strokeWidth={r(1)} />
+              {all.map((c, i) => (
+                <Circle key={`all${i}`} cx={c.x} cy={c.y} r={r(2.2)} fill={WHITE} opacity={0.3} />
+              ))}
+              {here.length > 1 && (
+                <>
+                  <Polyline
+                    points={here.map((c) => `${c.x},${c.y}`).join(' ')}
+                    fill="none"
+                    stroke={MINT}
+                    strokeOpacity={0.25}
+                    strokeWidth={r(7)}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Polyline
+                    points={here.map((c) => `${c.x},${c.y}`).join(' ')}
+                    fill="none"
+                    stroke={MINT}
+                    strokeWidth={r(2)}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </>
+              )}
+              {here.map((c, i) => {
+                const last = i === here.length - 1;
+                return (
+                  <G key={`here${i}`}>
+                    {last && <Circle cx={c.x} cy={c.y} r={r(11)} fill={MINT} opacity={0.18} />}
+                    <Circle cx={c.x} cy={c.y} r={last ? r(5) : r(3.2)} fill={last ? MINT : WHITE} />
+                  </G>
+                );
+              })}
+            </G>
+          </Svg>
+        </View>
+      )}
+
+      {/* What got you here, on one frosted panel */}
       <View
         style={[
-          styles.postcard,
-          {
-            borderRadius: px(8),
-            left: px(30),
-            position: 'absolute',
-            right: px(30),
-            top: px(232),
-            transform: [{ rotate: '-3deg' }],
-          },
+          styles.panel,
+          { borderRadius: px(18), borderWidth: px(1), left: px(22), paddingHorizontal: px(18), paddingVertical: px(14), position: 'absolute', right: px(22), top: px(388) },
         ]}
       >
-        <Airmail a={a} b={b} h={px(8)} />
-        <View style={{ paddingHorizontal: px(20), paddingVertical: px(18) }}>
-          <View style={[styles.stamp, { borderWidth: px(2), height: px(46), right: px(14), top: px(14), width: px(40) }]}>
-            {info && <Flag spec={info.flag} height={px(20)} />}
-          </View>
-          <View
-            style={[
-              styles.postmark,
-              { borderWidth: px(1.5), height: px(58), right: px(40), top: px(28), width: px(58), transform: [{ rotate: '-14deg' }] },
-            ]}
-          >
-            <Text style={[styles.postmarkText, { fontSize: px(7.5) }]} numberOfLines={1}>
-              {stop.city.toUpperCase()}
-            </Text>
-            <Text style={[styles.postmarkDate, { fontSize: px(8.5) }]}>{date}</Text>
-          </View>
-          <Text style={[styles.cardLabel, { fontSize: px(10), letterSpacing: px(1.6) }]}>THE WORDS THAT GOT ME HERE</Text>
-          <View style={{ gap: px(7), marginTop: px(14), paddingRight: px(70) }}>
-            {shown.map((w) => (
-              <Text key={w.word} style={[styles.word, { fontSize: px(19) }]} numberOfLines={1}>
+        <Text style={[styles.panelLabel, { fontSize: px(9.5), letterSpacing: px(2) }]}>THE WORDS THAT GOT ME HERE</Text>
+        <View style={{ gap: px(5), marginTop: px(9) }}>
+          {shown.map((w) => (
+            <View key={w.word} style={[styles.row, { justifyContent: 'space-between', gap: px(12) }]}>
+              <Text style={[styles.word, { fontSize: px(17) }]} numberOfLines={1}>
                 {w.word}
-                <Text style={[styles.meaning, { fontSize: px(12.5) }]}>{`  ${w.meaning}`}</Text>
               </Text>
-            ))}
-          </View>
-        </View>
-        <Airmail a={a} b={b} h={px(8)} />
-      </View>
-
-      {/* The route so far */}
-      <View style={{ bottom: px(150), left: px(28), position: 'absolute', right: px(28) }}>
-        <Svg width={width - px(56)} height={px(14)}>
-          <Line x1={px(6)} y1={px(7)} x2={width - px(62)} y2={px(7)} stroke="#f2f5f3" strokeOpacity={0.25} strokeWidth={px(1.5)} strokeDasharray={`${px(4)} ${px(5)}`} />
-          {[...route, next.city].map((_, i, all) => {
-            const x = px(6) + (i * (width - px(68))) / Math.max(1, all.length - 1);
-            const isHere = i === all.length - 2;
-            const isNext = i === all.length - 1;
-            return (
-              <Circle
-                key={i}
-                cx={x}
-                cy={px(7)}
-                r={isHere ? px(6) : px(4)}
-                fill={isNext ? NIGHT : MINT}
-                stroke={isNext ? '#f2f5f3' : MINT}
-                strokeOpacity={isNext ? 0.4 : 1}
-                strokeWidth={px(1.5)}
-              />
-            );
-          })}
-        </Svg>
-        <View style={[styles.row, { justifyContent: 'space-between', marginTop: px(8) }]}>
-          {[...route, next.city].map((c, i, all) => (
-            <Text
-              key={c + i}
-              style={[
-                styles.routeCity,
-                { fontSize: px(10.5) },
-                i === all.length - 2 && styles.routeHere,
-                i === all.length - 1 && styles.routeNext,
-              ]}
-              numberOfLines={1}
-            >
-              {c}
-            </Text>
+              <Text style={[styles.meaning, { fontSize: px(11.5) }]} numberOfLines={1}>
+                {w.meaning}
+              </Text>
+            </View>
           ))}
         </View>
       </View>
 
-      {/* Foot: what Loro is, and Loro */}
-      <View style={{ bottom: px(36), left: px(28), position: 'absolute', right: px(130) }}>
-        <Text style={[styles.footBig, { fontSize: px(17), lineHeight: px(22) }]}>
-          {learnedTotal} words learned from real people speaking.
-        </Text>
-        <Text style={[styles.footBrand, { fontSize: px(13), letterSpacing: px(0.4), marginTop: px(8) }]}>
-          loro <Text style={styles.footDim}>· Spanish from real videos</Text>
-        </Text>
+      {/* Foot */}
+      <View style={[styles.row, { bottom: px(26), justifyContent: 'space-between', left: px(26), position: 'absolute', right: px(22) }]}>
+        <View>
+          <Text style={[styles.stat, { fontSize: px(13) }]}>
+            {learnedTotal} words · {citiesSoFar} {citiesSoFar === 1 ? 'city' : 'cities'}
+          </Text>
+          <Text style={[styles.tag, { fontSize: px(10.5), marginTop: px(3) }]}>Spanish from real people, on Loro</Text>
+        </View>
+        <Image source={BRAND.parrotWaving} resizeMode="contain" style={{ height: px(58), width: px(52) }} />
       </View>
-      <Image
-        source={BRAND.parrotWaving}
-        resizeMode="contain"
-        style={{ bottom: px(18), height: px(128), position: 'absolute', right: px(14), width: px(114) }}
-      />
-    </View>
-  );
-}
-
-function Airmail({ a, b, h }: { a: string; b: string; h: number }) {
-  return (
-    <View style={[styles.row, { height: h, overflow: 'hidden' }]}>
-      {Array.from({ length: 22 }, (_, i) => (
-        <View key={i} style={{ backgroundColor: i % 2 === 0 ? a : b, flex: 1, transform: [{ skewX: '-30deg' }] }} />
-      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { alignItems: 'center', flexDirection: 'row' },
-  eyebrow: { color: 'rgba(242,245,243,0.7)', fontWeight: '900' },
-  hello: { color: 'rgba(242,245,243,0.75)', fontStyle: 'italic', fontWeight: '600' },
-  city: { color: '#f2f5f3', fontWeight: '900' },
-  country: { color: 'rgba(242,245,243,0.6)', fontWeight: '900' },
-  postcard: {
-    backgroundColor: CREAM,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { height: 14, width: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 22,
-  },
-  stamp: {
-    alignItems: 'center',
-    backgroundColor: '#fffaf0',
-    borderColor: 'rgba(60,45,20,0.35)',
-    borderStyle: 'dotted',
-    justifyContent: 'center',
-    position: 'absolute',
-  },
+  kicker: { color: 'rgba(246,243,236,0.62)', fontFamily: SANS, fontWeight: '700' },
   postmark: {
     alignItems: 'center',
-    borderColor: 'rgba(40,30,80,0.42)',
+    borderColor: 'rgba(246,243,236,0.4)',
     borderRadius: 999,
     justifyContent: 'center',
-    position: 'absolute',
+    transform: [{ rotate: '-10deg' }],
   },
-  postmarkText: { color: 'rgba(40,30,80,0.55)', fontWeight: '900', letterSpacing: 0.6 },
-  postmarkDate: { color: 'rgba(40,30,80,0.55)', fontWeight: '800', marginTop: 1 },
-  cardLabel: { color: '#8a7755', fontWeight: '900' },
-  word: { color: INK, fontStyle: 'italic', fontWeight: '800' },
-  meaning: { color: '#8a7755', fontStyle: 'normal', fontWeight: '700' },
-  routeCity: { color: 'rgba(242,245,243,0.55)', fontWeight: '800' },
-  routeHere: { color: MINT },
-  routeNext: { color: 'rgba(242,245,243,0.35)' },
-  footBig: { color: '#f2f5f3', fontWeight: '800' },
-  footBrand: { color: MINT, fontWeight: '900' },
-  footDim: { color: 'rgba(242,245,243,0.5)', fontWeight: '700' },
+  postDay: { color: WHITE, fontFamily: DISPLAY, fontWeight: '700' },
+  postMonth: { color: 'rgba(246,243,236,0.7)', fontFamily: SANS, fontWeight: '700' },
+  hello: { color: 'rgba(246,243,236,0.78)', fontFamily: SERIF, fontStyle: 'italic' },
+  city: { color: WHITE, fontFamily: DISPLAY, fontWeight: '700' },
+  country: { color: 'rgba(246,243,236,0.6)', fontFamily: SANS, fontWeight: '600' },
+  panel: { backgroundColor: 'rgba(246,243,236,0.07)', borderColor: 'rgba(246,243,236,0.14)' },
+  panelLabel: { color: 'rgba(246,243,236,0.5)', fontFamily: SANS, fontWeight: '700' },
+  word: { color: WHITE, flexShrink: 1, fontFamily: SERIF, fontStyle: 'italic' },
+  meaning: { color: 'rgba(246,243,236,0.55)', flexShrink: 1, fontFamily: SANS, fontWeight: '500', textAlign: 'right' },
+  stat: { color: WHITE, fontFamily: SANS, fontWeight: '700' },
+  tag: { color: MINT, fontFamily: SANS, fontWeight: '600' },
 });
