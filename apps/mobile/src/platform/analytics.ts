@@ -136,7 +136,7 @@ export type EventName =
   | 'postcard_opened'     // { stage } — the arrival postcard was opened
   | 'postcard_shared'     // { stage, action, to } — the share sheet closed; to = the app it went to
   | 'topics_changed'      // { topics } — the feed topics edited in Progress settings
-  | 'feed_refreshed'      // { how: 'button' | 'pull', fresh } — the reels feed was re-ranked on demand
+  | 'feed_refreshed'      // { how: 'button' | 'topics', fresh } (pull removed 2026-10-06) — the reels feed was re-ranked on demand
   // THE TRIP (1.7.1): does anyone get past Madrid, and is the ladder looked at?
   | 'city_arrived'        // { stage, city, country, newCountry, empty } — the arrival played
   | 'level_banner_opened' // { tier, learned } — the level chip on Words was tapped open

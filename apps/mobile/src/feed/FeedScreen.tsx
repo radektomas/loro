@@ -419,7 +419,7 @@ export function FeedScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const refreshingRef = useRef(false);
-  const refreshFeed = useCallback(async (how: 'button' | 'pull' | 'topics') => {
+  const refreshFeed = useCallback(async (how: 'button' | 'topics') => {
     if (refreshingRef.current || reelRef.current || collectionRef.current !== REELS) return;
     refreshingRef.current = true;
     setRefreshing(true);
@@ -646,10 +646,8 @@ function useTodayProgress(): { count: number; goal: number } {
 
 /** A refresh waits this long for the catalog pointer before re-ranking what it has. */
 const REFRESH_WAIT_MS = 3000;
-/** ...and spins at least this long, so the tap visibly did something. */
-const REFRESH_MIN_MS = 600;
-/** How far past the top the first slide must be pulled to refresh. */
-const PULL_REFRESH_PX = 70;
+/** ...and shows "Refreshing" at least this long, so the tap visibly did something. */
+const REFRESH_MIN_MS = 1100;
 
 /** How long the quick case gets before EmptyFeed admits something is wrong. */
 const SLOW_HINT_MS = 6000;
@@ -802,7 +800,7 @@ function FeedBody({
   refreshKey = 0,
 }: {
   /** The reels shelf's refresh (button and pull); absent elsewhere. */
-  onRefresh?: (how: 'button' | 'pull' | 'topics') => void;
+  onRefresh?: (how: 'button' | 'topics') => void;
   refreshing?: boolean;
   /** Bumped by each refresh: the new list lands on its first slide. */
   refreshKey?: number;
@@ -1389,10 +1387,6 @@ function FeedBody({
                 swipe.onBeginDrag();
               }}
               onScrollEndDrag={(event) => {
-                // Pulled down past the first slide and let go: a refresh.
-                if (onRefresh && activeIndex === 0 && event.nativeEvent.contentOffset.y < -PULL_REFRESH_PX) {
-                  onRefresh('pull');
-                }
                 swipe.onEndDrag();
               }}
               onMomentumScrollBegin={swipe.onMomentumBegin}

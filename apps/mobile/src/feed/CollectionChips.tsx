@@ -67,6 +67,36 @@ export function CollectionPill({
   refreshing?: boolean;
 }) {
   const label = findCollection(selected).label;
+  /**
+   * THE PILL SAYS WHAT IS HAPPENING (Radek, 2026-10-06: the pull is gone,
+   * the button stays, with "some loading animation that the feed is
+   * refreshing so user knows"). While the new order is built the pill turns
+   * mint and reads "Refreshing" over three breathing dots; when it lands it
+   * says "New reels ready" for a moment, then goes back to "Reels". Each
+   * change cross-fades. The ↻ spins the whole time.
+   */
+  const [justDone, setJustDone] = useState(false);
+  const wasRefreshing = useRef(refreshing);
+  useEffect(() => {
+    if (wasRefreshing.current && !refreshing) {
+      setJustDone(true);
+      const t = setTimeout(() => setJustDone(false), 1600);
+      wasRefreshing.current = refreshing;
+      return () => clearTimeout(t);
+    }
+    wasRefreshing.current = refreshing;
+  }, [refreshing]);
+  const mode: 'idle' | 'busy' | 'done' = refreshing ? 'busy' : justDone ? 'done' : 'idle';
+  const fade = useRef(new Animated.Value(1)).current;
+  const firstMode = useRef(true);
+  useEffect(() => {
+    if (firstMode.current) {
+      firstMode.current = false;
+      return;
+    }
+    fade.setValue(0);
+    Animated.timing(fade, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [mode, fade]);
   /** One full turn per refresh: it spins while the new order is built. */
   const spin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -86,11 +116,24 @@ export function CollectionPill({
         accessibilityLabel={`Watching ${label}${detail ? `, episode ${detail}` : ''}. Change what to watch`}
         accessibilityState={{ expanded: open }}
         hitSlop={8}
-        style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.pill, mode !== 'idle' && styles.pillBusy, pressed && styles.pressed]}
       >
-        <Text style={styles.pillText}>{label}</Text>
-        {detail && <Text style={styles.pillDetail}>· {detail}</Text>}
-        <Text style={styles.pillChevron}>{open ? '▴' : '▾'}</Text>
+        <Animated.View style={[styles.pillInner, { opacity: fade }]}>
+          {mode === 'busy' ? (
+            <>
+              <Text style={[styles.pillText, styles.pillTextBusy]}>Refreshing</Text>
+              <LoadingDots />
+            </>
+          ) : mode === 'done' ? (
+            <Text style={[styles.pillText, styles.pillTextBusy]}>New reels ready</Text>
+          ) : (
+            <>
+              <Text style={styles.pillText}>{label}</Text>
+              {detail && <Text style={styles.pillDetail}>· {detail}</Text>}
+              <Text style={styles.pillChevron}>{open ? '▴' : '▾'}</Text>
+            </>
+          )}
+        </Animated.View>
       </Pressable>
       {today && <DayDots count={today.count} goal={today.goal} topInset={topInset} />}
       {/* REFRESH (Radek, 2026-10-06: "a possibility to refresh the feed").
@@ -104,11 +147,17 @@ export function CollectionPill({
           accessibilityLabel="New videos"
           accessibilityHint="Shuffles in videos you have not seen yet"
           hitSlop={10}
-          style={({ pressed }) => [styles.refresh, { top: topInset + (CHIP_ROW_H - 34) / 2 }, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.refresh,
+            { top: topInset + (CHIP_ROW_H - 34) / 2 },
+            refreshing && styles.refreshBusy,
+            pressed && styles.pressed,
+          ]}
         >
           <Animated.Text
             style={[
               styles.refreshGlyph,
+              refreshing && styles.refreshGlyphBusy,
               { transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] },
             ]}
           >
@@ -116,6 +165,35 @@ export function CollectionPill({
           </Animated.Text>
         </Pressable>
       )}
+    </View>
+  );
+}
+
+/** Each dot's brightness through one beat: they light up left to right. */
+const DOT_WAVE = [
+  [1, 0.3, 0.3, 1],
+  [0.3, 1, 0.3, 0.3],
+  [0.3, 0.3, 1, 0.3],
+];
+
+/** Three dots breathing in turn: the pill's "still working". */
+function LoadingDots() {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(t, { toValue: 1, duration: 900, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [t]);
+  return (
+    <View style={styles.loadingDots}>
+      {DOT_WAVE.map((outputRange, i) => (
+        <Animated.View
+          key={i}
+          style={[styles.loadingDot, { opacity: t.interpolate({ inputRange: [0, 1 / 3, 2 / 3, 1], outputRange }) }]}
+        />
+      ))}
     </View>
   );
 }
@@ -383,6 +461,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   pillText: { color: '#f2f5f3', fontSize: 14, fontWeight: '800' },
+  pillInner: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  pillBusy: { backgroundColor: 'rgba(94,230,168,0.14)', borderColor: 'rgba(94,230,168,0.5)' },
+  pillTextBusy: { color: '#5ee6a8' },
+  loadingDots: { flexDirection: 'row', gap: 3, marginLeft: 1 },
+  loadingDot: { backgroundColor: '#5ee6a8', borderRadius: 2, height: 4, width: 4 },
+  refreshBusy: { backgroundColor: 'rgba(94,230,168,0.18)', borderColor: 'rgba(94,230,168,0.5)' },
+  refreshGlyphBusy: { color: '#5ee6a8' },
   pillDetail: { color: 'rgba(242,245,243,0.6)', fontSize: 13, fontWeight: '700' },
   pillChevron: { color: 'rgba(242,245,243,0.6)', fontSize: 12, fontWeight: '700' },
   pressed: { opacity: 0.7 },
