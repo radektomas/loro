@@ -30,7 +30,7 @@ import { storage } from '@loro/core/storage';
 import { rankFeed } from '@loro/core/feedRank';
 import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
-import { getLikedTopics } from './topics';
+import { getLikedTopics, setLikedTopics } from './topics';
 import { subscribeDevVideo } from '../platform/devMenu';
 import { track, trackOnce } from '../platform/analytics';
 import {
@@ -414,7 +414,7 @@ export function FeedScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const refreshingRef = useRef(false);
-  const refreshFeed = useCallback(async (how: 'button' | 'pull') => {
+  const refreshFeed = useCallback(async (how: 'button' | 'pull' | 'topics') => {
     if (refreshingRef.current || reelRef.current || collectionRef.current !== REELS) return;
     refreshingRef.current = true;
     setRefreshing(true);
@@ -783,7 +783,7 @@ function FeedBody({
   refreshKey = 0,
 }: {
   /** The reels shelf's refresh (button and pull); absent elsewhere. */
-  onRefresh?: (how: 'button' | 'pull') => void;
+  onRefresh?: (how: 'button' | 'pull' | 'topics') => void;
   refreshing?: boolean;
   /** Bumped by each refresh: the new list lands on its first slide. */
   refreshKey?: number;
@@ -810,6 +810,25 @@ function FeedBody({
   useEffect(() => {
     if (!active) setMenuOpen(false);
   }, [active]);
+  /**
+   * The reels' topics, editable in the menu. Saved on every tap; the feed is
+   * re-ranked once, when the menu closes, so a few taps cost one reshuffle.
+   */
+  const [likedTopics, setLikedTopicsState] = useState<string[]>(getLikedTopics);
+  const topicsDirtyRef = useRef(false);
+  const toggleTopic = (id: string) => {
+    setLikedTopicsState((prev) => {
+      const next = prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id];
+      setLikedTopics(next);
+      return next;
+    });
+    topicsDirtyRef.current = true;
+  };
+  useEffect(() => {
+    if (menuOpen || !topicsDirtyRef.current) return;
+    topicsDirtyRef.current = false;
+    onRefresh?.('topics');
+  }, [menuOpen, onRefresh]);
   // An episode shelf opens on the episode it was last on (episodeProgress.ts).
   const [activeIndex, setActiveIndex] = useState(() =>
     episodes ? landingIndexFor(collection, videos) : 0
@@ -1270,6 +1289,8 @@ function FeedBody({
                   : null
               }
               activeIndex={activeIndex}
+              likedTopics={collection === REELS ? likedTopics : undefined}
+              onToggleTopic={collection === REELS ? toggleTopic : undefined}
               onPickEpisode={(shelfId, index) => {
                 setMenuOpen(false);
                 if (shelfId === collection) {
