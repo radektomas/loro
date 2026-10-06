@@ -13,7 +13,7 @@ import { Keyboard, Platform } from 'react-native';
 import { runOnJS, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import type { Video } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
-import { noteBlueRight, tripSnapshot } from './tripMoments';
+import { noteBlueRight, tripMomentRecent, tripSnapshot } from './tripMoments';
 import { tierFor } from '@loro/core/levels';
 import { dueCount } from '@loro/core/progress';
 import type { AnswerMatch } from '@loro/core/srs';
@@ -1086,7 +1086,9 @@ export function RecallHost({
             // card — it only shows when no card took the moment.
             if (learnedNow) raiseWordLearned(entry.word);
             const raised = sessionComplete && (await maybeAskToSaveProgress());
-            if (!raised && wasCorrect) await maybeAskForPermission();
+            // Never on top of a trip moment ("it's on your map"): the ask is
+            // not latched until it shows, so the next right answer gets it.
+            if (!raised && wasCorrect && !tripMomentRecent()) await maybeAskForPermission();
           })();
         }, CELEBRATE_MS);
       }

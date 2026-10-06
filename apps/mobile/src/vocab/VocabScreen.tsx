@@ -27,7 +27,7 @@ import { PostcardLayer } from '../share/PostcardLayer';
 import { subscribeToPostcard } from '../share/postcardBus';
 import { CityArrival } from './CityArrival';
 import { LevelBanner } from './LevelBanner';
-import { tripStop } from '@loro/core/roadmap';
+import { countsOnTrip, tripStop } from '@loro/core/roadmap';
 import { track } from '../platform/analytics';
 import { tierForLearned } from '@loro/core/levels';
 import { learnedTotal } from '../feed/wordLearned';
@@ -320,6 +320,18 @@ export function VocabScreen({
   const ladder = useMemo(() => tierForLearned(learnedTotal(words)), [words]);
   /** The ladder banner under the title, opened from the level chip. */
   const [showLevels, setShowLevels] = useState(false);
+  /**
+   * BLUE WORDS ARE WORDS TOO (Radek, 2026-10-06: two blue blanks typed right
+   * on a fresh install, "none appeared"). They live outside the saved list
+   * (roadmap.withLevelKnown), so a user whose only words were blue saw the
+   * empty "trip waiting to start" instead of their map. Re-read with
+   * `words`: a blue answer emits words-changed like a save does.
+   */
+  const hasBlueStops = useMemo(
+    () => storage.getLevelKnownWords().some((l) => countsOnTrip(l.text)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [words]
+  );
   /** A past city's postcard, opened from its panel on the trip map. */
   const [postcard, setPostcard] = useState<number | null>(null);
   useEffect(() => subscribeToPostcard(setPostcard), []);
@@ -670,7 +682,7 @@ export function VocabScreen({
             renders null until core says otherwise, which is almost always. */}
         <SavePromptCard />
 
-        {words.length === 0 ? (
+        {words.length === 0 && !hasBlueStops ? (
           // Zero words: the trip, waiting to start (TripPreview).
           <TripPreview onGoToFeed={onGoToFeed} />
         ) : (

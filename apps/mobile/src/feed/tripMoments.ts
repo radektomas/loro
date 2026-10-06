@@ -93,6 +93,16 @@ function emit(moment: TripMoment, videoId: string | null): boolean {
   return true;
 }
 
+/**
+ * A moment is on screen now (or just was). The notifications ask waits for
+ * the next right answer instead of landing on top of it (Radek, 2026-10-06:
+ * the first blue word's "it's on your map" arrived together with the
+ * notifications card).
+ */
+export function tripMomentRecent(withinMs = 5000): boolean {
+  return lastAt > 0 && Date.now() - lastAt < withinMs;
+}
+
 /** Where the trip stands — read before a blue answer, compared after it. */
 export function tripSnapshot(): { stage: number; learnedHere: number; size: number } {
   return tripPosition(withLevelKnown(storage.getSavedWords(), storage.getLevelKnownWords()).words);
