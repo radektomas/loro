@@ -289,8 +289,8 @@ function MotivationStep({ state, update, next }: StepProps) {
 // ---------------------------------------------------------------- 2b. topics
 
 /**
- * WHAT THEY LOVE WATCHING. The same multi-select cards as the screen before
- * it, labels only so six fit without a scroll. Saved on Continuar (an empty
+ * WHAT THEY LOVE WATCHING. Six topic tiles in a 2×3 grid (TopicTile), placed
+ * after the screens that show how Loro works. Saved on Continuar (an empty
  * answer saves nothing: the feed simply does not lean), read by the feed's
  * ranking on its next ordering (feed/topics.ts, core feedRank).
  */
@@ -309,24 +309,101 @@ function TopicsStep({ state, update, next }: StepProps) {
     <Screen footer={<PrimaryButton label={TOPICS.cta} onPress={commit} />}>
       <Title>{TOPICS.title}</Title>
       <Body>{TOPICS.body}</Body>
-      <View style={styles.choices}>
+      <View style={styles.topicGrid}>
         {TOPICS.options.map((option) => {
-          const on = picked.includes(option.id);
           const art = TOPIC_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
           return (
-            <ChoiceCard
+            <TopicTile
               key={option.id}
-              multi
               label={option.label}
-              selected={on}
-              icon={<IconTile glyph={art.glyph} tint={art.tint} size={38} />}
-              iconOn={<IconTile glyph={art.glyph} tint={art.tint} on size={38} />}
+              glyph={art.glyph}
+              tint={art.tint}
+              on={picked.includes(option.id)}
               onPress={() => toggle(option.id)}
             />
           );
         })}
       </View>
     </Screen>
+  );
+}
+
+/**
+ * A TOPIC AS A TILE, not a row (Radek, 2026-10-06: not "the same looking
+ * page of taps" as the motivation cards). A 2×3 grid of squares, each in its
+ * own colour: selected, the tile washes with its tint, the icon fills and
+ * pops, a tick lands in the corner — all on one 220 ms clock, like the cards.
+ */
+function TopicTile({
+  label,
+  glyph,
+  tint,
+  on,
+  onPress,
+}: {
+  label: string;
+  glyph: string;
+  tint: Tint;
+  on: boolean;
+  onPress: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const sel = useSharedValue(on ? 1 : 0);
+  const pop = useSharedValue(1);
+  const press = useSharedValue(0);
+  const wasOn = useRef(on);
+  const colour = TINTS[tint];
+  useEffect(() => {
+    sel.value = withTiming(on ? 1 : 0, { duration: reduced ? 0 : 220, easing: Easing.out(Easing.cubic) });
+    if (on && !wasOn.current && !reduced) {
+      pop.value = withSequence(
+        withTiming(1.16, { duration: 110, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 220, easing: Easing.out(Easing.back(2)) })
+      );
+    }
+    wasOn.current = on;
+  }, [on, reduced, sel, pop]);
+  const tile = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sel.value, [0, 1], [CARD, `${colour}24`]),
+    borderColor: interpolateColor(sel.value, [0, 1], ['rgba(242,245,243,0.06)', `${colour}99`]),
+    transform: [{ scale: 1 - press.value * 0.03 }],
+  }));
+  const iconPop = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const offFace = useAnimatedStyle(() => ({ opacity: 1 - sel.value }));
+  const onFace = useAnimatedStyle(() => ({ opacity: sel.value }));
+  const tick = useAnimatedStyle(() => ({ opacity: sel.value, transform: [{ scale: 0.5 + sel.value * 0.5 }] }));
+  const labelStyle = useAnimatedStyle(() => ({ color: interpolateColor(sel.value, [0, 1], [TEXT, colour]) }));
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        press.value = withTiming(1, { duration: reduced ? 0 : 90 });
+      }}
+      onPressOut={() => {
+        press.value = withTiming(0, { duration: reduced ? 0 : 160 });
+      }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel={label}
+      style={styles.topicCell}
+    >
+      <Animated.View style={[styles.topicTile, tile]}>
+        <Animated.View style={[styles.topicTick, { backgroundColor: colour }, tick]}>
+          <Text style={styles.topicTickMark}>✓</Text>
+        </Animated.View>
+        <Animated.View style={iconPop}>
+          <Animated.View style={offFace}>
+            <IconTile glyph={glyph} tint={tint} size={48} />
+          </Animated.View>
+          <Animated.View style={[StyleSheet.absoluteFill, onFace]}>
+            <IconTile glyph={glyph} tint={tint} size={48} on />
+          </Animated.View>
+        </Animated.View>
+        <Animated.Text style={[styles.topicLabel, labelStyle]} numberOfLines={2}>
+          {label}
+        </Animated.Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -1433,13 +1510,20 @@ const TASTE_BENCHED = true;
 export const STEPS: StepDef[] = [
   { id: 'hook', Component: HookStep },
   { id: 'motivation', Component: MotivationStep },
-  { id: 'topics', Component: TopicsStep },
   { id: 'selfLevel', Component: SelfLevelStep },
   { id: 'calibrationIntro', Component: CalibrationIntroStep, skip: zeroPath },
   { id: 'grid', Component: GridStep, skip: zeroPath },
   { id: 'result', Component: ResultStep, skip: zeroPath },
   { id: 'howItWorks', Component: HowItWorksStep },
   { id: 'blanks', Component: BlanksStep },
+  /**
+   * WHAT THEY LOVE WATCHING sits here, not beside motivation (Radek,
+   * 2026-10-06: not right after "the same looking page of taps"). The two
+   * screens before it have just shown that Loro is real videos with blanks
+   * in them, so "what do you love watching?" is the natural next question —
+   * and it is a different shape (a tile grid) from the motivation cards.
+   */
+  { id: 'topics', Component: TopicsStep },
   { id: 'frequency', Component: FrequencyStep },
   /**
    * THE CONVERSION TAIL, and the order is an argument rather than a list.
@@ -1636,6 +1720,21 @@ const styles = StyleSheet.create({
   parrot: { height: 168, marginBottom: 18, width: 113 },
   parrotWaving: { alignSelf: 'flex-start', height: 150, marginBottom: 20, width: 134 },
   choices: { marginTop: 18 },
+  topicGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
+  topicCell: { width: '48.5%' },
+  topicTile: { alignItems: 'flex-start', borderRadius: 20, borderWidth: 1, gap: 12, minHeight: 116, padding: 14 },
+  topicTick: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 20,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    width: 20,
+  },
+  topicTickMark: { color: ON_ACCENT, fontSize: 11, fontWeight: '900' },
+  topicLabel: { fontSize: 15, fontWeight: '800', lineHeight: 19 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 22 },
   chip: {
     backgroundColor: '#141a17',

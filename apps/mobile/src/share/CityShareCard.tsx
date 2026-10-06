@@ -18,7 +18,9 @@ import { CITY_XY, LANDS, MAP_H } from '../vocab/tripMapData';
  *   - the COUNTRY'S REAL OUTLINE (the trip map's Natural Earth shapes) with
  *     your route through it glowing mint, the city you reached haloed;
  *   - the words that got you there on one frosted panel;
- *   - a postmark with the date, and Loro small at the foot.
+ *   - a postmark with the date, the Loro logo at the head, and the trip in
+ *     two labelled numbers at the foot (third draft: the unlabelled "10 words
+ *     · 2 cities" beside four words read as a contradiction).
  *
  * Laid out in units of width/360, so the preview and the 1080-wide export are
  * the same picture. Everything on it is the user's own trip. No emoji.
@@ -62,8 +64,9 @@ export function CityShareCard({
   const d = new Date(arrivedAt);
   const day = d.toLocaleDateString('es-ES', { day: 'numeric' });
   const month = d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '').toUpperCase();
-  const citiesSoFar = stage + 1;
-  const shown = words.slice(0, 4);
+  // Every word of the city before, as pills — a city is 5 to 10 words.
+  const shown = words.slice(0, 10);
+  const prevCity = tripStop(Math.max(0, stage - 1)).city;
 
   // The country's outline, fitted into the map box, and your route through it.
   const land = LANDS.find((l) => l.country === stop.country);
@@ -96,7 +99,7 @@ export function CityShareCard({
 
       {/* Header: brand left, postmark right */}
       <View style={[styles.row, { justifyContent: 'space-between', left: px(26), position: 'absolute', right: px(26), top: px(28) }]}>
-        <Text style={[styles.kicker, { fontSize: px(10), letterSpacing: px(2.4) }]}>LORO · TRIP LOG</Text>
+        <Image source={BRAND.logo} resizeMode="contain" style={{ height: px(34), width: px(69) }} accessibilityLabel="Loro" />
         <View style={[styles.postmark, { borderWidth: px(1), height: px(46), width: px(46) }]}>
           <Text style={[styles.postDay, { fontSize: px(15) }]}>{day}</Text>
           <Text style={[styles.postMonth, { fontSize: px(7.5), letterSpacing: px(1.2) }]}>{month}</Text>
@@ -170,30 +173,26 @@ export function CityShareCard({
           { borderRadius: px(18), borderWidth: px(1), left: px(22), paddingHorizontal: px(18), paddingVertical: px(14), position: 'absolute', right: px(22), top: px(388) },
         ]}
       >
-        <Text style={[styles.panelLabel, { fontSize: px(9.5), letterSpacing: px(2) }]}>THE WORDS THAT GOT ME HERE</Text>
-        <View style={{ gap: px(5), marginTop: px(9) }}>
+        <Text style={[styles.panelLabel, { fontSize: px(9.5), letterSpacing: px(1.8) }]} numberOfLines={1}>
+          {`${shown.length} ${shown.length === 1 ? 'WORD' : 'WORDS'} LEARNED IN ${prevCity.toUpperCase()}`}
+        </Text>
+        <View style={[styles.pills, { gap: px(7), marginTop: px(11) }]}>
           {shown.map((w) => (
-            <View key={w.word} style={[styles.row, { justifyContent: 'space-between', gap: px(12) }]}>
-              <Text style={[styles.word, { fontSize: px(17) }]} numberOfLines={1}>
+            <View key={w.word} style={[styles.pill, { borderRadius: px(99), paddingHorizontal: px(12), paddingVertical: px(6) }]}>
+              <Text style={[styles.pillText, { fontSize: px(14) }]} numberOfLines={1}>
                 {w.word}
-              </Text>
-              <Text style={[styles.meaning, { fontSize: px(11.5) }]} numberOfLines={1}>
-                {w.meaning}
               </Text>
             </View>
           ))}
         </View>
       </View>
 
-      {/* Foot */}
-      <View style={[styles.row, { bottom: px(26), justifyContent: 'space-between', left: px(26), position: 'absolute', right: px(22) }]}>
-        <View>
-          <Text style={[styles.stat, { fontSize: px(13) }]}>
-            {learnedTotal} words · {citiesSoFar} {citiesSoFar === 1 ? 'city' : 'cities'}
-          </Text>
-          <Text style={[styles.tag, { fontSize: px(10.5), marginTop: px(3) }]}>Spanish from real people, on Loro</Text>
-        </View>
-        <Image source={BRAND.parrotWaving} resizeMode="contain" style={{ height: px(58), width: px(52) }} />
+      {/* Foot: the trip in two honest numbers */}
+      <View style={{ bottom: px(28), left: px(26), position: 'absolute', right: px(26) }}>
+        <Text style={[styles.stat, { fontSize: px(14) }]}>
+          {learnedTotal} words learned · stop {stage + 1} of {TRIP.length}
+        </Text>
+        <Text style={[styles.tag, { fontSize: px(11), marginTop: px(4) }]}>Spanish from real people, on Loro</Text>
       </View>
     </View>
   );
@@ -201,7 +200,6 @@ export function CityShareCard({
 
 const styles = StyleSheet.create({
   row: { alignItems: 'center', flexDirection: 'row' },
-  kicker: { color: 'rgba(246,243,236,0.62)', fontFamily: SANS, fontWeight: '700' },
   postmark: {
     alignItems: 'center',
     borderColor: 'rgba(246,243,236,0.4)',
@@ -216,8 +214,9 @@ const styles = StyleSheet.create({
   country: { color: 'rgba(246,243,236,0.6)', fontFamily: SANS, fontWeight: '600' },
   panel: { backgroundColor: 'rgba(246,243,236,0.07)', borderColor: 'rgba(246,243,236,0.14)' },
   panelLabel: { color: 'rgba(246,243,236,0.5)', fontFamily: SANS, fontWeight: '700' },
-  word: { color: WHITE, flexShrink: 1, fontFamily: SERIF, fontStyle: 'italic' },
-  meaning: { color: 'rgba(246,243,236,0.55)', flexShrink: 1, fontFamily: SANS, fontWeight: '500', textAlign: 'right' },
+  pills: { flexDirection: 'row', flexWrap: 'wrap' },
+  pill: { backgroundColor: 'rgba(246,243,236,0.1)', borderColor: 'rgba(94,230,168,0.35)', borderWidth: 1 },
+  pillText: { color: WHITE, fontFamily: SANS, fontWeight: '600' },
   stat: { color: WHITE, fontFamily: SANS, fontWeight: '700' },
   tag: { color: MINT, fontFamily: SANS, fontWeight: '600' },
 });
