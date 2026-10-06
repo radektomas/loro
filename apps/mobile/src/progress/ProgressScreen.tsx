@@ -11,6 +11,16 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 
@@ -198,37 +208,99 @@ function TopicsSection() {
       <SectionTitle>Your feed</SectionTitle>
       <View style={styles.card}>
         <Text style={styles.notifTitle}>What you love watching</Text>
+        {/* One sentence whatever is picked: a line that swapped wording on the
+            first tap changed the card's height and shoved the grid (Radek,
+            2026-10-06: "I click something and it changes position"). */}
         <Text style={styles.notifBody}>
-          {liked.length > 0
-            ? 'Two in every five reels come from these. Everything else still shows up.'
-            : 'Pick any and your reels lean that way.'}
+          Two in every five reels come from what you pick. Everything else still shows up.
         </Text>
         <View style={styles.topicChips}>
-          {TOPICS.options.map((t) => {
-            const on = liked.includes(t.id);
-            const colour = TOPIC_TINT[t.id] ?? '#5ee6a8';
-            return (
-              <Pressable
-                key={t.id}
-                onPress={() => toggle(t.id)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                style={({ pressed }) => [
-                  styles.topicChip,
-                  on && { backgroundColor: `${colour}24`, borderColor: `${colour}99` },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={[styles.topicChipText, on && { color: colour }]}>
-                  {on ? '✓ ' : ''}
-                  {t.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {TOPICS.options.map((t) => (
+            <TopicToggle
+              key={t.id}
+              label={t.label}
+              colour={TOPIC_TINT[t.id] ?? '#5ee6a8'}
+              on={liked.includes(t.id)}
+              onPress={() => toggle(t.id)}
+            />
+          ))}
         </View>
       </View>
     </View>
+  );
+}
+
+/**
+ * One topic. NOTHING ABOUT IT CHANGES SIZE: every tile is half the row and
+ * the same height, and the tick ring is always drawn, so a tap only changes
+ * colour. The earlier chips grew a "✓ " prefix on tap, and in a wrapping row
+ * a wider chip pushed its neighbours onto the next line. Colour eases on one
+ * 0→1 clock, as the onboarding cards do (onboarding/chrome.tsx ChoiceCard).
+ */
+function TopicToggle({
+  label,
+  colour,
+  on,
+  onPress,
+}: {
+  label: string;
+  colour: string;
+  on: boolean;
+  onPress: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const sel = useSharedValue(on ? 1 : 0);
+  const press = useSharedValue(0);
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    sel.value = withTiming(on ? 1 : 0, { duration: reduced ? 0 : 220, easing: Easing.out(Easing.cubic) });
+    if (on && !reduced) {
+      pop.value = withSequence(
+        withTiming(1.2, { duration: 110, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 9, stiffness: 260 })
+      );
+    }
+  }, [on, reduced, sel, pop]);
+  const tile = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sel.value, [0, 1], ['rgba(242,245,243,0.05)', `${colour}24`]),
+    borderColor: interpolateColor(sel.value, [0, 1], ['rgba(242,245,243,0.10)', `${colour}99`]),
+    transform: [{ scale: 1 - press.value * 0.03 }],
+  }));
+  const text = useAnimatedStyle(() => ({
+    color: interpolateColor(sel.value, [0, 1], ['rgba(242,245,243,0.85)', colour]),
+  }));
+  const ring = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sel.value, [0, 1], [`${colour}00`, colour]),
+    borderColor: interpolateColor(sel.value, [0, 1], ['rgba(242,245,243,0.25)', colour]),
+    transform: [{ scale: pop.value }],
+  }));
+  const mark = useAnimatedStyle(() => ({
+    opacity: sel.value,
+    transform: [{ scale: 0.5 + sel.value * 0.5 }],
+  }));
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        press.value = withTiming(1, { duration: reduced ? 0 : 90 });
+      }}
+      onPressOut={() => {
+        press.value = withTiming(0, { duration: reduced ? 0 : 160 });
+      }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel={label}
+      style={styles.topicCell}
+    >
+      <Animated.View style={[styles.topicChip, tile]}>
+        <Animated.View style={[styles.topicTick, ring]}>
+          <Animated.Text style={[styles.topicTickMark, mark]}>✓</Animated.Text>
+        </Animated.View>
+        <Animated.Text style={[styles.topicChipText, text]} numberOfLines={2}>
+          {label}
+        </Animated.Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -895,15 +967,27 @@ const styles = StyleSheet.create({
   notifLabel: { flex: 1 },
   notifTitle: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
   topicChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  /** Two equal columns: 47% + grow absorbs the 8pt gap on any width. */
+  topicCell: { flexBasis: '47%', flexGrow: 1 },
   topicChip: {
-    backgroundColor: 'rgba(242,245,243,0.06)',
-    borderColor: 'rgba(242,245,243,0.12)',
-    borderRadius: 999,
+    alignItems: 'center',
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    gap: 9,
+    height: 52,
+    paddingHorizontal: 11,
   },
-  topicChipText: { color: 'rgba(242,245,243,0.85)', fontSize: 13, fontWeight: '700' },
+  topicTick: {
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  topicTickMark: { color: '#06130d', fontSize: 11, fontWeight: '900' },
+  topicChipText: { flex: 1, fontSize: 13, fontWeight: '700', lineHeight: 17 },
   notifBody: {
     color: 'rgba(242,245,243,0.55)',
     fontSize: 12,
