@@ -22,6 +22,15 @@
  * views). So one bad view never buries a video, and a creator whose videos
  * people keep skipping drags down its unwatched ones too.
  *
+ * SHORT FIRST (Radek, 2026-10-06). Watch-through is ~66% on clips of 20s
+ * or less and ~20% on 36-60s ones, which were 57% of all views — so a
+ * new user's first minutes were mostly clips they abandoned. Every video's
+ * score gets a length bonus (lengthBonus): short up, long down. It goes
+ * into the published score itself, so installed apps feel it on their next
+ * launch, and every catalog video gets a score so new short ones do too.
+ * Benching still judges the score WITHOUT the bonus: a short video people
+ * skip is still benched.
+ *
  * BENCHED = smoothed score under BENCH_BELOW with real evidence behind it
  * (the creator's views >= BENCH_MIN_EVIDENCE). Benched videos sort after
  * everything; they are not deleted.
@@ -137,7 +146,18 @@ for (const [name, s] of perCreator) {
   creatorScore.set(name, e === null ? prior : (n * e + CREATOR_K * prior) / (n + CREATOR_K));
 }
 
+/** The short-first nudge, added to a video's score (see the header). */
+function lengthBonus(seconds: number | undefined): number {
+  if (seconds === undefined) return 0;
+  if (seconds <= 20) return 0.25;
+  if (seconds <= 35) return 0.22;
+  if (seconds <= 45) return 0;
+  if (seconds <= 60) return -0.08;
+  return -0.15;
+}
+
 const scores: Record<string, number> = {};
+const unboosted: Record<string, number> = {};
 const benched: string[] = [];
 for (const v of catalog) {
   const c = creatorOf(v);
@@ -146,9 +166,11 @@ for (const v of catalog) {
   const e = s ? engagement(s) : null;
   const n = s?.watch.length ?? 0;
   const score = e === null ? base : (n * e + VIDEO_K * base) / (n + VIDEO_K);
-  // Only videos with some evidence of their own or of their creator get a
-  // number; the rest fall back to the prior in the app.
-  if (n > 0 || perCreator.has(c)) scores[v.id] = Math.round(score * 1000) / 1000;
+  // Every video gets a number now: with no evidence it is the prior, and
+  // the length bonus still applies (a fresh short clip should come early).
+  const boosted = Math.min(1, Math.max(0, score + lengthBonus(v.durationSeconds)));
+  scores[v.id] = Math.round(boosted * 1000) / 1000;
+  unboosted[v.id] = score;
   const evidence = (perCreator.get(c)?.watch.length ?? 0) + n;
   if (score < BENCH_BELOW && evidence >= BENCH_MIN_EVIDENCE) benched.push(v.id);
 }
@@ -172,6 +194,27 @@ console.log(`views ${allStats.views}, catalog ${catalog.length}, scored ${Object
 console.log(`benched ${benched.length} videos from ${new Set(benched.map((id) => creatorOf(byId.get(id)!))).size} creators`);
 console.log('\ntop creators:   ' + ranked.slice(0, 6).map(([n, s]) => `${n} ${s.toFixed(2)}`).join(' · '));
 console.log('bottom creators: ' + ranked.slice(-6).map(([n, s]) => `${n} ${s.toFixed(2)}`).join(' · '));
+
+// What a fresh install's first 30 videos look like, with and without the bonus
+// (the same weighted shuffle as core/feedRank, averaged over many shuffles).
+const shareShort = (table: Record<string, number>): number => {
+  const short = new Set(catalog.filter((v) => (v.durationSeconds ?? 99) <= 35).map((v) => v.id));
+  const bench = new Set(benched);
+  let hits = 0;
+  const RUNS = 400;
+  for (let r = 0; r < RUNS; r++) {
+    const keyed = catalog
+      .filter((v) => !bench.has(v.id))
+      .map((v) => ({ id: v.id, k: Math.pow(Math.max(Number.EPSILON, Math.random()), 1 / Math.exp(4 * (table[v.id] ?? prior))) }))
+      .sort((a, b) => b.k - a.k)
+      .slice(0, 30);
+    hits += keyed.filter((x) => short.has(x.id)).length;
+  }
+  return hits / (RUNS * 30);
+};
+console.log(`\nfirst 30 videos of a fresh install that are <=35s: ${(100 * shareShort(unboosted)).toFixed(0)}% before, ${(100 * shareShort(scores)).toFixed(0)}% now`);
+console.log(`catalog <=35s: ${catalog.filter((v) => (v.durationSeconds ?? 99) <= 35).length} of ${catalog.length}`);
+
 console.log(`\nwrote ${path.relative(REPO_ROOT, OUT)}`);
 
 if (publish) {
