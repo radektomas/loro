@@ -33,9 +33,20 @@ export type FeedScores = {
   benched: string[];
   /** The average score, used for videos with no data yet. */
   prior: number;
+  /** video id -> what it is about (scripts/tag-topics.mts). Optional: older files lack it. */
+  topics?: Record<string, string[]>;
 };
 
 export const EMPTY_SCORES: FeedScores = { scores: {}, benched: [], prior: 0.5 };
+
+/**
+ * FOR YOU (Radek, 2026-10-06: "the feed leans that way ... I would still show
+ * other topics, just less"). A video about a topic the user picked gets this
+ * much added to its score. With SHARPNESS 4 that is about 1.8x the weight —
+ * a clear lean, not a filter: the rest of the catalog still comes, and still
+ * unseen-first.
+ */
+export const TOPIC_BONUS = 0.15;
 
 /**
  * How much more often a better video comes first. exp(SHARPNESS * score):
@@ -46,12 +57,20 @@ const SHARPNESS = 4;
 
 export function rankFeed<V extends { id: string }>(
   videos: readonly V[],
-  options: { watchedIds?: ReadonlySet<string>; scores?: FeedScores; random?: () => number } = {}
+  options: {
+    watchedIds?: ReadonlySet<string>;
+    scores?: FeedScores;
+    /** The topics the user picked in onboarding (loro.mobile.topics). */
+    liked?: ReadonlySet<string>;
+    random?: () => number;
+  } = {}
 ): V[] {
-  const { watchedIds, scores = EMPTY_SCORES, random = Math.random } = options;
+  const { watchedIds, scores = EMPTY_SCORES, liked, random = Math.random } = options;
   const benched = new Set(scores.benched);
   const keyed = videos.map((video) => {
-    const score = scores.scores[video.id] ?? scores.prior;
+    const about = scores.topics?.[video.id];
+    const forYou = liked && liked.size > 0 && about?.some((t) => liked.has(t)) ? TOPIC_BONUS : 0;
+    const score = (scores.scores[video.id] ?? scores.prior) + forYou;
     const weight = Math.exp(SHARPNESS * Math.min(1, Math.max(0, score)));
     // u in (0,1]; a larger key comes first.
     const u = Math.max(Number.EPSILON, random());
@@ -76,5 +95,11 @@ export function parseFeedScores(raw: unknown): FeedScores | null {
   }
   const benched = Array.isArray(r.benched) ? r.benched.filter((x): x is string => typeof x === 'string') : [];
   const prior = typeof r.prior === 'number' && Number.isFinite(r.prior) ? r.prior : 0.5;
-  return { scores, benched, prior };
+  const topics: Record<string, string[]> = {};
+  if (r.topics && typeof r.topics === 'object') {
+    for (const [id, list] of Object.entries(r.topics as Record<string, unknown>)) {
+      if (Array.isArray(list)) topics[id] = list.filter((t): t is string => typeof t === 'string');
+    }
+  }
+  return { scores, benched, prior, topics };
 }

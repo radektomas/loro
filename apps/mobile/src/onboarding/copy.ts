@@ -50,6 +50,26 @@ export const MOTIVATION = {
   cta: 'Continuar',
 };
 
+/**
+ * WHAT THEY LIKE WATCHING (Radek, 2026-10-06: "every question adds to the
+ * user feeling they gave more"). Multi-select, and the promise is exactly
+ * what the feed does: it leans that way and still shows everything. Ids are
+ * stored (loro.mobile.topics) and match scripts/tag-topics.mts.
+ */
+export const TOPICS = {
+  title: 'What do you love watching?',
+  body: 'Pick a few. Your feed leans that way, and you still get a bit of everything.',
+  options: [
+    { id: 'travel', label: 'Travel and places' },
+    { id: 'food', label: 'Food' },
+    { id: 'love', label: 'Love, family and friends' },
+    { id: 'money', label: 'Money and work' },
+    { id: 'funny', label: 'Funny, everyday life' },
+    { id: 'mind', label: 'Health, sport and mind' },
+  ],
+  cta: 'Continuar',
+};
+
 // ----------------------------------------------------------- 3. self-assess
 
 /**

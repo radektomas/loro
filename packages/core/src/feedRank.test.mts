@@ -50,12 +50,39 @@ describe('rankFeed', () => {
 
 describe('parseFeedScores', () => {
   it('reads a published file and drops junk', () => {
-    const parsed = parseFeedScores({ scores: { a: 0.5, b: 'x' }, benched: ['c', 3], prior: 0.3 });
-    assert.deepEqual(parsed, { scores: { a: 0.5 }, benched: ['c'], prior: 0.3 });
+    const parsed = parseFeedScores({
+      scores: { a: 0.5, b: 'x' },
+      benched: ['c', 3],
+      prior: 0.3,
+      topics: { a: ['food', 7], b: 'travel' },
+    });
+    assert.deepEqual(parsed, { scores: { a: 0.5 }, benched: ['c'], prior: 0.3, topics: { a: ['food'] } });
   });
 
   it('treats anything malformed as no scores', () => {
     assert.equal(parseFeedScores(null), null);
     assert.equal(parseFeedScores({ nope: 1 }), null);
+  });
+});
+
+describe('rankFeed — for you', () => {
+  it('leans toward the liked topics without dropping the rest', () => {
+    const videos = Array.from({ length: 40 }, (_, i) => ({ id: `v${i}` }));
+    const scores = {
+      scores: {},
+      benched: [],
+      prior: 0.5,
+      topics: Object.fromEntries(videos.slice(0, 20).map((v) => [v.id, ['food']])),
+    };
+    let foodFirst = 0;
+    let seed = 7;
+    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let run = 0; run < 200; run++) {
+      const top = rankFeed(videos, { scores, liked: new Set(['food']), random }).slice(0, 10);
+      foodFirst += top.filter((v) => Number(v.id.slice(1)) < 20).length;
+    }
+    const share = foodFirst / 2000;
+    assert.ok(share > 0.6 && share < 0.9, `food share in the top 10 was ${share}`);
+    assert.equal(rankFeed(videos, { scores, liked: new Set(['food']), random }).length, 40);
   });
 });

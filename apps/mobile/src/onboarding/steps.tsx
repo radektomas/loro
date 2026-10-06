@@ -57,6 +57,7 @@ import {
   HOW_IT_WORKS,
   MOTIVATION,
   PAYWALL,
+  TOPICS,
   PLAN_BUILD,
   PLAN_READY,
   RESULT,
@@ -65,6 +66,7 @@ import {
 import { planFor } from '../progress/plan';
 import { PAYWALL_ENABLED, olog, setFrequency, setMotivation } from './flow';
 import { TasteStep } from './TasteStep';
+import { setLikedTopics } from '../feed/topics';
 import { tasteAvailable } from './taste';
 
 /**
@@ -95,6 +97,8 @@ import { tasteAvailable } from './taste';
 export type FlowState = {
   /** Several allowed, so an array. Empty means unanswered. */
   motivation: string[];
+  /** What they like watching — several allowed; the feed leans that way. */
+  topics: string[];
   selfLevel: SelfLevel | null;
   /** Surfaces tapped in the grid. The Set is the web's shape and feeds
       deriveLevel directly. */
@@ -109,6 +113,7 @@ export type FlowState = {
 
 export const INITIAL_FLOW: FlowState = {
   motivation: [],
+  topics: [],
   selfLevel: null,
   known: new Set(),
   derived: null,
@@ -156,6 +161,7 @@ export type StepProps = {
 export type StepId =
   | 'hook'
   | 'motivation'
+  | 'topics'
   | 'selfLevel'
   | 'calibrationIntro'
   | 'grid'
@@ -275,6 +281,60 @@ function MotivationStep({ state, update, next }: StepProps) {
     </Screen>
   );
 }
+
+// ---------------------------------------------------------------- 2b. topics
+
+/**
+ * WHAT THEY LOVE WATCHING. The same multi-select cards as the screen before
+ * it, labels only so six fit without a scroll. Saved on Continuar (an empty
+ * answer saves nothing: the feed simply does not lean), read by the feed's
+ * ranking on its next ordering (feed/topics.ts, core feedRank).
+ */
+function TopicsStep({ state, update, next }: StepProps) {
+  const toggle = (id: string) => {
+    const chosen = state.topics.includes(id)
+      ? state.topics.filter((value) => value !== id)
+      : [...state.topics, id];
+    update({ topics: chosen });
+  };
+  const commit = () => {
+    if (state.topics.length > 0) setLikedTopics(state.topics);
+    olog(`topics=[${state.topics.join(', ')}]`);
+    next();
+  };
+  return (
+    <Screen footer={<PrimaryButton label={TOPICS.cta} onPress={commit} />}>
+      <Title>{TOPICS.title}</Title>
+      <Body>{TOPICS.body}</Body>
+      <View style={styles.choices}>
+        {TOPICS.options.map((option) => {
+          const on = state.topics.includes(option.id);
+          const art = TOPIC_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
+          return (
+            <ChoiceCard
+              key={option.id}
+              multi
+              label={option.label}
+              selected={on}
+              icon={<IconTile glyph={art.glyph} tint={art.tint} on={on} size={38} />}
+              onPress={() => toggle(option.id)}
+            />
+          );
+        })}
+      </View>
+    </Screen>
+  );
+}
+
+/** Text-presentation symbols, never emoji — the motivation cards' rule. */
+const TOPIC_ART: Record<string, { glyph: string; tint: Tint }> = {
+  travel: { glyph: '✈︎', tint: 'sky' },
+  food: { glyph: '☕︎', tint: 'amber' },
+  love: { glyph: '♥︎', tint: 'rose' },
+  money: { glyph: '€', tint: 'mint' },
+  funny: { glyph: '☺︎', tint: 'violet' },
+  mind: { glyph: '✿︎', tint: 'mint' },
+};
 
 /**
  * ART PER ANSWER, NOT COPY: a glyph and a tint for each card. Keyed on the
@@ -1369,6 +1429,7 @@ const TASTE_BENCHED = true;
 export const STEPS: StepDef[] = [
   { id: 'hook', Component: HookStep },
   { id: 'motivation', Component: MotivationStep },
+  { id: 'topics', Component: TopicsStep },
   { id: 'selfLevel', Component: SelfLevelStep },
   { id: 'calibrationIntro', Component: CalibrationIntroStep, skip: zeroPath },
   { id: 'grid', Component: GridStep, skip: zeroPath },

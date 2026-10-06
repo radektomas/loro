@@ -39,7 +39,7 @@
  * and with --publish the same bytes at loro-catalog/feed/scores.json, which
  * the app refreshes from, so scores move without a release.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { loadEnv, REPO_ROOT } from './lib/env.mts';
 import { getAdminClient } from './lib/supabaseAdmin.mts';
@@ -175,11 +175,22 @@ for (const v of catalog) {
   if (score < BENCH_BELOW && evidence >= BENCH_MIN_EVIDENCE) benched.push(v.id);
 }
 
+/**
+ * What each video is about (scripts/tag-topics.mts), shipped in the same file
+ * so the "for you" lean reaches installed apps — and new videos — without a
+ * release. Untagged and topic-less videos are simply absent.
+ */
+const TOPICS_PATH = path.join(REPO_ROOT, 'data', 'videoTopics.json');
+const allTopics: Record<string, string[]> = existsSync(TOPICS_PATH) ? JSON.parse(readFileSync(TOPICS_PATH, 'utf8')) : {};
+const topics: Record<string, string[]> = {};
+for (const v of catalog) if (allTopics[v.id]?.length) topics[v.id] = allTopics[v.id];
+
 const out = {
   generatedAt: new Date().toISOString(),
   prior: Math.round(prior * 1000) / 1000,
   scores,
   benched,
+  topics,
 };
 writeFileSync(
   OUT,

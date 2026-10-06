@@ -30,6 +30,7 @@ import { storage } from '@loro/core/storage';
 import { rankFeed } from '@loro/core/feedRank';
 import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
+import { getLikedTopics } from './topics';
 import { subscribeDevVideo } from '../platform/devMenu';
 import { track, trackOnce } from '../platform/analytics';
 import {
@@ -727,7 +728,12 @@ function EmptyFeed() {
 function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
   if (list.length > 0) feedLog(`order: ranking ${list.length}`);
   refreshFeedScores();
-  return rankFeed(list, { watchedIds: new Set(storage.getWatchedVideoIds()), scores: getFeedScores() });
+  return rankFeed(list, {
+    watchedIds: new Set(storage.getWatchedVideoIds()),
+    scores: getFeedScores(),
+    // What they said they like watching leans the order (onboarding 'topics').
+    liked: new Set(getLikedTopics()),
+  });
 }
 
 /**
