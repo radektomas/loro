@@ -22,24 +22,33 @@ import type { DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, 
  */
 
 export const DASH = {
-  page: '#f4f5f7',
-  card: '#ffffff',
-  line: '#e6e8ec',
-  ink: '#0f172a',
-  muted: '#667085',
-  faint: '#98a2b3',
-  green: '#12a150',
-  greenSoft: '#e7f6ee',
-  red: '#d92d20',
-  redSoft: '#fdecea',
+  // Dark since 2026-10-09 (Radek: "make the dashboard dark theme"):
+  // neutrals leaning toward the app's green, colours lifted for a dark ground.
+  page: '#0b0f0d',
+  card: '#141a17',
+  inset: '#101512',
+  track: '#1f2622',
+  line: '#26302b',
+  ink: '#eef2ef',
+  muted: '#9aa59f',
+  faint: '#6b766f',
+  green: '#34d399',
+  greenSoft: 'rgba(52,211,153,0.14)',
+  red: '#f87171',
+  redSoft: 'rgba(248,113,113,0.14)',
+  blue: '#60a5fa',
+  blueSoft: 'rgba(96,165,250,0.15)',
+  violet: '#a78bfa',
+  orange: '#fb923c',
+  shadow: 'rgba(0,0,0,0.35)',
 } as const;
 
 type MetricKey = 'installs' | 'wall' | 'purchases' | 'videos';
 const METRICS: { key: MetricKey; label: string; color: string; pick: (d: DailyPoint) => number; help: string }[] = [
-  { key: 'installs', label: 'New installs', color: '#2563eb', pick: (d) => d.newInstalls, help: 'First launch of the App Store app.' },
-  { key: 'wall', label: 'Paywall views', color: '#7c3aed', pick: (d) => d.paywallViews, help: 'Installs that saw the wall that day.' },
+  { key: 'installs', label: 'New installs', color: DASH.blue, pick: (d) => d.newInstalls, help: 'First launch of the App Store app.' },
+  { key: 'wall', label: 'Paywall views', color: DASH.violet, pick: (d) => d.paywallViews, help: 'Installs that saw the wall that day.' },
   { key: 'purchases', label: 'Trials & purchases', color: DASH.green, pick: (d) => d.purchases, help: 'Completed Apple sheets — a trial start counts.' },
-  { key: 'videos', label: 'Videos watched', color: '#ea580c', pick: (d) => d.videosWatched, help: 'Clips played inside the app.' },
+  { key: 'videos', label: 'Videos watched', color: DASH.orange, pick: (d) => d.videosWatched, help: 'Clips played inside the app.' },
 ];
 
 const fmt = new Intl.NumberFormat('en-GB');
@@ -68,7 +77,7 @@ function Card({ children, className = '' }: { children: ReactNode; className?: s
   return (
     <section
       className={`rounded-2xl p-5 ${className}`}
-      style={{ background: DASH.card, border: `1px solid ${DASH.line}`, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}
+      style={{ background: DASH.card, border: `1px solid ${DASH.line}`, boxShadow: `0 1px 2px ${DASH.shadow}` }}
     >
       {children}
     </section>
@@ -150,7 +159,7 @@ function KpiCard({
       style={{
         background: DASH.card,
         border: `1px solid ${active ? color : DASH.line}`,
-        boxShadow: active ? `0 0 0 3px ${color}22` : '0 1px 2px rgba(16,24,40,0.04)',
+        boxShadow: active ? `0 0 0 3px ${color}22` : `0 1px 2px ${DASH.shadow}`,
       }}
     >
       <div className="flex items-center gap-2 text-xs font-medium" style={{ color: DASH.muted }}>
@@ -211,7 +220,7 @@ function MainChart({ days, metric }: { days: DailyPoint[]; metric: (typeof METRI
           const on = hover === i;
           return (
             <g key={d.day} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-              <rect x={x} y={padT} width={slot} height={H - padT - padB} fill={on ? '#f2f4f7' : 'transparent'} />
+              <rect x={x} y={padT} width={slot} height={H - padT - padB} fill={on ? DASH.track : 'transparent'} />
               {v > 0 && (
                 <rect
                   x={x + (slot - barW) / 2}
@@ -237,7 +246,7 @@ function MainChart({ days, metric }: { days: DailyPoint[]; metric: (typeof METRI
           className="pointer-events-none absolute top-2 rounded-xl px-3 py-2 text-xs shadow-lg"
           style={{
             background: DASH.ink,
-            color: '#fff',
+            color: DASH.page,
             left: `${Math.min(80, Math.max(4, ((padL + (hover + 0.5) * slot) / W) * 100 - 8))}%`,
           }}
         >
@@ -264,7 +273,7 @@ function Funnel({ w, compare }: { w: WallWindow; compare: WallWindow }) {
     <div>
       <div className="grid gap-3 sm:grid-cols-3">
         {steps.map((s, i) => (
-          <div key={s.label} className="relative rounded-xl p-4" style={{ background: '#f8f9fb', border: `1px solid ${DASH.line}` }}>
+          <div key={s.label} className="relative rounded-xl p-4" style={{ background: DASH.inset, border: `1px solid ${DASH.line}` }}>
             <div className="text-xs font-medium" style={{ color: DASH.muted }}>
               {i + 1}. {s.label}
             </div>
@@ -305,13 +314,13 @@ function Subscribers({ rows: all }: { rows: SubscriberRow[] }) {
     { key: 'paid' as const, label: `Paid straight away ${all.filter((r) => !r.trial).length}` },
   ];
   const tabBar = (
-    <div className="mb-3 flex w-fit gap-1 rounded-lg p-0.5" style={{ background: '#f2f4f7' }}>
+    <div className="mb-3 flex w-fit gap-1 rounded-lg p-0.5" style={{ background: DASH.track }}>
       {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => setTab(t.key)}
           className="rounded-md px-3 py-1 text-xs font-semibold"
-          style={tab === t.key ? { background: DASH.card, color: DASH.ink, boxShadow: '0 1px 2px rgba(16,24,40,0.08)' } : { color: DASH.muted }}
+          style={tab === t.key ? { background: DASH.card, color: DASH.ink, boxShadow: `0 1px 2px ${DASH.shadow}` } : { color: DASH.muted }}
         >
           {t.label}
         </button>
@@ -325,7 +334,7 @@ function Subscribers({ rows: all }: { rows: SubscriberRow[] }) {
     {tabBar}
     <div className="-mx-5 overflow-x-auto">
       <table className="w-full min-w-[700px] text-left text-sm">
-        <thead style={{ color: DASH.faint, background: '#f8f9fb' }}>
+        <thead style={{ color: DASH.faint, background: DASH.inset }}>
           <tr>
             <th className={`${head} pl-5`}>Started</th>
             <th className={head}>Plan</th>
@@ -343,9 +352,9 @@ function Subscribers({ rows: all }: { rows: SubscriberRow[] }) {
             const engaged = r.daysActiveAfter >= 2 || r.savedAfter >= 5;
             const status =
               r.trial && ageDays < 7
-                ? { text: `Trial · day ${Math.floor(ageDays) + 1} of 7`, bg: '#eef4ff', fg: '#2563eb' }
+                ? { text: `Trial · day ${Math.floor(ageDays) + 1} of 7`, bg: DASH.blueSoft, fg: DASH.blue }
                 : r.trial
-                  ? { text: 'Trial ended · check RevenueCat', bg: '#f2f4f7', fg: DASH.muted }
+                  ? { text: 'Trial ended · check RevenueCat', bg: DASH.track, fg: DASH.muted }
                   : engaged
                   ? { text: 'Using it', bg: DASH.greenSoft, fg: DASH.green }
                   : { text: 'Went quiet', bg: DASH.redSoft, fg: DASH.red };
@@ -414,8 +423,8 @@ function Feedback({ rows }: { rows: FeedbackRow[] }) {
           return (
             <div key={k} className="flex items-center gap-3 text-sm">
               <div className="w-56 shrink-0" style={{ color: DASH.ink }}>{REASON_LABEL[k]}</div>
-              <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: '#f2f4f7' }}>
-                <div className="h-full rounded-full" style={{ width: `${(n / max) * 100}%`, background: '#7c3aed' }} />
+              <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: DASH.track }}>
+                <div className="h-full rounded-full" style={{ width: `${(n / max) * 100}%`, background: DASH.violet }} />
               </div>
               <div className="w-20 shrink-0 text-right tabular-nums" style={{ color: DASH.muted }}>
                 <b style={{ color: DASH.ink }}>{n}</b> · {pct(n, answered.length)}
@@ -432,7 +441,7 @@ function Feedback({ rows }: { rows: FeedbackRow[] }) {
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: DASH.faint }}>In their words</div>
           <ul className="space-y-2">
             {notes.map((r, i) => (
-              <li key={i} className="rounded-xl px-4 py-3 text-sm" style={{ background: '#f8f9fb', border: `1px solid ${DASH.line}` }}>
+              <li key={i} className="rounded-xl px-4 py-3 text-sm" style={{ background: DASH.inset, border: `1px solid ${DASH.line}` }}>
                 <span style={{ color: DASH.ink }}>“{r.note}”</span>
                 <span className="ml-2 text-xs" style={{ color: DASH.faint }}>
                   {dayLabel(r.answeredAt)}
@@ -463,11 +472,11 @@ function DauChart({ points }: { points: DauPoint[] }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-36 w-full" role="img" aria-label="Active installs per day">
       <line x1={8} x2={W - 8} y1={y(0)} y2={y(0)} stroke={DASH.line} />
-      <path d={`${line} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill="#2563eb" opacity={0.08} />
-      <path d={line} fill="none" stroke="#2563eb" strokeWidth={2} strokeLinejoin="round" />
+      <path d={`${line} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill={DASH.blue} opacity={0.08} />
+      <path d={line} fill="none" stroke={DASH.blue} strokeWidth={2} strokeLinejoin="round" />
       {last && (
         <g>
-          <circle cx={x(n - 1)} cy={y(last.dau)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+          <circle cx={x(n - 1)} cy={y(last.dau)} r={4.5} fill={DASH.blue} stroke={DASH.card} strokeWidth={2} />
           <text x={x(n - 1) - 8} y={y(last.dau) - 9} textAnchor="end" fontSize={12} fontWeight={600} fill={DASH.ink}>
             {last.dau} today
           </text>
@@ -548,7 +557,7 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
           value={fmt.format(trials14)}
           now={trials14}
           before={trialsPrev}
-          color="#2563eb"
+          color={DASH.blue}
           caption={`last 14 days · ${activeTrials} running now`}
         />
         <KpiCard
@@ -567,13 +576,13 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
           title={metric.label}
           hint={metric.help}
           aside={
-            <div className="flex gap-1 rounded-lg p-0.5" style={{ background: '#f2f4f7' }}>
+            <div className="flex gap-1 rounded-lg p-0.5" style={{ background: DASH.track }}>
               {([30, 60] as const).map((d) => (
                 <button
                   key={d}
                   onClick={() => setRange(d)}
                   className="rounded-md px-3 py-1 text-xs font-semibold"
-                  style={range === d ? { background: DASH.card, color: DASH.ink, boxShadow: '0 1px 2px rgba(16,24,40,0.08)' } : { color: DASH.muted }}
+                  style={range === d ? { background: DASH.card, color: DASH.ink, boxShadow: `0 1px 2px ${DASH.shadow}` } : { color: DASH.muted }}
                 >
                   {d} days
                 </button>
@@ -666,7 +675,7 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
             { label: 'Day 3', n: r.d3Returned, of: r.d3Cohort },
             { label: 'Day 7', n: r.d7Returned, of: r.d7Cohort },
           ].map((c) => (
-            <div key={c.label} className="rounded-xl p-4" style={{ background: '#f8f9fb', border: `1px solid ${DASH.line}` }}>
+            <div key={c.label} className="rounded-xl p-4" style={{ background: DASH.inset, border: `1px solid ${DASH.line}` }}>
               <div className="text-xs font-medium" style={{ color: DASH.muted }}>{c.label}</div>
               <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color: DASH.ink }}>{pct(c.n, c.of)}</div>
               <div className="text-xs" style={{ color: DASH.faint }}>{c.n} of {c.of} installs</div>

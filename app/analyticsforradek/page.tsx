@@ -72,8 +72,8 @@ export default function AnalyticsForRadek() {
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black text-white"
-              style={{ background: DASH.green }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black"
+              style={{ background: DASH.green, color: DASH.page }}
             >
               L
             </span>
@@ -109,7 +109,7 @@ export default function AnalyticsForRadek() {
           <form
             onSubmit={submit}
             className="mx-auto mt-20 max-w-sm rounded-2xl p-6"
-            style={{ background: DASH.card, border: `1px solid ${DASH.line}`, boxShadow: '0 8px 24px rgba(16,24,40,0.08)' }}
+            style={{ background: DASH.card, border: `1px solid ${DASH.line}`, boxShadow: `0 8px 24px ${DASH.shadow}` }}
           >
             <h2 className="text-lg font-bold">Loro numbers</h2>
             <p className="mt-1 text-sm" style={{ color: DASH.muted }}>Enter the password to open the dashboard.</p>
@@ -123,7 +123,7 @@ export default function AnalyticsForRadek() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-4 w-full rounded-lg px-3 py-2.5 text-sm outline-none"
-              style={{ border: `1px solid ${DASH.line}`, color: DASH.ink, background: '#fff' }}
+              style={{ border: `1px solid ${DASH.line}`, color: DASH.ink, background: DASH.page }}
             />
             {error && <p className="mt-2 text-sm" style={{ color: DASH.red }}>{error}</p>}
             {user && admin === false && (
@@ -132,8 +132,8 @@ export default function AnalyticsForRadek() {
             <button
               type="submit"
               disabled={busy || !password}
-              className="mt-4 w-full rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-50"
-              style={{ background: DASH.green }}
+              className="mt-4 w-full rounded-lg py-2.5 text-sm font-bold disabled:opacity-50"
+              style={{ background: DASH.green, color: DASH.page }}
             >
               {busy ? 'Opening…' : 'Open'}
             </button>
