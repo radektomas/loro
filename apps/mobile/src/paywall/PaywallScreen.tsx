@@ -706,6 +706,52 @@ export function PaywallScreen({
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+        {/* THE PLANS AS TWO CARDS on the arrival wall (Radek, 2026-10-09:
+            "the options of a trial"): both visible, each with its trial and
+            price, the chosen one outlined in mint. Yearly first, with its
+            saving. The button below follows the choice. */}
+        {arrived && offer.status === 'ready' && offer.packages.length > 1 && (
+          <View style={styles.plans}>
+            {[...offer.packages]
+              .sort((a, b) => (b.product.price ?? 0) - (a.product.price ?? 0))
+              .map((pkg) => {
+                const on = selected?.identifier === pkg.identifier;
+                const days = trialDays(pkg.product);
+                const period = periodLabel(pkg.product.subscriptionPeriod);
+                const perMonth = perMonthLabel(pkg.product);
+                const saving = savingLabel(pkg, offer.packages);
+                return (
+                  <Pressable
+                    key={pkg.identifier}
+                    onPress={() => setSelectedId(pkg.identifier)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                    style={[styles.plan, on && styles.planOn]}
+                  >
+                    <View style={[styles.planDot, on && styles.planDotOn]}>
+                      {on && <View style={styles.planDotInner} />}
+                    </View>
+                    <View style={styles.planText}>
+                      <View style={styles.planHead}>
+                        <Text style={styles.planName}>{planName(pkg)}</Text>
+                        {saving && (
+                          <View style={styles.planSave}>
+                            <Text style={styles.planSaveText}>{saving}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.planPrice} numberOfLines={1}>
+                        {days !== null ? 'then ' : ''}
+                        {pkg.product.priceString} {billedWord(period)}
+                        {perMonth ? ` · ${perMonth} / month` : ''}
+                      </Text>
+                    </View>
+                    {days !== null && <Text style={[styles.planTrial, on && styles.planTrialOn]}>{days} days free</Text>}
+                  </Pressable>
+                );
+              })}
+          </View>
+        )}
         {/* The owner's line, right above the button it belongs to. */}
         {selected && (
           <Pressable
@@ -752,7 +798,7 @@ export function PaywallScreen({
         )}
         {/* THE OTHER PLAN, one tap away. Names its price and whether it has a
             trial, so the choice is made here and not discovered on the sheet. */}
-        {other && (
+        {other && !arrived && (
           <Pressable
             onPress={() => setSelectedId(other.identifier)}
             accessibilityRole="button"
@@ -878,6 +924,38 @@ const styles = StyleSheet.create({
   reviewSlim: { marginTop: 18, paddingVertical: 10 },
   arrivedTitle: { fontSize: 24, lineHeight: 29, marginTop: 2 },
   arrivedLine: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 4, textAlign: 'center' },
+  plans: { gap: 8, marginBottom: 12 },
+  plan: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(20,26,23,0.92)',
+    borderColor: 'rgba(242,245,243,0.12)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  planOn: { backgroundColor: 'rgba(94,230,168,0.08)', borderColor: ACCENT },
+  planDot: {
+    alignItems: 'center',
+    borderColor: 'rgba(242,245,243,0.35)',
+    borderRadius: 11,
+    borderWidth: 2,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  planDotOn: { borderColor: ACCENT },
+  planDotInner: { backgroundColor: ACCENT, borderRadius: 5, height: 10, width: 10 },
+  planText: { flex: 1 },
+  planHead: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  planName: { color: TEXT, fontSize: 16, fontWeight: '800' },
+  planSave: { backgroundColor: 'rgba(255,196,107,0.18)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  planSaveText: { color: '#ffc46b', fontSize: 11, fontWeight: '800' },
+  planPrice: { color: MUTED, fontSize: 12.5, fontWeight: '600', marginTop: 2 },
+  planTrial: { color: MUTED, fontSize: 13, fontWeight: '800' },
+  planTrialOn: { color: ACCENT },
   ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   // ---- the plan as chips ----
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 },
