@@ -270,7 +270,7 @@ function ArrivedHead() {
           "free" does on the first wall and a blank does in the app (Radek,
           2026-10-08). "Vamos a", not "¡Vamos a": the slot cannot carry the
           closing "!" without a gap, and half a pair of marks is wrong. */}
-      <View style={styles.hero}>
+      <View style={[styles.hero, styles.arrivedHero]}>
         <Image
           source={BRAND.parrotWaving}
           style={styles.arrivedParrot}
@@ -296,14 +296,25 @@ function ArrivedHead() {
       <Text style={styles.arrivedLine}>
         {next.city} is next: {citySize(1)} words and a new local word.
       </Text>
-      {card.words.length > 0 && <Text style={styles.arrivedLabel}>THE WORDS YOU LEARNED SO FAR</Text>}
+      {/* THEIR WORDS AS A LIST, not pills (Radek: "nicer than those ugly
+          bubbles"): one card, each word with its meaning under it, three
+          to a row, so it reads as a page of what they now know. */}
       {card.words.length > 0 && (
-        <View style={[styles.chips, styles.arrivedChips]}>
-          {card.words.slice(0, 6).map((w) => (
-            <View key={w.word} style={[styles.chip, styles.chipAccent]}>
-              <Text style={styles.chipAccentText}>✓ {w.word}</Text>
-            </View>
-          ))}
+        <View style={styles.learned}>
+          <Text style={styles.arrivedLabel}>THE WORDS YOU LEARNED SO FAR</Text>
+          <View style={styles.learnedGrid}>
+            {card.words.slice(0, 6).map((w) => (
+              <View key={w.word} style={styles.learnedCell}>
+                <Text style={styles.learnedWord} numberOfLines={1}>
+                  <Text style={styles.learnedTick}>✓ </Text>
+                  {w.word}
+                </Text>
+                <Text style={styles.learnedMeaning} numberOfLines={1}>
+                  {w.meaning}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -623,17 +634,17 @@ export function PaywallScreen({
         {/* WHAT THAT BUYS — three lines, each a shipped fact. Out of the
             arrival the third is Peppa: the show the marketing sells, and
             seven in ten users never found its shelf (2026-10-07). */}
-        <View style={styles.benefits}>
+        <View style={[styles.benefits, arrived && styles.benefitsTight]}>
           <View style={styles.benefit}>
-            <IconTile glyph="▶︎" tint="sky" size={34} />
+            <IconTile glyph="▶︎" tint="sky" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
           </View>
           <View style={styles.benefit}>
-            <IconTile glyph="✓" tint="mint" size={34} />
+            <IconTile glyph="✓" tint="mint" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>Every word you save, trained until it sticks</Text>
           </View>
           <View style={styles.benefit}>
-            <IconTile glyph="★︎" tint="amber" size={34} />
+            <IconTile glyph="★︎" tint="amber" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>
               {arrived
                 ? `Peppa Pig in Spanish, ${PEPPA_EPISODES} episodes`
@@ -792,19 +803,34 @@ const styles = StyleSheet.create({
   // ---- out of the arrival ----
   arrived: { alignItems: 'center' },
   /** Bigger than the first wall's Loro: here he is the moment, not a guide. */
-  arrivedParrot: { height: 132, width: 92 },
-  arrivedBubble: { marginBottom: 26, paddingVertical: 14 },
+  arrivedHero: { marginTop: 0 },
+  arrivedParrot: { height: 112, width: 78 },
+  arrivedBubble: { marginBottom: 20, paddingVertical: 12 },
   arrivedLabel: {
     color: MUTED,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 1.4,
-    marginTop: 18,
     textAlign: 'center',
   },
-  arrivedChips: { marginTop: 8 },
-  arrivedTitle: { marginTop: 4 },
-  arrivedLine: { color: MUTED, fontSize: 15, lineHeight: 21, marginTop: 6, textAlign: 'center' },
+  learned: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(20,26,23,0.92)',
+    borderColor: 'rgba(94,230,168,0.22)',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  learnedGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 8, rowGap: 8 },
+  learnedCell: { alignItems: 'center', paddingHorizontal: 4, width: '33.33%' },
+  learnedWord: { color: TEXT, fontSize: 16, fontWeight: '800' },
+  learnedTick: { color: ACCENT, fontSize: 13, fontWeight: '900' },
+  learnedMeaning: { color: MUTED, fontSize: 12, fontWeight: '600', marginTop: 1 },
+  benefitsTight: { gap: 7, marginTop: 14 },
+  arrivedTitle: { fontSize: 24, lineHeight: 29, marginTop: 2 },
+  arrivedLine: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 4, textAlign: 'center' },
   ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   // ---- the plan as chips ----
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 },
