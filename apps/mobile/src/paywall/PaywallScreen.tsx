@@ -24,8 +24,9 @@ import { Backdrop, IconTile, TypingMock } from '../onboarding/art';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { storage } from '@loro/core/storage';
-import { citySize, tripStop } from '@loro/core/roadmap';
-import { postcardFor } from '../share/cardData';
+import { buildRoadmap, citySize, splitCities, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { cleanWord } from '@loro/core/dictionary';
+import { KNOWN_BOX } from '@loro/core/srs';
 import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue, takeDevPaywallFeedback } from './PaywallFeedback';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
@@ -259,17 +260,42 @@ const REVIEW = {
  * step, and the five words they actually learned, ticked. Their own words
  * make stopping feel like leaving something behind; a sample could not. Everything on it is theirs.
  */
+/**
+ * THEIR SPANISH, MID-WAY (Radek, 2026-10-09: "words in progress of
+ * learning, so it's like they are in the process and they don't want to
+ * stop"). The Madrid words they finished, bar full, then the words already
+ * waiting in Sevilla, bar part-way by how far their schedule has got them —
+ * a row that is visibly unfinished. Real rows only; a user with nothing
+ * waiting yet sees just their Madrid words.
+ */
+function wordsInProgress(): { word: string; meaning: string; fill: number }[] {
+  const trip = withLevelKnown(storage.getSavedWords(), storage.getLevelKnownWords()).words;
+  const cities = splitCities(buildRoadmap(trip));
+  const learned = (cities[0] ?? [])
+    .filter((n) => n.status === 'done')
+    .map((n) => ({ word: cleanWord(n.word.text), meaning: n.word.translation, fill: 1 }));
+  const going = cities
+    .slice(1)
+    .flat()
+    .filter((n) => n.status !== 'done')
+    .slice(0, 3)
+    .map((n) => ({
+      word: cleanWord(n.word.text),
+      meaning: n.word.translation,
+      fill: Math.min(0.8, Math.max(0.2, (n.word.box ?? 0) / KNOWN_BOX)),
+    }));
+  return [...learned.slice(0, 6 - going.length), ...going];
+}
+
 function ArrivedHead({ tight }: { tight: boolean }) {
-  const card = useMemo(() => postcardFor(1), []);
+  const words = useMemo(() => wordsInProgress(), []);
   const next = tripStop(1);
   return (
     <View style={styles.arrived}>
-      {/* Loro on top, as everywhere a moment is his (Radek, 2026-10-08: "there
-          should be Loro, our mascot, definitely" — not the postcard). */}
-      {/* The city types itself in letter by letter and turns green, the way
-          "free" does on the first wall and a blank does in the app (Radek,
-          2026-10-08). "Vamos a", not "¡Vamos a": the slot cannot carry the
-          closing "!" without a gap, and half a pair of marks is wrong. */}
+      {/* Loro on top, as everywhere a moment is his (Radek, 2026-10-08), and
+          the five-star review in his bubble — someone else saying it, next
+          to the mascot (Radek, 2026-10-09: "put the review instead of the
+          chat bubble"). */}
       <View style={[styles.hero, styles.arrivedHero]}>
         <Image
           source={BRAND.parrotWaving}
@@ -278,33 +304,27 @@ function ArrivedHead({ tight }: { tight: boolean }) {
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot"
         />
-        <View style={[styles.bubble, styles.arrivedBubble]}>
+        <View
+          style={[styles.bubble, styles.arrivedBubble]}
+          accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}
+        >
           <View style={styles.bubbleTail} />
-          <TypingMock
-            before={['Vamos', 'a']}
-            answer={next.city}
-            after={[]}
-            gloss=""
-            isCurrent
-            bar={false}
-            frame={false}
-            size={20}
-          />
+          <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
+          <Text style={styles.bubbleReview}>“{REVIEW.text}”</Text>
+          <Text style={styles.reviewBy}>
+            {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
+          </Text>
         </View>
       </View>
       <Text style={[styles.title, styles.arrivedTitle, tight && styles.arrivedTitleTight]}>Don't stop now</Text>
       <Text style={styles.arrivedLine}>
         {next.city} is next: {citySize(1)} words and a new local word.
       </Text>
-      {/* THEIR WORDS, EACH ON ITS OWN SOFT TILE (Radek, 2026-10-08: not
-          pills, not one big box — "something more smooth"): word over its
-          meaning, rising in one after another like they are being laid
-          down. */}
-      {card.words.length > 0 && (
+      {words.length > 0 && (
         <>
-          <Text style={styles.arrivedLabel}>THE WORDS YOU LEARNED SO FAR</Text>
+          <Text style={styles.arrivedLabel}>YOUR WORDS IN PROGRESS</Text>
           <View style={styles.learnedRow}>
-            {card.words.slice(0, 6).map((w, i) => (
+            {words.map((w, i) => (
               <Animated.View
                 key={w.word}
                 entering={FadeInDown.delay(250 + i * 110).duration(420).easing(Easing.out(Easing.cubic))}
@@ -316,6 +336,11 @@ function ArrivedHead({ tight }: { tight: boolean }) {
                 <Text style={styles.learnedMeaning} numberOfLines={1}>
                   {w.meaning}
                 </Text>
+                {/* How far along: full for a finished word, part-way for one
+                    still being learned. */}
+                <View style={styles.learnedTrack}>
+                  <View style={[styles.learnedFill, { width: `${Math.round(w.fill * 100)}%` }]} />
+                </View>
               </Animated.View>
             ))}
           </View>
@@ -691,16 +716,17 @@ export function PaywallScreen({
           </View>
         )}
 
-        {/* WHAT SOMEONE SAID — see REVIEW. On the arrival wall too (Radek,
-            2026-10-08: "we need it there"), in a slimmer card so the page
-            stays one still screen. */}
-        <View style={[styles.review, arrived && styles.reviewSlim]} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
-          <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
-          <Text style={styles.reviewText}>“{REVIEW.text}”</Text>
-          <Text style={styles.reviewBy}>
-            {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
-          </Text>
-        </View>
+        {/* WHAT SOMEONE SAID — see REVIEW. Out of the arrival it sits in
+            Loro's bubble instead (ArrivedHead). */}
+        {!arrived && (
+          <View style={styles.review} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
+            <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
+            <Text style={styles.reviewText}>“{REVIEW.text}”</Text>
+            <Text style={styles.reviewBy}>
+              {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
+            </Text>
+          </View>
+        )}
 
         </View>
       </ScrollView>
@@ -920,8 +946,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   learnedWord: { color: TEXT, fontSize: 16, fontWeight: '800' },
+  learnedTrack: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(242,245,243,0.1)',
+    borderRadius: 2,
+    height: 3,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  learnedFill: { backgroundColor: ACCENT, borderRadius: 2, height: 3 },
+  bubbleReview: { color: TEXT, fontSize: 13, fontStyle: 'italic', lineHeight: 18, marginTop: 4 },
   learnedMeaning: { color: 'rgba(94,230,168,0.8)', fontSize: 11.5, fontWeight: '600', marginTop: 1 },
-  reviewSlim: { marginTop: 18, paddingVertical: 10 },
   arrivedTitle: { fontSize: 24, lineHeight: 29, marginTop: 2 },
   arrivedLine: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 4, textAlign: 'center' },
   plans: { gap: 8, marginBottom: 12 },
