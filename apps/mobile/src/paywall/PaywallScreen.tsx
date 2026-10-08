@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import type {
   PurchasesPackage,
   PurchasesStoreProduct,
@@ -259,7 +260,7 @@ const PEPPA_EPISODES = collectionVideos.filter((v) => v.collection === 'peppa').
  * step, and the five words they actually learned, ticked. Their own words
  * make stopping feel like leaving something behind; a sample could not. Everything on it is theirs.
  */
-function ArrivedHead() {
+function ArrivedHead({ tight }: { tight: boolean }) {
   const card = useMemo(() => postcardFor(1), []);
   const next = tripStop(1);
   return (
@@ -273,7 +274,7 @@ function ArrivedHead() {
       <View style={[styles.hero, styles.arrivedHero]}>
         <Image
           source={BRAND.parrotWaving}
-          style={styles.arrivedParrot}
+          style={tight ? styles.arrivedParrotTight : styles.arrivedParrot}
           resizeMode="contain"
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot"
@@ -292,30 +293,34 @@ function ArrivedHead() {
           />
         </View>
       </View>
-      <Text style={[styles.title, styles.arrivedTitle]}>Don't stop now</Text>
+      <Text style={[styles.title, styles.arrivedTitle, tight && styles.arrivedTitleTight]}>Don't stop now</Text>
       <Text style={styles.arrivedLine}>
         {next.city} is next: {citySize(1)} words and a new local word.
       </Text>
-      {/* THEIR WORDS AS A LIST, not pills (Radek: "nicer than those ugly
-          bubbles"): one card, each word with its meaning under it, three
-          to a row, so it reads as a page of what they now know. */}
+      {/* THEIR WORDS, EACH ON ITS OWN SOFT TILE (Radek, 2026-10-08: not
+          pills, not one big box — "something more smooth"): word over its
+          meaning, rising in one after another like they are being laid
+          down. */}
       {card.words.length > 0 && (
-        <View style={styles.learned}>
+        <>
           <Text style={styles.arrivedLabel}>THE WORDS YOU LEARNED SO FAR</Text>
-          <View style={styles.learnedGrid}>
-            {card.words.slice(0, 6).map((w) => (
-              <View key={w.word} style={styles.learnedCell}>
+          <View style={styles.learnedRow}>
+            {card.words.slice(0, 6).map((w, i) => (
+              <Animated.View
+                key={w.word}
+                entering={FadeInDown.delay(250 + i * 110).duration(420).easing(Easing.out(Easing.cubic))}
+                style={[styles.learnedTile, tight && styles.learnedTileTight]}
+              >
                 <Text style={styles.learnedWord} numberOfLines={1}>
-                  <Text style={styles.learnedTick}>✓ </Text>
                   {w.word}
                 </Text>
                 <Text style={styles.learnedMeaning} numberOfLines={1}>
                   {w.meaning}
                 </Text>
-              </View>
+              </Animated.View>
             ))}
           </View>
-        </View>
+        </>
       )}
     </View>
   );
@@ -339,6 +344,14 @@ export function PaywallScreen({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [remindable, setRemindable] = useState(false);
+  /** The arrival wall's fit: once the content is measured taller than the
+      page, it switches to tight sizes for good (no flip-flopping). */
+  const [viewportH, setViewportH] = useState(0);
+  const [contentH, setContentH] = useState(0);
+  const [tight, setTight] = useState(false);
+  useEffect(() => {
+    if (arrived && !tight && viewportH > 0 && contentH > viewportH + 1) setTight(true);
+  }, [arrived, tight, viewportH, contentH]);
   useEffect(() => {
     if (!arrived) return;
     void getPermissionState().then((s) => setRemindable(s === 'granted'));
@@ -554,10 +567,16 @@ export function PaywallScreen({
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 16, paddingBottom: 12 },
+          { paddingTop: insets.top + (arrived ? 8 : 16), paddingBottom: 12 },
         ]}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        // OUT OF THE ARRIVAL IT IS ONE STILL PAGE (Radek, 2026-10-08: "it
+        // has to be a still, one page"). Nothing scrolls; a phone too short
+        // for it gets the tight sizes instead (measured, below).
+        scrollEnabled={!arrived}
+        onLayout={arrived ? (e) => setViewportH(e.nativeEvent.layout.height) : undefined}
+        onContentSizeChange={arrived ? (_w, h) => setContentH(h) : undefined}
       >
         {/* THE SALE, in this order: their plan (the answers they just gave,
             as chips — level, pace), the product doing the thing (a clip with
@@ -565,7 +584,7 @@ export function PaywallScreen({
             loop), three lines of what that buys, and a free week that is
             safe to start. Nothing here promises an outcome. */}
         {arrived ? (
-          <ArrivedHead />
+          <ArrivedHead tight={tight} />
         ) : (
           <>
             <Text style={styles.title}>Your plan is ready</Text>
@@ -634,7 +653,7 @@ export function PaywallScreen({
         {/* WHAT THAT BUYS — three lines, each a shipped fact. Out of the
             arrival the third is Peppa: the show the marketing sells, and
             seven in ten users never found its shelf (2026-10-07). */}
-        <View style={[styles.benefits, arrived && styles.benefitsTight]}>
+        <View style={[styles.benefits, arrived && styles.benefitsTight, tight && styles.benefitsTighter]}>
           <View style={styles.benefit}>
             <IconTile glyph="▶︎" tint="sky" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
@@ -804,6 +823,10 @@ const styles = StyleSheet.create({
   arrived: { alignItems: 'center' },
   /** Bigger than the first wall's Loro: here he is the moment, not a guide. */
   arrivedHero: { marginTop: 0 },
+  arrivedParrotTight: { height: 84, width: 58 },
+  arrivedTitleTight: { fontSize: 22, lineHeight: 26 },
+  learnedTileTight: { paddingVertical: 5 },
+  benefitsTighter: { gap: 4, marginTop: 10 },
   arrivedParrot: { height: 112, width: 78 },
   arrivedBubble: { marginBottom: 20, paddingVertical: 12 },
   arrivedLabel: {
@@ -811,23 +834,26 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 1.4,
+    marginTop: 14,
     textAlign: 'center',
   },
-  learned: {
-    alignSelf: 'stretch',
-    backgroundColor: 'rgba(20,26,23,0.92)',
-    borderColor: 'rgba(94,230,168,0.22)',
-    borderRadius: 18,
-    borderWidth: 1,
-    marginTop: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+  learnedRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 8,
   },
-  learnedGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 8, rowGap: 8 },
-  learnedCell: { alignItems: 'center', paddingHorizontal: 4, width: '33.33%' },
+  learnedTile: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(94,230,168,0.09)',
+    borderRadius: 14,
+    minWidth: 84,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   learnedWord: { color: TEXT, fontSize: 16, fontWeight: '800' },
-  learnedTick: { color: ACCENT, fontSize: 13, fontWeight: '900' },
-  learnedMeaning: { color: MUTED, fontSize: 12, fontWeight: '600', marginTop: 1 },
+  learnedMeaning: { color: 'rgba(94,230,168,0.8)', fontSize: 11.5, fontWeight: '600', marginTop: 1 },
   benefitsTight: { gap: 7, marginTop: 14 },
   arrivedTitle: { fontSize: 24, lineHeight: 29, marginTop: 2 },
   arrivedLine: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 4, textAlign: 'center' },
