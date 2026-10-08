@@ -37,6 +37,7 @@ import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
 import { getLikedTopics, subscribeToLikedTopics } from './topics';
 import { subscribeDevVideo } from '../platform/devMenu';
+import { PEPPA_HINT_MS, markPeppaHintShown, peppaHintDue, subscribeToDevPeppaHint } from './peppaHint';
 import { track, trackOnce } from '../platform/analytics';
 import {
   usePlayerApi,
@@ -1075,6 +1076,22 @@ function FeedBody({
 
   const swipe = useSwipeLifecycle(setDragging);
 
+  /**
+   * PEPPA PIG IS HERE, once ever, on the second reel (feed/peppaHint.ts).
+   * The pill says it; nothing is drawn over the player.
+   */
+  const [peppaHint, setPeppaHint] = useState(false);
+  useEffect(() => {
+    if (!active || collection !== REELS || activeIndex < 1 || !peppaHintDue()) return;
+    markPeppaHintShown();
+    setPeppaHint(true);
+  }, [active, collection, activeIndex]);
+  useEffect(() => subscribeToDevPeppaHint(() => setPeppaHint(true)), []);
+  useEffect(() => {
+    if (!peppaHint) return;
+    const t = setTimeout(() => setPeppaHint(false), PEPPA_HINT_MS);
+    return () => clearTimeout(t);
+  }, [peppaHint]);
   const activeVideo = videos[activeIndex] ?? null;
   /**
    * WHERE THIS EPISODE OPENS — read once per episode, not per render: the
@@ -1267,6 +1284,7 @@ function FeedBody({
               onRefresh={onRefresh ? () => onRefresh('button', activeVideoId) : undefined}
               refreshing={refreshing}
               today={today}
+              hint={peppaHint}
             />
           )}
           {showChips && menuOpen && (

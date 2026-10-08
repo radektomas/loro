@@ -136,6 +136,7 @@ export type EventName =
   | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
   | 'postcard_opened'     // { stage } — the arrival postcard was opened
   | 'postcard_shared'     // { stage, action, to } — the share sheet closed; to = the app it went to
+  | 'peppa_hint_shown'    // the Reels pill said "Peppa Pig is here", once ever (feed/peppaHint.ts)
   | 'topics_changed'      // { topics } — the feed topics edited in Progress settings
   | 'feed_refreshed'      // { how: 'button' | 'topics', fresh } (pull removed 2026-10-06) — the reels feed was re-ranked on demand
   // THE TRIP (1.7.1): does anyone get past Madrid, and is the ladder looked at?

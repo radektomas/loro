@@ -53,7 +53,10 @@ export function CollectionPill({
   onRefresh,
   refreshing = false,
   today,
+  hint = false,
 }: {
+  /** "Peppa Pig is here" for a few seconds, once ever (feed/peppaHint.ts). */
+  hint?: boolean;
   /** Today's correct answers against the plan's goal — the dots. */
   today?: { count: number; goal: number };
   selected: string;
@@ -86,7 +89,13 @@ export function CollectionPill({
     }
     wasRefreshing.current = refreshing;
   }, [refreshing]);
-  const mode: 'idle' | 'busy' | 'done' = refreshing ? 'busy' : justDone ? 'done' : 'idle';
+  const mode: 'idle' | 'busy' | 'done' | 'hint' = refreshing
+    ? 'busy'
+    : justDone
+      ? 'done'
+      : hint
+        ? 'hint'
+        : 'idle';
   const fade = useRef(new Animated.Value(1)).current;
   const firstMode = useRef(true);
   useEffect(() => {
@@ -126,6 +135,11 @@ export function CollectionPill({
             </>
           ) : mode === 'done' ? (
             <Text style={[styles.pillText, styles.pillTextBusy]}>New reels ready</Text>
+          ) : mode === 'hint' ? (
+            <>
+              <Text style={[styles.pillText, styles.pillTextBusy]}>Peppa Pig is here</Text>
+              <Text style={[styles.pillChevron, styles.pillTextBusy]}>▾</Text>
+            </>
           ) : (
             <>
               <Text style={styles.pillText}>{label}</Text>
