@@ -26,6 +26,7 @@ import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { storage } from '@loro/core/storage';
 import { citySize, tripStop } from '@loro/core/roadmap';
 import { postcardFor } from '../share/cardData';
+import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue } from './PaywallFeedback';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import { track } from '../platform/analytics';
@@ -344,6 +345,8 @@ export function PaywallScreen({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [remindable, setRemindable] = useState(false);
+  /** The package whose Apple sheet was just closed: the feedback card is up. */
+  const [feedbackFor, setFeedbackFor] = useState<string | null>(null);
   /** The arrival wall's fit: once the content is measured taller than the
       page, it switches to tight sizes for good (no flip-flopping). */
   const [viewportH, setViewportH] = useState(0);
@@ -475,6 +478,11 @@ export function PaywallScreen({
           packageId: selected.identifier,
           packageType: selected.packageType,
         });
+        // The one moment their reason is real — asked once ever.
+        if (paywallFeedbackDue()) {
+          markPaywallFeedbackAsked();
+          setFeedbackFor(selected.identifier);
+        }
         return;
       }
       console.warn('[loro] purchase failed', err);
@@ -769,6 +777,10 @@ export function PaywallScreen({
         </View>
         <LegalLinks />
       </View>
+
+      {feedbackFor !== null && (
+        <PaywallFeedback packageId={feedbackFor} onClose={() => setFeedbackFor(null)} />
+      )}
 
       {/* The account sheet — see the header note on not orphaning accounts.
           A pageSheet rather than a screen: the wall stays the surface, this

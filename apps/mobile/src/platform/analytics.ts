@@ -114,6 +114,7 @@ export type EventName =
   | 'purchase_started'     // tapped subscribe; the Apple sheet is up
   | 'purchase_completed'
   | 'purchase_cancelled'   // dismissed the Apple sheet
+  | 'paywall_feedback'     // { reason, packageId, text? } — "What's holding you back?" after a closed sheet, once ever
   | 'purchase_failed'
   | 'restore_succeeded'
   | 'restore_empty'

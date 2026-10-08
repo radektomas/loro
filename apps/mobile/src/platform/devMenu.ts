@@ -208,6 +208,15 @@ export function installDevMenu(): void {
         DevSettings.reload();
       },
     },
+    /** Ask "What's holding you back?" again: close Apple's sheet on the wall
+        once more to see it. */
+    {
+      name: "Loro · Paywall feedback: ask again on the next closed sheet",
+      run: () => {
+        storageDriver.local.removeItem('loro.mobile.paywallFeedbackAsked');
+        console.log('[loro:dev] paywall feedback re-armed — tap the button, close Apple\'s sheet');
+      },
+    },
     /** Just the wall, on the device as it stands. No wipe, nothing destroyed. */
     {
       name: 'Loro · Show paywall now',
