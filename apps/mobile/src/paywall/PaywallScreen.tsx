@@ -252,8 +252,6 @@ const REVIEW = {
  * hundred so the line never claims more than is there. Counted, never
  * typed (Radek, 2026-09-22: "say the amount of words we have on Loro").
  */
-const PEPPA_EPISODES = collectionVideos.filter((v) => v.collection === 'peppa').length;
-
 /**
  * THE WALL OUT OF THE FIRST ARRIVAL (Radek, 2026-10-08: "do it how you think
  * it will convert the best"). What they already have, then what is next:
@@ -354,6 +352,10 @@ export function PaywallScreen({
   const [viewportH, setViewportH] = useState(0);
   const [contentH, setContentH] = useState(0);
   const [tight, setTight] = useState(false);
+  const [innerH, setInnerH] = useState(0);
+  /** Room the page has: the scroll view minus its own top and bottom padding. */
+  const room = viewportH - (insets.top + 8) - 12;
+  const fit = arrived && tight && innerH > 0 && room > 0 ? Math.min(1, room / innerH) : 1;
   useEffect(() => {
     if (arrived && !tight && viewportH > 0 && contentH > viewportH + 1) setTight(true);
   }, [arrived, tight, viewportH, contentH]);
@@ -588,6 +590,15 @@ export function PaywallScreen({
         onLayout={arrived ? (e) => setViewportH(e.nativeEvent.layout.height) : undefined}
         onContentSizeChange={arrived ? (_w, h) => setContentH(h) : undefined}
       >
+        {/* FIT, DON'T SCROLL (Radek, 2026-10-08: "you would need to scroll
+            to see all that, I don't want that"). Tight sizes first; if the
+            page is still taller than the screen, the whole page is scaled
+            down to fit from the top. A transform does not change layout, so
+            the measured height stays the natural one and nothing loops. */}
+        <View
+          onLayout={arrived ? (e) => setInnerH(e.nativeEvent.layout.height) : undefined}
+          style={arrived && fit < 1 ? { transform: [{ scale: fit }], transformOrigin: 'top center' } : undefined}
+        >
         {/* THE SALE, in this order: their plan (the answers they just gave,
             as chips — level, pace), the product doing the thing (a clip with
             a word lit and Loro saying the line, the tap→saved beat on a
@@ -660,31 +671,25 @@ export function PaywallScreen({
         </View>
         )}
 
-        {/* WHAT THAT BUYS — three lines, each a shipped fact. Out of the
-            arrival the third is Peppa: the show the marketing sells, and
-            seven in ten users never found its shelf (2026-10-07). */}
-        <View style={[styles.benefits, arrived && styles.benefitsTight, tight && styles.benefitsTighter]}>
-          <View style={styles.benefit}>
-            <IconTile glyph="▶︎" tint="sky" size={arrived ? 28 : 34} />
-            <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
+        {/* WHAT THAT BUYS — three lines, each a shipped fact. Not on the
+            arrival wall (Radek, 2026-10-08: "put the real clips and Peppa
+            Pig away"): there their words and the review carry it. */}
+        {!arrived && (
+          <View style={styles.benefits}>
+            <View style={styles.benefit}>
+              <IconTile glyph="▶︎" tint="sky" size={34} />
+              <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
+            </View>
+            <View style={styles.benefit}>
+              <IconTile glyph="✓" tint="mint" size={34} />
+              <Text style={styles.benefitText}>Every word you save, trained until it sticks</Text>
+            </View>
+            <View style={styles.benefit}>
+              <IconTile glyph="★︎" tint="amber" size={34} />
+              <Text style={styles.benefitText}>{words.toLocaleString('en-US')}+ Spanish words, every one tappable</Text>
+            </View>
           </View>
-          {/* Their own words above already say this, out of the arrival —
-              the room goes to the review instead. */}
-          {!arrived && (
-          <View style={styles.benefit}>
-            <IconTile glyph="✓" tint="mint" size={arrived ? 28 : 34} />
-            <Text style={styles.benefitText}>Every word you save, trained until it sticks</Text>
-          </View>
-          )}
-          <View style={styles.benefit}>
-            <IconTile glyph="★︎" tint="amber" size={arrived ? 28 : 34} />
-            <Text style={styles.benefitText}>
-              {arrived
-                ? `Peppa Pig in Spanish, ${PEPPA_EPISODES} episodes`
-                : `${words.toLocaleString('en-US')}+ Spanish words, every one tappable`}
-            </Text>
-          </View>
-        </View>
+        )}
 
         {/* WHAT SOMEONE SAID — see REVIEW. On the arrival wall too (Radek,
             2026-10-08: "we need it there"), in a slimmer card so the page
@@ -697,6 +702,7 @@ export function PaywallScreen({
           </Text>
         </View>
 
+        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
@@ -842,7 +848,6 @@ const styles = StyleSheet.create({
   arrivedParrotTight: { height: 84, width: 58 },
   arrivedTitleTight: { fontSize: 22, lineHeight: 26 },
   learnedTileTight: { paddingVertical: 5 },
-  benefitsTighter: { gap: 4, marginTop: 10 },
   arrivedParrot: { height: 112, width: 78 },
   arrivedBubble: { marginBottom: 20, paddingVertical: 12 },
   arrivedLabel: {
@@ -870,8 +875,7 @@ const styles = StyleSheet.create({
   },
   learnedWord: { color: TEXT, fontSize: 16, fontWeight: '800' },
   learnedMeaning: { color: 'rgba(94,230,168,0.8)', fontSize: 11.5, fontWeight: '600', marginTop: 1 },
-  benefitsTight: { gap: 7, marginTop: 14 },
-  reviewSlim: { marginTop: 12, paddingVertical: 10 },
+  reviewSlim: { marginTop: 18, paddingVertical: 10 },
   arrivedTitle: { fontSize: 24, lineHeight: 29, marginTop: 2 },
   arrivedLine: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 4, textAlign: 'center' },
   ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
