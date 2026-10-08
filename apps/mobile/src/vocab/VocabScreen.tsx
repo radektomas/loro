@@ -23,6 +23,7 @@ import { SavePromptCard } from '../auth/SavePromptCard';
 import { WordVideoPanel, type PanelMode } from './WordVideoPanel';
 import { WordDetailSheet } from './WordDetailSheet';
 import { RoadmapPath, TRIP_SEEN_KEY, TripPreview } from './RoadmapPath';
+import { endFreePass } from '../paywall/freePass';
 import { PostcardLayer } from '../share/PostcardLayer';
 import { subscribeToPostcard } from '../share/postcardBus';
 import { CityArrival } from './CityArrival';
@@ -362,6 +363,9 @@ export function VocabScreen({
       try {
         storageDriver.local.setItem(TRIP_SEEN_KEY, String(arrival.to));
       } catch {}
+      // Madrid was the free taste: ¡Vamos! out of the first arrival is
+      // where the wall comes in (paywall/freePass.ts). No-op once ended.
+      if (arrival.to >= 1) endFreePass('arrival');
     }
     setArrival(null);
   };

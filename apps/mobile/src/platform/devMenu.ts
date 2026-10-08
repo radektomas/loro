@@ -7,6 +7,7 @@ import { devRaiseTripMoment } from '../feed/tripMoments';
 import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
+import { endFreePass } from '../paywall/freePass';
 import { storageDriver } from './storage';
 
 /**
@@ -170,7 +171,7 @@ export function installDevMenu(): void {
      * where a new install ends. The entitled path is the next entry down.
      */
     {
-      name: 'Loro · First run (ends on the paywall)',
+      name: 'Loro · First run as a new user (Madrid free, then paywall)',
       run: () => {
         setDevPaywallForced(true);
         storageDriver.clearByPrefix('loro.');
@@ -201,6 +202,8 @@ export function installDevMenu(): void {
       name: 'Loro · Show paywall now',
       run: () => {
         setDevPaywallForced(true);
+        // The free Madrid pass would otherwise keep the feed up.
+        endFreePass('launch');
         console.log('[loro:dev] forcing the paywall');
         DevSettings.reload();
       },

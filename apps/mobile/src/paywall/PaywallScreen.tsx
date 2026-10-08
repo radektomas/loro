@@ -256,7 +256,13 @@ function wordCount(): number {
   return Math.floor(keys.size / 100) * 100;
 }
 
-export function PaywallScreen() {
+export function PaywallScreen({
+  arrived = false,
+}: {
+  /** Shown out of the first city arrival (paywall/freePass.ts): Madrid was
+      free, and the wall says where they got to instead of "your plan". */
+  arrived?: boolean;
+} = {}) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const words = useMemo(() => wordCount(), []);
@@ -274,7 +280,8 @@ export function PaywallScreen() {
    * looked at.
    */
   useEffect(() => {
-    track('paywall_shown');
+    track('paywall_shown', { after: arrived ? 'arrival' : 'launch' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOfferings = useCallback(() => {
@@ -479,7 +486,7 @@ export function PaywallScreen() {
             a word lit and Loro saying the line, the tap→saved beat on a
             loop), three lines of what that buys, and a free week that is
             safe to start. Nothing here promises an outcome. */}
-        <Text style={styles.title}>Your plan is ready</Text>
+        <Text style={styles.title}>{arrived ? 'You made it to Sevilla' : 'Your plan is ready'}</Text>
         <View style={styles.chips}>
           <View style={[styles.chip, styles.chipAccent]}>
             <Text style={styles.chipAccentText}>{storage.getStartLevel() ?? 'A1'}</Text>

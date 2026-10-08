@@ -20,6 +20,7 @@ import { onAuthDeepLink } from './src/auth/exchange';
 import { onAppReset } from './src/platform/appReset';
 import { usePurchaseGate } from './src/platform/purchases';
 import { PaywallScreen } from './src/paywall/PaywallScreen';
+import { useFreePass } from './src/paywall/freePass';
 import { GROUND } from './src/onboarding/chrome';
 
 /**
@@ -99,6 +100,14 @@ export default function App() {
    * CustomerInfo listener flips `entitled` and the right screen renders.
    */
   const gate = usePurchaseGate();
+  /**
+   * MADRID IS FREE (paywall/freePass.ts): until the first city is done, a
+   * user who is not subscribed gets the Shell, not the wall. The dev menu's
+   * "force paywall" only makes the gate say NOT entitled, so a forced first
+   * run plays exactly like a new install: Madrid free, then the wall.
+   */
+  const freePass = useFreePass();
+  const letIn = gate.entitled || freePass.active;
 
   /**
    * Splash release, now conditional on the gate. Onboarding releases it
@@ -199,10 +208,10 @@ export default function App() {
               />
             ) : !gate.ready ? (
               <View style={{ backgroundColor: GROUND, flex: 1 }} />
-            ) : gate.entitled ? (
+            ) : letIn ? (
               <Shell key={`shell-${resetKey}`} />
             ) : (
-              <PaywallScreen />
+              <PaywallScreen arrived={freePass.endedBy === 'arrival'} />
             )}
           </PlayerHost>
         </BottomSheetModalProvider>

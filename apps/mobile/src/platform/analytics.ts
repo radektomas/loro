@@ -108,7 +108,8 @@ export type EventName =
   | 'taste_word_saved'     // { word, scripted } — the coached tap landed
   | 'taste_outro'          // reached the closing card
   // the wall
-  | 'paywall_shown'        // the gate rendered PaywallScreen
+  | 'paywall_shown'        // the gate rendered PaywallScreen; { after: 'arrival' | 'launch' } since the free Madrid pass
+  | 'free_pass_ended'      // { how: 'arrival' | 'launch' } — Madrid done, the wall is next (paywall/freePass.ts)
   | 'paywall_offerings_failed'
   | 'purchase_started'     // tapped subscribe; the Apple sheet is up
   | 'purchase_completed'
