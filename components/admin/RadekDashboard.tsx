@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { DailyPoint, DauPoint, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
+import type { DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
 
 /**
  * THE OWNER'S DASHBOARD, in the house style of RevenueCat and App Store
@@ -376,6 +376,77 @@ function Subscribers({ rows: all }: { rows: SubscriberRow[] }) {
   );
 }
 
+// ---------------------------------------------------------------- feedback
+
+const REASON_LABEL: Record<string, string> = {
+  price: 'Too expensive',
+  no_subscription: 'Doesn’t want a subscription',
+  not_sure: 'Not sure it works for them yet',
+  try_more: 'Wants to try more first',
+  other: 'Something else',
+  skipped: 'Skipped the question',
+};
+const REASON_ORDER = ['price', 'no_subscription', 'not_sure', 'try_more', 'other', 'skipped'];
+
+/**
+ * "WHAT'S HOLDING YOU BACK?" — asked once, right after someone closed
+ * Apple's purchase sheet (Radek, 2026-10-09). The tally first, then every
+ * typed answer word for word; skips are counted but kept out of the bars'
+ * share so they do not drown the real reasons.
+ */
+function Feedback({ rows }: { rows: FeedbackRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: DASH.muted }}>
+        No answers yet. People are asked after they close Apple’s sheet, from version 1.9.1 on.
+      </p>
+    );
+  }
+  const answered = rows.filter((r) => r.reason !== 'skipped');
+  const count = (k: string) => rows.filter((r) => r.reason === k).length;
+  const max = Math.max(1, ...REASON_ORDER.filter((k) => k !== 'skipped').map(count));
+  const notes = rows.filter((r) => r.note);
+  return (
+    <div>
+      <div className="space-y-2.5">
+        {REASON_ORDER.filter((k) => k !== 'skipped').map((k) => {
+          const n = count(k);
+          return (
+            <div key={k} className="flex items-center gap-3 text-sm">
+              <div className="w-56 shrink-0" style={{ color: DASH.ink }}>{REASON_LABEL[k]}</div>
+              <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: '#f2f4f7' }}>
+                <div className="h-full rounded-full" style={{ width: `${(n / max) * 100}%`, background: '#7c3aed' }} />
+              </div>
+              <div className="w-20 shrink-0 text-right tabular-nums" style={{ color: DASH.muted }}>
+                <b style={{ color: DASH.ink }}>{n}</b> · {pct(n, answered.length)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs" style={{ color: DASH.faint }}>
+        {answered.length} answered · {count('skipped')} skipped the question
+      </p>
+      {notes.length > 0 && (
+        <div className="mt-5">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: DASH.faint }}>In their words</div>
+          <ul className="space-y-2">
+            {notes.map((r, i) => (
+              <li key={i} className="rounded-xl px-4 py-3 text-sm" style={{ background: '#f8f9fb', border: `1px solid ${DASH.line}` }}>
+                <span style={{ color: DASH.ink }}>“{r.note}”</span>
+                <span className="ml-2 text-xs" style={{ color: DASH.faint }}>
+                  {dayLabel(r.answeredAt)}
+                  {r.packageId ? ` · looking at ${r.packageId.replace('$rc_', '')}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------- DAU
 
 function DauChart({ points }: { points: DauPoint[] }) {
@@ -557,6 +628,28 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
         ) : (
           <p className="text-sm" style={{ color: DASH.muted }}>
             Paste <code>supabase/migrations/20260924000000_analytics_wall_subscribers.sql</code> into the Supabase SQL editor to see this.
+          </p>
+        )}
+      </Card>
+
+      {/* PAYWALL FEEDBACK */}
+      <Card>
+        <CardTitle
+          title="What’s holding people back"
+          hint="Asked once, right after someone tapped the button and closed Apple’s purchase sheet. One tap, or their own words."
+          aside={
+            data.feedback ? (
+              <span className="text-xs font-medium" style={{ color: DASH.muted }}>
+                {data.feedback.length} responses
+              </span>
+            ) : null
+          }
+        />
+        {data.feedback ? (
+          <Feedback rows={data.feedback} />
+        ) : (
+          <p className="text-sm" style={{ color: DASH.muted }}>
+            Paste <code>supabase/migrations/20261009000000_analytics_paywall_feedback.sql</code> into the Supabase SQL editor to see this.
           </p>
         )}
       </Card>

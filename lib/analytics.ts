@@ -277,6 +277,14 @@ export type SubscriberRow = {
   answersAfter: number;
 };
 
+export type FeedbackRow = {
+  answeredAt: string;
+  reason: string;
+  note: string | null;
+  packageId: string | null;
+  appVersion: string;
+};
+
 export type DailyPoint = {
   day: string;
   newInstalls: number;
@@ -289,6 +297,7 @@ export type RadekDashboard = {
   daily: DailyPoint[];
   windows: WallWindow[];
   subscribers: SubscriberRow[] | null; // null until the migration is applied
+  feedback: FeedbackRow[] | null; // null until 20261009000000 is applied
   retention: Retention;
   dau: DauPoint[];
   loadedAt: string;
@@ -348,6 +357,19 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
       // The migration not applied yet: the rest of the page still renders.
       if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
     }
+    let feedback: FeedbackRow[] | null = null;
+    try {
+      const rows = await call('loro_analytics_paywall_feedback', { p_all_builds: allBuilds });
+      feedback = rows.map((r) => ({
+        answeredAt: str(r.answered_at),
+        reason: str(r.reason),
+        note: r.note ? str(r.note) : null,
+        packageId: r.package_id ? str(r.package_id) : null,
+        appVersion: str(r.app_version),
+      }));
+    } catch (err) {
+      if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
+    }
     const rt = retentionRows[0] ?? {};
     return {
       ok: true,
@@ -361,6 +383,7 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
         })),
         windows: [last7, last14, prev14],
         subscribers,
+        feedback,
         retention: {
           d1Returned: num(rt.d1_returned),
           d1Cohort: num(rt.d1_cohort),
