@@ -197,6 +197,17 @@ export function installDevMenu(): void {
         DevSettings.reload();
       },
     },
+    /** The wall as it comes out of the first arrival ("Don't stop now"),
+        with this device's own Madrid words. No wipe. */
+    {
+      name: "Loro · Paywall after Madrid (Don't stop now)",
+      run: () => {
+        setDevPaywallForced(true);
+        storageDriver.local.setItem('loro.mobile.freePassEnded', 'arrival');
+        console.log('[loro:dev] forcing the arrival paywall');
+        DevSettings.reload();
+      },
+    },
     /** Just the wall, on the device as it stands. No wipe, nothing destroyed. */
     {
       name: 'Loro · Show paywall now',

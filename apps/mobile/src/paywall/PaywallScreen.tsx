@@ -23,6 +23,9 @@ import { Backdrop, IconTile, TypingMock } from '../onboarding/art';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { storage } from '@loro/core/storage';
+import { citySize, tripStop } from '@loro/core/roadmap';
+import { CityShareCard } from '../share/CityShareCard';
+import { postcardFor } from '../share/cardData';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import { track } from '../platform/analytics';
@@ -35,7 +38,7 @@ import {
   TEXT,
   TextButton,
 } from '../onboarding/chrome';
-import { noteTrialStarted } from '../platform/notifications';
+import { getPermissionState, noteTrialStarted } from '../platform/notifications';
 import { authEnabled } from '../platform/supabaseInit';
 import { LegalLinks } from '../progress/LegalLinks';
 
@@ -248,6 +251,43 @@ const REVIEW = {
  * hundred so the line never claims more than is there. Counted, never
  * typed (Radek, 2026-09-22: "say the amount of words we have on Loro").
  */
+const PEPPA_EPISODES = collectionVideos.filter((v) => v.collection === 'peppa').length;
+
+/**
+ * THE WALL OUT OF THE FIRST ARRIVAL (Radek, 2026-10-08: "do it how you think
+ * it will convert the best"). What they already have, then what is next:
+ * their own Madrid postcard, "Don't stop now", Sevilla as a concrete next
+ * step, and the five words they actually learned, ticked. Their words and
+ * their card make stopping feel like leaving something behind; a sample
+ * could not. Everything on it is theirs.
+ */
+function ArrivedHead() {
+  const card = useMemo(() => postcardFor(1), []);
+  const next = tripStop(1);
+  return (
+    <View style={styles.arrived}>
+      <View style={styles.arrivedCard}>
+        <CityShareCard {...card} width={ARRIVED_CARD_W} />
+      </View>
+      <Text style={[styles.title, styles.arrivedTitle]}>Don't stop now</Text>
+      <Text style={styles.arrivedLine}>
+        {next.city} is next: {citySize(1)} words and a new local word.
+      </Text>
+      {card.words.length > 0 && (
+        <View style={styles.chips}>
+          {card.words.slice(0, 6).map((w) => (
+            <View key={w.word} style={[styles.chip, styles.chipAccent]}>
+              <Text style={styles.chipAccentText}>✓ {w.word}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const ARRIVED_CARD_W = 104;
+
 function wordCount(): number {
   const keys = new Set<string>();
   for (const video of [...getCatalog(), ...collectionVideos]) {
@@ -265,6 +305,11 @@ export function PaywallScreen({
 } = {}) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const [remindable, setRemindable] = useState(false);
+  useEffect(() => {
+    if (!arrived) return;
+    void getPermissionState().then((s) => setRemindable(s === 'granted'));
+  }, [arrived]);
   const words = useMemo(() => wordCount(), []);
   const [offer, setOffer] = useState<Offer>({ status: 'loading' });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -486,15 +531,21 @@ export function PaywallScreen({
             a word lit and Loro saying the line, the tap→saved beat on a
             loop), three lines of what that buys, and a free week that is
             safe to start. Nothing here promises an outcome. */}
-        <Text style={styles.title}>{arrived ? 'You made it to Sevilla' : 'Your plan is ready'}</Text>
-        <View style={styles.chips}>
-          <View style={[styles.chip, styles.chipAccent]}>
-            <Text style={styles.chipAccentText}>{storage.getStartLevel() ?? 'A1'}</Text>
-          </View>
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>{planLine(getPlan())}</Text>
-          </View>
-        </View>
+        {arrived ? (
+          <ArrivedHead />
+        ) : (
+          <>
+            <Text style={styles.title}>Your plan is ready</Text>
+            <View style={styles.chips}>
+              <View style={[styles.chip, styles.chipAccent]}>
+                <Text style={styles.chipAccentText}>{storage.getStartLevel() ?? 'A1'}</Text>
+              </View>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>{planLine(getPlan())}</Text>
+              </View>
+            </View>
+          </>
+        )}
         {/* No paragraph under the title: the value card below says it, and
             the wall must fit one screen (Radek: "I don't want any
             scrolling"). */}
@@ -522,6 +573,7 @@ export function PaywallScreen({
             blank does in the app: letter by letter, then green (Radek,
             2026-09-22: "the mascot saying in a bubble 'we want you to try
             Loro for free', and the free will be like esta is now"). */}
+        {!arrived && (
         <View style={styles.hero}>
           <Image
             source={BRAND.parrot}
@@ -544,8 +596,11 @@ export function PaywallScreen({
             />
           </View>
         </View>
+        )}
 
-        {/* WHAT THAT BUYS — three lines, each a shipped fact. */}
+        {/* WHAT THAT BUYS — three lines, each a shipped fact. Out of the
+            arrival the third is Peppa: the show the marketing sells, and
+            seven in ten users never found its shelf (2026-10-07). */}
         <View style={styles.benefits}>
           <View style={styles.benefit}>
             <IconTile glyph="▶︎" tint="sky" size={34} />
@@ -557,11 +612,18 @@ export function PaywallScreen({
           </View>
           <View style={styles.benefit}>
             <IconTile glyph="★︎" tint="amber" size={34} />
-            <Text style={styles.benefitText}>{words.toLocaleString('en-US')}+ Spanish words, every one tappable</Text>
+            <Text style={styles.benefitText}>
+              {arrived
+                ? `Peppa Pig in Spanish, ${PEPPA_EPISODES} episodes`
+                : `${words.toLocaleString('en-US')}+ Spanish words, every one tappable`}
+            </Text>
           </View>
         </View>
 
-        {/* WHAT SOMEONE SAID — see REVIEW. */}
+        {/* WHAT SOMEONE SAID — see REVIEW. Not out of the arrival: their own
+            postcard and words are the proof there, and the wall stays one
+            screen. */}
+        {!arrived && (
         <View style={styles.review} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
           <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
           <Text style={styles.reviewText}>“{REVIEW.text}”</Text>
@@ -569,6 +631,7 @@ export function PaywallScreen({
             {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
           </Text>
         </View>
+        )}
 
       </ScrollView>
 
@@ -589,7 +652,9 @@ export function PaywallScreen({
             ) : (
               <Text style={styles.ctaText}>
                 {selectedDays !== null
-                  ? 'Start Loro for free'
+                  ? arrived
+                    ? `Keep going, free for ${selectedDays} days`
+                    : 'Start Loro for free'
                   : `Subscribe · ${selected.product.priceString} ${billedWord(selectedPeriod)}`}
               </Text>
             )}
@@ -597,6 +662,15 @@ export function PaywallScreen({
         )}
         {/* The terms in READABLE size, right under the button. The sheet then
             confirms what was already read. */}
+        {/* THE FEAR APPLE'S SHEET RAISES, answered before it opens: the
+            trails showed people tapping, closing the sheet, trying Restore
+            (2026-10-08). Only what is true: the reminder line needs
+            notifications on (notifications.ts noteTrialStarted). */}
+        {arrived && selected && selectedDays !== null && (
+          <Text style={styles.ctaCalm}>
+            {remindable ? 'No charge today · We remind you 2 days before' : 'No charge today · Cancel anytime in Settings'}
+          </Text>
+        )}
         {selected && (
           <Text style={styles.ctaTerms}>
             {selectedDays !== null
@@ -693,6 +767,20 @@ export function PaywallScreen({
 const styles = StyleSheet.create({
   screen: { backgroundColor: GROUND, flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
+  // ---- out of the arrival ----
+  arrived: { alignItems: 'center' },
+  arrivedCard: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    transform: [{ rotate: '-4deg' }],
+  },
+  arrivedTitle: { marginTop: 16 },
+  arrivedLine: { color: MUTED, fontSize: 15, lineHeight: 21, marginTop: 6, textAlign: 'center' },
+  ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   // ---- the plan as chips ----
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 },
   chip: {
