@@ -266,25 +266,39 @@ function ArrivedHead() {
     <View style={styles.arrived}>
       {/* Loro on top, as everywhere a moment is his (Radek, 2026-10-08: "there
           should be Loro, our mascot, definitely" — not the postcard). */}
+      {/* The city types itself in letter by letter and turns green, the way
+          "free" does on the first wall and a blank does in the app (Radek,
+          2026-10-08). "Vamos a", not "¡Vamos a": the slot cannot carry the
+          closing "!" without a gap, and half a pair of marks is wrong. */}
       <View style={styles.hero}>
         <Image
           source={BRAND.parrotWaving}
-          style={styles.heroParrot}
+          style={styles.arrivedParrot}
           resizeMode="contain"
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot"
         />
-        <View style={styles.bubble}>
+        <View style={[styles.bubble, styles.arrivedBubble]}>
           <View style={styles.bubbleTail} />
-          <Text style={styles.arrivedBubble}>¡Vamos a {next.city}!</Text>
+          <TypingMock
+            before={['Vamos', 'a']}
+            answer={next.city}
+            after={[]}
+            gloss=""
+            isCurrent
+            bar={false}
+            frame={false}
+            size={20}
+          />
         </View>
       </View>
       <Text style={[styles.title, styles.arrivedTitle]}>Don't stop now</Text>
       <Text style={styles.arrivedLine}>
         {next.city} is next: {citySize(1)} words and a new local word.
       </Text>
+      {card.words.length > 0 && <Text style={styles.arrivedLabel}>THE WORDS YOU LEARNED SO FAR</Text>}
       {card.words.length > 0 && (
-        <View style={styles.chips}>
+        <View style={[styles.chips, styles.arrivedChips]}>
           {card.words.slice(0, 6).map((w) => (
             <View key={w.word} style={[styles.chip, styles.chipAccent]}>
               <Text style={styles.chipAccentText}>✓ {w.word}</Text>
@@ -777,7 +791,18 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   // ---- out of the arrival ----
   arrived: { alignItems: 'center' },
-  arrivedBubble: { color: TEXT, fontSize: 18, fontWeight: '800' },
+  /** Bigger than the first wall's Loro: here he is the moment, not a guide. */
+  arrivedParrot: { height: 132, width: 92 },
+  arrivedBubble: { marginBottom: 26, paddingVertical: 14 },
+  arrivedLabel: {
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    marginTop: 18,
+    textAlign: 'center',
+  },
+  arrivedChips: { marginTop: 8 },
   arrivedTitle: { marginTop: 4 },
   arrivedLine: { color: MUTED, fontSize: 15, lineHeight: 21, marginTop: 6, textAlign: 'center' },
   ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
