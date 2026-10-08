@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { storage } from '@loro/core/storage';
 import { tripPosition, withLevelKnown } from '@loro/core/roadmap';
 import { storageDriver } from '../platform/storage';
@@ -55,6 +56,27 @@ export function endFreePass(how: FreePassEnd): void {
   for (const l of listeners) l();
 }
 
+/**
+ * MADRID DONE OUTSIDE WORDS (Radek, 2026-10-08: "what happens if they reach
+ * 5 words blue, don't go to Words and fill the 6th"). The arrival and the
+ * wall live in Words, so a user finishing Madrid with blue blanks in the
+ * feed could keep going for free until the next cold launch — and iOS keeps
+ * an app alive in the background for days. So the moment the trip passes
+ * Madrid while the pass is open, Shell is told once, lets the feed's own
+ * "¡Llegaste!" beat play, and takes them to Words, where the arrival plays
+ * and its ¡Vamos! ends the pass.
+ */
+export function subscribeToMadridDone(listener: () => void): () => void {
+  let told = false;
+  const check = () => {
+    if (told || readEnd() !== null || getPurchaseGate().entitled) return;
+    if (!pastMadrid()) return;
+    told = true;
+    listener();
+  };
+  return storage.onWordsChanged(check);
+}
+
 /** Is Madrid still free for this device? Re-checked when the pass ends. */
 export function useFreePass(): { active: boolean; endedBy: FreePassEnd | null } {
   const [endedBy, setEndedBy] = useState<FreePassEnd | null>(() => {
@@ -73,8 +95,14 @@ export function useFreePass(): { active: boolean; endedBy: FreePassEnd | null } 
   useEffect(() => {
     const l = () => setEndedBy(readEnd());
     listeners.add(l);
+    // BACK FROM THE BACKGROUND past Madrid: the arrival had its chance (the
+    // app was open when it happened), so the wall now, as on a cold launch.
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active' && readEnd() === null && pastMadrid()) endFreePass('launch');
+    });
     return () => {
       listeners.delete(l);
+      sub.remove();
     };
   }, []);
   return { active: endedBy === null, endedBy };

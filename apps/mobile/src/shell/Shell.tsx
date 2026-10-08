@@ -14,6 +14,7 @@ import { storage } from '@loro/core/storage';
 import { getPlan } from '../progress/plan';
 import { initLevelUp } from '../feed/levelUp';
 import { SharePreviewHost } from '../share/SharePreview';
+import { subscribeToMadridDone } from '../paywall/freePass';
 
 /**
  * The app shell: three tabs, hand-rolled.
@@ -70,6 +71,9 @@ const INACTIVE = 'rgba(242,245,243,0.42)';
  * This only works because onGoToFeed below is stable — a fresh closure per
  * render would fail every comparison and quietly undo it.
  */
+/** Long enough for the answer's celebration and the "¡Llegaste!" moment. */
+const MADRID_DONE_TO_WORDS_MS = 3500;
+
 const Feed = memo(FeedScreen);
 const Vocab = memo(VocabScreen);
 const Progress = memo(ProgressScreen);
@@ -84,6 +88,21 @@ export function Shell() {
   const goToFeed = useCallback(() => setTab('feed'), []);
   const goToProgress = useCallback(() => setTab('progress'), []);
   const goToWords = useCallback(() => setTab('vocab'), []);
+  /**
+   * Madrid finished in the feed on the free pass: after the feed's own
+   * "¡Llegaste!" beat, Words, where the arrival plays and leads to the wall
+   * (paywall/freePass.ts subscribeToMadridDone).
+   */
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const off = subscribeToMadridDone(() => {
+      timer = setTimeout(() => setTab('vocab'), MADRID_DONE_TO_WORDS_MS);
+    });
+    return () => {
+      off();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
   /** The bubble on the Words tab — see useDueCount for what it counts. */
   const due = useDueCount();
 
