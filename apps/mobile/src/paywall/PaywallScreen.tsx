@@ -668,10 +668,14 @@ export function PaywallScreen({
             <IconTile glyph="▶︎" tint="sky" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
           </View>
+          {/* Their own words above already say this, out of the arrival —
+              the room goes to the review instead. */}
+          {!arrived && (
           <View style={styles.benefit}>
             <IconTile glyph="✓" tint="mint" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>Every word you save, trained until it sticks</Text>
           </View>
+          )}
           <View style={styles.benefit}>
             <IconTile glyph="★︎" tint="amber" size={arrived ? 28 : 34} />
             <Text style={styles.benefitText}>
@@ -682,18 +686,16 @@ export function PaywallScreen({
           </View>
         </View>
 
-        {/* WHAT SOMEONE SAID — see REVIEW. Not out of the arrival: their own
-            postcard and words are the proof there, and the wall stays one
-            screen. */}
-        {!arrived && (
-        <View style={styles.review} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
+        {/* WHAT SOMEONE SAID — see REVIEW. On the arrival wall too (Radek,
+            2026-10-08: "we need it there"), in a slimmer card so the page
+            stays one still screen. */}
+        <View style={[styles.review, arrived && styles.reviewSlim]} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
           <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
           <Text style={styles.reviewText}>“{REVIEW.text}”</Text>
           <Text style={styles.reviewBy}>
             {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
           </Text>
         </View>
-        )}
 
       </ScrollView>
 
@@ -869,6 +871,7 @@ const styles = StyleSheet.create({
   learnedWord: { color: TEXT, fontSize: 16, fontWeight: '800' },
   learnedMeaning: { color: 'rgba(94,230,168,0.8)', fontSize: 11.5, fontWeight: '600', marginTop: 1 },
   benefitsTight: { gap: 7, marginTop: 14 },
+  reviewSlim: { marginTop: 12, paddingVertical: 10 },
   arrivedTitle: { fontSize: 24, lineHeight: 29, marginTop: 2 },
   arrivedLine: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 4, textAlign: 'center' },
   ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
