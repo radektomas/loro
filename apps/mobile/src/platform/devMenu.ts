@@ -8,7 +8,6 @@ import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { endFreePass } from '../paywall/freePass';
-import { devShowPeppaHint } from '../feed/peppaHint';
 import { storageDriver } from './storage';
 
 /**
@@ -140,7 +139,6 @@ export function installDevMenu(): void {
     { name: '★ Share · Postcard, city to city (Bogotá → Medellín)', run: () => devShowCityCard('city') },
     { name: '★ Share · Postcard, country to country (Cartagena → Quito)', run: () => devShowCityCard('country') },
     { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
-    { name: '★ Feed · Pill hint: Peppa Pig is here', run: () => devShowPeppaHint() },
     { name: '★ Loro · Trip: first word saved', run: () => devRaiseTripMoment('firstSave') },
     { name: '★ Loro · Trip: first blue word', run: () => devRaiseTripMoment('firstBlue') },
     { name: '★ Loro · Trip: 1 word to the next city', run: () => devRaiseTripMoment('oneAway') },
