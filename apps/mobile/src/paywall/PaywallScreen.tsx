@@ -26,7 +26,7 @@ import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { storage } from '@loro/core/storage';
 import { citySize, tripStop } from '@loro/core/roadmap';
 import { postcardFor } from '../share/cardData';
-import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue } from './PaywallFeedback';
+import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue, takeDevPaywallFeedback } from './PaywallFeedback';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import { track } from '../platform/analytics';
@@ -346,7 +346,9 @@ export function PaywallScreen({
   const { width, height } = useWindowDimensions();
   const [remindable, setRemindable] = useState(false);
   /** The package whose Apple sheet was just closed: the feedback card is up. */
-  const [feedbackFor, setFeedbackFor] = useState<string | null>(null);
+  const [feedbackFor, setFeedbackFor] = useState<string | null>(() =>
+    takeDevPaywallFeedback() ? 'dev-preview' : null
+  );
   /** The arrival wall's fit: once the content is measured taller than the
       page, it switches to tight sizes for good (no flip-flopping). */
   const [viewportH, setViewportH] = useState(0);

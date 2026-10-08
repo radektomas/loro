@@ -8,6 +8,7 @@ import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
 import { endFreePass } from '../paywall/freePass';
+import { DEV_SHOW_PAYWALL_FEEDBACK_KEY } from '../paywall/PaywallFeedback';
 import { storageDriver } from './storage';
 
 /**
@@ -208,13 +209,16 @@ export function installDevMenu(): void {
         DevSettings.reload();
       },
     },
-    /** Ask "What's holding you back?" again: close Apple's sheet on the wall
-        once more to see it. */
+    /** "What's holding you back?" on screen now: the wall, with the card
+        already up (closing Apple's sheet in a dev client is unreliable). */
     {
-      name: "Loro · Paywall feedback: ask again on the next closed sheet",
+      name: "Loro · Paywall feedback card (preview)",
       run: () => {
-        storageDriver.local.removeItem('loro.mobile.paywallFeedbackAsked');
-        console.log('[loro:dev] paywall feedback re-armed — tap the button, close Apple\'s sheet');
+        setDevPaywallForced(true);
+        endFreePass('launch');
+        storageDriver.local.setItem(DEV_SHOW_PAYWALL_FEEDBACK_KEY, '1');
+        console.log('[loro:dev] showing the paywall with the feedback card');
+        DevSettings.reload();
       },
     },
     /** Just the wall, on the device as it stands. No wipe, nothing destroyed. */

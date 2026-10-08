@@ -16,6 +16,19 @@ import { track } from '../platform/analytics';
  */
 const KEY = 'loro.mobile.paywallFeedbackAsked';
 const TEXT_MAX = 280;
+/** DEV: the dev menu sets this and reloads; the wall opens with the card up. */
+export const DEV_SHOW_PAYWALL_FEEDBACK_KEY = 'loro.dev.showPaywallFeedback';
+
+export function takeDevPaywallFeedback(): boolean {
+  if (!__DEV__) return false;
+  try {
+    if (storageDriver.local.getItem(DEV_SHOW_PAYWALL_FEEDBACK_KEY) === null) return false;
+    storageDriver.local.removeItem(DEV_SHOW_PAYWALL_FEEDBACK_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const REASONS = [
   { id: 'price', label: 'Too expensive' },
