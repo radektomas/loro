@@ -24,7 +24,6 @@ import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { storage } from '@loro/core/storage';
 import { citySize, tripStop } from '@loro/core/roadmap';
-import { CityShareCard } from '../share/CityShareCard';
 import { postcardFor } from '../share/cardData';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
@@ -256,18 +255,29 @@ const PEPPA_EPISODES = collectionVideos.filter((v) => v.collection === 'peppa').
 /**
  * THE WALL OUT OF THE FIRST ARRIVAL (Radek, 2026-10-08: "do it how you think
  * it will convert the best"). What they already have, then what is next:
- * their own Madrid postcard, "Don't stop now", Sevilla as a concrete next
- * step, and the five words they actually learned, ticked. Their words and
- * their card make stopping feel like leaving something behind; a sample
- * could not. Everything on it is theirs.
+ * Loro cheering them on, "Don't stop now", Sevilla as a concrete next
+ * step, and the five words they actually learned, ticked. Their own words
+ * make stopping feel like leaving something behind; a sample could not. Everything on it is theirs.
  */
 function ArrivedHead() {
   const card = useMemo(() => postcardFor(1), []);
   const next = tripStop(1);
   return (
     <View style={styles.arrived}>
-      <View style={styles.arrivedCard}>
-        <CityShareCard {...card} width={ARRIVED_CARD_W} />
+      {/* Loro on top, as everywhere a moment is his (Radek, 2026-10-08: "there
+          should be Loro, our mascot, definitely" — not the postcard). */}
+      <View style={styles.hero}>
+        <Image
+          source={BRAND.parrotWaving}
+          style={styles.heroParrot}
+          resizeMode="contain"
+          accessibilityRole="image"
+          accessibilityLabel="Loro the parrot"
+        />
+        <View style={styles.bubble}>
+          <View style={styles.bubbleTail} />
+          <Text style={styles.arrivedBubble}>¡Vamos a {next.city}!</Text>
+        </View>
       </View>
       <Text style={[styles.title, styles.arrivedTitle]}>Don't stop now</Text>
       <Text style={styles.arrivedLine}>
@@ -285,8 +295,6 @@ function ArrivedHead() {
     </View>
   );
 }
-
-const ARRIVED_CARD_W = 104;
 
 function wordCount(): number {
   const keys = new Set<string>();
@@ -769,16 +777,8 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   // ---- out of the arrival ----
   arrived: { alignItems: 'center' },
-  arrivedCard: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    transform: [{ rotate: '-4deg' }],
-  },
-  arrivedTitle: { marginTop: 16 },
+  arrivedBubble: { color: TEXT, fontSize: 18, fontWeight: '800' },
+  arrivedTitle: { marginTop: 4 },
   arrivedLine: { color: MUTED, fontSize: 15, lineHeight: 21, marginTop: 6, textAlign: 'center' },
   ctaCalm: { color: ACCENT, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   // ---- the plan as chips ----
