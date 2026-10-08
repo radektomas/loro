@@ -211,7 +211,7 @@ export default function App() {
             ) : letIn ? (
               <Shell key={`shell-${resetKey}`} />
             ) : (
-              <PaywallScreen arrived={freePass.endedBy === 'arrival'} />
+              <PaywallScreen arrived={freePass.endedBy === 'arrival' && freePass.inSevilla} />
             )}
           </PlayerHost>
         </BottomSheetModalProvider>

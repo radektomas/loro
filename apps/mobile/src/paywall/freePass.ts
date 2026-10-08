@@ -41,9 +41,13 @@ function readEnd(): FreePassEnd | null {
   }
 }
 
-function pastMadrid(): boolean {
+function stageNow(): number {
   const words = withLevelKnown(storage.getSavedWords(), storage.getLevelKnownWords()).words;
-  return tripPosition(words).stage >= 1;
+  return tripPosition(words).stage;
+}
+
+function pastMadrid(): boolean {
+  return stageNow() >= 1;
 }
 
 export function endFreePass(how: FreePassEnd): void {
@@ -78,7 +82,14 @@ export function subscribeToMadridDone(listener: () => void): () => void {
 }
 
 /** Is Madrid still free for this device? Re-checked when the pass ends. */
-export function useFreePass(): { active: boolean; endedBy: FreePassEnd | null } {
+export function useFreePass(): {
+  active: boolean;
+  endedBy: FreePassEnd | null;
+  /** Still in Sevilla, the city right after Madrid. The "Don't stop now"
+      wall talks about Madrid and Sevilla, so a subscriber who lapses weeks
+      later, cities further on, gets the ordinary wall instead. */
+  inSevilla: boolean;
+} {
   const [endedBy, setEndedBy] = useState<FreePassEnd | null>(() => {
     const now = readEnd();
     if (now !== null) return now;
@@ -105,5 +116,6 @@ export function useFreePass(): { active: boolean; endedBy: FreePassEnd | null } 
       sub.remove();
     };
   }, []);
-  return { active: endedBy === null, endedBy };
+  const inSevilla = endedBy === 'arrival' && stageNow() === 1;
+  return { active: endedBy === null, endedBy, inSevilla };
 }
