@@ -7,7 +7,7 @@ import { devRaiseTripMoment } from '../feed/tripMoments';
 import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
-import { endFreePass } from '../paywall/freePass';
+import { DEV_ARRIVAL_WALL_KEY, endFreePass } from '../paywall/freePass';
 import { DEV_SHOW_PAYWALL_FEEDBACK_KEY } from '../paywall/PaywallFeedback';
 import { storageDriver } from './storage';
 
@@ -205,6 +205,7 @@ export function installDevMenu(): void {
       run: () => {
         setDevPaywallForced(true);
         storageDriver.local.setItem('loro.mobile.freePassEnded', 'arrival');
+        storageDriver.local.setItem(DEV_ARRIVAL_WALL_KEY, '1');
         console.log('[loro:dev] forcing the arrival paywall');
         DevSettings.reload();
       },
@@ -215,7 +216,8 @@ export function installDevMenu(): void {
       name: "Loro · Paywall feedback card (preview)",
       run: () => {
         setDevPaywallForced(true);
-        endFreePass('launch');
+        storageDriver.local.setItem('loro.mobile.freePassEnded', 'arrival');
+        storageDriver.local.setItem(DEV_ARRIVAL_WALL_KEY, '1');
         storageDriver.local.setItem(DEV_SHOW_PAYWALL_FEEDBACK_KEY, '1');
         console.log('[loro:dev] showing the paywall with the feedback card');
         DevSettings.reload();
@@ -262,6 +264,7 @@ export function installDevMenu(): void {
       name: 'Loro · Clear paywall override',
       run: () => {
         setDevPaywallForced(false);
+        storageDriver.local.removeItem(DEV_ARRIVAL_WALL_KEY);
         console.log('[loro:dev] paywall override cleared — real entitlement again');
         DevSettings.reload();
       },

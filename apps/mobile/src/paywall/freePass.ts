@@ -29,6 +29,18 @@ const KEY = 'loro.mobile.freePassEnded';
 
 export type FreePassEnd = 'arrival' | 'launch';
 
+/** DEV: the dev menu's previews show the "Don't stop now" wall wherever the
+    test device is on its trip. */
+export const DEV_ARRIVAL_WALL_KEY = 'loro.dev.arrivalWall';
+function devArrivalWall(): boolean {
+  if (!__DEV__) return false;
+  try {
+    return storageDriver.local.getItem(DEV_ARRIVAL_WALL_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 const listeners = new Set<() => void>();
 
 function readEnd(): FreePassEnd | null {
@@ -116,6 +128,6 @@ export function useFreePass(): {
       sub.remove();
     };
   }, []);
-  const inSevilla = endedBy === 'arrival' && stageNow() === 1;
+  const inSevilla = endedBy === 'arrival' && (stageNow() === 1 || devArrivalWall());
   return { active: endedBy === null, endedBy, inSevilla };
 }
