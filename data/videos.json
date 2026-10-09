@@ -437,7 +437,7 @@
         "pos": "adj",
         "note": "starting a sentence",
         "glosses": {
-          "en": "so",
+          "en": "good",
           "cs": "takže",
           "de": "also",
           "fr": "alors"
@@ -503,7 +503,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "came",
+          "en": "I came",
           "cs": "přišel",
           "de": "kam",
           "fr": "suis venu"
@@ -536,7 +536,7 @@
         "pos": "noun",
         "note": "masculine form",
         "glosses": {
-          "en": "buddy",
+          "en": "friend",
           "cs": "kamarád",
           "de": "Kumpel",
           "fr": "copain"
@@ -613,7 +613,7 @@
         "pos": "noun",
         "note": "figurative use",
         "glosses": {
-          "en": "fan",
+          "en": "son",
           "cs": "fanoušek",
           "de": "Fan",
           "fr": "fan"
@@ -635,7 +635,7 @@
         "pos": "noun",
         "note": "contextual noun",
         "glosses": {
-          "en": "soccer",
+          "en": "selection",
           "cs": "fotbal",
           "de": "Fußball",
           "fr": "football"
@@ -701,7 +701,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "wanna",
+          "en": "I want",
           "cs": "chci",
           "de": "will",
           "fr": "veux"
@@ -723,7 +723,7 @@
         "pos": "verb",
         "note": null,
         "glosses": {
-          "en": "watch",
+          "en": "to see",
           "cs": "sledovat",
           "de": "sehen",
           "fr": "regarder"
@@ -756,7 +756,7 @@
         "pos": "noun",
         "note": "plural form",
         "glosses": {
-          "en": "Argentinians",
+          "en": "Argentine",
           "cs": "Argentinci",
           "de": "Argentinier",
           "fr": "Argentins"
@@ -844,7 +844,7 @@
         "pos": "verb",
         "note": "with pronoun",
         "glosses": {
-          "en": "watch",
+          "en": "see them",
           "cs": "sledovat",
           "de": "sehen",
           "fr": "voir"
@@ -866,7 +866,7 @@
         "pos": "adj",
         "note": "plural form",
         "glosses": {
-          "en": "quietly",
+          "en": "calm",
           "cs": "tiše",
           "de": "ruhig",
           "fr": "tranquillement"
@@ -1053,7 +1053,7 @@
       },
       "fin": {
         "lemma": "fin",
-        "pos": "noun",
+        "pos": "phrase",
         "note": null,
         "glosses": {
           "en": "end",
@@ -1100,7 +1100,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "have",
+          "en": "I have",
           "cs": "mám",
           "de": "habe",
           "fr": "ai"
@@ -1122,7 +1122,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "want",
+          "en": "I want",
           "cs": "chci",
           "de": "will",
           "fr": "veux"
@@ -1152,7 +1152,7 @@
       },
       "tocar": {
         "lemma": "tocar",
-        "pos": "verb",
+        "pos": "phrase",
         "note": null,
         "glosses": {
           "en": "play",
@@ -1199,7 +1199,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "know",
+          "en": "I know",
           "cs": "vím",
           "de": "weiß",
           "fr": "sais"
@@ -1531,7 +1531,7 @@
         "pos": "noun",
         "note": "part of place name",
         "glosses": {
-          "en": "Costa",
+          "en": "coast",
           "cs": "Costa",
           "de": "Costa",
           "fr": "Costa"
@@ -1542,7 +1542,7 @@
         "pos": "noun",
         "note": "part of place name",
         "glosses": {
-          "en": "Rica",
+          "en": "tasty",
           "cs": "Rica",
           "de": "Rica",
           "fr": "Rica"
@@ -1608,7 +1608,7 @@
         "pos": "verb",
         "note": "used like noun in Spanish",
         "glosses": {
-          "en": "like",
+          "en": "likes",
           "cs": "líbit se",
           "de": "gefallen",
           "fr": "aime"
@@ -1619,7 +1619,7 @@
         "pos": "adv",
         "note": null,
         "glosses": {
-          "en": "that much",
+          "en": "so much",
           "cs": "tolik",
           "de": "so sehr",
           "fr": "tellement"
@@ -1649,7 +1649,7 @@
       },
       "seguro": {
         "lemma": "seguro",
-        "pos": "adj",
+        "pos": "phrase",
         "note": null,
         "glosses": {
           "en": "safe",
@@ -1718,7 +1718,7 @@
         "pos": "verb",
         "note": "first person singular",
         "glosses": {
-          "en": "live",
+          "en": "alive",
           "cs": "žiji",
           "de": "lebe",
           "fr": "vis"
@@ -2153,7 +2153,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "I am doing",
+          "en": "I do",
           "cs": "dělám",
           "de": "mache",
           "fr": "fais"
@@ -2183,7 +2183,7 @@
       },
       "vez": {
         "lemma": "vez",
-        "pos": "noun",
+        "pos": "phrase",
         "note": null,
         "glosses": {
           "en": "time",
@@ -2230,7 +2230,7 @@
         "pos": "adj",
         "note": "comparative form",
         "glosses": {
-          "en": "best",
+          "en": "better",
           "cs": "nejlepší",
           "de": "beste",
           "fr": "meilleur"
@@ -2473,7 +2473,7 @@
         "pos": "verb",
         "note": "reflexive use",
         "glosses": {
-          "en": "named",
+          "en": "is called",
           "cs": "jmenuje",
           "de": "heißt",
           "fr": "s'appelle"
@@ -2506,7 +2506,7 @@
         "pos": "verb",
         "note": null,
         "glosses": {
-          "en": "love",
+          "en": "I love",
           "cs": "miluji",
           "de": "liebe",
           "fr": "j'aime"
@@ -2517,7 +2517,7 @@
         "pos": "adv",
         "note": "intensifier",
         "glosses": {
-          "en": "very much",
+          "en": "a lot",
           "cs": "moc",
           "de": "sehr",
           "fr": "beaucoup"
@@ -2550,7 +2550,7 @@
         "pos": "adj",
         "note": null,
         "glosses": {
-          "en": "friendly",
+          "en": "kind",
           "cs": "přátelský",
           "de": "freundlich",
           "fr": "aimable"
@@ -2903,7 +2903,7 @@
         "pos": "adj",
         "note": null,
         "glosses": {
-          "en": "well",
+          "en": "good",
           "cs": "dobře",
           "de": "gut",
           "fr": "bon"
@@ -2958,7 +2958,7 @@
         "pos": "noun",
         "note": null,
         "glosses": {
-          "en": "cleanse",
+          "en": "cleaning",
           "cs": "očista",
           "de": "Reinigung",
           "fr": "nettoyage"
@@ -3013,7 +3013,7 @@
         "pos": "verb",
         "note": "1st person singular",
         "glosses": {
-          "en": "finish",
+          "en": "I finish",
           "cs": "končím",
           "de": "beende",
           "fr": "termine"
@@ -3068,7 +3068,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "feel",
+          "en": "I feel",
           "cs": "cítím",
           "de": "fühle",
           "fr": "sens"
@@ -3101,7 +3101,7 @@
         "pos": "verb",
         "note": "3rd person singular",
         "glosses": {
-          "en": "happened",
+          "en": "it was",
           "cs": "bylo",
           "de": "war",
           "fr": "était"
@@ -3594,7 +3594,7 @@
         "pos": "verb",
         "note": null,
         "glosses": {
-          "en": "watching it",
+          "en": "to see it",
           "cs": "vidět to",
           "de": "sehen",
           "fr": "le voir"
@@ -3605,7 +3605,7 @@
         "pos": "verb",
         "note": "irregular verb",
         "glosses": {
-          "en": "I don't know",
+          "en": "I know",
           "cs": "nevím",
           "de": "weiß ich nicht",
           "fr": "je ne sais"
