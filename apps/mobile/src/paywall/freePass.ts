@@ -5,6 +5,7 @@ import { tripPosition, withLevelKnown } from '@loro/core/roadmap';
 import { storageDriver } from '../platform/storage';
 import { track } from '../platform/analytics';
 import { getPurchaseGate } from '../platform/purchases';
+import { getPaywallVariant, subscribeToRemoteFlags } from '../platform/remoteFlags';
 
 /**
  * MADRID IS FREE (Radek, 2026-10-08: "we have nothing to lose, let's make it
@@ -24,6 +25,11 @@ import { getPurchaseGate } from '../platform/purchases';
  * One flag, set once, never cleared: the pass is a first taste, not a
  * renewable one. A lapsed subscriber already past Madrid meets the wall at
  * launch exactly as before.
+ *
+ * REMOTELY SWITCHABLE since 1.9.2 (platform/remoteFlags.ts): an install in
+ * the 'hard' arm gets no pass at all — the wall straight after onboarding,
+ * as before 1.9.0. The arm is fixed per install, so flipping the remote
+ * percent never takes the pass from someone already inside Madrid.
  */
 const KEY = 'loro.mobile.freePassEnded';
 
@@ -86,6 +92,7 @@ export function subscribeToMadridDone(listener: () => void): () => void {
   let told = false;
   const check = () => {
     if (told || readEnd() !== null || getPurchaseGate().entitled) return;
+    if (getPaywallVariant() !== 'madrid') return;
     if (!pastMadrid()) return;
     told = true;
     listener();
@@ -115,6 +122,10 @@ export function useFreePass(): {
     }
     return null;
   });
+  // The A/B arm. Re-read when the remote flags land: on a first launch the
+  // arm is decided only once a real percent is known (remoteFlags.ts).
+  const [variant, setVariant] = useState(getPaywallVariant);
+  useEffect(() => subscribeToRemoteFlags(() => setVariant(getPaywallVariant())), []);
   useEffect(() => {
     const l = () => setEndedBy(readEnd());
     listeners.add(l);
@@ -129,5 +140,5 @@ export function useFreePass(): {
     };
   }, []);
   const inSevilla = endedBy === 'arrival' && (stageNow() === 1 || devArrivalWall());
-  return { active: endedBy === null, endedBy, inSevilla };
+  return { active: endedBy === null && variant === 'madrid', endedBy, inSevilla };
 }

@@ -7,6 +7,7 @@ import { devRaiseTripMoment } from '../feed/tripMoments';
 import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
+import { setDevPaywallVariant } from './remoteFlags';
 import { DEV_ARRIVAL_WALL_KEY, endFreePass } from '../paywall/freePass';
 import { DEV_SHOW_PAYWALL_FEEDBACK_KEY } from '../paywall/PaywallFeedback';
 import { storageDriver } from './storage';
@@ -259,6 +260,30 @@ export function installDevMenu(): void {
     { name: 'Loro · Card: level up → Nativo', run: () => devRaiseLevelUp(6) },
     { name: 'Loro · Card: day done', run: () => devRaiseDayDone() },
     { name: 'Loro · Card: review session done', run: () => devRaiseReviewEnd() },
+    /** The Madrid-pass A/B (remoteFlags.ts): pin this device to an arm, or
+        clear it so the next launch decides from the remote percent. Pair
+        with "First run as a new user" to play either version from the top. */
+    {
+      name: 'Loro · Paywall A/B: Madrid free first',
+      run: () => {
+        setDevPaywallVariant('madrid');
+        DevSettings.reload();
+      },
+    },
+    {
+      name: 'Loro · Paywall A/B: hard wall after onboarding',
+      run: () => {
+        setDevPaywallVariant('hard');
+        DevSettings.reload();
+      },
+    },
+    {
+      name: 'Loro · Paywall A/B: clear (decide from remote)',
+      run: () => {
+        setDevPaywallVariant(null);
+        DevSettings.reload();
+      },
+    },
     /** Back to the real verdict from RevenueCat. */
     {
       name: 'Loro · Clear paywall override',

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getPaywallVariant } from '../platform/remoteFlags';
 import {
   ActivityIndicator,
   Alert,
@@ -403,7 +404,7 @@ export function PaywallScreen({
    * looked at.
    */
   useEffect(() => {
-    track('paywall_shown', { after: arrived ? 'arrival' : 'launch' });
+    track('paywall_shown', { after: arrived ? 'arrival' : 'launch', variant: getPaywallVariant() });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -11,6 +11,7 @@ import { installDevMenu } from './devMenu';
 import { captureCampaignAttribution, initPurchases } from './purchases';
 import { initAnalytics } from './analytics';
 import { installCachedCatalog, refreshCatalog, type CatalogSource } from './catalog';
+import { refreshRemoteFlags } from './remoteFlags';
 
 /**
  * RN boot. The sibling of the web's lib/platformInit.ts + lib/catalogInit.ts,
@@ -140,6 +141,8 @@ export function finishBoot(): void {
   installDevMenu();
   void SplashScreen.hideAsync();
   void refreshCatalog();
+  // The Madrid-pass switch (remoteFlags.ts). Same once-per-launch rhythm.
+  void refreshRemoteFlags();
   initNotifications();
   // First-launch campaign capture + subscriber attribute. Here and not at
   // module scope because getInitialURL is async native work nothing waits on,
