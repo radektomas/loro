@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseFeedScores, rankFeed, type FeedScores } from './feedRank.ts';
+import { feedLevelFor, LEVEL_EVERY, LEVEL_STRICT, parseFeedScores, rankFeed, type FeedScores } from './feedRank.ts';
 
 /** The ranked feed — run with `npm test`. */
 const vids = (ids: string[]) => ids.map((id) => ({ id }));
@@ -96,5 +96,54 @@ describe('rankFeed — for you', () => {
     const plain = rankFeed(videos, { scores, random: () => 0.5 });
     assert.equal(isFood(plain[0]), false);
     void random;
+  });
+});
+
+describe('rankFeed — level window', () => {
+  // 12 of each level, so the window never runs out inside the strict stretch.
+  const mixed = (['A1', 'A2', 'B1', 'B2'] as const).flatMap((level) =>
+    Array.from({ length: 12 }, (_, i) => ({ id: `${level}-${i}`, level }))
+  );
+
+  it('opens a beginner on A1 and A2 only', () => {
+    const order = rankFeed(mixed, { level: 'A1', random: seeded(1) });
+    for (const v of order.slice(0, LEVEL_STRICT)) assert.ok(['A1', 'A2'].includes(v.level), v.id);
+  });
+
+  it('opens a strong speaker on B1 and B2 only', () => {
+    const order = rankFeed(mixed, { level: 'B2', random: seeded(2) });
+    for (const v of order.slice(0, LEVEL_STRICT)) assert.ok(['B1', 'B2'].includes(v.level), v.id);
+  });
+
+  it('after the strict stretch, every fifth slot steps outside — nearest level first', () => {
+    const order = rankFeed(mixed, { level: 'A1', random: seeded(3) });
+    const firstOutside = order.findIndex((v) => !['A1', 'A2'].includes(v.level));
+    assert.equal(firstOutside, LEVEL_STRICT + LEVEL_EVERY - 1 - (LEVEL_STRICT % LEVEL_EVERY));
+    assert.equal(order[firstOutside].level, 'B1');
+    assert.equal(order.length, mixed.length, 'nothing is dropped');
+  });
+
+  it('still never shows a seen video before an unseen one', () => {
+    const watched = new Set(mixed.filter((v) => v.level === 'A1').map((v) => v.id));
+    const order = rankFeed(mixed, { level: 'A1', watchedIds: watched, random: seeded(4) });
+    const lastUnseen = order.map((v) => watched.has(v.id)).lastIndexOf(false);
+    const firstSeen = order.findIndex((v) => watched.has(v.id));
+    assert.ok(lastUnseen < firstSeen);
+  });
+
+  it('without a level the order is exactly what it was', () => {
+    const a = rankFeed(mixed, { random: seeded(9) }).map((v) => v.id);
+    const b = rankFeed(mixed.map(({ id }) => ({ id })), { random: seeded(9) }).map((v) => v.id);
+    assert.deepEqual(a, b);
+  });
+});
+
+describe('feedLevelFor', () => {
+  it('treats no onboarding level as a beginner', () => assert.equal(feedLevelFor(null, 1), 'A1'));
+  it('keeps what onboarding said while the tier is lower', () => assert.equal(feedLevelFor('B1', 1), 'B1'));
+  it('moves up as the blue-blank tier climbs', () => {
+    assert.equal(feedLevelFor('A1', 2), 'A2');
+    assert.equal(feedLevelFor('A1', 3), 'B1');
+    assert.equal(feedLevelFor('A2', 5), 'B2');
   });
 });

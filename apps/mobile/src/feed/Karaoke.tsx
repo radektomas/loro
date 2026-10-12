@@ -120,7 +120,30 @@ const TRANSLATION_LINE_H = 23;
 const TRANSLATION_CHAR_W = 8;
 const TRANSLATION_MAX_LINES = 2;
 
-function sizeFor(words: readonly { text: string }[], translation: string, innerWidth: number): SizeTier {
+/**
+ * THE BLANK IS WIDER THAN ITS WORD (Radek, 2026-10-12: "the sentence was too
+ * long and I didn't see the empty blank, it was hidden up"). BlankSlot draws
+ * a fixed-point slot sized for the gloss prompt ("taxi driver") plus, for a
+ * level blank, the tier chip — far wider than "taxista" measured as text.
+ * Estimating the line from the word alone under-counted a row, the fixed
+ * track overflowed, and it clips at the TOP, where an early blank sits. So
+ * the blank's word is measured at the slot's real width.
+ */
+type BlankEstimate = { index: number; width: number };
+const TIER_CHIP_CHAR_W = 7;
+const TIER_CHIP_PAD_W = 10 + 4; // chip padding + the row gap
+
+export function blankSlotWidth(answerLength: number, gloss: string, tier: string | null): number {
+  const slot = Math.max(4, answerLength + 1, Math.min(gloss.length, 14)) * APPROX_CHAR_PT;
+  return slot + (tier ? tier.length * TIER_CHIP_CHAR_W + TIER_CHIP_PAD_W : 0);
+}
+
+function sizeFor(
+  words: readonly { text: string }[],
+  translation: string,
+  innerWidth: number,
+  blank: BlankEstimate | null = null
+): SizeTier {
   if (innerWidth <= 0) return SIZE_TIERS[0];
   const tl = Math.min(
     TRANSLATION_MAX_LINES,
@@ -129,8 +152,12 @@ function sizeFor(words: readonly { text: string }[], translation: string, innerW
   for (const tier of SIZE_TIERS) {
     let rows = 1;
     let x = 0;
-    for (const w of words) {
-      const ww = w.text.length * tier.fontSize * CHAR_W + CHIP_PAD_W;
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      const ww =
+        blank && i === blank.index
+          ? blank.width + CHIP_PAD_W
+          : w.text.length * tier.fontSize * CHAR_W + CHIP_PAD_W;
       if (x > 0 && x + ww > innerWidth) {
         rows++;
         x = ww;
@@ -344,9 +371,24 @@ export const Karaoke = memo(function Karaoke({
 
   const [trackWidth, setTrackWidth] = useState(0);
   const translation = cue ? (cue.translations[language] ?? cue.translations.en ?? '') : '';
+  // An unanswered blank is measured at its slot's width, not its word's.
+  const blankEstimate = useMemo<BlankEstimate | null>(
+    () =>
+      blank && !blankResult
+        ? {
+            index: blank.wordIndex,
+            width: blankSlotWidth(
+              blank.word.text.length,
+              blank.word.translation,
+              blank.kind === 'level' ? tierFor(blank.word.level).name : null
+            ),
+          }
+        : null,
+    [blank, blankResult]
+  );
   const size = useMemo(
-    () => (cue ? sizeFor(cue.words, translation, trackWidth - 32) : SIZE_TIERS[0]),
-    [cue, translation, trackWidth]
+    () => (cue ? sizeFor(cue.words, translation, trackWidth - 32, blankEstimate) : SIZE_TIERS[0]),
+    [cue, translation, trackWidth, blankEstimate]
   );
 
   return (

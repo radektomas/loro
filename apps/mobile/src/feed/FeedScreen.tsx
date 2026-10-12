@@ -32,7 +32,7 @@ import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { REELS, collectionOf, findCollection, isEpisodes } from '@loro/core/collections';
 import { liftDueBlock } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
-import { rankFeed } from '@loro/core/feedRank';
+import { feedLevelFor, rankFeed } from '@loro/core/feedRank';
 import { getFeedScores, refreshFeedScores } from './feedScores';
 import { refreshCatalog } from '../platform/catalog';
 import { getLikedTopics, subscribeToLikedTopics } from './topics';
@@ -756,6 +756,10 @@ function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
     scores: getFeedScores(),
     // What they said they like watching leans the order (onboarding 'topics').
     liked: new Set(getLikedTopics()),
+    // Beginners open on slow videos, strong speakers on native speed: the
+    // onboarding level, raised as their blue-blank tier climbs (no level —
+    // a skipped onboarding — is a beginner).
+    level: feedLevelFor(storage.getStartLevel(), storage.getLevelState().level),
   });
 }
 

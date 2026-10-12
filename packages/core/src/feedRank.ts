@@ -62,17 +62,44 @@ const LIKED_SLOTS = new Set([0, 2]);
  */
 const SHARPNESS = 4;
 
-export function rankFeed<V extends { id: string }>(
+/**
+ * LEVEL FIRST (Radek, 2026-10-12: "beginners really get EASY videos, better
+ * Spanish speakers … more native speaking fast"). Until this the feed never
+ * looked at the user's level: a "zero" beginner could open on a 4-words-a-
+ * second B2 clip. A video's `level` is estimateLevel()'s, which is speech
+ * rate (A1 ≈ 1.7 words/s, A2 ≈ 2.5, B1 ≈ 3.2, B2 ≈ 3.8 — measured
+ * 2026-10-12), so the window is really "how fast can you follow".
+ *
+ * The user's window: A1 → A1+A2, A2 → A2+B1, B1 → B1+B2, B2 → B2+B1.
+ * The first LEVEL_STRICT videos of each group come only from the window
+ * (while it has any) — that is the stretch where people decide to stay.
+ * After it, every LEVEL_EVERY-th slot is an outside video, nearest level
+ * first, so the feed still stretches them and never runs dry.
+ */
+export type FeedLevel = 'A1' | 'A2' | 'B1' | 'B2';
+const LEVELS: readonly FeedLevel[] = ['A1', 'A2', 'B1', 'B2'];
+const WINDOW: Record<FeedLevel, readonly FeedLevel[]> = {
+  A1: ['A1', 'A2'],
+  A2: ['A2', 'B1'],
+  B1: ['B1', 'B2'],
+  B2: ['B2', 'B1'],
+};
+export const LEVEL_STRICT = 10;
+export const LEVEL_EVERY = 5;
+
+export function rankFeed<V extends { id: string; level?: string }>(
   videos: readonly V[],
   options: {
     watchedIds?: ReadonlySet<string>;
     scores?: FeedScores;
     /** The topics the user picked in onboarding (loro.mobile.topics). */
     liked?: ReadonlySet<string>;
+    /** The user's CEFR level (onboarding, raised by their blue-blank tier). */
+    level?: FeedLevel;
     random?: () => number;
   } = {}
 ): V[] {
-  const { watchedIds, scores = EMPTY_SCORES, liked, random = Math.random } = options;
+  const { watchedIds, scores = EMPTY_SCORES, liked, level, random = Math.random } = options;
   const benched = new Set(scores.benched);
   const keyed = videos.map((video) => {
     const score = scores.scores[video.id] ?? scores.prior;
@@ -86,25 +113,65 @@ export function rankFeed<V extends { id: string }>(
     };
   });
   keyed.sort((a, b) => a.group - b.group || b.key - a.key);
-  const ranked = keyed.map((k) => k.video);
-  if (!liked || liked.size === 0 || !scores.topics) return ranked;
+  const leanTopics = Boolean(liked && liked.size > 0 && scores.topics);
+  if (!leanTopics && !level) return keyed.map((k) => k.video);
 
-  const isLiked = (video: V) => scores.topics?.[video.id]?.some((t) => liked.has(t)) ?? false;
-  const out: V[] = [];
-  for (const group of [0, 1, 2]) {
-    const inGroup = keyed.filter((k) => k.group === group).map((k) => k.video);
-    const mine = inGroup.filter(isLiked);
-    const rest = inGroup.filter((v) => !isLiked(v));
+  const isLiked = (video: V) => scores.topics?.[video.id]?.some((t) => liked?.has(t)) ?? false;
+  /** The topic rhythm over one already-ranked list. */
+  const lean = (list: V[]): V[] => {
+    if (!leanTopics) return list;
+    const mine = list.filter(isLiked);
+    const rest = list.filter((v) => !isLiked(v));
+    const out: V[] = [];
     let m = 0;
     let r = 0;
     while (m < mine.length || r < rest.length) {
-      const slot = out.length % LIKED_EVERY;
-      const wantMine = LIKED_SLOTS.has(slot);
+      const wantMine = LIKED_SLOTS.has(out.length % LIKED_EVERY);
       if ((wantMine && m < mine.length) || r >= rest.length) out.push(mine[m++]);
       else out.push(rest[r++]);
     }
+    return out;
+  };
+
+  const out: V[] = [];
+  for (const group of [0, 1, 2]) {
+    const inGroup = keyed.filter((k) => k.group === group).map((k) => k.video);
+    if (!level) {
+      out.push(...lean(inGroup));
+      continue;
+    }
+    const window = WINDOW[level];
+    const at = LEVELS.indexOf(level);
+    const distance = (v: V) => {
+      const i = LEVELS.indexOf(v.level as FeedLevel);
+      return i < 0 ? LEVELS.length : Math.abs(i - at);
+    };
+    const inside = lean(inGroup.filter((v) => window.includes(v.level as FeedLevel)));
+    // Stable sort: nearest level first, ranked order kept within a distance.
+    const outside = lean(
+      inGroup
+        .filter((v) => !window.includes(v.level as FeedLevel))
+        .map((v, i) => ({ v, i, d: distance(v) }))
+        .sort((a, b) => a.d - b.d || a.i - b.i)
+        .map((x) => x.v)
+    );
+    let a = 0;
+    let b = 0;
+    for (let slot = 0; a < inside.length || b < outside.length; slot++) {
+      const wantOutside = slot >= LEVEL_STRICT && slot % LEVEL_EVERY === LEVEL_EVERY - 1;
+      if ((wantOutside && b < outside.length) || a >= inside.length) out.push(outside[b++]);
+      else out.push(inside[a++]);
+    }
   }
   return out;
+}
+
+/** The feed level for a user: the higher of what onboarding said and what
+    their blue-blank tier has climbed to (tier 1 ≈ A1 … 4+ ≈ B2). */
+export function feedLevelFor(startLevel: FeedLevel | null, tier: number): FeedLevel {
+  const fromTier: FeedLevel = tier >= 4 ? 'B2' : tier === 3 ? 'B1' : tier === 2 ? 'A2' : 'A1';
+  const fromStart = startLevel ?? 'A1';
+  return LEVELS.indexOf(fromTier) > LEVELS.indexOf(fromStart) ? fromTier : fromStart;
 }
 
 /** Read a published scores file defensively: anything malformed is "no scores". */
