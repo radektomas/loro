@@ -38,7 +38,7 @@ import { PracticeDrill } from './PracticeDrill';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { findWordOccurrences } from '@loro/core/occurrences';
-import { setTourStep, useTourStep } from '../tour/tour';
+import { useTourStep } from '../tour/tour';
 import { WordsTour, type TourRect } from '../tour/WordsTour';
 import { HERE_ROW_H } from './RoadmapPath';
 
@@ -463,15 +463,6 @@ export function VocabScreen({
       if (landed) clearTimeout(landed);
     };
   }, [wordsStep]);
-  const tourNext = () => {
-    if (tourStep === 'wordsHere') setTourStep('wordsTrain');
-    else if (tourStep === 'wordsTrain') setTourStep('map');
-    else {
-      setTourStep('done');
-      onGoToFeed();
-    }
-  };
-
   const scrollToHere = () => {
     if (anchoredRef.current || pathYRef.current === null || hereYRef.current === null) return;
     anchoredRef.current = true;
@@ -832,7 +823,7 @@ export function VocabScreen({
       {postcard !== null && active && detail === null && !picker && (
         <PostcardLayer stage={postcard} onClose={() => setPostcard(null)} />
       )}
-      {wordsStep && <WordsTour step={wordsStep} rect={tourRect} onNext={tourNext} />}
+      {wordsStep && <WordsTour rect={tourRect} />}
 
       {/* ONE WINDOW. Its contents swap; it never gains a sibling. `visible`
           drops before the contents do, so the slide-out has something to draw

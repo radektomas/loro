@@ -205,8 +205,11 @@ export type FeedWalkthrough = {
   scriptedLevelBlank?: { cueIndex: number; text: string } | null;
   /** Pin the focusWord blank to this cue — see RecallHost's focusCueIndex. */
   focusCueIndex?: number;
+  /** Where the coach card sits: over the band (the taste reel) or at the
+      foot of the feed with Loro (the first-run tour). */
+  coachAnchor?: 'top' | 'bottom';
   /** Fired after a blank is graded, either kind, right or wrong. */
-  onBlankResolved?: (kind: 'recall' | 'level', cueIndex: number) => void;
+  onBlankResolved?: (kind: 'recall' | 'level', cueIndex: number, correct: boolean) => void;
   /** Draw the swipe hint loud — the walkthrough's full-stop moments, where
       the video is paused and the swipe is the only move left. */
   hintEmphatic?: boolean;
@@ -1435,6 +1438,7 @@ function FeedBody({
               hintText={walkthrough.hintText ?? ''}
               hintEmphatic={walkthrough.hintEmphatic ?? false}
               top={bandTop}
+              anchor={walkthrough.coachAnchor ?? 'top'}
             />
           )}
           {/* NEITHER CARD EXISTS DURING THE GUIDED RUN.
@@ -1500,12 +1504,14 @@ function CoachLayer({
   hintText,
   hintEmphatic,
   top,
+  anchor,
 }: {
   coach: CoachCardContent | null;
   hint: boolean;
   hintText: string;
   hintEmphatic: boolean;
   top: number | null;
+  anchor: 'top' | 'bottom';
 }) {
   const held = useHeldBlank();
   return (
@@ -1516,6 +1522,7 @@ function CoachLayer({
       hintEmphatic={hintEmphatic}
       held={held}
       top={top}
+      anchor={anchor}
     />
   );
 }

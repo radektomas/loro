@@ -15,7 +15,8 @@ import { getPlan } from '../progress/plan';
 import { initLevelUp } from '../feed/levelUp';
 import { SharePreviewHost } from '../share/SharePreview';
 import { subscribeToMadridDone } from '../paywall/freePass';
-import { TOUR_STAGE, isTouring, setTourStep, skipTour, useTourStep, type TourStep } from '../tour/tour';
+import { isTouring, setTourStep, useTourStep, type TourStep } from '../tour/tour';
+import { TourDock } from '../tour/TourDock';
 import { useFeedTour } from '../tour/FeedTour';
 
 /**
@@ -137,6 +138,15 @@ export function Shell() {
    */
   const tourStep = useTourStep();
   const touring = isTouring(tourStep);
+  /** The Words beats' button, in the dock: city → word → map → the feed. */
+  const tourNext = useCallback(() => {
+    if (tourStep === 'wordsHere') setTourStep('wordsTrain');
+    else if (tourStep === 'wordsTrain') setTourStep('map');
+    else if (tourStep === 'map') {
+      setTourStep('done');
+      setTab('feed');
+    }
+  }, [tourStep]);
   const ring = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (tourStep !== 'words') return;
@@ -261,29 +271,9 @@ export function Shell() {
         style={[styles.bar, { paddingBottom: insets.bottom + 6 }]}
         onLayout={(event) => setTabBarHeight(event.nativeEvent.layout.height)}
       >
-        {/* The tour's strip: where you are in it, and the way out. Part of
-            the bar (not floating over the feed), so nothing covers the band
-            and the player box simply measures a little shorter. */}
-        {touring && (
-          <View style={styles.tourStrip}>
-            <Text style={styles.tourLabel}>Quick tour</Text>
-            <View style={styles.tourDots}>
-              {[1, 2, 3, 4].map((n) => (
-                <View
-                  key={n}
-                  style={[
-                    styles.tourDot,
-                    n < TOUR_STAGE[tourStep] && styles.tourDotDone,
-                    n === TOUR_STAGE[tourStep] && styles.tourDotOn,
-                  ]}
-                />
-              ))}
-            </View>
-            <Pressable onPress={skipTour} hitSlop={10} accessibilityRole="button" accessibilityLabel="Skip the tour">
-              <Text style={styles.tourSkip}>Skip</Text>
-            </Pressable>
-          </View>
-        )}
+        {/* Loro's dock: the walkthrough's one voice, part of the bar so it
+            covers nothing above it (tour/TourDock.tsx). */}
+        {touring && <TourDock step={tourStep} onNext={tourNext} />}
         <View style={styles.tabs}>
         {TABS.map((entry) => {
           const selected = tab === entry.key;
@@ -396,19 +386,6 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   tabs: { flexDirection: 'row' },
-  tourStrip: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    paddingBottom: 6,
-    paddingHorizontal: 18,
-  },
-  tourLabel: { color: 'rgba(242,245,243,0.55)', fontSize: 12, fontWeight: '700' },
-  tourDots: { flex: 1, flexDirection: 'row', gap: 5 },
-  tourDot: { backgroundColor: 'rgba(242,245,243,0.16)', borderRadius: 3, height: 5, width: 5 },
-  tourDotOn: { backgroundColor: ACTIVE, width: 16 },
-  tourDotDone: { backgroundColor: 'rgba(94,230,168,0.5)' },
-  tourSkip: { color: 'rgba(242,245,243,0.55)', fontSize: 12.5, fontWeight: '700' },
   tourRing: {
     borderColor: ACTIVE,
     borderRadius: 999,

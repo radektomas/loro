@@ -1206,6 +1206,26 @@ export const BLOCKED_VIDEOS: readonly BlockedVideo[] = [
       '2026-09-01. publish-embeds now rejects this shape at ingest ' +
       '(captions_no_word_timing).',
   },
+  {
+    youtubeId: 'paZZCB3uLAU',
+    title: 'Fundación Huésped — Buscar trabajo viviendo con VIH | La historia de Manuel',
+    reason: 'Fundación Huésped: plays wrong in the feed and shows a man with a gun (Radek, 2026-10-12, seen in the walkthrough)',
+  },
+  {
+    youtubeId: 't8yXCnj-6Sk',
+    title: 'Fundación Huésped — Fernando Peña con Mirtha Legrand #Shorts',
+    reason: 'Fundación Huésped: plays wrong in the feed and shows a man with a gun (Radek, 2026-10-12, seen in the walkthrough)',
+  },
+  {
+    youtubeId: '1BPlKttJN5M',
+    title: 'Fundación Huésped — ¿Cómo se transmite el VIH?',
+    reason: 'Fundación Huésped: plays wrong in the feed and shows a man with a gun (Radek, 2026-10-12, seen in the walkthrough)',
+  },
+  {
+    youtubeId: 'mHNMUJthiSA',
+    title: 'Fundación Huésped — Los Abuelos sobre #MiguelAbuelo y el #VIH - #shorts',
+    reason: 'Fundación Huésped: plays wrong in the feed and shows a man with a gun (Radek, 2026-10-12, seen in the walkthrough)',
+  },
 ];
 
 /** Lookup set derived from the list above — the filter uses this. */

@@ -226,6 +226,17 @@ function setGate(next: Partial<PurchaseGate>): void {
   gateChanged.emit();
 }
 
+/**
+ * DEV: a test purchase or restore went through — drop the forced wall so the
+ * app goes in, exactly as it does for a real user. Without this the override
+ * kept the wall up after a sandbox payment and looked like a broken purchase.
+ */
+export function devReleaseForcedPaywall(): void {
+  if (!__DEV__ || !isDevPaywallForced()) return;
+  setDevPaywallForced(false);
+  gateChanged.emit();
+}
+
 export function getPurchaseGate(): PurchaseGate {
   return withDevOverride(gate);
 }

@@ -338,7 +338,7 @@ export function RecallHost({
   scriptedLevelBlankText?: string;
   /** Fired after a blank is graded, either kind, right or wrong — the
       walkthrough uses it to run its next beat off the answer. */
-  onBlankResolved?: (kind: 'recall' | 'level', cueIndex: number) => void;
+  onBlankResolved?: (kind: 'recall' | 'level', cueIndex: number, correct: boolean) => void;
   /**
    * THE GIVEAWAY MODE — currently unused, kept for the next scripted beat
    * that wants it.
@@ -951,7 +951,7 @@ export function RecallHost({
 
       // The walkthrough's hook: the answer, right or wrong, is what its next
       // beat keys on. Via ref so grade() keeps its stable identity.
-      onBlankResolvedRef.current?.(entry.kind, entry.cueIndex);
+      onBlankResolvedRef.current?.(entry.kind, entry.cueIndex, wasCorrect);
 
       // The word-learned toast keys on the SURFACE crossing into learned
       // through this grade (wordLearned.ts) — read before and after.

@@ -1,4 +1,6 @@
 import { DevSettings } from 'react-native';
+import { storage } from '@loro/core/storage';
+import { signOut } from '@loro/core/auth';
 import { devRaiseDayDone } from '../feed/dayDone';
 import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
@@ -189,6 +191,30 @@ export function installDevMenu(): void {
     },
     /** The first-run walkthrough again (tour/tour.ts), straight into the
         feed: clears the paywall override so a subscribed device lands there. */
+    /** The walkthrough as a BRAND-NEW account would get it: every loro.* key
+        wiped (saved words, blue words, trip, history), onboarding marked
+        done at A1, the tour armed, straight into the feed. Destroys this
+        device's progress — it is the point. */
+    {
+      name: 'Loro · ★ Walkthrough as a brand-new user (wipes progress)',
+      run: async () => {
+        // Signed out FIRST: a signed-in device would hydrate the account's
+        // words straight back down after the wipe (storage followsAuth).
+        try {
+          await signOut();
+        } catch {
+          // Not signed in, or offline: the wipe below is still the point.
+        }
+        storageDriver.clearByPrefix('loro.');
+        storage.setOnboarded();
+        storage.setSelfLevel('zero');
+        storage.setStartLevel('A1');
+        devRestartTour();
+        setDevPaywallForced(false);
+        console.log('[loro:dev] wiped loro.* — fresh account, walkthrough armed');
+        DevSettings.reload();
+      },
+    },
     {
       name: 'Loro · ★ Walkthrough: run it again',
       run: () => {

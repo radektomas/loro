@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -8,11 +8,8 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withDelay,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { WebView } from 'react-native-webview';
-import { CATALOG_BASE_URL } from '../platform/config';
 import { mmkv } from '../platform/storage';
 import { track } from '../platform/analytics';
 import { GROUND, PrimaryButton, TEXT } from '../onboarding/chrome';
@@ -22,26 +19,29 @@ import { GROUND, PrimaryButton, TEXT } from '../onboarding/chrome';
  * middle of the screen … a few seconds screen recording of how the app works,
  * in front of the hard paywall").
  *
- * A phone slides up into the middle and plays a real screen recording: two
+ * A phone slides in from the side and plays a real screen recording: two
  * blanks filled, a word tapped and saved, the Words path, the map. One button
  * under it; the phone slides away and the wall is behind it.
  *
- * THE CLIP IS NOT IN THE BINARY. There is no native video module in the app
- * (that would be an EAS build), so it plays in the WebView the app already
- * ships, from the public catalog bucket — swappable without a build by
- * uploading a new file (scripts/upload-demo.mts) and bumping DEMO_FILE.
+ * NATIVE VIDEO, AND THE CLIP IS IN THE BINARY (assets/demo/loro-demo.mp4,
+ * 0.9 MB). It first played in a WebView, streamed from the catalog bucket,
+ * and on device that loaded slowly, froze as a zoomed still, or never started
+ * (2026-10-12) — a WebView's video layer is fragile on iOS. expo-video is
+ * AVPlayer: instant, offline, smooth under any animation.
  *
- * FAILS QUIET. No network, a slow bucket, a WebView error: the phone shows a
- * spinner and the button still works, so the worst case is the wall one tap
- * later than before. Shown once per install (the launch wall only — the
- * Madrid arrival wall comes after they have used the app for real).
+ * FAILS QUIET. A binary without the expo-video module (a dev client older than
+ * this change) gets the clip's first frame as a still and the same button —
+ * never a crash, never a spinner. The first frame sits on the screen in every
+ * case until the video's own first frame has rendered, so the hand-off is
+ * invisible. Shown once per install, on the launch wall only.
  */
 
-const DEMO_FILE = 'config/demo/loro-demo-v1.mp4';
-const DEMO_URL = `${CATALOG_BASE_URL}/${DEMO_FILE}`;
 const SEEN_KEY = 'loro.paywallDemoSeen';
 /** The recording's own aspect (1170×2532). */
 const CLIP_ASPECT = 1170 / 2532;
+const CLIP = require('../../assets/demo/loro-demo.mp4');
+/** The clip's first frame, bundled: on screen until the video's own renders. */
+const POSTER = require('../../assets/brand/demo-poster.jpg');
 
 export function paywallDemoDue(): boolean {
   try {
@@ -51,17 +51,51 @@ export function paywallDemoDue(): boolean {
   }
 }
 
-const HTML = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;height:100%;background:${GROUND};overflow:hidden}
-video{width:100%;height:100%;object-fit:cover;display:block}</style></head><body>
-<video id="v" src="${DEMO_URL}" autoplay muted playsinline loop preload="auto"></video>
-<script>
-var v=document.getElementById('v');
-function post(m){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(m)}
-v.addEventListener('playing',function(){post('playing')});
-v.addEventListener('error',function(){post('error')});
-v.play&&v.play().catch(function(){});
-</script></body></html>`;
+type VideoModule = typeof import('expo-video');
+
+/** expo-video, or null on a binary that does not have its native module. */
+const video: VideoModule | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const core = require('expo-modules-core') as typeof import('expo-modules-core');
+    if (!core.requireOptionalNativeModule('ExpoVideo')) return null;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-video') as VideoModule;
+  } catch {
+    return null;
+  }
+})();
+
+/** The player, in its own component so the hook only ever runs with the module. */
+function Clip({
+  mod,
+  width,
+  height,
+  onFirstFrame,
+}: {
+  mod: VideoModule;
+  width: number;
+  height: number;
+  onFirstFrame: () => void;
+}) {
+  const player = mod.useVideoPlayer(CLIP, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+  const VideoView = mod.VideoView as unknown as ComponentType<Record<string, unknown>>;
+  return (
+    <VideoView
+      player={player}
+      style={{ width, height }}
+      contentFit="cover"
+      nativeControls={false}
+      allowsPictureInPicture={false}
+      fullscreenOptions={{ enable: false }}
+      onFirstFrameRender={onFirstFrame}
+    />
+  );
+}
 
 export function DemoIntro({ onDone }: { onDone: () => void }) {
   const { width, height } = useWindowDimensions();
@@ -81,16 +115,15 @@ export function DemoIntro({ onDone }: { onDone: () => void }) {
   const phoneH = screenH + 2 * (bezel + frame);
   const screenR = screenW * 0.13;
 
-  /** The phone slides in from the right with a slight tilt that settles
-      (Radek: "I would like the phone to move like from the side"), and
-      leaves to the left, so it reads as one motion through the screen. */
+  /** The phone slides in from the right (Radek: "I would like the phone to
+      move like from the side") and leaves to the left: one motion through. */
   const slide = useSharedValue(reduce ? 0 : width);
   const fade = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
-    track('paywall_demo_shown', {});
+    track('paywall_demo_shown', { native: video !== null });
     if (reduce) return;
     fade.value = withTiming(1, { duration: 320 });
-    slide.value = withDelay(150, withSpring(0, { damping: 18, stiffness: 120, mass: 1 }));
+    slide.value = withDelay(150, withTiming(0, { duration: 650, easing: Easing.out(Easing.cubic) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,7 +135,7 @@ export function DemoIntro({ onDone }: { onDone: () => void }) {
     } catch {
       // A demo shown twice is fine.
     }
-    track('paywall_demo_done', { watchedMs: Date.now() - shownAt.current, played: playing });
+    track('paywall_demo_done', { watchedMs: Date.now() - shownAt.current, played: playing, native: video !== null });
     if (reduce) {
       onDone();
       return;
@@ -113,12 +146,7 @@ export function DemoIntro({ onDone }: { onDone: () => void }) {
     }));
   };
 
-  const phoneStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: slide.value },
-      { rotate: `${(slide.value / width) * 8}deg` },
-    ],
-  }));
+  const phoneStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slide.value }] }));
   const sheetStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
   return (
@@ -128,36 +156,16 @@ export function DemoIntro({ onDone }: { onDone: () => void }) {
       </View>
 
       <Animated.View style={[styles.center, phoneStyle]}>
-        <View
-          style={[
-            styles.phone,
-            { width: phoneW, height: phoneH, borderRadius: screenR + bezel + frame },
-          ]}
-        >
-          <View
-            style={[
-              styles.bezel,
-              { borderRadius: screenR + bezel, padding: bezel },
-            ]}
-          >
+        <View style={[styles.phone, { width: phoneW, height: phoneH, borderRadius: screenR + bezel + frame }]}>
+          <View style={[styles.bezel, { borderRadius: screenR + bezel, padding: bezel }]}>
             <View style={{ width: screenW, height: screenH, borderRadius: screenR, overflow: 'hidden' }}>
-              <WebView
-                source={{ html: HTML, baseUrl: CATALOG_BASE_URL }}
-                style={styles.web}
-                originWhitelist={['*']}
-                allowsInlineMediaPlayback
-                mediaPlaybackRequiresUserAction={false}
-                scrollEnabled={false}
-                bounces={false}
-                pointerEvents="none"
-                onMessage={(e) => {
-                  if (e.nativeEvent.data === 'playing') setPlaying(true);
-                }}
-              />
+              {video && <Clip mod={video} width={screenW} height={screenH} onFirstFrame={() => setPlaying(true)} />}
               {!playing && (
-                <View style={[StyleSheet.absoluteFill, styles.loading]}>
-                  <ActivityIndicator color={TEXT} />
-                </View>
+                <Image
+                  source={POSTER}
+                  style={{ position: 'absolute', top: 0, left: 0, width: screenW, height: screenH }}
+                  resizeMode="cover"
+                />
               )}
               {/* Dynamic Island, so it reads as a phone and not a box. */}
               <View
@@ -205,7 +213,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
   },
   bezel: { backgroundColor: '#040405', flex: 1 },
-  web: { backgroundColor: GROUND, flex: 1 },
-  loading: { alignItems: 'center', backgroundColor: GROUND, justifyContent: 'center' },
   island: { backgroundColor: '#000', position: 'absolute' },
 });

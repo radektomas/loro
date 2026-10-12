@@ -114,3 +114,34 @@ export function devRestartTour(): void {
   current = 'blank';
   storageDriver.local.setItem(KEY, 'blank');
 }
+
+// ------------------------------------------------------------------ the dock
+
+/**
+ * WHAT LORO IS SAYING in the tour dock (Shell's bottom bar). One voice in one
+ * place for every beat — the feed beats publish their line here instead of
+ * floating a card over the band (Radek, 2026-10-12: the card "appears in the
+ * place where the English subtitles are … make up something better").
+ */
+export type TourLine = { key: string; title: string; body: string };
+
+let line: TourLine | null = null;
+const lineListeners = new Set<(l: TourLine | null) => void>();
+
+export function setTourLine(next: TourLine | null): void {
+  if (next?.key === line?.key && next?.body === line?.body) return;
+  line = next;
+  for (const l of lineListeners) l(line);
+}
+
+export function useTourLine(): TourLine | null {
+  const [l, setL] = useState(line);
+  useEffect(() => {
+    setL(line);
+    lineListeners.add(setL);
+    return () => {
+      lineListeners.delete(setL);
+    };
+  }, []);
+  return l;
+}

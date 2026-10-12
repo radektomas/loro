@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { BRAND } from '../onboarding/brand';
 import Animated, {
+  FadeInDown,
+  FadeOut,
   cancelAnimation,
   useAnimatedStyle,
   useReducedMotion,
@@ -60,7 +63,16 @@ export function WalkthroughCoach({
   hintEmphatic = false,
   held,
   top,
+  anchor = 'top',
 }: {
+  /**
+   * 'bottom' (the first-run tour, 2026-10-12): the card sits at the foot of
+   * the feed, above the tab bar, Loro beside it — the look of the Words tour
+   * cards — and no longer over the band's chip row, where it hid the very
+   * "Tap for sound" pill the sound card names. Still below the player, so the
+   * embed rule holds; the karaoke line is above it and stays tappable.
+   */
+  anchor?: 'top' | 'bottom';
   coach: CoachCardContent | null;
   hint: boolean;
   hintText: string;
@@ -131,6 +143,34 @@ export function WalkthroughCoach({
 
   if (top === null) return null;
 
+  if (anchor === 'bottom') {
+    return (
+      <View pointerEvents="none" style={[styles.layer, styles.layerBottom]}>
+        {shown && (
+          // Keyed by beat: each new card pops in on a spring, the old one
+          // fades — the same entrance as the Words tour card.
+          <Animated.View
+            key={shown.kind}
+            entering={FadeInDown.springify().damping(16).stiffness(190)}
+            exiting={FadeOut.duration(140)}
+            style={styles.tourCard}
+            accessibilityLiveRegion="polite"
+          >
+            <Image source={BRAND.parrot} style={styles.tourParrot} resizeMode="contain" />
+            <View style={styles.tourText}>
+              <Text style={styles.tourTitle} numberOfLines={1}>
+                {shown.title}
+              </Text>
+              <Text style={styles.tourBody} numberOfLines={2}>
+                {shown.body}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View pointerEvents="none" style={[styles.layer, { top }]}>
       {content && (
@@ -185,6 +225,27 @@ function ScrollHint({ text, emphatic = false }: { text: string; emphatic?: boole
 }
 
 const styles = StyleSheet.create({
+  layerBottom: { bottom: 12 },
+  tourCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(20,26,23,0.98)',
+    borderColor: 'rgba(94,230,168,0.35)',
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+  },
+  tourParrot: { height: 56, width: 38 },
+  tourText: { flex: 1 },
+  tourTitle: { color: '#f2f5f3', fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
+  tourBody: { color: 'rgba(242,245,243,0.62)', fontSize: 14, lineHeight: 19, marginTop: 2 },
   /** Anchored at bandTop and grows DOWNWARD only — see the header note. */
   layer: { left: 0, position: 'absolute', right: 0 },
   card: {

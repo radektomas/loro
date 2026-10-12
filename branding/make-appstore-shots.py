@@ -25,7 +25,7 @@ SHOTS = [
     ('IMG_5167.PNG', ['Every few words,', ('a new city', GREEN)]),
     ('IMG_5168.PNG', ['Travel the', ('Spanish-speaking', GREEN), 'world']),
     ('IMG_5171.PNG', ['A parrot that', ('cheers you on', GREEN)]),
-    ('IMG_5169.PNG', [('Peppa Pig', GREEN), 'in Spanish']),
+    ('IMG_5169.PNG', ['Cartoons', ('in Spanish too', GREEN)]),
 ]
 
 def lines_of(spec):

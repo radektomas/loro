@@ -31,7 +31,7 @@ import { KNOWN_BOX } from '@loro/core/srs';
 import { DemoIntro, paywallDemoDue } from './DemoIntro';
 import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue, takeDevPaywallFeedback } from './PaywallFeedback';
 import { getPlan, type Plan } from '../progress/plan';
-import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
+import { devReleaseForcedPaywall, getPackageTypes, getPurchasesApi } from '../platform/purchases';
 import { track } from '../platform/analytics';
 import {
   ACCENT,
@@ -535,6 +535,8 @@ export function PaywallScreen({
       // The timeline's "day 5: we remind you" — made true (notifications.ts).
       const days = trialDays(selected.product);
       if (days !== null) noteTrialStarted(days);
+      // Dev only: a forced test wall lets go after a sandbox purchase.
+      devReleaseForcedPaywall();
     } catch (err) {
       // A cancelled sheet is the user changing their mind, so it stays silent
       // in the UI — but it is emphatically an EVENT: someone who opened the
@@ -594,6 +596,7 @@ export function PaywallScreen({
          * falls, so the metric would look best when the product was doing worst.
          */
         track('restore_succeeded');
+        devReleaseForcedPaywall();
       }
     } catch (err) {
       console.warn('[loro] restore failed', err);
