@@ -48,7 +48,8 @@ export type TopicSlug =
   | 'street-money'
   | 'personal-questions'
   | 'work-story'
-  | 'everyday-questions';
+  | 'everyday-questions'
+  | 'learner-spanish';
 
 export type Topic = {
   slug: TopicSlug;
@@ -607,6 +608,39 @@ export const TOPICS: readonly Topic[] = [
     regions: GEOGRAPHIC_REGIONS,
     pages: 1,
   },
+  {
+    slug: 'learner-spanish',
+    label: 'Learner Spanish (slow, clear, for beginners)',
+    /**
+     * Added 2026-10-12 for the level-first feed (core/feedRank LEVEL FIRST):
+     * the catalog had 15 A1 videos against 221 B1, so a beginner's window
+     * was mostly 2.5-words-a-second A2. These ask for teachers and creators
+     * speaking SLOW, CLEAR SPANISH IN SPANISH — not lessons about Spanish in
+     * English (rule 0). Only the clips rate-candidates measures as A1/A2 get
+     * published; the rest stay candidates.
+     *
+     * All terminate on a noun or adjective, per rule 1.
+     */
+    queries: [
+      'español fácil para principiantes',
+      'historias en español lento',
+      'aprende español despacio',
+      'español nivel básico',
+      'frases útiles en español',
+      'mi rutina en español fácil',
+      // Second round (2026-10-12), after the first proved the teachers are
+      // there once the standard licence is searched: aim at the classroom.
+      'clase de español para extranjeros',
+      'diálogo en español para principiantes',
+      'conversación en español lenta',
+      'vocabulario en español básico',
+      'profesora de español nativa',
+      'español para extranjeros nivel inicial',
+    ],
+    tags: ['talking-head', 'learner'],
+    regions: ['MX', 'ES'],
+    pages: 2,
+  },
 ];
 
 // ------------------------------------------------------------------ regions
@@ -644,19 +678,21 @@ export const LICENSE_BRANCHES: readonly LicenseBranch[] = [
 ];
 
 /**
- * What the SWEEP actually walks — Creative Commons only.
+ * What the SWEEP walks — BOTH licences since 2026-10-12.
  *
- * The 'any' branch was dropped 2026-07-21. Not for quota: embed-only content
- * cannot feed the transcription pipeline at all. There is no lawful audio
- * access for videos we do not own, and YouTube's caption tracks are cue-level,
- * while Loro's core loop is built on Whisper word-level timings. A 'ready'
- * embed-only row could never mean what a 'ready' CC row means, so it would be
- * a second, weaker content class wearing the same status name.
+ * Radek: "I want any video that can play on Loro". Every Loro video plays
+ * through YouTube's own iframe embed, which is allowed for the standard
+ * licence as much as for Creative Commons, and the embed path never needed
+ * Whisper: json3 captions are word-timed (json3ToCues.mts), which is what
+ * every published embed already uses. The CC-only sweep (2026-07-21) rested
+ * on the opposite assumption and hid ~99% of YouTube — including nearly all
+ * real learner content (teachers speaking slow, clear Spanish).
  *
- * Existing license='youtube' rows stay in the table; we simply stop harvesting
- * that branch. `--license any` therefore now selects zero combinations.
+ * The one thing a standard-licence video can never do is be self-hosted:
+ * the licence split in the table (license = 'creativeCommon' | 'youtube')
+ * stays, so that option is kept for the CC rows.
  */
-export const SWEPT_LICENSE_BRANCHES: readonly LicenseBranch[] = ['creativeCommon'];
+export const SWEPT_LICENSE_BRANCHES: readonly LicenseBranch[] = ['creativeCommon', 'any'];
 
 /** What actually lands in the table. Never widen this without a legal review. */
 export type StoredLicense = 'creativeCommon' | 'youtube';

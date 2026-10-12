@@ -168,8 +168,9 @@ ${JSON.stringify(unique)}
 For each word return an object with:
 - "w": the word exactly as it appears in the list above
 - "lemma": its dictionary form ("es" -> "ser", "novia" -> "novia")
-- "pos": one of: noun, verb, adj, adv, prep, pron, conj, det, other
-- one SHORT gloss per language — ${langsList()} — translating THIS word AS USED in these sentences. 1-3 words. A translation, not a definition. Context matters: "como" is "like" in one sentence and "I eat" in another.
+- "pos": one of: noun, verb, adj, adv, prep, pron, conj, det, phrase, other
+- one SHORT gloss per language — ${langsList()} — translating THIS EXACT FORM of THIS word alone, 1-3 words. A translation, not a definition. Keep the form visible: tense, mood and person ("sería" -> "would be", "pueden" -> "they can", "llegaron" -> "they arrived"). Pick the meaning that fits these sentences ("como" is "like" or "I eat"), but NEVER translate the words around it: "o sea" does not make "sea" mean "I mean", "hace dos años" does not make "hace" mean "ago".
+- If in these lines the word only appears as a piece of a fixed expression that cannot be understood word by word (o sea, por favor, a veces, de repente, tal vez, darse cuenta), set "pos" to "phrase" and put the expression in "note".
 - "note": max 8 words, ONLY when genuinely useful (irregular verb, false friend, gendered form, common idiom). Otherwise null.
 
 Gloss every single word, including function words — a beginner needs "de" and "que" as much as any noun. Do not skip any word from the list.

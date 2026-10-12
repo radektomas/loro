@@ -652,7 +652,7 @@ async function main(): Promise<void> {
     console.log(`\nMatrix: ${matrix.length} combinations`);
     console.log(
       `  ${TOPICS.length} topics x ${TOPICS.reduce((n, t) => n + t.queries.length, 0)} queries total` +
-        ` — regions per topic, ${SWEPT_LICENSE_BRANCHES.length} license branch (CC only)`
+        ` — regions per topic, ${SWEPT_LICENSE_BRANCHES.length} license branch(es): ${SWEPT_LICENSE_BRANCHES.join(", ")}`
     );
     console.log(`Selected by flags: ${selectedCount}`);
     if (exploratory) {

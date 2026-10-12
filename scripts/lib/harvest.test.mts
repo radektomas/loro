@@ -195,7 +195,10 @@ describe('buildMatrix', () => {
     // The whole reason for the ordering: matrix order == information order.
     const matrix = buildMatrix();
     // Every topic's FIRST query must appear before any topic's SECOND query.
-    const firstRoundEnd = TOPICS.reduce((n, t) => n + t.regions.length, 0);
+    const firstRoundEnd = TOPICS.reduce(
+      (n, t) => n + t.regions.length * SWEPT_LICENSE_BRANCHES.length,
+      0
+    );
     const prefix = matrix.slice(0, firstRoundEnd);
     const topicsInPrefix = new Set(prefix.map((c) => c.topic));
     assert.equal(topicsInPrefix.size, TOPICS.length, 'prefix should cover all topics');
@@ -230,12 +233,13 @@ describe('buildMatrix', () => {
     assert.equal(new Set(keys).size, keys.length);
   });
 
-  it('sweeps Creative Commons only — the any branch is dropped', () => {
-    // Embed-only content cannot feed the transcription pipeline, so it is no
-    // longer harvested. Existing license='youtube' rows stay in the table.
+  it('sweeps both licence branches — every video that can play in Loro', () => {
+    // Radek, 2026-10-12: "I want any video that can play on Loro". Playback
+    // is the YouTube embed, allowed for both licences; the table still keeps
+    // license='creativeCommon' vs 'youtube' apart for the self-host option.
     const matrix = buildMatrix();
-    assert.ok(matrix.length > 0);
-    assert.ok(matrix.every((c) => c.license === 'creativeCommon'));
+    assert.ok(matrix.some((c) => c.license === 'creativeCommon'));
+    assert.ok(matrix.some((c) => c.license === 'any'));
   });
 });
 
