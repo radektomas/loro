@@ -458,10 +458,37 @@ function Feedback({ rows }: { rows: FeedbackRow[] }) {
 
 // ------------------------------------------------------------------- A/B
 
-const ARMS = [
-  { key: 'hard', label: 'Hard wall after onboarding', color: DASH.blue },
-  { key: 'madrid', label: 'Madrid free first', color: DASH.green },
-] as const;
+/**
+ * TWO TESTS, ONE PANEL. 1.9.2 split Madrid-free vs the hard wall; 1.9.3 runs
+ * the wall SHAPE instead — the one-page hard wall vs the three-page one (demo
+ * → value → price), everyone on the hard wall (Radek, 2026-10-12). Each test
+ * has its own arms, its own steps and its own "born on" version.
+ */
+type AbTestKey = 'style' | 'madrid';
+type Arm = { key: string; label: string; short: string; color: string };
+const TESTS: Record<
+  AbTestKey,
+  { title: string; arms: Arm[]; armOf: (r: AbRow) => string | null; since: string }
+> = {
+  style: {
+    title: '3-page vs 1-page wall (1.9.3+)',
+    arms: [
+      { key: 'single', label: '1-page hard wall', short: '1-page', color: DASH.blue },
+      { key: 'multi', label: '3-page wall (demo → value → price)', short: '3-page', color: DASH.green },
+    ],
+    armOf: (r) => r.style,
+    since: '1.9.3',
+  },
+  madrid: {
+    title: 'Madrid free vs hard wall (1.9.2)',
+    arms: [
+      { key: 'hard', label: 'Hard wall after onboarding', short: 'Hard', color: DASH.blue },
+      { key: 'madrid', label: 'Madrid free first', short: 'Madrid', color: DASH.green },
+    ],
+    armOf: (r) => r.variant,
+    since: '1.9.2',
+  },
+};
 
 /** "1.9.10" >= "1.9.2", which a string compare gets wrong. */
 function versionAtLeast(v: string | null, min: string): boolean {
@@ -492,21 +519,39 @@ const AB_MIN_PER_ARM = 30;
  * straight after onboarding, or Madrid free first. The comparison first —
  * each step as a share of that arm's installs — then every install's story.
  */
-function AbTest({ rows: all }: { rows: AbRow[] }) {
+function AbTest({ rows: every }: { rows: AbRow[] }) {
+  const [test, setTest] = useState<AbTestKey>('style');
   const [newOnly, setNewOnly] = useState(true);
   const [showAll, setShowAll] = useState(false);
-  const rows = newOnly ? all.filter((r) => versionAtLeast(r.installVersion, '1.9.2')) : all;
-  const arm = (k: string) => rows.filter((r) => r.variant === k);
-  const steps: { label: string; help?: string; pick: (r: AbRow) => boolean; of?: 'installs' | 'wall' }[] = [
-    { label: 'Finished onboarding', pick: (r) => r.onboarded && !r.skippedOnboarding },
-    { label: 'Answered a blank', pick: (r) => r.blanks > 0 },
-    { label: 'Reached Madrid (5 words)', pick: (r) => r.reachedMadrid },
-    { label: 'Saw the wall', pick: (r) => r.wallViews > 0 },
-    { label: 'Tapped buy', pick: (r) => r.tappedBuy > 0, of: 'wall' },
-    { label: 'Closed Apple’s sheet', pick: (r) => r.cancelled > 0, of: 'wall' },
-    { label: 'Started a trial / bought', pick: (r) => r.trial },
-    { label: 'Came back on a 2nd day', pick: (r) => r.activeDays >= 2 },
-  ];
+  const T = TESTS[test];
+  const ARMS = T.arms;
+  const all = every.filter((r) => T.armOf(r) !== null);
+  const rows = newOnly ? all.filter((r) => versionAtLeast(r.installVersion, T.since)) : all;
+  const arm = (k: string) => rows.filter((r) => T.armOf(r) === k);
+  const steps: { label: string; help?: string; pick: (r: AbRow) => boolean; of?: 'installs' | 'wall' }[] =
+    test === 'style'
+      ? [
+          { label: 'Finished onboarding', pick: (r) => r.onboarded && !r.skippedOnboarding },
+          { label: 'Saw the wall', pick: (r) => r.wallViews > 0 },
+          { label: 'Saw the demo (3-page only)', pick: (r) => r.demoSeen, of: 'wall' },
+          { label: 'Reached the price page (3-page only)', pick: (r) => r.reachedPrice, of: 'wall' },
+          { label: 'Tapped buy', pick: (r) => r.tappedBuy > 0, of: 'wall' },
+          { label: 'Closed Apple’s sheet', pick: (r) => r.cancelled > 0, of: 'wall' },
+          { label: 'Started a trial / bought', pick: (r) => r.trial },
+          { label: 'Finished the walkthrough', pick: (r) => r.tourDone && !r.tourSkippedAt, of: 'installs' },
+          { label: 'Answered a blank', pick: (r) => r.blanks > 0 },
+          { label: 'Came back on a 2nd day', pick: (r) => r.activeDays >= 2 },
+        ]
+      : [
+          { label: 'Finished onboarding', pick: (r) => r.onboarded && !r.skippedOnboarding },
+          { label: 'Answered a blank', pick: (r) => r.blanks > 0 },
+          { label: 'Reached Madrid (5 words)', pick: (r) => r.reachedMadrid },
+          { label: 'Saw the wall', pick: (r) => r.wallViews > 0 },
+          { label: 'Tapped buy', pick: (r) => r.tappedBuy > 0, of: 'wall' },
+          { label: 'Closed Apple’s sheet', pick: (r) => r.cancelled > 0, of: 'wall' },
+          { label: 'Started a trial / bought', pick: (r) => r.trial },
+          { label: 'Came back on a 2nd day', pick: (r) => r.activeDays >= 2 },
+        ];
   const tiny = ARMS.some((a) => arm(a.key).length < AB_MIN_PER_ARM);
   const trialRate = (k: string) => {
     const a = arm(k);
@@ -517,15 +562,28 @@ function AbTest({ rows: all }: { rows: AbRow[] }) {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3 text-xs" style={{ color: DASH.muted }}>
+        {(Object.keys(TESTS) as AbTestKey[]).map((k) => (
+          <button
+            key={k}
+            onClick={() => setTest(k)}
+            className="rounded-full px-3 py-1 font-semibold"
+            style={{
+              background: test === k ? DASH.greenSoft : DASH.track,
+              color: test === k ? DASH.green : DASH.ink,
+            }}
+          >
+            {TESTS[k].title}
+          </button>
+        ))}
         <label className="flex cursor-pointer items-center gap-2">
           <input type="checkbox" checked={newOnly} onChange={(e) => setNewOnly(e.target.checked)} />
-          Only installs born on 1.9.2+ (older installs also get an arm when they update)
+          Only installs born on {T.since}+ (older installs also get an arm when they update)
         </label>
       </div>
 
       {rows.length === 0 ? (
         <p className="text-sm" style={{ color: DASH.muted }}>
-          No installs in the test yet. It starts with the first install of 1.9.2 from the App Store.
+          No installs in this test yet. It starts with the first install of {T.since} from the App Store.
         </p>
       ) : (
         <>
@@ -589,8 +647,8 @@ function AbTest({ rows: all }: { rows: AbRow[] }) {
 
           <p className="mt-3 text-xs leading-relaxed" style={{ color: tiny ? DASH.orange : DASH.muted }}>
             {tiny
-              ? `Too early to call: wait for at least ${AB_MIN_PER_ARM} installs in each arm. With 30% / 70%, the Madrid arm fills slower.`
-              : `Trial per install: hard ${Math.round(trialRate('hard') * 100)}% vs Madrid ${Math.round(trialRate('madrid') * 100)}%. A trial is not money yet — check who converts after day 7 in RevenueCat.`}
+              ? `Too early to call: wait for at least ${AB_MIN_PER_ARM} installs in each arm.`
+              : `Trial per install: ${ARMS.map((a) => `${a.short} ${Math.round(trialRate(a.key) * 100)}%`).join(' vs ')}. A trial is not money yet — check who converts after day 7 in RevenueCat.`}
           </p>
 
           <div className="mt-6 mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: DASH.faint }}>
@@ -598,18 +656,22 @@ function AbTest({ rows: all }: { rows: AbRow[] }) {
           </div>
           <ul className="space-y-1.5">
             {list.map((r) => {
-              const a = ARMS.find((x) => x.key === r.variant);
+              const a = ARMS.find((x) => x.key === T.armOf(r));
               const chips: { t: string; good?: boolean; bad?: boolean }[] = [];
               chips.push(r.skippedOnboarding ? { t: 'skipped onboarding', bad: true } : r.onboarded ? { t: 'onboarding ✓' } : { t: 'left in onboarding', bad: true });
               if (r.blanks) chips.push({ t: `${r.blanksRight}/${r.blanks} blanks right` });
               if (r.wordsSaved) chips.push({ t: `${r.wordsSaved} saved` });
               if (r.reachedMadrid) chips.push({ t: 'Madrid ✓', good: true });
               if (r.wallViews) chips.push({ t: `saw wall ×${r.wallViews}` });
+              if (r.demoSeen) chips.push({ t: r.demoMs != null ? `demo ${Math.round(r.demoMs / 1000)}s` : 'demo' });
+              if (r.reachedPrice) chips.push({ t: 'price page' });
               if (r.tappedBuy) chips.push({ t: `tapped buy ×${r.tappedBuy}` });
               if (r.cancelled) chips.push({ t: `closed sheet ×${r.cancelled}`, bad: true });
               if (r.feedback) chips.push({ t: `“${r.feedbackNote ?? REASON_LABEL[r.feedback] ?? r.feedback}”` });
               if (r.trial) chips.push({ t: 'TRIAL', good: true });
               if (r.restored) chips.push({ t: 'restored' });
+              if (r.tourSkippedAt) chips.push({ t: `skipped tour at ${r.tourSkippedAt}`, bad: true });
+              else if (r.tourDone) chips.push({ t: 'tour ✓', good: true });
               if (r.activeDays >= 2) chips.push({ t: `${r.activeDays} days`, good: true });
               return (
                 <li key={r.installId} className="flex flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-xs" style={{ background: DASH.inset, border: `1px solid ${DASH.line}` }}>
@@ -617,7 +679,7 @@ function AbTest({ rows: all }: { rows: AbRow[] }) {
                     {new Date(r.installedAt ?? r.assignedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </span>
                   <span className="rounded-full px-2 py-0.5 font-semibold" style={{ background: `${a?.color ?? DASH.muted}22`, color: a?.color ?? DASH.muted }}>
-                    {r.variant === 'hard' ? 'Hard' : r.variant === 'madrid' ? 'Madrid' : r.variant}
+                    {a?.short ?? T.armOf(r)}
                   </span>
                   {chips.map((c, i) => (
                     <span

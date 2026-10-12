@@ -288,7 +288,9 @@ export type FeedbackRow = {
 /** One install in the paywall A/B test (loro_analytics_paywall_ab). */
 export type AbRow = {
   installId: string;
-  variant: 'hard' | 'madrid' | string;
+  variant: 'hard' | 'madrid' | string | null;
+  /** The wall shape, from 1.9.3 (20261013000000): 'multi' | 'single'. */
+  style: 'multi' | 'single' | string | null;
   assignedAt: string;
   installedAt: string | null;
   installVersion: string | null;
@@ -301,12 +303,17 @@ export type AbRow = {
   wallViews: number;
   firstWallAt: string | null;
   wallAfter: string | null;
+  demoSeen: boolean;
+  demoMs: number | null;
+  reachedPrice: boolean;
   tappedBuy: number;
   cancelled: number;
   trial: boolean;
   restored: boolean;
   feedback: string | null;
   feedbackNote: string | null;
+  tourDone: boolean;
+  tourSkippedAt: string | null;
   activeDays: number;
   lastSeen: string;
 };
@@ -402,7 +409,8 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
       const rows = await call('loro_analytics_paywall_ab', { p_all_builds: allBuilds });
       ab = rows.map((r) => ({
         installId: str(r.install_id),
-        variant: str(r.variant),
+        variant: r.variant ? str(r.variant) : null,
+        style: r.style ? str(r.style) : null,
         assignedAt: str(r.assigned_at),
         installedAt: r.installed_at ? str(r.installed_at) : null,
         installVersion: r.install_version ? str(r.install_version) : null,
@@ -415,12 +423,17 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
         wallViews: num(r.wall_views),
         firstWallAt: r.first_wall_at ? str(r.first_wall_at) : null,
         wallAfter: r.wall_after ? str(r.wall_after) : null,
+        demoSeen: Boolean(r.demo_seen),
+        demoMs: r.demo_ms == null ? null : num(r.demo_ms),
+        reachedPrice: Boolean(r.reached_price),
         tappedBuy: num(r.tapped_buy),
         cancelled: num(r.cancelled),
         trial: Boolean(r.trial),
         restored: Boolean(r.restored),
         feedback: r.feedback ? str(r.feedback) : null,
         feedbackNote: r.feedback_note ? str(r.feedback_note) : null,
+        tourDone: Boolean(r.tour_done),
+        tourSkippedAt: r.tour_skipped_at ? str(r.tour_skipped_at) : null,
         activeDays: num(r.active_days),
         lastSeen: str(r.last_seen),
       }));
