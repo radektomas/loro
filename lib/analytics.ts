@@ -285,6 +285,32 @@ export type FeedbackRow = {
   appVersion: string;
 };
 
+/** One install in the paywall A/B test (loro_analytics_paywall_ab). */
+export type AbRow = {
+  installId: string;
+  variant: 'hard' | 'madrid' | string;
+  assignedAt: string;
+  installedAt: string | null;
+  installVersion: string | null;
+  onboarded: boolean;
+  skippedOnboarding: boolean;
+  blanks: number;
+  blanksRight: number;
+  wordsSaved: number;
+  reachedMadrid: boolean;
+  wallViews: number;
+  firstWallAt: string | null;
+  wallAfter: string | null;
+  tappedBuy: number;
+  cancelled: number;
+  trial: boolean;
+  restored: boolean;
+  feedback: string | null;
+  feedbackNote: string | null;
+  activeDays: number;
+  lastSeen: string;
+};
+
 export type DailyPoint = {
   day: string;
   newInstalls: number;
@@ -298,6 +324,7 @@ export type RadekDashboard = {
   windows: WallWindow[];
   subscribers: SubscriberRow[] | null; // null until the migration is applied
   feedback: FeedbackRow[] | null; // null until 20261009000000 is applied
+  ab: AbRow[] | null; // null until 20261012000000 is applied
   retention: Retention;
   dau: DauPoint[];
   loadedAt: string;
@@ -370,6 +397,36 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
     } catch (err) {
       if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
     }
+    let ab: AbRow[] | null = null;
+    try {
+      const rows = await call('loro_analytics_paywall_ab', { p_all_builds: allBuilds });
+      ab = rows.map((r) => ({
+        installId: str(r.install_id),
+        variant: str(r.variant),
+        assignedAt: str(r.assigned_at),
+        installedAt: r.installed_at ? str(r.installed_at) : null,
+        installVersion: r.install_version ? str(r.install_version) : null,
+        onboarded: Boolean(r.onboarded),
+        skippedOnboarding: Boolean(r.skipped_onboarding),
+        blanks: num(r.blanks),
+        blanksRight: num(r.blanks_right),
+        wordsSaved: num(r.words_saved),
+        reachedMadrid: Boolean(r.reached_madrid),
+        wallViews: num(r.wall_views),
+        firstWallAt: r.first_wall_at ? str(r.first_wall_at) : null,
+        wallAfter: r.wall_after ? str(r.wall_after) : null,
+        tappedBuy: num(r.tapped_buy),
+        cancelled: num(r.cancelled),
+        trial: Boolean(r.trial),
+        restored: Boolean(r.restored),
+        feedback: r.feedback ? str(r.feedback) : null,
+        feedbackNote: r.feedback_note ? str(r.feedback_note) : null,
+        activeDays: num(r.active_days),
+        lastSeen: str(r.last_seen),
+      }));
+    } catch (err) {
+      if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
+    }
     const rt = retentionRows[0] ?? {};
     return {
       ok: true,
@@ -384,6 +441,7 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
         windows: [last7, last14, prev14],
         subscribers,
         feedback,
+        ab,
         retention: {
           d1Returned: num(rt.d1_returned),
           d1Cohort: num(rt.d1_cohort),

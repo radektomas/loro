@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
+import type { AbRow, DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
 
 /**
  * THE OWNER'S DASHBOARD, in the house style of RevenueCat and App Store
@@ -456,6 +456,196 @@ function Feedback({ rows }: { rows: FeedbackRow[] }) {
   );
 }
 
+// ------------------------------------------------------------------- A/B
+
+const ARMS = [
+  { key: 'hard', label: 'Hard wall after onboarding', color: DASH.blue },
+  { key: 'madrid', label: 'Madrid free first', color: DASH.green },
+] as const;
+
+/** "1.9.10" >= "1.9.2", which a string compare gets wrong. */
+function versionAtLeast(v: string | null, min: string): boolean {
+  if (!v) return false;
+  const a = v.split('.').map(Number);
+  const b = min.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return true;
+}
+
+function median(xs: number[]): number | null {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+}
+
+/** Fewer installs than this in either arm and the page says so, loudly. */
+const AB_MIN_PER_ARM = 30;
+
+/**
+ * THE PAYWALL A/B TEST (Radek, 2026-10-12: "I want to see how many people
+ * saw each wall, and what exactly they did"). Every 1.9.2+ install is put in
+ * one arm by the remote dial (scripts/set-paywall-flag.mts): the hard wall
+ * straight after onboarding, or Madrid free first. The comparison first —
+ * each step as a share of that arm's installs — then every install's story.
+ */
+function AbTest({ rows: all }: { rows: AbRow[] }) {
+  const [newOnly, setNewOnly] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const rows = newOnly ? all.filter((r) => versionAtLeast(r.installVersion, '1.9.2')) : all;
+  const arm = (k: string) => rows.filter((r) => r.variant === k);
+  const steps: { label: string; help?: string; pick: (r: AbRow) => boolean; of?: 'installs' | 'wall' }[] = [
+    { label: 'Finished onboarding', pick: (r) => r.onboarded && !r.skippedOnboarding },
+    { label: 'Answered a blank', pick: (r) => r.blanks > 0 },
+    { label: 'Reached Madrid (5 words)', pick: (r) => r.reachedMadrid },
+    { label: 'Saw the wall', pick: (r) => r.wallViews > 0 },
+    { label: 'Tapped buy', pick: (r) => r.tappedBuy > 0, of: 'wall' },
+    { label: 'Closed Apple’s sheet', pick: (r) => r.cancelled > 0, of: 'wall' },
+    { label: 'Started a trial / bought', pick: (r) => r.trial },
+    { label: 'Came back on a 2nd day', pick: (r) => r.activeDays >= 2 },
+  ];
+  const tiny = ARMS.some((a) => arm(a.key).length < AB_MIN_PER_ARM);
+  const trialRate = (k: string) => {
+    const a = arm(k);
+    return a.length ? a.filter((r) => r.trial).length / a.length : 0;
+  };
+  const list = showAll ? rows : rows.slice(0, 40);
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-xs" style={{ color: DASH.muted }}>
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={newOnly} onChange={(e) => setNewOnly(e.target.checked)} />
+          Only installs born on 1.9.2+ (older installs also get an arm when they update)
+        </label>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm" style={{ color: DASH.muted }}>
+          No installs in the test yet. It starts with the first install of 1.9.2 from the App Store.
+        </p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead>
+                <tr style={{ color: DASH.muted }}>
+                  <th className="pb-2 text-left font-medium">Step</th>
+                  {ARMS.map((a) => (
+                    <th key={a.key} className="pb-2 text-right font-medium">
+                      <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ background: a.color }} />
+                      {a.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderTop: `1px solid ${DASH.line}` }}>
+                  <td className="py-2" style={{ color: DASH.ink }}>Installs in the arm</td>
+                  {ARMS.map((a) => (
+                    <td key={a.key} className="py-2 text-right text-base font-bold tabular-nums" style={{ color: DASH.ink }}>
+                      {fmt.format(arm(a.key).length)}
+                    </td>
+                  ))}
+                </tr>
+                {steps.map((st) => (
+                  <tr key={st.label} style={{ borderTop: `1px solid ${DASH.line}` }}>
+                    <td className="py-2" style={{ color: DASH.ink }}>
+                      {st.label}
+                      {st.of === 'wall' && <span className="ml-1 text-xs" style={{ color: DASH.faint }}>(of those who saw it)</span>}
+                    </td>
+                    {ARMS.map((a) => {
+                      const r = arm(a.key);
+                      const base = st.of === 'wall' ? r.filter((x) => x.wallViews > 0) : r;
+                      const n = base.filter(st.pick).length;
+                      return (
+                        <td key={a.key} className="py-2 text-right tabular-nums" style={{ color: DASH.muted }}>
+                          <b style={{ color: DASH.ink }}>{n}</b> · {pct(n, base.length)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                <tr style={{ borderTop: `1px solid ${DASH.line}` }}>
+                  <td className="py-2" style={{ color: DASH.ink }}>Minutes from install to the wall (median)</td>
+                  {ARMS.map((a) => {
+                    const mins = arm(a.key)
+                      .filter((r) => r.firstWallAt && r.installedAt)
+                      .map((r) => (Date.parse(r.firstWallAt!) - Date.parse(r.installedAt!)) / 60000);
+                    const m = median(mins);
+                    return (
+                      <td key={a.key} className="py-2 text-right tabular-nums" style={{ color: DASH.ink }}>
+                        {m == null ? '—' : m < 60 ? `${Math.round(m)} min` : `${(m / 60).toFixed(1)} h`}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p className="mt-3 text-xs leading-relaxed" style={{ color: tiny ? DASH.orange : DASH.muted }}>
+            {tiny
+              ? `Too early to call: wait for at least ${AB_MIN_PER_ARM} installs in each arm. With 30% / 70%, the Madrid arm fills slower.`
+              : `Trial per install: hard ${Math.round(trialRate('hard') * 100)}% vs Madrid ${Math.round(trialRate('madrid') * 100)}%. A trial is not money yet — check who converts after day 7 in RevenueCat.`}
+          </p>
+
+          <div className="mt-6 mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: DASH.faint }}>
+            What each person did · newest first
+          </div>
+          <ul className="space-y-1.5">
+            {list.map((r) => {
+              const a = ARMS.find((x) => x.key === r.variant);
+              const chips: { t: string; good?: boolean; bad?: boolean }[] = [];
+              chips.push(r.skippedOnboarding ? { t: 'skipped onboarding', bad: true } : r.onboarded ? { t: 'onboarding ✓' } : { t: 'left in onboarding', bad: true });
+              if (r.blanks) chips.push({ t: `${r.blanksRight}/${r.blanks} blanks right` });
+              if (r.wordsSaved) chips.push({ t: `${r.wordsSaved} saved` });
+              if (r.reachedMadrid) chips.push({ t: 'Madrid ✓', good: true });
+              if (r.wallViews) chips.push({ t: `saw wall ×${r.wallViews}` });
+              if (r.tappedBuy) chips.push({ t: `tapped buy ×${r.tappedBuy}` });
+              if (r.cancelled) chips.push({ t: `closed sheet ×${r.cancelled}`, bad: true });
+              if (r.feedback) chips.push({ t: `“${r.feedbackNote ?? REASON_LABEL[r.feedback] ?? r.feedback}”` });
+              if (r.trial) chips.push({ t: 'TRIAL', good: true });
+              if (r.restored) chips.push({ t: 'restored' });
+              if (r.activeDays >= 2) chips.push({ t: `${r.activeDays} days`, good: true });
+              return (
+                <li key={r.installId} className="flex flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-xs" style={{ background: DASH.inset, border: `1px solid ${DASH.line}` }}>
+                  <span className="w-28 shrink-0 tabular-nums" style={{ color: DASH.faint }}>
+                    {new Date(r.installedAt ?? r.assignedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="rounded-full px-2 py-0.5 font-semibold" style={{ background: `${a?.color ?? DASH.muted}22`, color: a?.color ?? DASH.muted }}>
+                    {r.variant === 'hard' ? 'Hard' : r.variant === 'madrid' ? 'Madrid' : r.variant}
+                  </span>
+                  {chips.map((c, i) => (
+                    <span
+                      key={i}
+                      className="rounded-full px-2 py-0.5"
+                      style={{
+                        background: c.good ? DASH.greenSoft : c.bad ? DASH.redSoft : DASH.track,
+                        color: c.good ? DASH.green : c.bad ? DASH.red : DASH.ink,
+                      }}
+                    >
+                      {c.t}
+                    </span>
+                  ))}
+                </li>
+              );
+            })}
+          </ul>
+          {rows.length > 40 && (
+            <button className="mt-3 text-xs font-semibold" style={{ color: DASH.blue }} onClick={() => setShowAll((v) => !v)}>
+              {showAll ? 'Show the newest 40' : `Show all ${rows.length}`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------- DAU
 
 function DauChart({ points }: { points: DauPoint[] }) {
@@ -637,6 +827,28 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
         ) : (
           <p className="text-sm" style={{ color: DASH.muted }}>
             Paste <code>supabase/migrations/20260924000000_analytics_wall_subscribers.sql</code> into the Supabase SQL editor to see this.
+          </p>
+        )}
+      </Card>
+
+      {/* PAYWALL A/B TEST */}
+      <Card>
+        <CardTitle
+          title="Paywall A/B test"
+          hint="From 1.9.2 each new install gets one wall: the hard wall right after onboarding, or Madrid free first (5 words), then the wall. The split is the remote dial. Every step is a share of that wall’s installs."
+          aside={
+            data.ab ? (
+              <span className="text-xs font-medium" style={{ color: DASH.muted }}>
+                {data.ab.length} installs in the test
+              </span>
+            ) : null
+          }
+        />
+        {data.ab ? (
+          <AbTest rows={data.ab} />
+        ) : (
+          <p className="text-sm" style={{ color: DASH.muted }}>
+            Paste <code>supabase/migrations/20261012000000_analytics_paywall_ab.sql</code> into the Supabase SQL editor to see this.
           </p>
         )}
       </Card>
