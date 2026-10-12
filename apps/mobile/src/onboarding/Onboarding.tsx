@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTourAfterOnboarding } from '../tour/tour';
 import {
   BackHandler,
   Pressable,
@@ -205,6 +206,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         index: canonicalIndex(currentIdRef.current),
       });
       storage.setOnboarded();
+      // Arms the first-run walkthrough for the feed this hands over to.
+      startTourAfterOnboarding();
       olog(
         `finished — onboarded=1 skipped=${skipped ? 1 : 0} ` +
           `selfLevel=${storage.getSelfLevel() ?? 'none'} ` +

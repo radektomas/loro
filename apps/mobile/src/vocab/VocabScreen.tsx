@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cleanWord } from '@loro/core/dictionary';
 import {
+  Dimensions,
   Modal,
   Pressable,
   ScrollView,
@@ -37,6 +38,9 @@ import { PracticeDrill } from './PracticeDrill';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { findWordOccurrences } from '@loro/core/occurrences';
+import { setTourStep, useTourStep } from '../tour/tour';
+import { WordsTour, type TourRect } from '../tour/WordsTour';
+import { HERE_ROW_H } from './RoadmapPath';
 
 /**
  * VOCAB — port of the web's app/vocab/page.tsx.
@@ -405,6 +409,69 @@ export function VocabScreen({
   const wordYRef = useRef<number | null>(null);
   const focusWordRef = useRef(false);
   const anchoredRef = useRef(false);
+  /**
+   * THE WALKTHROUGH'S WORDS BEATS (tour/WordsTour.tsx): this screen knows the
+   * scroll and where the path sits, so it turns "the city", "the next word"
+   * and "the map" into one rect in the overlay's coordinates, scrolls there,
+   * and hands the rect over once the scroll has landed.
+   */
+  const tourStep = useTourStep();
+  const wordsStep =
+    active && (tourStep === 'wordsHere' || tourStep === 'wordsTrain' || tourStep === 'map') ? tourStep : null;
+  const [tourRect, setTourRect] = useState<TourRect | null>(null);
+  const scrollTopRef = useRef(0);
+  const scrollOffRef = useRef(0);
+  const mapLayoutRef = useRef<{ y: number; height: number } | null>(null);
+  const stageLayoutRef = useRef<{ y: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!wordsStep) {
+      setTourRect(null);
+      return;
+    }
+    // The first beat starts in the same render that unhides this tab, before
+    // its layouts have reported: measure a moment later, then scroll, then
+    // hand the rect over once the scroll has landed.
+    let landed: ReturnType<typeof setTimeout> | null = null;
+    const measured = setTimeout(() => {
+      const pathY = pathYRef.current;
+      if (pathY === null) return; // the empty-trip preview: the card alone
+      const screenW = Dimensions.get('window').width;
+      let target: { y: number; height: number } | null = null;
+      if (wordsStep === 'map' && mapLayoutRef.current) {
+        target = { y: pathY + mapLayoutRef.current.y, height: mapLayoutRef.current.height };
+      } else if (wordsStep === 'wordsTrain' && wordYRef.current !== null) {
+        target = { y: pathY + wordYRef.current - HERE_ROW_H / 2, height: HERE_ROW_H };
+      } else if (stageLayoutRef.current) {
+        // The sign and the first rows under it — the whole city can be taller
+        // than the screen, and a hole bigger than the view points at nothing.
+        target = { y: pathY + stageLayoutRef.current.y, height: Math.min(stageLayoutRef.current.height, 330) };
+      }
+      if (!target) return;
+      const t = target;
+      scrollRef.current?.scrollTo({ y: Math.max(0, t.y - (wordsStep === 'map' ? 24 : 110)), animated: true });
+      landed = setTimeout(() => {
+        setTourRect({
+          x: 16,
+          y: scrollTopRef.current + t.y - scrollOffRef.current,
+          width: screenW - 32,
+          height: t.height,
+        });
+      }, 360);
+    }, wordsStep === 'wordsHere' ? 140 : 0);
+    return () => {
+      clearTimeout(measured);
+      if (landed) clearTimeout(landed);
+    };
+  }, [wordsStep]);
+  const tourNext = () => {
+    if (tourStep === 'wordsHere') setTourStep('wordsTrain');
+    else if (tourStep === 'wordsTrain') setTourStep('map');
+    else {
+      setTourStep('done');
+      onGoToFeed();
+    }
+  };
+
   const scrollToHere = () => {
     if (anchoredRef.current || pathYRef.current === null || hereYRef.current === null) return;
     anchoredRef.current = true;
@@ -677,6 +744,14 @@ export function VocabScreen({
         ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={!wordsStep}
+        onLayout={(e) => {
+          scrollTopRef.current = e.nativeEvent.layout.y;
+        }}
+        onScroll={(e) => {
+          scrollOffRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         {/* THE ONLY SURFACE THIS MAY EVER MOUNT ON. The feed is structurally
             uninterruptible; core enforces the same rule independently
@@ -733,6 +808,10 @@ export function VocabScreen({
                 onOpen={startTraining}
                 onLongPress={openDetail}
                 onArrive={onArrive}
+                onTourLayout={(part, y, height) => {
+                  if (part === 'map') mapLayoutRef.current = { y, height };
+                  else stageLayoutRef.current = { y, height };
+                }}
                 onAnchor={(signY, wordY) => {
                   hereYRef.current = signY;
                   wordYRef.current = wordY;
@@ -753,6 +832,7 @@ export function VocabScreen({
       {postcard !== null && active && detail === null && !picker && (
         <PostcardLayer stage={postcard} onClose={() => setPostcard(null)} />
       )}
+      {wordsStep && <WordsTour step={wordsStep} rect={tourRect} onNext={tourNext} />}
 
       {/* ONE WINDOW. Its contents swap; it never gains a sibling. `visible`
           drops before the contents do, so the slide-out has something to draw

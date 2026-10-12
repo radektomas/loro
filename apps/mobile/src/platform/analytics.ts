@@ -109,6 +109,10 @@ export type EventName =
   | 'taste_outro'          // reached the closing card
   // the wall
   | 'paywall_shown'        // the gate rendered PaywallScreen; { after: 'arrival' | 'launch' } since the free Madrid pass
+  | 'paywall_style'        // { style: 'multi' | 'single', percent, bucket } — the wall-shape split, logged once when decided
+  | 'paywall_page'         // { page: 2 | 3 } — the multi-page wall reached the value / price page
+  | 'paywall_demo_shown'   // the phone with the screen recording slid up in front of the launch wall (once per install)
+  | 'paywall_demo_done'    // { watchedMs, played } — Continuar tapped, the wall is next
   | 'free_pass_ended'      // { how: 'arrival' | 'launch' } — Madrid done, the wall is next (paywall/freePass.ts)
   | 'paywall_offerings_failed'
   | 'purchase_started'     // tapped subscribe; the Apple sheet is up
@@ -119,6 +123,9 @@ export type EventName =
   | 'restore_succeeded'
   | 'restore_empty'
   | 'restore_failed'
+  // the first-run walkthrough (tour/tour.ts)
+  | 'tour_step'            // { step, from } — a beat reached: blank, save, words, wordsHere, wordsTrain, map, done
+  | 'tour_skipped'         // { at } — Skip tapped on that beat
   // the app itself
   | 'video_watched'
   // THE LOOP (2026-09-07). Until this update the log stopped at

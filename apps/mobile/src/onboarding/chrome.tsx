@@ -70,7 +70,9 @@ export function Title({ children }: { children: string }) {
   return <Text style={styles.title}>{children}</Text>;
 }
 
+/** Renders nothing for an empty string, so a screen can drop its body line in copy.ts alone. */
 export function Body({ children }: { children: string }) {
+  if (!children) return null;
   return <Text style={styles.body}>{children}</Text>;
 }
 

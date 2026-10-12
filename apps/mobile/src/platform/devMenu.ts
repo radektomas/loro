@@ -7,10 +7,11 @@ import { devRaiseTripMoment } from '../feed/tripMoments';
 import { devShowCityCard } from '../share/SharePreview';
 import { devSendNotification } from './notifications';
 import { isDevPaywallForced, setDevPaywallForced } from './purchases';
-import { setDevPaywallVariant } from './remoteFlags';
+import { setDevPaywallStyle, setDevPaywallVariant } from './remoteFlags';
+import { devRestartTour } from '../tour/tour';
 import { DEV_ARRIVAL_WALL_KEY, endFreePass } from '../paywall/freePass';
 import { DEV_SHOW_PAYWALL_FEEDBACK_KEY } from '../paywall/PaywallFeedback';
-import { storageDriver } from './storage';
+import { mmkv, storageDriver } from './storage';
 
 /**
  * THE DEV MENU — the closest thing this app has to a command palette.
@@ -172,6 +173,31 @@ export function installDevMenu(): void {
      * nobody resets onboarding in order to watch it end somewhere other than
      * where a new install ends. The entitled path is the next entry down.
      */
+    /** The whole new-user path with the 3-page wall: onboarding from the
+        top, then demo → value → price. Pins the hard arm and the multi
+        style (both dev keys, so the wipe below keeps them). */
+    {
+      name: 'Loro · ★ Full first run: onboarding + 3-page paywall',
+      run: () => {
+        setDevPaywallVariant('hard');
+        setDevPaywallStyle('multi');
+        setDevPaywallForced(true);
+        storageDriver.clearByPrefix('loro.');
+        console.log('[loro:dev] full first run — onboarding, then the multi-page wall');
+        DevSettings.reload();
+      },
+    },
+    /** The first-run walkthrough again (tour/tour.ts), straight into the
+        feed: clears the paywall override so a subscribed device lands there. */
+    {
+      name: 'Loro · ★ Walkthrough: run it again',
+      run: () => {
+        devRestartTour();
+        setDevPaywallForced(false);
+        storageDriver.local.removeItem(DEV_ARRIVAL_WALL_KEY);
+        DevSettings.reload();
+      },
+    },
     {
       name: 'Loro · First run as a new user (Madrid free, then paywall)',
       run: () => {
@@ -281,6 +307,45 @@ export function installDevMenu(): void {
       name: 'Loro · Paywall A/B: clear (decide from remote)',
       run: () => {
         setDevPaywallVariant(null);
+        DevSettings.reload();
+      },
+    },
+    /** The wall-shape split (remoteFlags.getPaywallStyle). Multi = demo →
+        value → price; single = the one-page wall. Pin, then "Show paywall now". */
+    {
+      name: 'Loro · Paywall style: multi-page (demo → value → price)',
+      run: () => {
+        setDevPaywallStyle('multi');
+        mmkv.remove('loro.paywallDemoSeen');
+        storageDriver.local.removeItem(DEV_ARRIVAL_WALL_KEY);
+        setDevPaywallForced(true);
+        DevSettings.reload();
+      },
+    },
+    {
+      name: 'Loro · Paywall style: single page',
+      run: () => {
+        setDevPaywallStyle('single');
+        storageDriver.local.removeItem(DEV_ARRIVAL_WALL_KEY);
+        setDevPaywallForced(true);
+        DevSettings.reload();
+      },
+    },
+    {
+      name: 'Loro · Paywall style: clear (decide from remote)',
+      run: () => {
+        setDevPaywallStyle(null);
+        DevSettings.reload();
+      },
+    },
+    /** The demo phone in front of the launch wall shows once per install
+        (paywall/DemoIntro.tsx); this forgets it was seen and opens the wall. */
+    {
+      name: 'Loro · Paywall demo: show again',
+      run: () => {
+        mmkv.remove('loro.paywallDemoSeen');
+        storageDriver.local.removeItem(DEV_ARRIVAL_WALL_KEY);
+        setDevPaywallForced(true);
         DevSettings.reload();
       },
     },

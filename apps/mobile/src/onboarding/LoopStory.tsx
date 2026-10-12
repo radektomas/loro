@@ -17,7 +17,8 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 const MINT = '#5ee6a8';
 const INK = '#f2f5f3';
-const SCENE_MS = 3200;
+/** Per scene. Was 3200 (Radek, 2026-10-12: "faster please, it's too long"). */
+const SCENE_MS = 1900;
 
 export const LOOP_LINES = [
   'Tap a word you don’t know in a video.',
@@ -47,7 +48,7 @@ function Pop({ active, delay, children, style }: { active: boolean; delay: numbe
     if (!active) return;
     const anim = Animated.sequence([
       Animated.delay(delay),
-      Animated.spring(v, { toValue: 1, friction: 5, tension: 110, useNativeDriver: true }),
+      Animated.spring(v, { toValue: 1, friction: 6, tension: 170, useNativeDriver: true }),
     ]);
     anim.start();
     return () => anim.stop();
@@ -58,8 +59,8 @@ function Pop({ active, delay, children, style }: { active: boolean; delay: numbe
 
 /** Scene 1: the subtitle, a tap on "esta", and the saved tag. */
 function TapScene({ active }: { active: boolean }) {
-  const lit = useProgress(active, 250, 600);
-  const ripple = useProgress(active, 700, 450);
+  const lit = useProgress(active, 170, 320);
+  const ripple = useProgress(active, 420, 240);
   const rippleScale = ripple.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.8] });
   const rippleOpacity = ripple.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.6, 0] });
   return (
@@ -79,7 +80,7 @@ function TapScene({ active }: { active: boolean }) {
           <Text style={styles.word}>ciudad</Text>
         </View>
       </View>
-      <Pop active={active} delay={1100} style={styles.tag}>
+      <Pop active={active} delay={620} style={styles.tag}>
         <Text style={styles.tagText}>✓ Saved · this</Text>
       </Pop>
     </View>
@@ -88,7 +89,7 @@ function TapScene({ active }: { active: boolean }) {
 
 /** Scene 2: a slice of the path; the white coin flips to a mint check. */
 function TrainScene({ active }: { active: boolean }) {
-  const flip = useProgress(active, 350, 1000);
+  const flip = useProgress(active, 240, 540);
   const white = flip.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
   return (
     <View style={styles.scene}>
@@ -105,7 +106,7 @@ function TrainScene({ active }: { active: boolean }) {
               <View style={styles.play} />
             </Animated.View>
           </View>
-          <Pop active={active} delay={1150} style={styles.aprendida}>
+          <Pop active={active} delay={660} style={styles.aprendida}>
             <Text style={styles.aprendidaText}>¡Aprendida!</Text>
             <Text style={styles.aprendidaWord}>esta · this</Text>
           </Pop>
@@ -124,7 +125,7 @@ function ReturnScene({ active }: { active: boolean }) {
   useEffect(() => {
     setTyped('');
     if (!active) return;
-    const timers = ['e', 'es', 'est', 'esta'].map((t, i) => setTimeout(() => setTyped(t), 650 + i * 230));
+    const timers = ['e', 'es', 'est', 'esta'].map((t, i) => setTimeout(() => setTyped(t), 340 + i * 140));
     return () => timers.forEach(clearTimeout);
   }, [active]);
   const done = typed === 'esta';
@@ -140,7 +141,7 @@ function ReturnScene({ active }: { active: boolean }) {
           <Text style={styles.word}>ciudad</Text>
         </View>
       </View>
-      <Pop active={active && done} delay={150} style={styles.tag}>
+      <Pop active={active && done} delay={80} style={styles.tag}>
         <Text style={styles.tagText}>¡Eso es!</Text>
       </Pop>
     </View>
@@ -165,9 +166,9 @@ export function LoopStory({ isCurrent }: { isCurrent: boolean }) {
     if (!isCurrent) return;
     const ease = Easing.inOut(Easing.cubic);
     const show = () =>
-      Animated.timing(fade, { toValue: 1, duration: 520, easing: ease, useNativeDriver: true });
+      Animated.timing(fade, { toValue: 1, duration: 300, easing: ease, useNativeDriver: true });
     const hide = () =>
-      Animated.timing(fade, { toValue: 0, duration: 380, easing: ease, useNativeDriver: true });
+      Animated.timing(fade, { toValue: 0, duration: 220, easing: ease, useNativeDriver: true });
     show().start();
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let next = 1; next < 3; next++) {
@@ -213,7 +214,7 @@ function StoryLine({ index, line, state }: { index: number; line: string; state:
   useEffect(() => {
     Animated.timing(lit, {
       toValue: state === 'next' ? 0 : 1,
-      duration: 450,
+      duration: 280,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: true,
     }).start();

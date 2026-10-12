@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getPaywallVariant } from '../platform/remoteFlags';
+import { getPaywallStyle, getPaywallVariant } from '../platform/remoteFlags';
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import Animated, { Easing, FadeInDown, FadeInRight } from 'react-native-reanimated';
 import type {
   PurchasesPackage,
   PurchasesStoreProduct,
@@ -25,9 +25,10 @@ import { Backdrop, IconTile, TypingMock } from '../onboarding/art';
 import { getCatalog } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { storage } from '@loro/core/storage';
-import { buildRoadmap, citySize, splitCities, tripStop, withLevelKnown } from '@loro/core/roadmap';
+import { TRIP, buildRoadmap, citySize, splitCities, tripStop, withLevelKnown } from '@loro/core/roadmap';
 import { cleanWord } from '@loro/core/dictionary';
 import { KNOWN_BOX } from '@loro/core/srs';
+import { DemoIntro, paywallDemoDue } from './DemoIntro';
 import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue, takeDevPaywallFeedback } from './PaywallFeedback';
 import { getPlan, type Plan } from '../progress/plan';
 import { getPackageTypes, getPurchasesApi } from '../platform/purchases';
@@ -38,6 +39,7 @@ import {
   GROUND,
   MUTED,
   ON_ACCENT,
+  PrimaryButton,
   TEXT,
   TextButton,
 } from '../onboarding/chrome';
@@ -351,6 +353,23 @@ function ArrivedHead({ tight }: { tight: boolean }) {
   );
 }
 
+/** Three dots over the multi-page wall: demo, value, price. */
+function PageDots({ page }: { page: 1 | 2 | 3 }) {
+  return (
+    <View style={styles.dots} accessibilityLabel={`Page ${page} of 3`}>
+      {[1, 2, 3].map((n) => (
+        <View key={n} style={[styles.dot, n === page && styles.dotOn, n < page && styles.dotDone]} />
+      ))}
+    </View>
+  );
+}
+
+/** Videos the user can actually watch: the catalog plus the bundled shelves,
+    rounded DOWN to the ten. Counted, like wordCount, never typed. */
+function videoCount(): number {
+  return Math.floor((getCatalog().length + collectionVideos.length) / 10) * 10;
+}
+
 function wordCount(): number {
   const keys = new Set<string>();
   for (const video of [...getCatalog(), ...collectionVideos]) {
@@ -390,10 +409,29 @@ export function PaywallScreen({
     void getPermissionState().then((s) => setRemindable(s === 'granted'));
   }, [arrived]);
   const words = useMemo(() => wordCount(), []);
+  const videos = useMemo(() => videoCount(), []);
   const [offer, setOffer] = useState<Offer>({ status: 'loading' });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<'purchase' | 'restore' | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  /**
+   * THE MULTI-PAGE WALL (Radek, 2026-10-12: "multi page paywall converts
+   * better … it solves the problem, I couldn't fit everything into one
+   * screen"). The launch wall only, and only in the 'multi' arm of the
+   * remote split (remoteFlags.getPaywallStyle):
+   *   1. the demo — a phone slides up playing the real recording (DemoIntro)
+   *   2. the value — their plan, what it buys, the App Store review
+   *   3. the price — Loro: "We want you to try Loro for free", then the button
+   * The demo is once per install; a later launch opens on the price page.
+   * The 'single' arm is the one-page wall exactly as shipped through 1.9.2.
+   */
+  const [multi] = useState(() => !arrived && getPaywallStyle() === 'multi');
+  const [demo, setDemo] = useState(() => multi && paywallDemoDue());
+  const [page, setPage] = useState<2 | 3>(() => (multi && paywallDemoDue() ? 2 : 3));
+  const showPrice = !multi || page === 3;
+  useEffect(() => {
+    if (multi && !demo) track('paywall_page', { page });
+  }, [multi, demo, page]);
 
   /**
    * THE WALL WAS SEEN. The denominator of every conversion number on the
@@ -404,7 +442,7 @@ export function PaywallScreen({
    * looked at.
    */
   useEffect(() => {
-    track('paywall_shown', { after: arrived ? 'arrival' : 'launch', variant: getPaywallVariant() });
+    track('paywall_shown', { after: arrived ? 'arrival' : 'launch', variant: getPaywallVariant(), style: arrived ? null : getPaywallStyle() });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -623,16 +661,28 @@ export function PaywallScreen({
             the measured height stays the natural one and nothing loops. */}
         <View
           onLayout={arrived ? (e) => setInnerH(e.nativeEvent.layout.height) : undefined}
-          style={arrived && fit < 1 ? { transform: [{ scale: fit }], transformOrigin: 'top center' } : undefined}
+          style={
+            arrived && fit < 1
+              ? { transform: [{ scale: fit }], transformOrigin: 'top center' }
+              : multi
+                ? styles.pageFill
+                : undefined
+          }
         >
         {/* THE SALE, in this order: their plan (the answers they just gave,
             as chips — level, pace), the product doing the thing (a clip with
             a word lit and Loro saying the line, the tap→saved beat on a
             loop), three lines of what that buys, and a free week that is
             safe to start. Nothing here promises an outcome. */}
+        {multi && <PageDots page={demo ? 1 : page} />}
+        <Animated.View
+          key={multi ? `page-${page}` : 'single'}
+          entering={multi ? FadeInRight.duration(280) : undefined}
+          style={multi ? styles.pageFill : undefined}
+        >
         {arrived ? (
           <ArrivedHead tight={tight} />
-        ) : (
+        ) : multi && page === 3 ? null : (
           <>
             <Text style={styles.title}>Your plan is ready</Text>
             <View style={styles.chips}>
@@ -644,6 +694,24 @@ export function PaywallScreen({
               </View>
             </View>
           </>
+        )}
+        {/* THREE COUNTED NUMBERS on the value page (Radek: "half of the page
+            is empty … put something more"). Each is read off the device. */}
+        {multi && page === 2 && (
+          <View style={styles.stats}>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{videos.toLocaleString('en-US')}+</Text>
+              <Text style={styles.statLabel}>real videos</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{words.toLocaleString('en-US')}+</Text>
+              <Text style={styles.statLabel}>words to tap</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{TRIP.length}</Text>
+              <Text style={styles.statLabel}>cities to visit</Text>
+            </View>
+          </View>
         )}
         {/* No paragraph under the title: the value card below says it, and
             the wall must fit one screen (Radek: "I don't want any
@@ -672,17 +740,17 @@ export function PaywallScreen({
             blank does in the app: letter by letter, then green (Radek,
             2026-09-22: "the mascot saying in a bubble 'we want you to try
             Loro for free', and the free will be like esta is now"). */}
-        {!arrived && (
-        <View style={styles.hero}>
+        {!arrived && (!multi || page === 3) && (
+        <View style={[styles.hero, multi && styles.heroBig]}>
           <Image
             source={BRAND.parrot}
-            style={styles.heroParrot}
+            style={multi ? styles.heroParrotBig : styles.heroParrot}
             resizeMode="contain"
             accessibilityRole="image"
             accessibilityLabel="Loro the parrot"
           />
-          <View style={styles.bubble}>
-            <View style={styles.bubbleTail} />
+          <View style={[styles.bubble, multi && styles.bubbleBig]}>
+            {!multi && <View style={styles.bubbleTail} />}
             <TypingMock
               before={['We', 'want', 'you', 'to', 'try', 'Loro', 'for']}
               answer="free"
@@ -691,7 +759,7 @@ export function PaywallScreen({
               isCurrent
               bar={false}
               frame={false}
-              size={18}
+              size={multi ? 26 : 18}
             />
           </View>
         </View>
@@ -700,34 +768,37 @@ export function PaywallScreen({
         {/* WHAT THAT BUYS — three lines, each a shipped fact. Not on the
             arrival wall (Radek, 2026-10-08: "put the real clips and Peppa
             Pig away"): there their words and the review carry it. */}
-        {!arrived && (
-          <View style={styles.benefits}>
+        {!arrived && (!multi || page === 2) && (
+          <View style={[styles.benefits, multi && styles.benefitsBig]}>
             <View style={styles.benefit}>
-              <IconTile glyph="▶︎" tint="sky" size={34} />
-              <Text style={styles.benefitText}>Real clips at your level, from real people</Text>
+              <IconTile glyph="▶︎" tint="sky" size={multi ? 42 : 34} />
+              <Text style={[styles.benefitText, multi && styles.benefitTextBig]}>Real clips at your level, from real people</Text>
             </View>
             <View style={styles.benefit}>
-              <IconTile glyph="✓" tint="mint" size={34} />
-              <Text style={styles.benefitText}>Every word you save, trained until it sticks</Text>
+              <IconTile glyph="✓" tint="mint" size={multi ? 42 : 34} />
+              <Text style={[styles.benefitText, multi && styles.benefitTextBig]}>Every word you save, trained until it sticks</Text>
             </View>
             <View style={styles.benefit}>
-              <IconTile glyph="★︎" tint="amber" size={34} />
-              <Text style={styles.benefitText}>{words.toLocaleString('en-US')}+ Spanish words, every one tappable</Text>
+              <IconTile glyph="★︎" tint="amber" size={multi ? 42 : 34} />
+              <Text style={[styles.benefitText, multi && styles.benefitTextBig]}>
+                {multi ? `One trip from Madrid across ${new Set(TRIP.map((t) => t.country)).size} Spanish-speaking countries` : `${words.toLocaleString('en-US')}+ Spanish words, every one tappable`}
+              </Text>
             </View>
           </View>
         )}
 
         {/* WHAT SOMEONE SAID — see REVIEW. Out of the arrival it sits in
             Loro's bubble instead (ArrivedHead). */}
-        {!arrived && (
-          <View style={styles.review} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
+        {!arrived && (!multi || page === 2) && (
+          <View style={[styles.review, multi && styles.reviewBig]} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
             <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
-            <Text style={styles.reviewText}>“{REVIEW.text}”</Text>
+            <Text style={[styles.reviewText, multi && styles.reviewTextBig]}>“{REVIEW.text}”</Text>
             <Text style={styles.reviewBy}>
               {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
             </Text>
           </View>
         )}
+        </Animated.View>
 
         </View>
       </ScrollView>
@@ -779,8 +850,10 @@ export function PaywallScreen({
               })}
           </View>
         )}
+        {/* The value page's only button: on to the price. */}
+        {!showPrice && <PrimaryButton label="Continuar" onPress={() => setPage(3)} />}
         {/* The owner's line, right above the button it belongs to. */}
-        {selected && (
+        {showPrice && selected && (
           <Pressable
             onPress={() => void purchase()}
             disabled={busy !== null}
@@ -814,7 +887,7 @@ export function PaywallScreen({
             {remindable ? 'No charge today · We remind you 2 days before' : 'No charge today · Cancel anytime in Settings'}
           </Text>
         )}
-        {selected && (
+        {showPrice && selected && (
           <Text style={styles.ctaTerms}>
             {selectedDays !== null
               ? `${selectedDays} days free, then ${selected.product.priceString} ${billedWord(selectedPeriod)}` +
@@ -825,7 +898,7 @@ export function PaywallScreen({
         )}
         {/* THE OTHER PLAN, one tap away. Names its price and whether it has a
             trial, so the choice is made here and not discovered on the sheet. */}
-        {other && !arrived && (
+        {showPrice && other && !arrived && (
           <Pressable
             onPress={() => setSelectedId(other.identifier)}
             accessibilityRole="button"
@@ -907,6 +980,8 @@ export function PaywallScreen({
           </ScrollView>
         </View>
       </Modal>
+      {/* Last, so it sits over the whole wall until Continuar slides it away. */}
+      {demo && <DemoIntro onDone={() => setDemo(false)} />}
     </View>
   );
 }
@@ -1008,6 +1083,21 @@ const styles = StyleSheet.create({
   chipAccentText: { color: ACCENT, fontSize: 13, fontWeight: '800' },
   // ---- the demo and the benefits ----
   benefits: { gap: 10, marginTop: 18 },
+  benefitsBig: { gap: 16, marginTop: 26 },
+  benefitTextBig: { fontSize: 16.5, lineHeight: 22 },
+  pageFill: { flexGrow: 1, justifyContent: 'center' },
+  stats: { flexDirection: 'row', gap: 10, marginTop: 22 },
+  stat: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(20,26,23,0.92)',
+    borderColor: 'rgba(242,245,243,0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 14,
+  },
+  statNum: { color: ACCENT, fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
+  statLabel: { color: MUTED, fontSize: 12.5, fontWeight: '600', marginTop: 2 },
   benefit: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   benefitText: { color: TEXT, flex: 1, fontSize: 14, fontWeight: '600', lineHeight: 19 },
   // ---- the review ----
@@ -1027,6 +1117,15 @@ const styles = StyleSheet.create({
   // ---- Loro and the bubble ----
   hero: { alignItems: 'flex-end', flexDirection: 'row', gap: 10, marginTop: 18 },
   heroParrot: { height: 96, width: 64 },
+  heroBig: { alignItems: 'center', flexDirection: 'column-reverse', gap: 4, marginTop: 56 },
+  bubbleBig: { alignSelf: 'stretch', borderBottomLeftRadius: 18, flex: 0, marginBottom: 0, paddingHorizontal: 20, paddingVertical: 18 },
+  reviewBig: { marginTop: 22, paddingHorizontal: 18, paddingVertical: 16 },
+  reviewTextBig: { fontSize: 16.5, lineHeight: 23 },
+  heroParrotBig: { height: 190, width: 128 },
+  dots: { alignSelf: 'center', flexDirection: 'row', gap: 6, marginBottom: 14 },
+  dot: { backgroundColor: 'rgba(242,245,243,0.18)', borderRadius: 3, height: 6, width: 6 },
+  dotOn: { backgroundColor: ACCENT, width: 22 },
+  dotDone: { backgroundColor: 'rgba(94,230,168,0.5)' },
   bubble: {
     backgroundColor: 'rgba(20,26,23,0.95)',
     borderColor: 'rgba(242,245,243,0.1)',

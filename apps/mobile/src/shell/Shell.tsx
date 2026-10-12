@@ -15,6 +15,8 @@ import { getPlan } from '../progress/plan';
 import { initLevelUp } from '../feed/levelUp';
 import { SharePreviewHost } from '../share/SharePreview';
 import { subscribeToMadridDone } from '../paywall/freePass';
+import { TOUR_STAGE, isTouring, setTourStep, skipTour, useTourStep, type TourStep } from '../tour/tour';
+import { useFeedTour } from '../tour/FeedTour';
 
 /**
  * The app shell: three tabs, hand-rolled.
@@ -75,6 +77,28 @@ const INACTIVE = 'rgba(242,245,243,0.42)';
 const MADRID_DONE_TO_WORDS_MS = 3500;
 
 const Feed = memo(FeedScreen);
+
+/**
+ * The feed, with the walkthrough when one runs. Its own component so the player
+ * subscriptions the script needs (status, clock) re-render only this and
+ * never the Shell — and it stays mounted through the Words beats with a
+ * quiet walkthrough, so tapping Words does not also flip the whole feed
+ * back to normal (popups armed, blanks re-planned) in the same frame.
+ */
+function TourFeed({
+  step,
+  active,
+  onGoToProgress,
+  onGoToWords,
+}: {
+  step: TourStep;
+  active: boolean;
+  onGoToProgress: () => void;
+  onGoToWords: () => void;
+}) {
+  const walkthrough = useFeedTour(step);
+  return <Feed active={active} onGoToProgress={onGoToProgress} onGoToWords={onGoToWords} walkthrough={walkthrough} />;
+}
 const Vocab = memo(VocabScreen);
 const Progress = memo(ProgressScreen);
 
@@ -105,6 +129,33 @@ export function Shell() {
   }, []);
   /** The bubble on the Words tab — see useDueCount for what it counts. */
   const due = useDueCount();
+
+  /**
+   * THE FIRST-RUN WALKTHROUGH (tour/tour.ts). Its feed beats ride the feed's
+   * walkthrough seam; the "open Words" beat lives here, on the tab bar it
+   * points at: the Words tab breathes a mint ring until it is tapped.
+   */
+  const tourStep = useTourStep();
+  const touring = isTouring(tourStep);
+  const ring = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (tourStep !== 'words') return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ring, { toValue: 1, duration: 1100, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(ring, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [tourStep, ring]);
+  // The Words beats belong to the Words tab: a user who leaves it mid-tour
+  // is sent back to "open Words" rather than finding a stranded overlay.
+  useEffect(() => {
+    if (tab !== 'vocab' && (tourStep === 'wordsHere' || tourStep === 'wordsTrain' || tourStep === 'map')) {
+      setTourStep('words');
+    }
+  }, [tab, tourStep]);
 
   /**
    * A saved word landing in the tab (the feed's save chip, pulseWordsTab):
@@ -194,7 +245,9 @@ export function Shell() {
           would drop that state instead. */}
       <View style={styles.screens}>
         <View style={[styles.screen, tab !== 'feed' && styles.hidden]}>
-          <Feed active={tab === 'feed'} onGoToProgress={goToProgress} onGoToWords={goToWords} />
+          {/* Always the same component, so the end of the tour never remounts
+              the feed (its scroll, its player box, the clip playing). */}
+          <TourFeed step={tourStep} active={tab === 'feed'} onGoToProgress={goToProgress} onGoToWords={goToWords} />
         </View>
         <View style={[styles.screen, tab !== 'vocab' && styles.hidden]}>
           <Vocab active={tab === 'vocab'} onGoToFeed={goToFeed} />
@@ -208,6 +261,30 @@ export function Shell() {
         style={[styles.bar, { paddingBottom: insets.bottom + 6 }]}
         onLayout={(event) => setTabBarHeight(event.nativeEvent.layout.height)}
       >
+        {/* The tour's strip: where you are in it, and the way out. Part of
+            the bar (not floating over the feed), so nothing covers the band
+            and the player box simply measures a little shorter. */}
+        {touring && (
+          <View style={styles.tourStrip}>
+            <Text style={styles.tourLabel}>Quick tour</Text>
+            <View style={styles.tourDots}>
+              {[1, 2, 3, 4].map((n) => (
+                <View
+                  key={n}
+                  style={[
+                    styles.tourDot,
+                    n < TOUR_STAGE[tourStep] && styles.tourDotDone,
+                    n === TOUR_STAGE[tourStep] && styles.tourDotOn,
+                  ]}
+                />
+              ))}
+            </View>
+            <Pressable onPress={skipTour} hitSlop={10} accessibilityRole="button" accessibilityLabel="Skip the tour">
+              <Text style={styles.tourSkip}>Skip</Text>
+            </Pressable>
+          </View>
+        )}
+        <View style={styles.tabs}>
         {TABS.map((entry) => {
           const selected = tab === entry.key;
           return (
@@ -216,6 +293,7 @@ export function Shell() {
               onPress={() => {
                 // A tap on the tab already showing is not an open.
                 if (entry.key !== tab) track('tab_opened', { tab: entry.key });
+                if (entry.key === 'vocab' && tourStep === 'words') setTourStep('wordsHere');
                 setTab(entry.key);
               }}
               accessibilityRole="tab"
@@ -231,6 +309,18 @@ export function Shell() {
                   inside the icon, and label weight — so it survives a
                   colour-blind reading. */}
               <View>
+                {entry.key === 'vocab' && tourStep === 'words' && (
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.tourRing,
+                      {
+                        opacity: ring.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.9, 0] }),
+                        transform: [{ scale: ring.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.9] }) }],
+                      },
+                    ]}
+                  />
+                )}
                 {entry.key === 'vocab' && (
                   <Animated.Text
                     pointerEvents="none"
@@ -282,6 +372,7 @@ export function Shell() {
             </Pressable>
           );
         })}
+        </View>
       </View>
       {__DEV__ && <SharePreviewHost />}
     </View>
@@ -302,8 +393,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d110f',
     borderTopColor: 'rgba(242,245,243,0.10)',
     borderTopWidth: 1,
-    flexDirection: 'row',
     paddingTop: 6,
+  },
+  tabs: { flexDirection: 'row' },
+  tourStrip: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingBottom: 6,
+    paddingHorizontal: 18,
+  },
+  tourLabel: { color: 'rgba(242,245,243,0.55)', fontSize: 12, fontWeight: '700' },
+  tourDots: { flex: 1, flexDirection: 'row', gap: 5 },
+  tourDot: { backgroundColor: 'rgba(242,245,243,0.16)', borderRadius: 3, height: 5, width: 5 },
+  tourDotOn: { backgroundColor: ACTIVE, width: 16 },
+  tourDotDone: { backgroundColor: 'rgba(94,230,168,0.5)' },
+  tourSkip: { color: 'rgba(242,245,243,0.55)', fontSize: 12.5, fontWeight: '700' },
+  tourRing: {
+    borderColor: ACTIVE,
+    borderRadius: 999,
+    borderWidth: 2.5,
+    height: 40,
+    left: -8,
+    position: 'absolute',
+    top: -8,
+    width: 40,
   },
   tab: { alignItems: 'center', flex: 1, gap: 4, paddingVertical: 4 },
   tabPressed: { opacity: 0.6 },

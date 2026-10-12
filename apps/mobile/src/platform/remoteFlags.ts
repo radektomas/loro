@@ -34,6 +34,8 @@ import { getInstallId, track } from './analytics';
 const FLAGS_URL = `${CATALOG_BASE_URL}/config/flags.json`;
 const CACHE_KEY = 'loro.remoteFlags';
 const VARIANT_KEY = 'loro.paywallVariant';
+const STYLE_KEY = 'loro.paywallStyle';
+const DEV_STYLE_KEY = 'dev.paywallStyle';
 /** DEV pin. Outside 'loro.' on purpose: the dev menu's "First run as a new
     user" wipes 'loro.*', and the pin must survive it in either order. */
 const DEV_VARIANT_KEY = 'dev.paywallVariant';
@@ -43,8 +45,14 @@ const FETCH_TIMEOUT_MS = 6000;
 const DEFAULT_MADRID_PASS_PERCENT = 100;
 
 export type PaywallVariant = 'madrid' | 'hard';
+/** The launch wall's shape: 'multi' = demo → value → price, three pages;
+    'single' = the one-page wall that shipped through 1.9.2. */
+export type PaywallStyle = 'multi' | 'single';
 
-type Flags = { madridPassPercent: number };
+/** What a flags file without the field means: the one-page wall, as shipped. */
+const DEFAULT_MULTI_PAGE_PERCENT = 0;
+
+type Flags = { madridPassPercent: number; multiPagePercent: number };
 
 const listeners = new Set<() => void>();
 
@@ -61,7 +69,12 @@ function parseFlags(raw: unknown): Flags | null {
   if (!raw || typeof raw !== 'object') return null;
   const p = (raw as { madridPassPercent?: unknown }).madridPassPercent;
   if (typeof p !== 'number' || !Number.isFinite(p)) return null;
-  return { madridPassPercent: Math.min(100, Math.max(0, Math.round(p))) };
+  const m = (raw as { multiPagePercent?: unknown }).multiPagePercent;
+  const clamp = (n: number) => Math.min(100, Math.max(0, Math.round(n)));
+  return {
+    madridPassPercent: clamp(p),
+    multiPagePercent: typeof m === 'number' && Number.isFinite(m) ? clamp(m) : DEFAULT_MULTI_PAGE_PERCENT,
+  };
 }
 
 /** Called once per launch from finishBoot. Never throws. */
@@ -86,7 +99,8 @@ export function subscribeToRemoteFlags(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** 0..99, stable for an install. FNV-1a over the install id. */
+/** 0..99, stable for an install. FNV-1a over the install id (salted per
+    test, so the two splits are independent of each other). */
 function bucketOf(installId: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < installId.length; i++) {
@@ -120,6 +134,45 @@ export function getPaywallVariant(): PaywallVariant {
     return variant;
   } catch {
     return 'madrid';
+  }
+}
+
+/**
+ * THE SECOND SPLIT: which wall SHAPE an install gets (Radek, 2026-10-12:
+ * "multi page paywall converts better … im thinking about AB testing that").
+ * Same rules as the Madrid split — sticky once decided, logged once as
+ * `paywall_style`, waits for a real percent — but its own bucket (salted), so
+ * the two tests cross cleanly: any mix of madridPassPercent and
+ * multiPagePercent is a valid experiment.
+ */
+export function getPaywallStyle(): PaywallStyle {
+  try {
+    if (__DEV__) {
+      const pinned = mmkv.getString(DEV_STYLE_KEY);
+      if (pinned === 'multi' || pinned === 'single') return pinned;
+    }
+    const stored = mmkv.getString(STYLE_KEY);
+    if (stored === 'multi' || stored === 'single') return stored;
+    const flags = readCache();
+    if (!flags) return DEFAULT_MULTI_PAGE_PERCENT >= 100 ? 'multi' : 'single';
+    const id = getInstallId();
+    const bucket = id ? bucketOf(`style:${id}`) : 0;
+    const style: PaywallStyle = bucket < flags.multiPagePercent ? 'multi' : 'single';
+    mmkv.set(STYLE_KEY, style);
+    track('paywall_style', { style, percent: flags.multiPagePercent, bucket });
+    return style;
+  } catch {
+    return 'single';
+  }
+}
+
+/** DEV: pin or clear this device's wall shape from the dev menu. */
+export function setDevPaywallStyle(style: PaywallStyle | null): void {
+  if (style) {
+    mmkv.set(DEV_STYLE_KEY, style);
+  } else {
+    mmkv.remove(DEV_STYLE_KEY);
+    mmkv.remove(STYLE_KEY);
   }
 }
 

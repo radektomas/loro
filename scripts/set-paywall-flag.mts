@@ -6,6 +6,10 @@
  *   node scripts/set-paywall-flag.mts --percent 50 # 50% of NEW installs get the pass
  *   node scripts/set-paywall-flag.mts --percent 0  # everyone new: hard wall after onboarding
  *   node scripts/set-paywall-flag.mts --percent 100# everyone new: Madrid free first
+ *   node scripts/set-paywall-flag.mts --multi 50   # 50% of NEW installs get the 3-page launch wall
+ *
+ * The two dials are independent splits (remoteFlags.ts); setting one keeps
+ * the other's live value.
  *
  * Writes config/flags.json into the public loro-catalog bucket (60s cache).
  * Builds from 1.9.2 on fetch it once per launch (apps/mobile/src/platform/
@@ -21,22 +25,33 @@ import { SNAPSHOT_BUCKET } from './lib/catalog.mts';
 const PATH = 'config/flags.json';
 const PUBLIC_URL = `https://iqfsnkmtpffrepcedwih.supabase.co/storage/v1/object/public/${SNAPSHOT_BUCKET}/${PATH}`;
 
-const i = process.argv.indexOf('--percent');
-const raw = i >= 0 ? process.argv[i + 1] : undefined;
+const arg = (flag: string) => {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+};
+const rawPercent = arg('--percent');
+const rawMulti = arg('--multi');
 
-if (raw === undefined) {
-  const res = await fetch(`${PUBLIC_URL}?t=${Date.now()}`);
-  console.log(res.ok ? `live: ${await res.text()}` : `no flags file yet (HTTP ${res.status}) — the app uses its default: 100`);
+const res = await fetch(`${PUBLIC_URL}?t=${Date.now()}`);
+const live = res.ok ? ((await res.json()) as { madridPassPercent?: number; multiPagePercent?: number }) : {};
+
+if (rawPercent === undefined && rawMulti === undefined) {
+  console.log(res.ok ? `live: ${JSON.stringify(live)}` : `no flags file yet (HTTP ${res.status}) — the app uses its defaults: madrid 100, multi 0`);
   process.exit(0);
 }
 
-const percent = Number(raw);
-if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
-  console.error(`--percent must be a whole number 0..100, got "${raw}"`);
-  process.exit(1);
-}
+const parse = (raw: string, name: string) => {
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) {
+    console.error(`${name} must be a whole number 0..100, got "${raw}"`);
+    process.exit(1);
+  }
+  return n;
+};
+const percent = rawPercent !== undefined ? parse(rawPercent, '--percent') : live.madridPassPercent ?? 100;
+const multi = rawMulti !== undefined ? parse(rawMulti, '--multi') : live.multiPagePercent ?? 0;
 
-const body = JSON.stringify({ madridPassPercent: percent, updatedAt: new Date().toISOString() });
+const body = JSON.stringify({ madridPassPercent: percent, multiPagePercent: multi, updatedAt: new Date().toISOString() });
 const { error } = await getAdminClient()
   .storage.from(SNAPSHOT_BUCKET)
   .upload(PATH, Buffer.from(body, 'utf8'), { contentType: 'application/json', cacheControl: '60', upsert: true });
@@ -44,6 +59,6 @@ if (error) {
   console.error(`✗ upload failed: ${error.message}`);
   process.exit(1);
 }
-console.log(`✓ madridPassPercent = ${percent}`);
+console.log(`✓ madridPassPercent = ${percent}, multiPagePercent = ${multi}`);
 console.log(`  ${PUBLIC_URL}`);
-console.log('  New installs on 1.9.2+ pick it up on their next launch (cache: 60s).');
+console.log('  New installs pick it up on their next launch (cache: 60s). multiPagePercent needs the build that has the 3-page wall.');

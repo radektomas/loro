@@ -30,7 +30,7 @@
 /** PORTED, app/welcome/page.tsx:366-375. No em-dash, nothing to fix. */
 export const HOOK = {
   title: 'Learn Spanish from real people talking.',
-  body: 'Not textbook Spanish. Real clips, real speed, real accents.',
+  body: '',
   cta: 'Empezar',
 };
 
@@ -40,12 +40,12 @@ export const HOOK = {
     Answers persist to loro.mobile.motivation as an array. */
 export const MOTIVATION = {
   title: 'What’s pulling you toward Spanish?',
-  body: 'Pick as many as you like. It helps us choose what to put in front of you.',
+  body: '',
   options: [
-    { id: 'travel', label: 'Travel', body: 'So I can actually talk when I get there.' },
-    { id: 'people', label: 'People', body: 'Family, a partner, friends.' },
-    { id: 'work', label: 'Work', body: 'I need it for my job.' },
-    { id: 'culture', label: 'Culture', body: 'Music, film, football, books.' },
+    { id: 'travel', label: 'Travel', body: '' },
+    { id: 'people', label: 'People', body: '' },
+    { id: 'work', label: 'Work', body: '' },
+    { id: 'culture', label: 'Culture', body: '' },
   ],
   cta: 'Continuar',
 };
@@ -58,7 +58,7 @@ export const MOTIVATION = {
  */
 export const TOPICS = {
   title: 'What do you love watching?',
-  body: 'Pick a few. Your feed leans that way, and you still get a bit of everything.',
+  body: '',
   options: [
     { id: 'travel', label: 'Travel and places' },
     { id: 'food', label: 'Food' },
@@ -95,22 +95,22 @@ export const TOPICS = {
  */
 export const SELF_LEVEL = {
   title: 'How much Spanish do you know already?',
-  body: 'This only sets your starting point. Your feed moves as you do.',
+  body: '',
   options: [
     {
       id: 'zero' as const,
       label: 'I’m starting from zero',
-      body: 'We’ll build your first words together.',
+      body: '',
     },
     {
       id: 'some' as const,
       label: 'I know a bit',
-      body: 'A quick word check tunes where you start.',
+      body: '',
     },
     {
       id: 'confident' as const,
       label: 'I’m fairly comfortable',
-      body: 'Jump into real videos and mine them for words.',
+      body: '',
     },
   ],
 };
@@ -121,7 +121,7 @@ export const SELF_LEVEL = {
     screen exists so the grid does not read as a test. */
 export const CALIBRATION_INTRO = {
   title: 'Quick word check.',
-  body: 'Fifteen words, about twenty seconds. Nothing is graded, so be generous with yourself.',
+  body: '15 words, about 20 seconds.',
   cta: 'Vale',
 };
 
@@ -132,7 +132,7 @@ export const CALIBRATION_INTRO = {
     is selected. */
 export const GRID = {
   title: 'Tap the words you already know.',
-  body: 'No timer, no right answers. It just tunes where you start.',
+  body: '',
   ctaSome: 'Continuar',
   ctaNone: 'None of these yet',
 };
@@ -145,7 +145,7 @@ export const GRID = {
     what the level actually means. */
 export const RESULT = {
   kicker: 'Empecemos con',
-  body: 'That’s where your feed starts. Watch, save what you don’t know, and it moves with you.',
+  body: '',
   cta: 'Seguir',
 };
 
@@ -172,7 +172,7 @@ export const BLANKS = {
   /** Since 2026-09-26 a saved word comes back only once it is TRAINED in
       Words; the blue level blanks come from the first video. Both look
       like this. */
-  body: 'Once you’ve trained a word, it turns into a gap in the subtitles. The video waits for you, you type it, and it carries on.',
+  body: 'Words you’ve trained come back as gaps. Type the word and the video carries on.',
   mockSentence: ['Vivo', 'en', '__BLANK__', 'ciudad'],
   mockGloss: 'this',
   cta: 'Entendido',
@@ -203,7 +203,7 @@ export const BLANKS = {
  */
 export const FREQUENCY = {
   title: 'How often do you want to practise?',
-  body: 'There is no wrong answer. It just sets the pace we aim for.',
+  body: '',
   options: [
     { id: 'light', label: 'A few times a week', body: 'About 5 minutes.' },
     { id: 'daily', label: 'Every day', body: 'About 10 minutes.' },
@@ -223,7 +223,7 @@ export const FREQUENCY = {
  */
 export const FLUENCY_GOAL = {
   title: 'When do you want to be fluent in Spanish?',
-  body: 'Drag to set your target. Nothing is locked in, and you can move it whenever you like.',
+  body: '',
   /** Suffixed with the number, so singular matters. */
   unitOne: 'month',
   unitMany: 'months',
@@ -436,7 +436,7 @@ export const PAYWALL = {
 /** PORTED (cta, app/welcome/page.tsx:550) + REWRITTEN (title, body). */
 export const HANDOFF = {
   title: '¡Listo!',
-  body: 'Your feed is ready. Swipe it like anything else, and tap a word the moment it stops making sense.',
+  body: '',
   cta: '¡Vamos!',
 };
 

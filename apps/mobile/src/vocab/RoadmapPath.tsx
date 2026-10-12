@@ -75,7 +75,7 @@ const COIN_H = 58;
 const LIP = 6;
 const ROW_H = 84;
 /** The current coin carries a halo and a tag above it. */
-const HERE_ROW_H = 132;
+export const HERE_ROW_H = 132;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -1110,7 +1110,11 @@ export function RoadmapPath({
   onLongPress,
   onAnchor,
   onArrive,
+  onTourLayout,
 }: {
+  /** Where the map and the current city sit inside this component — the
+      walkthrough's Words beats spotlight them (tour/WordsTour.tsx). */
+  onTourLayout?: (part: 'map' | 'stage', y: number, height: number) => void;
   /** The trip has reached a city the user has not been welcomed to yet. */
   onArrive?: (from: number, to: number, empty: boolean) => void;
   words: readonly SavedWord[];
@@ -1288,6 +1292,7 @@ export function RoadmapPath({
         style={styles.stageBlock}
         onLayout={(e) => {
           stageY.current.set(s, e.nativeEvent.layout.y);
+          if (s === current) onTourLayout?.('stage', e.nativeEvent.layout.y, e.nativeEvent.layout.height);
           report();
         }}
       >
@@ -1419,6 +1424,7 @@ export function RoadmapPath({
   return (
     <View>
       {path.length > 0 && (
+        <View onLayout={(e) => onTourLayout?.('map', e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
         <TripMap
           onPractise={onOpen}
           blue={trip.blue}
@@ -1428,6 +1434,7 @@ export function RoadmapPath({
           leftHere={citySize(current) - learnedNow}
           stageLen={citySize(current)}
         />
+        </View>
       )}
 
       {renderStage(cityNodes, current)}
