@@ -272,6 +272,8 @@ export function PlayerHost({ children }: { children: ReactNode }) {
   /** The id the current play request belongs to. Guards loadAndPlay against
       re-issuing a load for the video already on the player. */
   const requestedIdRef = useRef<string | null>(null);
+  /** When the current load was sent — read once by the playResult log. */
+  const loadAtRef = useRef<{ id: string; at: number } | null>(null);
 
   const send = useCallback((cmd: Record<string, unknown>) => {
     const id = `c${++seqRef.current}`;
@@ -345,6 +347,24 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           console.log(`[loro:player] ${String(msg.msg ?? '')}`);
           break;
         }
+        /**
+         * How long a load took to reach PLAYING — the black between slides,
+         * measured. The page always posted this; nothing read it. Only the
+         * first result per load is logged (a later play's result is not the
+         * swap's).
+         */
+        case 'playResult': {
+          const load = loadAtRef.current;
+          // Matched by id: a play issued before this load (a blank's resume)
+          // can settle just after it, and is not this video's result.
+          if (!load || msg.id !== `load:${load.id}`) break;
+          loadAtRef.current = null;
+          console.log(
+            `[loro:player] ${load.id} ${msg.ok ? 'PLAYING' : `FAILED (${String(msg.error)})`} ` +
+              `${Date.now() - load.at}ms after load (page: ${String(msg.elapsedMs)}ms)`
+          );
+          break;
+        }
         default:
           break;
       }
@@ -361,6 +381,7 @@ export function PlayerHost({ children }: { children: ReactNode }) {
       loadAndPlay(youtubeId: string, startSeconds?: number) {
         if (requestedIdRef.current === youtubeId && startSeconds === undefined) return;
         requestedIdRef.current = youtubeId;
+        loadAtRef.current = { id: youtubeId, at: Date.now() };
         const start = startSeconds !== undefined && startSeconds > 0 ? startSeconds : 0;
         // Reset the RN model too: the outgoing video's anchor must not drive
         // the incoming slide's karaoke for the moments before the first new
@@ -383,7 +404,7 @@ export function PlayerHost({ children }: { children: ReactNode }) {
           // the moment it takes the page to report the new list from PLAYING.
           availableRates: null,
         }));
-        send({ cmd: 'load', videoId: youtubeId, andPlay: true, start });
+        send({ cmd: 'load', id: `load:${youtubeId}`, videoId: youtubeId, andPlay: true, start });
       },
       play() {
         send({ cmd: 'play' });

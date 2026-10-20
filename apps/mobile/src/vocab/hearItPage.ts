@@ -18,13 +18,15 @@
  * (the nocookie loader 404s), and the `origin` playerVar matching the
  * document's baseUrl or the API handshake fails.
  *
- * SOUND IS ON BY DESIGN. The feed creates its player muted because it
- * autoplays as you scroll and sound is a preference; here the user tapped a
- * button whose only purpose is to hear a word, so muted playback would be a
- * broken feature rather than a polite default. WKWebView allows unmuted
- * autoplay when the host sets mediaPlaybackRequiresUserAction={false}, which
- * HearItPanel does. `controls: 1` is the safety net: if a device ever refuses
- * the autoplay, the user still has a play button rather than a dead frame.
+ * SOUND IS ON BY DESIGN — but it is switched on AFTER the clip starts. The
+ * user tapped a button whose only purpose is to hear a word, so a silent clip
+ * would be a broken feature. It used to start unmuted, trusting
+ * mediaPlaybackRequiresUserAction={false}; on device (2026-10-20) that start
+ * was refused every time and YouTube showed its play button. A muted start is
+ * always allowed, and the unMute right after PLAYING held — so that is the
+ * order now (trySound). If a device ever stops the clip on that unMute, it is
+ * muted again and RN offers "Tap for sound" below the frame. `controls: 1`
+ * stays as the last safety net: a play button rather than a dead frame.
  */
 
 export type HearItPageOptions = {
@@ -61,6 +63,12 @@ const PAGE_TEMPLATE = `<!doctype html>
   var player = null;
   var watch = null;
   var stopped = false;
+  var gotPlaying = false;
+  var fallback = null;
+  // Every start is muted now (see playerVars), so sound is always asked for
+  // on the first PLAYING.
+  var mutedRetry = true;
+  var soundTried = false;
 
   function post(o) {
     try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch (e) {}
@@ -85,6 +93,49 @@ const PAGE_TEMPLATE = `<!doctype html>
       }
     }, 100);
   }
+
+  function stateOf() { try { return player.getPlayerState(); } catch (e) { return 'n/a'; } }
+  function mutedOf() { try { return player.isMuted(); } catch (e) { return null; } }
+  function log(msg) { post({ type: 'log', msg: msg }); }
+
+  /**
+   * SOUND AFTER A MUTED START. A muted video may always start by itself; an
+   * unmuted one only when the phone allows it, and on a refusal YouTube shows
+   * its own play button (Radek, 2026-10-20: "you have to tap the youtube play
+   * button"). So after a muted retry reaches PLAYING, sound is asked for once.
+   * If that unMute stops the video — the engine's way of saying "not without
+   * a tap" — it is muted again and kept playing, and RN offers its own
+   * "Tap for sound" below the frame, which calls __hearItSound from a real
+   * touch.
+   */
+  function trySound() {
+    soundTried = true;
+    try { player.unMute(); } catch (e) {}
+    setTimeout(function () {
+      if (stateOf() !== 1) {
+        log('unMute without a tap stopped the clip — muted again, asking RN for a tap');
+        try { player.mute(); player.playVideo(); } catch (e) {}
+        post({ type: 'muted', muted: true });
+      } else {
+        log('unMute without a tap held (muted=' + mutedOf() + ')');
+        post({ type: 'muted', muted: mutedOf() === true });
+      }
+    }, 400);
+  }
+
+  // Called by RN from inside a real touch handler. Replays from the top: a
+  // muted clip may already have reached the word and stopped, and the point
+  // is to HEAR it.
+  window.__hearItSound = function () {
+    if (!player) return;
+    stopped = false;
+    try { player.seekTo(START, true); player.unMute(); player.playVideo(); } catch (e) {}
+    startWatching();
+    setTimeout(function () {
+      log('tap for sound -> muted=' + mutedOf() + ', state=' + stateOf());
+      post({ type: 'muted', muted: mutedOf() === true });
+    }, 300);
+  };
 
   // Replay the same span from the top. Called by RN via injectJavaScript.
   window.__hearItAgain = function () {
@@ -112,7 +163,11 @@ const PAGE_TEMPLATE = `<!doctype html>
         start: Math.floor(START),
         controls: 1,
         playsinline: 1,
-        mute: 0,
+        // MUTED AT CREATION, sound right after it starts (trySound). Measured
+        // 2026-10-20 on Radek's phone: an unmuted start was refused every time
+        // (state -1, YouTube's play button for 1.5s until the muted retry),
+        // while a muted start played and the unMute after PLAYING held.
+        mute: 1,
         rel: 0,
         fs: 0,
         iv_load_policy: 3,
@@ -122,17 +177,33 @@ const PAGE_TEMPLATE = `<!doctype html>
       events: {
         onReady: function () {
           try {
-            player.unMute();
             player.seekTo(START, true);
             player.playVideo();
           } catch (e) {}
           post({ type: 'ready' });
+          log('ready (muted=' + mutedOf() + ', state=' + stateOf() + ')');
           startWatching();
+          fallback = setTimeout(function () {
+            if (gotPlaying || stopped) return;
+            mutedRetry = true;
+            log('no PLAYING 1500ms after ready (state=' + stateOf() + ') — retrying');
+            try {
+              player.mute();
+              player.seekTo(START, true);
+              player.playVideo();
+            } catch (e) {}
+          }, 1500);
         },
         onStateChange: function (e) {
           // 1 = PLAYING. Reported so RN can drop its loading state on the
           // first frame that actually moves rather than on onReady, which
           // fires before the video has necessarily started.
+          log('state ' + (e && e.data));
+          if (e && e.data === 1) {
+            gotPlaying = true;
+            if (fallback) { clearTimeout(fallback); fallback = null; }
+            if (mutedRetry && !soundTried) trySound();
+          }
           if (e && e.data === 1 && !stopped) post({ type: 'playing' });
         },
         onError: function (e) {

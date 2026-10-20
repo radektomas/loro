@@ -1080,6 +1080,33 @@ function FeedBody({
   };
   const onViewableItemsChanged = useStableViewability(applyViewableIndex);
 
+  /**
+   * START THE NEXT VIDEO WHEN THE FINGER LIFTS, NOT WHEN THE LIST SETTLES.
+   * The black between slides is YouTube's loader (300-800ms cold), and it
+   * used to start late: viewability crosses 60% partway through the snap,
+   * then the whole feed re-renders on activeIndex, and only after that
+   * commit does PlayerDriver send the load. iOS hands onScrollEndDrag the
+   * page the list will land on, so the load can go out before the snap
+   * animation and before any render — YouTube gets that time back.
+   *
+   * PlayerDriver still runs on the new activeIndex and its loadAndPlay is a
+   * no-op for the id already requested (requestedIdRef). The cases where
+   * PlayerDriver would pass a START — a review landing, the walkthrough's
+   * offset — are left to it, or the video would load twice. Android gives no
+   * targetContentOffset and keeps the old path.
+   */
+  const liftAtRef = useRef<number | null>(null);
+  const loadOnLift = (target: { x: number; y: number } | undefined) => {
+    if (!LOAD_ON_LIFT || !target || pageHeight <= 0 || !active || walkthrough) return;
+    const index = Math.round(target.y / pageHeight);
+    if (index === activeIndex) return; // snapping back to the same slide
+    const next = videos[index];
+    if (!next || (landing && landing.videoId === next.id)) return;
+    liftAtRef.current = Date.now();
+    feedLog(`swipe: lift → load ${next.youtubeId} (slide ${index})`);
+    api.loadAndPlay(next.youtubeId);
+  };
+
   const swipe = useSwipeLifecycle(setDragging);
 
   const activeVideo = videos[activeIndex] ?? null;
@@ -1184,16 +1211,41 @@ function FeedBody({
     const barTop = windowHeight - playerCovered;
     return Math.max(0, box.top + box.height + PLAYER_LIFT_GAP - barTop);
   }, [box, playerCovered, windowHeight]);
+  /**
+   * THE POSTER COVERS YOUTUBE'S LOADER. Measured 2026-10-20: the slide
+   * settles ~320ms after the finger lifts, YouTube reaches PLAYING 800-1100ms
+   * after the load — so a player shown on settle showed 0.5-0.8s of the
+   * iframe's black. The player now stays hidden until THIS video has played
+   * once (later pauses — a blank's hold, a tap — keep it shown), or until
+   * REVEAL_CAP_MS after settling, so a refused autoplay still surfaces the
+   * player instead of a poster that looks frozen forever.
+   */
+  const playerStatus = usePlayerStatus();
+  const loadedId = playerStatus.loadedVideoId;
+  const [revealedFor, setRevealedFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (playerStatus.playing && loadedId) setRevealedFor(loadedId);
+  }, [playerStatus.playing, loadedId]);
+  useEffect(() => {
+    if (!POSTER_UNTIL_PLAYING || dragging || !loadedId || revealedFor === loadedId) return;
+    const cap = setTimeout(() => {
+      feedLog(`swipe: ${loadedId} not PLAYING ${REVEAL_CAP_MS}ms after settle — showing the player anyway`);
+      setRevealedFor(loadedId);
+    }, REVEAL_CAP_MS);
+    return () => clearTimeout(cap);
+  }, [dragging, loadedId, revealedFor]);
+  const revealed = !POSTER_UNTIL_PLAYING || !loadedId || revealedFor === loadedId;
+
   useEffect(() => {
     setPlayerBox({
       top: box?.top ?? 0,
       left: box?.left ?? 0,
       width: box?.width ?? 0,
       height: box?.height ?? 0,
-      visible: Boolean(box) && active && !dragging && !promptObscured,
+      visible: Boolean(box) && active && !dragging && !promptObscured && revealed,
       lift,
     });
-  }, [box, active, dragging, promptObscured, lift, setPlayerBox]);
+  }, [box, active, dragging, promptObscured, revealed, lift, setPlayerBox]);
 
   /**
    * PAUSE ON BLUR, AND STAY PAUSED ON RETURN.
@@ -1403,9 +1455,16 @@ function FeedBody({
               }}
               onScrollEndDrag={(event) => {
                 swipe.onEndDrag();
+                loadOnLift(event.nativeEvent.targetContentOffset);
               }}
               onMomentumScrollBegin={swipe.onMomentumBegin}
-              onMomentumScrollEnd={swipe.onSettled}
+              onMomentumScrollEnd={() => {
+                swipe.onSettled();
+                if (liftAtRef.current !== null) {
+                  feedLog(`swipe: settled ${Date.now() - liftAtRef.current}ms after lift`);
+                  liftAtRef.current = null;
+                }
+              }}
             />
           )}
 
@@ -1542,6 +1601,19 @@ const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: VISIBLE_PERCENT } as c
  * still short enough that the poster does not visibly linger when it fires.
  */
 const NO_MOMENTUM_MS = 150;
+
+/** Start the next video on finger lift (see loadOnLift). False = the old
+    settle-time path, for comparing the two on device. */
+const LOAD_ON_LIFT = true;
+
+/** The sound pill's height — also the band top row's floor (see bandTop). */
+const SOUND_PILL_H = 30;
+
+/** Keep the poster up until the new video plays (see `revealed`). False =
+    show the player on settle, over YouTube's loader. */
+const POSTER_UNTIL_PLAYING = true;
+/** The longest the poster holds after settling before the player shows anyway. */
+const REVEAL_CAP_MS = 1000;
 
 /**
  * IS A SWIPE IN FLIGHT? The player is hidden for as long as the answer is yes.
@@ -2351,6 +2423,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 20,
+    // THE SAME HEIGHT ON EVERY SLIDE. The sound pill (30pt, the row's tallest
+    // child) and the speed/replay controls render on the ACTIVE slide only,
+    // so without this an inactive row is just the ~20pt level chip. The
+    // player box is measured from slide 0, so once slide 0 went inactive its
+    // band shrank, its area grew ~10pt, and the frame reached into every
+    // active slide's seam — clipping the top of the seek bar's dot wherever
+    // it passed under the video (Radek, 2026-10-20: "it looks cheap").
+    minHeight: SOUND_PILL_H,
     // Kept as a safety net rather than a mechanism: measured, this row is
     // 277.8 of 335pt usable on the narrowest supported device in its widest
     // (muted) state, so it fits. If a larger text setting ever breaks that,
@@ -2394,7 +2474,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     flexDirection: 'row',
     gap: 7,
-    height: 30,
+    height: SOUND_PILL_H,
     justifyContent: 'center',
     minWidth: 36,
     paddingHorizontal: 10,

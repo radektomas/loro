@@ -100,6 +100,9 @@ export function WordVideoPanel({
   const [reviewing, setReviewing] = useState(mode === 'review');
   /** Bumped to remount the player for "play again". */
   const [take, setTake] = useState(0);
+  /** The clip only got going muted (see hearItPage trySound) — offer sound. */
+  const [needsSound, setNeedsSound] = useState(false);
+  const webRef = useRef<WebView>(null);
   /**
    * The rest of the practice set (PracticeDrill): the clip was exercise one,
    * and in review these two follow it instead of the window closing. `early`
@@ -148,11 +151,19 @@ export function WordVideoPanel({
 
   const onMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      let parsed: { type?: string } = {};
+      let parsed: { type?: string; msg?: string; muted?: boolean } = {};
       try {
-        parsed = JSON.parse(event.nativeEvent.data) as { type?: string };
+        parsed = JSON.parse(event.nativeEvent.data) as typeof parsed;
       } catch {
         return; // Not ours; the page posts nothing else.
+      }
+      if (parsed.type === 'log') {
+        console.log(`[loro:hearit] ${String(parsed.msg ?? '')}`);
+        return;
+      }
+      if (parsed.type === 'muted') {
+        setNeedsSound(parsed.muted === true);
+        return;
       }
       if (parsed.type === 'playing') setPhase('listening');
       else if (parsed.type === 'error') setPhase('listening');
@@ -166,6 +177,7 @@ export function WordVideoPanel({
   );
 
   const playAgain = useCallback(() => {
+    setNeedsSound(false);
     setPhase('loading');
     setTake((n) => n + 1);
   }, []);
@@ -240,6 +252,7 @@ export function WordVideoPanel({
       {showPlayer && (
         <View style={[styles.playerBox, { height: frameHeight, width: frameWidth }]}>
           <WebView
+            ref={webRef}
             key={`${occurrence.videoId}-${occurrence.cueIndex}-${take}`}
             source={{
               html: buildHearItPage({
@@ -280,6 +293,19 @@ export function WordVideoPanel({
           <View style={styles.attribution}>
             <AuthorLine video={video} />
           </View>
+        )}
+        {/* Below the frame, never over it. Injected from inside onPress: the
+            unmute needs a real touch, which is the reason this button exists. */}
+        {showPlayer && needsSound && (
+          <Pressable
+            onPress={() => {
+              webRef.current?.injectJavaScript('window.__hearItSound && window.__hearItSound(); true;');
+            }}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.secondary, styles.soundAsk, pressed && styles.pressed]}
+          >
+            <Text style={styles.secondaryLabel}>Tap for sound</Text>
+          </Pressable>
         )}
 
         {/* THE PLAYER GONE, THE SENTENCE TAKES THE STAGE. With the frame on
@@ -549,6 +575,7 @@ const styles = StyleSheet.create({
   },
   primaryLabel: { color: '#06130d', fontSize: 16, fontWeight: '800' },
   secondaryRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  soundAsk: { alignSelf: 'center', flex: 0, marginTop: 8, paddingHorizontal: 22 },
   secondary: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.10)',
