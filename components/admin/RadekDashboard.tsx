@@ -73,7 +73,7 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 // ------------------------------------------------------------------ chrome
 
-function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <section
       className={`rounded-2xl p-5 ${className}`}
@@ -84,7 +84,7 @@ function Card({ children, className = '' }: { children: ReactNode; className?: s
   );
 }
 
-function CardTitle({ title, hint, aside }: { title: string; hint?: string; aside?: ReactNode }) {
+export function CardTitle({ title, hint, aside }: { title: string; hint?: string; aside?: ReactNode }) {
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
       <div>
@@ -97,7 +97,7 @@ function CardTitle({ title, hint, aside }: { title: string; hint?: string; aside
 }
 
 /** "+42%" in green or "−12%" in red, against the previous period. */
-function Delta({ now, before }: { now: number; before: number }) {
+export function Delta({ now, before }: { now: number; before: number }) {
   if (before === 0 && now === 0) return <span style={{ color: DASH.faint }}>no change</span>;
   if (before === 0) return <span className="font-semibold" style={{ color: DASH.green }}>new</span>;
   const change = Math.round(((now - before) / before) * 100);
@@ -112,7 +112,7 @@ function Delta({ now, before }: { now: number; before: number }) {
   );
 }
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
+export function Sparkline({ values, color }: { values: number[]; color: string }) {
   const W = 120;
   const H = 32;
   const max = Math.max(1, ...values);
@@ -130,7 +130,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 
 // ------------------------------------------------------------- KPI cards
 
-function KpiCard({
+export function KpiCard({
   label,
   value,
   now,
