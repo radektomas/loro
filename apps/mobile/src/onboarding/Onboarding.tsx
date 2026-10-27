@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { startTourAfterOnboarding } from '../tour/tour';
 import {
   BackHandler,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -26,6 +27,7 @@ import {
   visibleSteps,
   type FlowState,
   type StepId,
+  type StepProps,
 } from './steps';
 import { track } from '../platform/analytics';
 
@@ -117,6 +119,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     x.value = withTiming(-index * width, {
       duration: reducedMotion ? 0 : SLIDE_MS,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
     });
   }, [index, width, reducedMotion, x]);
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
@@ -323,7 +326,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 i === index ? 'auto' : 'no-hide-descendants'
               }
             >
-              <step.Component
+              <StepSlot
+                Component={step.Component}
                 state={state}
                 update={update}
                 next={next}
@@ -344,6 +348,31 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     </View>
   );
 }
+
+/**
+ * ONE SCREEN RE-RENDERS PER TAP, NOT THIRTEEN.
+ *
+ * Every step is mounted side by side, and each gets the whole flow state,
+ * so a single answer used to re-render all of them in the same frame the
+ * slide started in: the tap's animation and the slide both stuttered
+ * (Radek, 2026-10-27). A screen off stage cannot be seen, so it keeps its
+ * last render until it is on stage again; the moment it arrives, isCurrent
+ * flips and it renders with the live state. The screen on stage always
+ * renders, so its own answers show immediately.
+ */
+type SlotProps = StepProps & { Component: ComponentType<StepProps> };
+const StepSlot = memo(
+  function StepSlot({ Component, ...props }: SlotProps) {
+    return <Component {...props} />;
+  },
+  (prev, next) =>
+    prev.Component === next.Component &&
+    prev.isCurrent === next.isCurrent &&
+    prev.isLast === next.isLast &&
+    prev.next === next.next &&
+    prev.finish === next.finish &&
+    (!next.isCurrent || prev.state === next.state)
+);
 
 const styles = StyleSheet.create({
   root: { backgroundColor: '#0a0d0b', flex: 1 },

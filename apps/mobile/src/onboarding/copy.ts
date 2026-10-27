@@ -27,10 +27,11 @@
 
 // ---------------------------------------------------------------- 1. hook
 
-/** PORTED, app/welcome/page.tsx:366-375. No em-dash, nothing to fix. */
+/** DIVERGED from app/welcome/page.tsx:366-375 (2026-10-27, with the
+    lyrics hero): the headline says the outcome, the line under it says how. */
 export const HOOK = {
-  title: 'Learn Spanish from real people talking.',
-  body: '',
+  title: 'Understand real Spanish.',
+  body: 'Learn from real people talking. Tap any word you don’t get.',
   cta: 'Empezar',
 };
 
@@ -42,10 +43,10 @@ export const MOTIVATION = {
   title: 'What’s pulling you toward Spanish?',
   body: '',
   options: [
-    { id: 'travel', label: 'Travel', body: '' },
-    { id: 'people', label: 'People', body: '' },
-    { id: 'work', label: 'Work', body: '' },
-    { id: 'culture', label: 'Culture', body: '' },
+    { id: 'travel', label: 'Travel', body: '', es: 'viajar' },
+    { id: 'people', label: 'People', body: '', es: 'mi gente' },
+    { id: 'work', label: 'Work', body: '', es: 'el trabajo' },
+    { id: 'culture', label: 'Culture', body: '', es: 'la cultura' },
   ],
   cta: 'Continuar',
 };
@@ -60,12 +61,12 @@ export const TOPICS = {
   title: 'What do you love watching?',
   body: '',
   options: [
-    { id: 'travel', label: 'Travel and places' },
-    { id: 'food', label: 'Food' },
-    { id: 'love', label: 'Love, family and friends' },
-    { id: 'money', label: 'Money and work' },
-    { id: 'funny', label: 'Funny, everyday life' },
-    { id: 'mind', label: 'Health, sport and mind' },
+    { id: 'travel', label: 'Travel and places', pill: 'Travel', es: 'los viajes' },
+    { id: 'food', label: 'Food', pill: 'Food', es: 'la comida' },
+    { id: 'love', label: 'Love, family and friends', pill: 'Love & family', es: 'el amor' },
+    { id: 'money', label: 'Money and work', pill: 'Money & work', es: 'el dinero' },
+    { id: 'funny', label: 'Funny, everyday life', pill: 'Everyday fun', es: 'el humor' },
+    { id: 'mind', label: 'Health, sport and mind', pill: 'Health & mind', es: 'la salud' },
   ],
   cta: 'Continuar',
   /** How each topic is named when the plan says it back ("more food and travel"). */
@@ -101,81 +102,66 @@ export const SELF_LEVEL = {
       id: 'zero' as const,
       label: 'I’m starting from zero',
       body: '',
+      es: 'desde cero',
     },
     {
       id: 'some' as const,
       label: 'I know a bit',
       body: '',
+      es: 'un poco',
     },
     {
       id: 'confident' as const,
       label: 'I’m fairly comfortable',
       body: '',
+      es: 'bastante',
     },
   ],
 };
 
-// ------------------------------------------------------ 4. calibration intro
+// ------------------------------------------------------- 7b. the lesson
 
-/** REWRITTEN. No web counterpart: the web drops straight into the grid. This
-    screen exists so the grid does not read as a test. */
-export const CALIBRATION_INTRO = {
-  title: 'Quick word check.',
-  body: '15 words, about 20 seconds.',
-  cta: 'Vale',
-};
-
-// ---------------------------------------------------------------- 5. grid
-
-/** DIVERGED, app/welcome/page.tsx:435-467: the body's em-dash became a full
-    stop. Both button labels are the web's, which switches on whether anything
-    is selected. */
-export const GRID = {
-  title: 'Tap the words you already know.',
-  body: '',
-  ctaSome: 'Continuar',
-  ctaNone: 'None of these yet',
-};
-
-// --------------------------------------------------------------- 6. result
-
-/** PORTED (kicker) + REWRITTEN (body, cta). The web shows only the kicker and
-    the level, then auto-advances into the guided video after 1900ms. We have
-    no guided video yet, so this screen ends in a tap and needs a line saying
-    what the level actually means. */
-export const RESULT = {
-  kicker: 'Empecemos con',
-  body: '',
-  cta: 'Seguir',
-};
-
-// --------------------------------------------------------- 7. how it works
-
-/** PORTED (title, app/welcome/page.tsx:534-537) + REWRITTEN (steps, cta). */
-export const HOW_IT_WORKS = {
-  title: 'Save it, train it, keep it.',
-  /** Unused since LoopStory (its three lines live there, beside the scenes). */
-  steps: [
-    'Tap a word you don’t know in a video.',
-    'Train it in Words. A few quick exercises and it’s learned.',
-    'It pops back up in your videos so it sticks.',
+/**
+ * REWRITTEN 2026-10-27. The two hands-on screens that replaced "how it
+ * works" (WordLesson.tsx): tap a word and save it, then type it back into a
+ * gap. Radek: "yayyy first word learned or something like that".
+ *
+ * "Saved" and never "saved to your Words": nothing is written to storage
+ * (see WordLesson's header), so the copy must not say it is waiting there.
+ */
+export const LESSON = {
+  steps: ['Tap it', 'It comes back', 'It’s yours'],
+  stepsDone: 'All 3 steps done',
+  /** The screen before the lesson. */
+  introLoro: { es: '¡Vamos a probar!', en: 'Let’s try it!' },
+  introTitle: 'Learn your first word in 30 seconds.',
+  introSteps: [
+    { head: 'Tap it', body: 'Tap a word you don’t know and save it.' },
+    { head: 'It comes back', body: 'Loro brings it back in another video.' },
+    { head: 'It’s yours', body: 'Type it in, and you’ve got it.' },
   ],
-  cta: 'Continuar',
-};
-
-// -------------------------------------------------------------- 8. blanks
-
-/** REWRITTEN. No web counterpart. The mock underneath is the real dashed slot,
-    so this teaches the mechanic before it interrupts a video. */
-export const BLANKS = {
-  title: 'This is how a word comes back.',
-  /** Since 2026-09-26 a saved word comes back only once it is TRAINED in
-      Words; the blue level blanks come from the first video. Both look
-      like this. */
-  body: 'Words you’ve trained come back as gaps. Type the word and the video carries on.',
-  mockSentence: ['Vivo', 'en', '__BLANK__', 'ciudad'],
-  mockGloss: 'this',
-  cta: 'Entendido',
+  introCta: '¡Vamos!',
+  tapTitle: 'Tap the word you don’t know.',
+  tapHint: 'Tap the glowing word. Others show their meaning too.',
+  save: 'Save word',
+  saved: '✓ Saved',
+  savedBody: 'Loro brings saved words back right before you’d forget them.',
+  tapWaiting: 'Tap the glowing word',
+  tapCta: 'Continuar',
+  backTitle: 'A few videos later, it comes back. Type it in.',
+  placeholder: 'Type the Spanish word',
+  hintPrefix: 'Almost. It starts with',
+  hintTail1: '.',
+  hintTail2: '. Or let Loro show you.',
+  reveal: 'Show me',
+  backWaiting: 'Type the word above',
+  wonTitle: 'That’s how Loro works.',
+  /** Loro's answer on the win, in his usual bubble (LoroSays). */
+  wonLoro: { es: '¡Muy bien! ¡Perfecto!', en: 'Very good! Perfect!' },
+  wonLoroRevealed: { es: '¡Eso es! Ahora es tuya.', en: 'That’s it! Now it’s yours.' },
+  /** The little achievement card under him. */
+  badgeHead: 'Your first Spanish word',
+  backCta: 'Continuar',
 };
 
 // ------------------------------------------------------------ 9. frequency
@@ -205,10 +191,13 @@ export const FREQUENCY = {
   title: 'How often do you want to practise?',
   body: '',
   options: [
-    { id: 'light', label: 'A few times a week', body: 'About 5 minutes.' },
-    { id: 'daily', label: 'Every day', body: 'About 10 minutes.' },
-    { id: 'serious', label: 'As much as I can', body: '20 minutes or more.' },
+    { id: 'light', label: 'A few times a week', body: 'About 5 minutes.', minutes: '5', es: 'a veces' },
+    { id: 'daily', label: 'Every day', body: 'About 10 minutes.', minutes: '10', es: 'cada día' },
+    { id: 'serious', label: 'As much as I can', body: '20 minutes or more.', minutes: '20+', es: 'mucho' },
   ],
+  /** Under the empty week, before anything is picked. */
+  pickPrompt: 'Pick a pace. You can change it anytime.',
+  cta: 'Continuar',
 };
 
 // ------------------------------------------------------- 10. fluency goal
@@ -261,7 +250,12 @@ export const FLUENCY_GOAL = {
  * answers or of shipped behaviour. Evidence first, then copy.
  */
 export const PLAN_BUILD = {
-  title: 'Building your customized plan',
+  title: 'Building your plan',
+  /** The title once the ring is full. */
+  titleDone: 'Your plan is built',
+  /** The checklist's last line: shipped behaviour (the Words path brings
+      trained words back into the feed), said in six words. */
+  recallShort: 'Words come back before you forget',
   /** Under point A, whose badge is the derived level. */
   todayLabel: 'Today',
   /** Point B's badge. "Fluent" is the user's own stated aim — it is the word
@@ -320,6 +314,8 @@ export const PLAN_BUILD = {
 export const PLAN_READY = {
   title: '¡Enhorabuena!',
   gloss: 'congratulations',
+  /** Under the title, above the boarding pass. */
+  sub: 'Your plan is ready. Here’s your ticket.',
   /** Followed by the date. */
   targetPrefix: 'Your plan is ready, and it points at one date: fluent by ',
   /** Row 1 body, after the pace line. Prefixed with the plan's number. */
@@ -439,6 +435,46 @@ export const HANDOFF = {
   body: '',
   cta: '¡Vamos!',
 };
+
+// ----------------------------------------------------------- Loro says
+
+/**
+ * LORO'S LINES ON THE QUESTION SCREENS (LoroSays.tsx, 2026-10-27). `open`
+ * is what he says on arrival; each answer id gets a reaction, shown for
+ * the last option tapped. Spanish first, its English under it: every line
+ * is a phrase people really say, so the questions teach too. Keyed on the
+ * stored option ids, like the art maps in steps.tsx.
+ */
+export const LORO_LINES = {
+  motivation: {
+    open: { es: '¡Hola! Soy Loro.', en: 'Hi! I’m Loro.' },
+    travel: { es: '¡Vámonos de viaje!', en: 'Let’s go travelling!' },
+    people: { es: '¡Qué bonito!', en: 'How lovely!' },
+    work: { es: '¡A trabajar!', en: 'Let’s get to work!' },
+    culture: { es: '¡Olé!', en: 'Bravo!' },
+  },
+  selfLevel: {
+    open: { es: '¿Hablas español?', en: 'Do you speak Spanish?' },
+    zero: { es: '¡Empezamos juntos!', en: 'We’ll start together!' },
+    some: { es: '¡Muy bien!', en: 'Very good!' },
+    confident: { es: '¡Genial!', en: 'Great!' },
+  },
+  topics: {
+    open: { es: '¿Qué te gusta ver?', en: 'What do you like watching?' },
+    travel: { es: '¡A la aventura!', en: 'Off on an adventure!' },
+    food: { es: '¡Qué rico!', en: 'Yum!' },
+    love: { es: '¡Ay, el amor!', en: 'Ah, love!' },
+    money: { es: '¡Dinero, dinero!', en: 'Money, money!' },
+    funny: { es: '¡Jajaja!', en: 'Hahaha!' },
+    mind: { es: '¡Mente sana!', en: 'Healthy mind!' },
+  },
+  frequency: {
+    open: { es: '¿Cuánto tiempo tienes?', en: 'How much time do you have?' },
+    light: { es: '¡Poco a poco!', en: 'Little by little!' },
+    daily: { es: '¡Cada día un poco!', en: 'A little every day!' },
+    serious: { es: '¡Así se hace!', en: 'That’s the spirit!' },
+  },
+} as Record<string, Record<string, { es: string; en: string }>>;
 
 // -------------------------------------------------------------- chrome
 

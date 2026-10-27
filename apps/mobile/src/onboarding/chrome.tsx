@@ -8,7 +8,6 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -131,6 +130,7 @@ export function TextButton({
  */
 export function ChoiceCard({
   label,
+  es,
   body,
   selected,
   multi,
@@ -139,6 +139,8 @@ export function ChoiceCard({
   iconOn,
 }: {
   label: string;
+  /** The answer in Spanish, small beside the label (2026-10-27). */
+  es?: string;
   body?: string;
   selected?: boolean;
   /** The icon's selected face. Given, the two cross-fade on the card's own
@@ -163,6 +165,11 @@ export function ChoiceCard({
    * choosing"). One clock, 0→1, drives the fill, the border and the label
    * colour together, and a press squeezes the card a touch; a tap reads
    * as a tap rather than a repaint. Reduce Motion makes both instant.
+   *
+   * CALM, NOT BOUNCY (Radek, 2026-10-27: "you click it and it starts moving
+   * as hell"). The icon used to overshoot to 1.14 and settle on a loose
+   * spring, which wobbled the whole row. Now it eases up a hair and back,
+   * on the same curve as the fill, and nothing overshoots.
    */
   const reduced = useReducedMotion();
   const sel = useSharedValue(on ? 1 : 0);
@@ -171,14 +178,13 @@ export function ChoiceCard({
   const wasOn = useRef(on);
   useEffect(() => {
     sel.value = withTiming(on ? 1 : 0, {
-      duration: reduced ? 0 : 220,
+      duration: reduced ? 0 : 240,
       easing: Easing.out(Easing.cubic),
     });
-    // A little lift on the way in only; letting go is quiet.
     if (on && !wasOn.current && !reduced) {
       pop.value = withSequence(
-        withTiming(1.14, { duration: 110, easing: Easing.out(Easing.quad) }),
-        withSpring(1, { damping: 9, stiffness: 260 })
+        withTiming(1.05, { duration: 140, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: 200, easing: Easing.inOut(Easing.cubic) })
       );
     }
     wasOn.current = on;
@@ -189,7 +195,7 @@ export function ChoiceCard({
   const card = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(sel.value, [0, 1], [CARD, CHOICE_ON_BG]),
     borderColor: interpolateColor(sel.value, [0, 1], [CHOICE_OFF_BORDER, CHOICE_ON_BORDER]),
-    transform: [{ scale: 1 - press.value * 0.02 }],
+    transform: [{ scale: 1 - press.value * 0.012 }],
   }));
   const labelStyle = useAnimatedStyle(() => ({
     color: interpolateColor(sel.value, [0, 1], [TEXT, ACCENT]),
@@ -226,6 +232,7 @@ export function ChoiceCard({
           )}
           <View style={styles.choiceText}>
             <Animated.Text style={[styles.choiceLabel, labelStyle]}>{label}</Animated.Text>
+            {es ? <Text style={styles.choiceEs}>{es}</Text> : null}
             {body && <Text style={styles.choiceBody}>{body}</Text>}
           </View>
           {/* The tick box is drawn only in multi mode, and it is always drawn
@@ -318,6 +325,7 @@ const styles = StyleSheet.create({
   choiceText: { flex: 1 },
   choiceLabel: { color: TEXT, fontSize: 16, fontWeight: '700' },
   choiceLabelOn: { color: ACCENT },
+  choiceEs: { color: 'rgba(94,230,168,0.7)', fontSize: 13, fontStyle: 'italic', fontWeight: '600', marginTop: 1 },
   tick: {
     alignItems: 'center',
     borderColor: 'rgba(242,245,243,0.25)',

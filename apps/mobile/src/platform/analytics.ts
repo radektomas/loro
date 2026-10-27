@@ -107,6 +107,8 @@ export type EventName =
   | 'taste_shown'          // { clips } — the guided reel before the wall
   | 'taste_word_saved'     // { word, scripted } — the coached tap landed
   | 'taste_outro'          // reached the closing card
+  | 'lesson_word_saved'    // { word } — the onboarding lesson's Save tapped (WordLesson.tsx; nothing persisted)
+  | 'lesson_word_back'     // { correct, tries, revealed } — the lesson's gap filled, typed or shown
   // the wall
   | 'paywall_shown'        // the gate rendered PaywallScreen; { after: 'arrival' | 'launch' } since the free Madrid pass
   | 'paywall_style'        // { style: 'multi' | 'single', percent, bucket } — the wall-shape split, logged once when decided
@@ -115,7 +117,9 @@ export type EventName =
   | 'paywall_demo_done'    // { watchedMs, played } — Continuar tapped, the wall is next
   | 'free_pass_ended'      // { how: 'arrival' | 'launch' } — Madrid done, the wall is next (paywall/freePass.ts)
   | 'paywall_offerings_failed'
-  | 'purchase_started'     // tapped subscribe; the Apple sheet is up
+  | 'exit_offer_shown'     // { from: 'close' | 'sheet' } — the second offer raised (paywall/ExitOffer.tsx)
+  | 'exit_offer_closed'    // "No thanks" on it — back to the wall
+  | 'purchase_started'     // tapped subscribe; the Apple sheet is up; { offer: 'exit' } when bought through the exit offer
   | 'purchase_completed'
   | 'purchase_cancelled'   // dismissed the Apple sheet
   | 'paywall_feedback'     // { reason, packageId, text? } — "What's holding you back?" after a closed sheet, once ever

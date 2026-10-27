@@ -85,9 +85,11 @@ if (__DEV__ && DEV_RESET_ON_LAUNCH) {
  */
 export const PAYWALL_ENABLED = false;
 
-/** Slide duration between screens. Short enough to feel like a swipe rather
-    than a page load; zeroed when Reduce Motion is on. */
-export const SLIDE_MS = 260;
+/** Slide duration between screens, on an ease-out curve (Onboarding.tsx):
+    the screen leaves fast and settles slowly, which reads as a glide. It was
+    260ms on the default in-out curve, which started and stopped hard (Radek,
+    2026-10-27: "it starts moving as hell"). Zeroed when Reduce Motion is on. */
+export const SLIDE_MS = 420;
 
 // -------------------------------------------------------------- mobile keys
 

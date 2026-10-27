@@ -1,26 +1,26 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { LoopStory } from './LoopStory';
-import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { HookHero } from './HookHero';
+import { LessonIntroStep, TapWordStep, WordBackStep } from './WordLesson';
+import { FrequencyPicker } from './FrequencyPicker';
+import { LoroSays } from './LoroSays';
+import { MotiveGrid, MotiveTile, PillCloud, TopicPill } from './PickCards';
+import { BoardingPass, PlanCheck, PlanRing } from './PlanArt';
+import { TRIP } from '@loro/core/roadmap';
+import { Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
-  Extrapolation,
-  interpolate,
-  interpolateColor,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
-  withSequence,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 import type { Level, SelfLevel } from '@loro/core/types';
 import { getCatalog } from '@loro/core/catalog';
 import { storage } from '@loro/core/storage';
-import { buildCalibrationWords, deriveLevel } from '@loro/core/calibration';
 import {
   ACCENT,
   CARD,
@@ -36,31 +36,20 @@ import {
 import { BRAND } from './brand';
 import {
   BarsIcon,
-  FeedMock,
   IconTile,
-  LevelLadder,
-  LineMock,
-  ParrotPeek,
-  TINTS,
-  TypingMock,
-  WeekIcon,
   type Tint,
 } from './art';
 import {
-  BLANKS,
-  CALIBRATION_INTRO,
   FLUENCY_GOAL,
   FREQUENCY,
-  GRID,
   HANDOFF,
   HOOK,
-  HOW_IT_WORKS,
+  LORO_LINES,
   MOTIVATION,
   PAYWALL,
   TOPICS,
   PLAN_BUILD,
   PLAN_READY,
-  RESULT,
   SELF_LEVEL,
 } from './copy';
 import { planFor } from '../progress/plan';
@@ -100,9 +89,6 @@ export type FlowState = {
   /** What they like watching — several allowed; the feed leans that way. */
   topics: string[];
   selfLevel: SelfLevel | null;
-  /** Surfaces tapped in the grid. The Set is the web's shape and feeds
-      deriveLevel directly. */
-  known: Set<string>;
   derived: Level | null;
   frequency: string | null;
   /** The fluency slider's months. IN FLOW STATE FOR DISPLAY ONLY — the plan
@@ -115,7 +101,6 @@ export const INITIAL_FLOW: FlowState = {
   motivation: [],
   topics: [],
   selfLevel: null,
-  known: new Set(),
   derived: null,
   frequency: null,
   goalMonths: null,
@@ -163,11 +148,9 @@ export type StepId =
   | 'motivation'
   | 'topics'
   | 'selfLevel'
-  | 'calibrationIntro'
-  | 'grid'
-  | 'result'
-  | 'howItWorks'
-  | 'blanks'
+  | 'lessonIntro'
+  | 'tapWord'
+  | 'wordBack'
   | 'frequency'
   | 'fluencyGoal'
   | 'planBuild'
@@ -176,35 +159,32 @@ export type StepId =
   | 'taste'
   | 'paywall';
 
-/**
- * The grid's fifteen words. Built once: buildCalibrationWords is deterministic
- * by design (no Math.random, so the web can render it server-side —
- * calibration.ts:33-37), so there is nothing to memoize against and the same
- * array can back both the chips and the deriveLevel call. Passing the SAME list
- * to deriveLevel is what the web does (page.tsx:215) and it matters: the
- * function's default argument would rebuild it, and a band ratio computed
- * against a different list is a different answer.
- */
-const CALIBRATION_WORDS = buildCalibrationWords();
+/** The start level each self-assessment sets, now that there is no grid. */
+const SELF_LEVEL_START: Record<SelfLevel, Level> = {
+  zero: 'A1',
+  some: 'A2',
+  confident: 'B1',
+};
 
 // ------------------------------------------------------------------ 1. hook
 
 function HookStep({ next, isCurrent }: StepProps) {
   /**
    * FITS THE WINDOW, NEVER SCROLLS (Radek: "the first page cannot be able
-   * to scroll"). Everything else on the screen is a known height — logo,
-   * title, body, button, chrome, paddings — so the mock takes what is left
-   * and no more, between a floor that still reads and a ceiling that
-   * still looks like a phone.
+   * to scroll"). Logo, title, body, button and chrome are known heights, so
+   * the lyrics take what is left, between a floor that still shows three
+   * lines and a ceiling that keeps them from drifting apart.
+   *
+   * THE DRAWN PHONE IS GONE (Radek, 2026-10-27: "the weird screen is
+   * horrible"). The sun, the hill and Loro inside a fake video said "app
+   * for kids"; Spanish lines rolling like lyrics, each one lit and
+   * explained, say what the app does to a sentence. See HookHero.
    */
   const { height } = useWindowDimensions();
-  const fixed = 96 + 74 + 46 + 96 + 60 + 72 + 24; // logo, title, body, footer, chrome, paddings, stage margins
-  const mockWidth = Math.max(150, Math.min(210, (height - fixed - 96) / 1.25));
+  const fixed = 56 + 64 + 92 + 52 + 100 + 60 + 24; // logo, title, body, footer, chrome, paddings
+  const heroHeight = Math.max(230, Math.min(400, height - fixed));
   return (
     <Screen footer={<PrimaryButton label={HOOK.cta} onPress={next} />}>
-      {/* The full lockup, wordmark and parrot together, because this is the
-          one screen where the app introduces itself by name. Every later
-          appearance is the parrot alone. */}
       <Image
         source={BRAND.logo}
         style={styles.logo}
@@ -212,22 +192,9 @@ function HookStep({ next, isCurrent }: StepProps) {
         accessibilityRole="image"
         accessibilityLabel="Loro"
       />
-      {/* THE PRODUCT, BEFORE A WORD ABOUT IT: a phone with a clip playing,
-          the line under it with one word lit, and the tap→saved beat on a
-          loop. Someone who reads nothing else on this screen still knows
-          what the app does. The scene is drawn, not a real clip. */}
-      <View style={styles.hookStage}>
-        <FeedMock
-          words={['Vivo', 'en', 'esta', 'ciudad']}
-          litIndex={2}
-          translation="I live in this city"
-          gloss="this"
-          isCurrent={isCurrent}
-          width={mockWidth}
-        />
-      </View>
-      <Title>{HOOK.title}</Title>
-      <Body>{HOOK.body}</Body>
+      <HookHero active={isCurrent} height={heroHeight} />
+      <Text style={styles.hookTitle}>{HOOK.title}</Text>
+      {HOOK.body ? <Text style={styles.hookBody}>{HOOK.body}</Text> : null}
     </Screen>
   );
 }
@@ -244,7 +211,7 @@ function HookStep({ next, isCurrent }: StepProps) {
  * over a key nothing reads yet would be the wrong trade, and an empty array on
  * disk is worse than no answer: it looks like an answer.
  */
-function MotivationStep({ state, update, next }: StepProps) {
+function MotivationStep({ state, update, next, isCurrent }: StepProps) {
   /**
    * PICKED LOCALLY, COMMITTED ON CONTINUAR. Every onboarding screen is
    * mounted at once, so patching the flow state on each tap re-rendered all
@@ -253,6 +220,9 @@ function MotivationStep({ state, update, next }: StepProps) {
   const [picked, setPicked] = useState<string[]>(state.motivation);
   const toggle = (id: string) =>
     setPicked((prev) => (prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]));
+  // Loro reacts to the newest answer still ticked; none ticked, his opener.
+  const lines = LORO_LINES.motivation;
+  const latest = picked[picked.length - 1];
 
   const commit = () => {
     update({ motivation: picked });
@@ -262,26 +232,22 @@ function MotivationStep({ state, update, next }: StepProps) {
 
   return (
     <Screen footer={<PrimaryButton label={MOTIVATION.cta} onPress={commit} />}>
+      <LoroSays line={(latest && lines[latest]) || lines.open} active={isCurrent} />
       <Title>{MOTIVATION.title}</Title>
       <Body>{MOTIVATION.body}</Body>
-      <View style={styles.choices}>
-        {MOTIVATION.options.map((option) => {
-          const on = picked.includes(option.id);
-          const art = MOTIVATION_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
-          return (
-            <ChoiceCard
-              key={option.id}
-              multi
-              label={option.label}
-              body={option.body}
-              selected={on}
-              icon={<IconTile glyph={art.glyph} tint={art.tint} />}
-              iconOn={<IconTile glyph={art.glyph} tint={art.tint} on />}
-              onPress={() => toggle(option.id)}
-            />
-          );
-        })}
-      </View>
+      {/* Four tiles, English first, an icon each (PickCards.tsx). */}
+      <MotiveGrid>
+        {MOTIVATION.options.map((option) => (
+          <MotiveTile
+            key={option.id}
+            id={option.id}
+            en={option.label}
+            es={option.es}
+            on={picked.includes(option.id)}
+            onPress={() => toggle(option.id)}
+          />
+        ))}
+      </MotiveGrid>
     </Screen>
   );
 }
@@ -294,7 +260,7 @@ function MotivationStep({ state, update, next }: StepProps) {
  * answer saves nothing: the feed simply does not lean), read by the feed's
  * ranking on its next ordering (feed/topics.ts, core feedRank).
  */
-function TopicsStep({ state, update, next }: StepProps) {
+function TopicsStep({ state, update, next, isCurrent }: StepProps) {
   // Picked locally for the same reason as MotivationStep.
   const [picked, setPicked] = useState<string[]>(state.topics);
   const toggle = (id: string) =>
@@ -307,103 +273,27 @@ function TopicsStep({ state, update, next }: StepProps) {
   };
   return (
     <Screen footer={<PrimaryButton label={TOPICS.cta} onPress={commit} />}>
+      <LoroSays
+        line={(picked.length > 0 && LORO_LINES.topics[picked[picked.length - 1]]) || LORO_LINES.topics.open}
+        active={isCurrent}
+      />
       <Title>{TOPICS.title}</Title>
       <Body>{TOPICS.body}</Body>
-      <View style={styles.topicGrid}>
-        {TOPICS.options.map((option) => {
-          const art = TOPIC_ART[option.id] ?? { glyph: '✦', tint: 'mint' as Tint };
-          return (
-            <TopicTile
-              key={option.id}
-              label={option.label}
-              glyph={art.glyph}
-              tint={art.tint}
-              on={picked.includes(option.id)}
-              onPress={() => toggle(option.id)}
-            />
-          );
-        })}
-      </View>
+      {/* A cloud of Spanish words (PickCards.tsx, 2026-10-27), replacing
+          the 2×3 grid of tinted icon tiles. */}
+      <PillCloud>
+        {TOPICS.options.map((option) => (
+          <TopicPill
+            key={option.id}
+            en={option.pill}
+            es={option.es}
+            glyph={(TOPIC_ART[option.id] ?? { glyph: '✦' }).glyph}
+            on={picked.includes(option.id)}
+            onPress={() => toggle(option.id)}
+          />
+        ))}
+      </PillCloud>
     </Screen>
-  );
-}
-
-/**
- * A TOPIC AS A TILE, not a row (Radek, 2026-10-06: not "the same looking
- * page of taps" as the motivation cards). A 2×3 grid of squares, each in its
- * own colour: selected, the tile washes with its tint, the icon fills and
- * pops, a tick lands in the corner — all on one 220 ms clock, like the cards.
- */
-function TopicTile({
-  label,
-  glyph,
-  tint,
-  on,
-  onPress,
-}: {
-  label: string;
-  glyph: string;
-  tint: Tint;
-  on: boolean;
-  onPress: () => void;
-}) {
-  const reduced = useReducedMotion();
-  const sel = useSharedValue(on ? 1 : 0);
-  const pop = useSharedValue(1);
-  const press = useSharedValue(0);
-  const wasOn = useRef(on);
-  const colour = TINTS[tint];
-  useEffect(() => {
-    sel.value = withTiming(on ? 1 : 0, { duration: reduced ? 0 : 220, easing: Easing.out(Easing.cubic) });
-    if (on && !wasOn.current && !reduced) {
-      pop.value = withSequence(
-        withTiming(1.16, { duration: 110, easing: Easing.out(Easing.quad) }),
-        withTiming(1, { duration: 220, easing: Easing.out(Easing.back(2)) })
-      );
-    }
-    wasOn.current = on;
-  }, [on, reduced, sel, pop]);
-  const tile = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(sel.value, [0, 1], [CARD, `${colour}24`]),
-    borderColor: interpolateColor(sel.value, [0, 1], ['rgba(242,245,243,0.06)', `${colour}99`]),
-    transform: [{ scale: 1 - press.value * 0.03 }],
-  }));
-  const iconPop = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
-  const offFace = useAnimatedStyle(() => ({ opacity: 1 - sel.value }));
-  const onFace = useAnimatedStyle(() => ({ opacity: sel.value }));
-  const tick = useAnimatedStyle(() => ({ opacity: sel.value, transform: [{ scale: 0.5 + sel.value * 0.5 }] }));
-  const labelStyle = useAnimatedStyle(() => ({ color: interpolateColor(sel.value, [0, 1], [TEXT, colour]) }));
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => {
-        press.value = withTiming(1, { duration: reduced ? 0 : 90 });
-      }}
-      onPressOut={() => {
-        press.value = withTiming(0, { duration: reduced ? 0 : 160 });
-      }}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: on }}
-      accessibilityLabel={label}
-      style={styles.topicCell}
-    >
-      <Animated.View style={[styles.topicTile, tile]}>
-        <Animated.View style={[styles.topicTick, { backgroundColor: colour }, tick]}>
-          <Text style={styles.topicTickMark}>✓</Text>
-        </Animated.View>
-        <Animated.View style={iconPop}>
-          <Animated.View style={offFace}>
-            <IconTile glyph={glyph} tint={tint} size={48} />
-          </Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, onFace]}>
-            <IconTile glyph={glyph} tint={tint} size={48} on />
-          </Animated.View>
-        </Animated.View>
-        <Animated.Text style={[styles.topicLabel, labelStyle]} numberOfLines={2}>
-          {label}
-        </Animated.Text>
-      </Animated.View>
-    </Pressable>
   );
 }
 
@@ -417,21 +307,6 @@ const TOPIC_ART: Record<string, { glyph: string; tint: Tint }> = {
   mind: { glyph: '✿︎', tint: 'mint' },
 };
 
-/**
- * ART PER ANSWER, NOT COPY: a glyph and a tint for each card. Keyed on the
- * stored ids, so a label can be reworded in copy.ts without touching this.
- * Four different tints on purpose — one accent repeated four times is the
- * "black and white" Radek was tired of.
- */
-/** Text-presentation symbols (U+FE0E forces the monochrome form), drawn
-    in the tile's tint — never an emoji. */
-const MOTIVATION_ART: Record<string, { glyph: string; tint: Tint }> = {
-  travel: { glyph: '✈︎', tint: 'sky' },
-  people: { glyph: '♥︎', tint: 'rose' },
-  work: { glyph: '✎︎', tint: 'amber' },
-  culture: { glyph: '♫', tint: 'violet' },
-};
-
 /** Drawn bars: one lit for zero, two for a bit, three for comfortable. */
 const SELF_LEVEL_ART: Record<string, { level: 1 | 2 | 3; tint: Tint }> = {
   zero: { level: 1, tint: 'mint' },
@@ -439,64 +314,61 @@ const SELF_LEVEL_ART: Record<string, { level: 1 | 2 | 3; tint: Tint }> = {
   confident: { level: 3, tint: 'amber' },
 };
 
-/** Drawn week: three days lit, every day lit, every day twice over. */
-const FREQUENCY_ART: Record<string, { lit: number; strong?: boolean; tint: Tint }> = {
-  light: { lit: 3, tint: 'amber' },
-  daily: { lit: 7, tint: 'rose' },
-  serious: { lit: 7, strong: true, tint: 'violet' },
-};
 
 // ----------------------------------------------------------- 3. self-assess
 
-function SelfLevelStep({ state, update, next }: StepProps) {
+/**
+ * How long a single-answer screen shows the tapped card lit before it slides
+ * on. Advancing in the same frame as the tap meant the card never visibly
+ * selected and the slide started under the finger (Radek, 2026-10-27).
+ * Long enough for Loro's reaction to be read before the screen moves.
+ */
+const CHOSEN_HOLD_MS = 650;
+
+function SelfLevelStep({ state, update, next, isCurrent }: StepProps) {
+  /** Lit at once; the answer itself commits after CHOSEN_HOLD_MS. */
+  const [chosen, setChosen] = useState<SelfLevel | null>(state.selfLevel);
+  const leaving = useRef(false);
+  const choose = (level: SelfLevel) => {
+    if (leaving.current) return;
+    leaving.current = true;
+    setChosen(level);
+    setTimeout(() => {
+      leaving.current = false;
+      pick(level);
+    }, CHOSEN_HOLD_MS);
+  };
   /** The web's pickSelfLevel, app/welcome/page.tsx:150-162. */
   const pick = (level: SelfLevel) => {
     storage.setSelfLevel(level);
-    if (level === 'zero') {
-      // The deck IS their calibration, so the feed is seeded at the easy end
-      // and the grid is skipped — the web's exact pair of lines (:154-156).
-      storage.setStartLevel('A1');
-      olog(`selfLevel=zero -> startLevel=A1, grid skipped`);
-      /**
-       * ===================================================================
-       * SEAM: THE STARTER DECK GOES HERE.
-       * ===================================================================
-       * On the web this branch routes to /onboarding/starter, a separate
-       * flow that teaches ~15 first words and grants each one into the SRS
-       * through storage.saveWordAtBox(word, box, stagger, 'deck') — box 3 if
-       * the user says they knew it, box 1 if not
-       * (app/onboarding/starter/page.tsx:225-245). On completion it writes
-       * setStarterDone() and setOnboarded() (:157-163).
-       *
-       * NONE OF THAT IS FAKED HERE. There is no deck on mobile yet, so this
-       * path currently just skips the grid: a 'zero' user starts at A1 with
-       * an empty word list, which is honest. Granting words without the deck
-       * that teaches them would put entries in /vocab the user has never
-       * seen, and mis-filing them as source 'user' would additionally leak
-       * them past the free-tier ceiling and the account prompt, both of
-       * which exclude 'deck' grants deliberately (storage.ts:1196-1204).
-       *
-       * When the deck lands: render it as its own step between here and
-       * screen 7, gated on selfLevel === 'zero', and call setStarterDone()
-       * on the way out. loro.starterDone is untouched until then.
-       */
-    }
-    update({ selfLevel: level });
+    /**
+     * THE WORD CHECK IS GONE (Radek, 2026-10-27: "I want the word check
+     * away"). The fifteen-word grid used to derive the start level; now
+     * the answer here sets it, at the bottom of each band so the feed
+     * starts easy and moves up from there: zero A1, a bit A2, comfortable
+     * B1. No calibration words are written, which core reads as "none".
+     */
+    const derived = SELF_LEVEL_START[level];
+    storage.setStartLevel(derived);
+    olog(`selfLevel=${level} -> startLevel=${derived} (no word check)`);
+    update({ selfLevel: level, derived });
     next();
   };
 
   return (
     <Screen>
+      <LoroSays line={(chosen && LORO_LINES.selfLevel[chosen]) || LORO_LINES.selfLevel.open} active={isCurrent} />
       <Title>{SELF_LEVEL.title}</Title>
       <Body>{SELF_LEVEL.body}</Body>
       <View style={styles.choices} accessibilityRole="radiogroup">
         {SELF_LEVEL.options.map((option) => {
-          const on = state.selfLevel === option.id;
+          const on = chosen === option.id;
           const art = SELF_LEVEL_ART[option.id];
           return (
             <ChoiceCard
               key={option.id}
               label={option.label}
+              es={option.es}
               body={option.body}
               selected={on}
               icon={
@@ -506,205 +378,10 @@ function SelfLevelStep({ state, update, next }: StepProps) {
                   </IconTile>
                 )
               }
-              onPress={() => pick(option.id)}
+              onPress={() => choose(option.id)}
             />
           );
         })}
-      </View>
-    </Screen>
-  );
-}
-
-// ------------------------------------------------------ 4. calibration intro
-
-function CalibrationIntroStep({ next }: StepProps) {
-  // A taste of the grid itself: four of its real words, dimmed, one lit —
-  // so the next screen is recognised rather than met.
-  const preview = CALIBRATION_WORDS.slice(0, 5).map((w) => w.text);
-  return (
-    <Screen footer={<PrimaryButton label={CALIBRATION_INTRO.cta} onPress={next} />}>
-      <View style={styles.introStage}>
-        <View style={styles.introFacts}>
-          <View style={styles.introFact}>
-            <Text style={styles.introNumber}>{CALIBRATION_WORDS.length}</Text>
-            <Text style={styles.introUnit}>words</Text>
-          </View>
-          <View style={styles.introFactDivider} />
-          <View style={styles.introFact}>
-            <Text style={styles.introNumber}>20</Text>
-            <Text style={styles.introUnit}>seconds</Text>
-          </View>
-        </View>
-        <View style={styles.introChips}>
-          {preview.map((w, i) => (
-            <View key={w} style={[styles.introChip, i === 1 && styles.introChipOn]}>
-              <Text style={[styles.introChipText, i === 1 && styles.introChipTextOn]}>{w}</Text>
-            </View>
-          ))}
-        </View>
-        <ParrotPeek size={120} style={styles.introParrot} />
-      </View>
-      <Title>{CALIBRATION_INTRO.title}</Title>
-      <Body>{CALIBRATION_INTRO.body}</Body>
-    </Screen>
-  );
-}
-
-// ------------------------------------------------------------------ 5. grid
-
-function GridStep({ state, update, next }: StepProps) {
-  const toggle = (text: string) => {
-    // The web's toggleWord, page.tsx:205-212 — a new Set each time so the
-    // identity changes and the chips re-render.
-    const nextKnown = new Set(state.known);
-    if (nextKnown.has(text)) nextKnown.delete(text);
-    else nextKnown.add(text);
-    update({ known: nextKnown });
-  };
-
-  /**
-   * The web's finishCalibration, page.tsx:214-226, minus the guided video it
-   * also prepares (pickGuidedVideo / pickTargetWord) — that walkthrough is a
-   * later checkpoint, and calling either here would pick a video nothing shows.
-   * The two storage writes and their order are unchanged.
-   */
-  const commit = () => {
-    const derived = deriveLevel(state.known, CALIBRATION_WORDS);
-    storage.setStartLevel(derived);
-    storage.setCalibrationKnown([...state.known]);
-    olog(
-      `calibration known=${state.known.size}/${CALIBRATION_WORDS.length} ` +
-        `[${[...state.known].join(', ')}] -> startLevel=${derived}`
-    );
-    update({ derived });
-    next();
-  };
-
-  return (
-    <Screen
-      footer={
-        <PrimaryButton
-          label={state.known.size > 0 ? GRID.ctaSome : GRID.ctaNone}
-          onPress={commit}
-        />
-      }
-    >
-      <Title>{GRID.title}</Title>
-      <Body>{GRID.body}</Body>
-      <View style={styles.grid}>
-        {CALIBRATION_WORDS.map((word) => (
-          <WordChip
-            key={word.text}
-            text={word.text}
-            on={state.known.has(word.text)}
-            onToggle={() => toggle(word.text)}
-          />
-        ))}
-      </View>
-      {/*
-        NO "I'M ACTUALLY STARTING FROM ZERO" ESCAPE HATCH, and that is a
-        deliberate omission rather than a gap. On the web that button
-        (page.tsx:174-202) is not a navigation shortcut — its whole body is
-        starter-deck work: every tapped word is granted at box 3 with source
-        'deck' via saveWordAtBox before it routes. Without the deck the button
-        would either drop those grants silently or fake them. The same
-        destination is one screen back, so nothing is unreachable. It returns
-        with the deck; see the seam in SelfLevelStep.
-      */}
-    </Screen>
-  );
-}
-
-/**
- * One tappable word of the calibration grid. Its own component because
- * selection is ANIMATED per chip, and fifteen chips inside GridStep's render
- * would mean fifteen hooks in a loop.
- *
- * THE GEOMETRY NEVER CHANGES, and holding that line is the reason this
- * component exists (2026-09-01, Radek on device: tapping "imprescindible"
- * made the grid "glitch into another position"). The old selected style
- * bumped the font weight 600 -> 700; a bolder run of a long word is a few
- * points wider, the chip is content-sized, and the flex-wrap grid reflowed
- * every chip after it — the tap looked like it shuffled the deck. Selection
- * may only touch PAINT (background, text colour) and TRANSFORM (the pop),
- * because neither reflows layout. Do not add borders, weight changes, icons
- * or padding to the selected state; any of them brings the jank back.
- *
- * The pop is transform-only for the same reason: the chip briefly overlaps
- * its neighbours instead of pushing them. Reduce Motion collapses both
- * animations to an instant colour change.
- */
-function WordChip({
-  text,
-  on,
-  onToggle,
-}: {
-  text: string;
-  on: boolean;
-  onToggle: () => void;
-}) {
-  const reduceMotion = useReducedMotion();
-  /** 0 unselected -> 1 selected; one clock drives both colours so they can
-      never crossfade out of step. */
-  const sel = useSharedValue(on ? 1 : 0);
-  const pop = useSharedValue(1);
-
-  useEffect(() => {
-    sel.value = withTiming(on ? 1 : 0, { duration: reduceMotion ? 0 : 160 });
-    if (on && !reduceMotion) {
-      pop.value = withSequence(
-        withTiming(1.045, { duration: 110, easing: Easing.out(Easing.ease) }),
-        withTiming(1, { duration: 150, easing: Easing.inOut(Easing.ease) })
-      );
-    }
-  }, [on, reduceMotion, sel, pop]);
-
-  const box = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(sel.value, [0, 1], ['#141a17', ACCENT]),
-    transform: [{ scale: pop.value }],
-  }));
-  const label = useAnimatedStyle(() => ({
-    color: interpolateColor(sel.value, [0, 1], [TEXT, ON_ACCENT]),
-  }));
-
-  return (
-    <Pressable
-      onPress={onToggle}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: on }}
-      style={({ pressed }) => pressed && styles.chipPressed}
-    >
-      <Animated.View style={[styles.chip, box]}>
-        <Animated.Text style={[styles.chipText, label]}>{text}</Animated.Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ---------------------------------------------------------------- 6. result
-
-function ResultStep({ state, next }: StepProps) {
-  return (
-    <Screen footer={<PrimaryButton label={RESULT.cta} onPress={next} />}>
-      <View style={styles.resultBlock}>
-        {/* The one unambiguously good moment in the flow: they answered, and
-            here is the answer. The parrot shows up to mark it. */}
-        <Image
-          source={BRAND.parrot}
-          style={styles.parrot}
-          resizeMode="contain"
-          accessibilityRole="image"
-          accessibilityLabel="Loro the parrot"
-        />
-        <Text style={styles.kicker}>{RESULT.kicker}</Text>
-        {/* Never reached with a null level: this step is skipped on the only
-            path that does not derive one. Rendered defensively anyway — a
-            crash here would be at the worst possible moment. */}
-        <Text style={styles.level}>{state.derived ?? 'A1'}</Text>
-        {/* The level on its scale: "A2" alone is a code; A2 lit on the road
-            from A1 to C2 is a place to start from. */}
-        <LevelLadder level={state.derived ?? 'A1'} />
-        <Body>{RESULT.body}</Body>
       </View>
     </Screen>
   );
@@ -743,78 +420,41 @@ function Reveal({
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-function HowItWorksStep({ next, isCurrent }: StepProps) {
-  // THE LOOP, PLAYED (LoopStory): tap a word, train it in Words, it comes
-  // back in your videos. Replaced the picture-plus-four-lines version when
-  // training moved into the Words tab (2026-09-26); the old lines promised
-  // a word "returns days later" on its own, which is no longer the shape.
-  return (
-    <Screen footer={<PrimaryButton label={HOW_IT_WORKS.cta} onPress={next} />}>
-      <Title>{HOW_IT_WORKS.title}</Title>
-      <LoopStory isCurrent={isCurrent} />
-    </Screen>
-  );
+/** The lesson's two screens adapt StepProps to what they need. */
+function LessonIntroScreen({ next, isCurrent }: StepProps) {
+  return <LessonIntroStep next={next} isCurrent={isCurrent} />;
 }
-
-// -------------------------------------------------------------- 8. blanks
-
-function BlanksStep({ next, isCurrent }: StepProps) {
-  const at = BLANKS.mockSentence.indexOf('__BLANK__');
-  return (
-    <Screen footer={<PrimaryButton label={BLANKS.cta} onPress={next} />}>
-      <Title>{BLANKS.title}</Title>
-      <Body>{BLANKS.body}</Body>
-      {/* The mechanic, played: the gap in the line, the letters arriving in
-          the answer bar and the slot together, the word turning green. The
-          static dashed slot (BlankMock) was the first cut; the loop says
-          "the video waits, you type, it carries on" without a caption. */}
-      <TypingMock
-        before={BLANKS.mockSentence.slice(0, at)}
-        answer="esta"
-        after={BLANKS.mockSentence.slice(at + 1)}
-        gloss={BLANKS.mockGloss}
-        isCurrent={isCurrent}
-      />
-    </Screen>
-  );
+function TapWordScreen({ next, isCurrent }: StepProps) {
+  return <TapWordStep next={next} isCurrent={isCurrent} />;
+}
+function WordBackScreen({ next, isCurrent }: StepProps) {
+  return <WordBackStep next={next} isCurrent={isCurrent} />;
 }
 
 // ------------------------------------------------------------ 9. frequency
 
-function FrequencyStep({ state, update, next }: StepProps) {
+function FrequencyStep({ state, update, next, isCurrent }: StepProps) {
+  /**
+   * PICK, THEN CONTINUE. It used to advance on tap, which slid the screen
+   * away under the finger; now the week fills in to show the choice and
+   * the button moves on (Radek, 2026-10-27). Picked locally and committed
+   * once, like the multi-selects, so a change of mind writes nothing.
+   */
+  const [picked, setPicked] = useState<string | null>(state.frequency);
+  const commit = () => {
+    if (!picked) return;
+    setFrequency(picked);
+    // The number core grades the streak day against (Shell.tsx).
+    storage.setDailyGoal(planFor(picked).wordsPerDay);
+    update({ frequency: picked });
+    next();
+  };
   return (
-    <Screen>
+    <Screen footer={<PrimaryButton label={FREQUENCY.cta} onPress={commit} disabled={!picked} />}>
+      <LoroSays line={(picked && LORO_LINES.frequency[picked]) || LORO_LINES.frequency.open} active={isCurrent} />
       <Title>{FREQUENCY.title}</Title>
       <Body>{FREQUENCY.body}</Body>
-      <View style={styles.choices} accessibilityRole="radiogroup">
-        {FREQUENCY.options.map((option) => (
-          <ChoiceCard
-            key={option.id}
-            label={option.label}
-            body={option.body}
-            selected={state.frequency === option.id}
-            // The dots alone, no tile behind them (Radek: "without the
-            // squares, the dots is a good idea").
-            icon={
-              FREQUENCY_ART[option.id] && (
-                <WeekIcon
-                  lit={FREQUENCY_ART[option.id].lit}
-                  strong={FREQUENCY_ART[option.id].strong}
-                  tint={FREQUENCY_ART[option.id].tint}
-                  size={7}
-                />
-              )
-            }
-            onPress={() => {
-              setFrequency(option.id);
-              // The number core grades the streak day against (Shell.tsx).
-              storage.setDailyGoal(planFor(option.id).wordsPerDay);
-              update({ frequency: option.id });
-              next();
-            }}
-          />
-        ))}
-      </View>
+      <FrequencyPicker picked={picked} onPick={setPicked} weeklyMinutes={WEEKLY_MINUTES} />
     </Screen>
   );
 }
@@ -974,15 +614,14 @@ function FluencyGoalStep({ update, next }: StepProps) {
 
 // ------------------------------------------------------------ 11. plan build
 
-/** How long the bar takes. The lines land inside this window, and the
-    button unlocks just after it — long enough to read them, short enough
-    that nobody reaches for the button while it is still dimmed. */
-const PLAN_BUILD_MS = 2600;
+/** How long the ring takes. The four lines tick inside this window, and the
+    button unlocks just after it. */
+const PLAN_BUILD_MS = 3000;
 
 /**
- * Minutes per week each frequency answer amounts to, FOR THE SUM LINE ONLY.
- * Each figure is the option's own copy turned into arithmetic — change the
- * copy in FREQUENCY.options and these must move with it:
+ * Minutes per week each frequency answer amounts to, FOR THE SUM LINE AND
+ * THE WEEK PICTURE ONLY. Each figure is the option's own copy turned into
+ * arithmetic — change the copy in FREQUENCY.options and these must move:
  *
  *   light    "A few times a week · About 5 minutes"  → 3 × 5
  *   daily    "Every day · About 10 minutes"          → 7 × 10
@@ -1003,113 +642,37 @@ function planHours(weeklyMinutes: number, months: number): number {
   return hours >= 10 ? Math.round(hours / 5) * 5 : Math.round(hours);
 }
 
-/**
- * Verdict tiers for the sum line, cut against the REAL spread of the inputs
- * (light 3–25h, daily 15–120h, serious 30–245h across the 3–24 month
- * slider): under 25h only the lightest plans land, so the verdict nudges for
- * more; 100h and up is only reachable by leaning in, so the verdict can
- * afford awe. The lines themselves live in PLAN_BUILD and are coaching on
- * commitment, never outcome promises — see the note there.
- */
-const PLAN_VERDICT_LOW_H = 25;
-const PLAN_VERDICT_HIGH_H = 100;
-
-function planVerdict(hours: number): string {
-  if (hours < PLAN_VERDICT_LOW_H) return PLAN_BUILD.verdictLow;
-  if (hours >= PLAN_VERDICT_HIGH_H) return PLAN_BUILD.verdictHigh;
-  return PLAN_BUILD.verdictMid;
+/** The pace as a short checklist line. */
+function paceShort(frequency: string | null): string | null {
+  switch (frequency) {
+    case 'light':
+      return '5 minutes, a few times a week';
+    case 'daily':
+      return '10 minutes, every day';
+    case 'serious':
+      return '20+ minutes, every day';
+    default:
+      return null;
+  }
 }
 
 /**
- * Geometry of the rising line. The journey is drawn as a climb — point B
- * sits PLAN_RISE higher than point A, because the level going UP is the
- * point of the picture — and the path between them is a polyline of small
- * rotated track segments, not one straight bar. Layout needs the seat's real
- * width (every angle depends on it), so the path renders only after onLayout
- * reports one; RN rotates around the centre, which is why the maths below
- * places each segment's midpoint first and tilts it second.
- */
-const PLAN_RISE = 36;
-/** Badge midline: paddingVertical 6 × 2 + one 18pt line of 14pt/800 ≈ 30. */
-const PLAN_BADGE_MID = 15;
-
-/**
- * The climb's silhouette. x is the fraction of the run, y the fraction of
- * the CLIMB reached — and it dips on purpose, because that is what the user
- * asked the picture to say: progress that wobbles and still ends up at B.
- * The shape is drawing, not data — it is the same fixed squiggle for
- * everyone, asserts nothing about how learning actually paces, and must
- * never grow axes, ticks or labels that would claim otherwise.
- */
-const PLAN_WAYPOINTS = [
-  { x: 0, y: 0 },
-  { x: 0.24, y: 0.42 },
-  { x: 0.42, y: 0.26 },
-  { x: 0.62, y: 0.74 },
-  { x: 0.76, y: 0.6 },
-  { x: 1, y: 1 },
-] as const;
-
-/**
- * One leg of the path. Its own component because each leg owns an animated
- * style (hooks cannot live in a loop), filling only across its span of the
- * shared 0→1 progress — so the fill runs the polyline end to end, leg by
- * leg, instead of all legs growing at once.
- */
-function PlanSegment({
-  progress,
-  from,
-  to,
-  left,
-  top,
-  width,
-  angle,
-}: {
-  progress: SharedValue<number>;
-  from: number;
-  to: number;
-  left: number;
-  top: number;
-  width: number;
-  angle: number;
-}) {
-  const fill = useAnimatedStyle(() => ({
-    width: `${interpolate(progress.value, [from, to], [0, 100], Extrapolation.CLAMP)}%`,
-  }));
-  return (
-    <View
-      style={[
-        styles.planBarTilt,
-        styles.planBar,
-        { left, top, transform: [{ rotate: `${angle}rad` }], width },
-      ]}
-    >
-      <Animated.View style={[styles.planBarFill, fill]} />
-    </View>
-  );
-}
-
-/**
- * The plan assembling on screen — and every element of it is TRUE, which is
- * the condition this slot exists under (see the history in copy.ts: the fake
- * loader with invented testimonials that once followed this screen was
- * deleted, not disabled). Point A of the journey is the level the grid
- * derived — or the A1 the zero path writes — point B is the goal month the
- * slider just set, the pace line is the frequency card tapped two screens
- * ago, and the recall line is shipped behaviour. The bar paces the reveal of
- * real answers; it does not simulate computation.
+ * The plan assembling: a ring to 100%, four lines ticking as it passes them,
+ * then the one number. Every line is TRUE, the condition this slot exists
+ * under (see the history in copy.ts: a fake loader with invented
+ * testimonials once stood here and was deleted). The level is the grid's (or
+ * the zero path's A1), the pace is their frequency answer, the feed line is
+ * their topics, and the last line is shipped behaviour. The hours are their
+ * pace × their window, nothing else.
  *
- * Keyed off isCurrent, not mount: every step is mounted at once, so a
- * mount-time clock would have finished five screens before anyone arrived.
- * It runs ONCE — coming back through the back arrow shows the finished
- * state, because watching the same loader twice is where trust goes to die.
+ * Redrawn 2026-10-27 (Radek: "good page, but the visual is bad, a lot of
+ * text"): the A→B polyline, the labelled sheet and the verdict paragraph are
+ * gone. Keyed off isCurrent, runs once.
  */
 function PlanBuildStep({ state, next, isCurrent }: StepProps) {
   const reduced = useReducedMotion();
   const started = useRef(false);
   const [done, setDone] = useState(false);
-  /** The seat's measured width — the tilt angle depends on it. */
-  const [run, setRun] = useState(0);
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -1120,168 +683,45 @@ function PlanBuildStep({ state, next, isCurrent }: StepProps) {
       setDone(true);
       return;
     }
-    progress.value = withTiming(1, {
-      duration: PLAN_BUILD_MS,
-      easing: Easing.inOut(Easing.cubic),
-    });
+    progress.value = withTiming(1, { duration: PLAN_BUILD_MS, easing: Easing.inOut(Easing.cubic) });
     const timer = setTimeout(() => setDone(true), PLAN_BUILD_MS + 150);
     return () => clearTimeout(timer);
   }, [isCurrent, reduced, progress]);
 
-  const pace = FREQUENCY.options.find((option) => option.id === state.frequency);
-  // Defensive 'A1' matches the zero path's real write (setStartLevel('A1')),
-  // so the fallback is still a true statement, not a guess.
   const level = state.derived ?? 'A1';
-  // Unreachable null: the goal screen patches this on the only way forward.
-  // The slider's untouched default is the honest stand-in if it ever is.
   const goalMonths = state.goalMonths ?? DEFAULT_MONTHS;
   const goalDate = targetLabel(goalMonths);
-  // The feed they asked for, said back (Radek, 2026-10-06: put the feed
-  // preference in the plan). No topics picked: the line it always was.
   const feedFor = topicPhrase(state.topics);
+  const pace = paceShort(state.frequency);
   const lines = [
-    {
-      label: 'Clips',
-      text: feedFor ? `Real clips at your level, with more ${feedFor}` : PLAN_BUILD.clips,
-    },
-    {
-      label: 'Pace',
-      text: pace ? `${pace.label} · ${pace.body.replace(/\.$/, '')}` : PLAN_BUILD.paceFallback,
-    },
-    { label: 'Recall', text: PLAN_BUILD.recall },
+    `Starting at ${level}`,
+    pace ?? PLAN_BUILD.paceFallback,
+    feedFor ? `More ${feedFor}` : 'Clips at your level',
+    PLAN_BUILD.recallShort,
   ];
-  // The sum line needs a pace to multiply; without one there is no honest
-  // number, so the hero simply does not render rather than inventing one.
-  const hours = pace ? planHours(WEEKLY_MINUTES[pace.id] ?? 0, goalMonths) : 0;
+  const hours = state.frequency ? planHours(WEEKLY_MINUTES[state.frequency] ?? 0, goalMonths) : 0;
 
   return (
-    <Screen
-      footer={
-        <PrimaryButton label={PLAN_BUILD.cta} onPress={next} disabled={!done} />
-      }
-    >
-      <Title>{PLAN_BUILD.title}</Title>
-
-      {/* THE JOURNEY IS THE PROGRESS BAR, AND IT CLIMBS. Point A is the
-          level the grid just derived, sitting low; point B is the user's own
-          goal from the slider one screen back, sitting PLAN_RISE higher; and
-          the bar filling between them is the same loader as before — now it
-          visibly rises from where they are toward where they said they want
-          to be. Both ends are true inputs; the slope is drawing, not data,
-          and the bar is pacing, not a measured forecast. */}
-      <View
-        style={styles.planJourney}
-        accessible
-        accessibilityLabel={`Your plan: from ${level} today to fluent by ${goalDate}`}
-      >
-        <View style={[styles.planNode, { marginTop: PLAN_RISE }]}>
-          <View style={styles.planNodeBadge}>
-            <Text style={styles.planNodeBadgeText}>{level}</Text>
-          </View>
-          <Text style={styles.planNodeLabel}>{PLAN_BUILD.todayLabel}</Text>
-        </View>
-
-        <View
-          style={styles.planBarSeat}
-          onLayout={(event) => setRun(event.nativeEvent.layout.width)}
-        >
-          {run > 0 &&
-            (() => {
-              // Waypoints in seat coordinates: y = 0 of the climb is A's
-              // badge midline, y = 1 is B's. Fill spans are proportional to
-              // each leg's LENGTH, so the travel reads at one speed instead
-              // of sprinting the short legs.
-              const aMid = PLAN_RISE + PLAN_BADGE_MID;
-              const pts = PLAN_WAYPOINTS.map((p) => ({
-                x: p.x * run,
-                y: aMid - p.y * PLAN_RISE,
-              }));
-              const legs = pts.slice(1).map((p2, i) => {
-                const p1 = pts[i];
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                return {
-                  length: Math.hypot(dx, dy),
-                  angle: Math.atan2(dy, dx),
-                  midX: (p1.x + p2.x) / 2,
-                  midY: (p1.y + p2.y) / 2,
-                };
-              });
-              const total = legs.reduce((sum, leg) => sum + leg.length, 0);
-              let travelled = 0;
-              return legs.map((leg, i) => {
-                const from = travelled / total;
-                travelled += leg.length;
-                // +4 overlaps the joints by ~2pt each side; with rounded
-                // caps that reads as one bending line, not five bars.
-                const drawn = leg.length + 4;
-                return (
-                  <PlanSegment
-                    key={i}
-                    progress={progress}
-                    from={from}
-                    to={travelled / total}
-                    left={leg.midX - drawn / 2}
-                    top={leg.midY - 3}
-                    width={drawn}
-                    angle={leg.angle}
-                  />
-                );
-              });
-            })()}
-        </View>
-
-        <View style={styles.planNode}>
-          <View style={[styles.planNodeBadge, styles.planNodeBadgeGoal]}>
-            <Text style={styles.planNodeBadgeGoalText}>
-              {PLAN_BUILD.goalBadge}
-            </Text>
-          </View>
-          <Text style={styles.planNodeLabel}>{goalDate}</Text>
-        </View>
+    <Screen footer={<PrimaryButton label={PLAN_BUILD.cta} onPress={next} disabled={!done} />}>
+      <Text style={styles.planTitle}>{done ? PLAN_BUILD.titleDone : PLAN_BUILD.title}</Text>
+      <View style={styles.planRingSeat}>
+        <PlanRing progress={progress} />
       </View>
-
-      {/* THE PLAN SHEET: one card, hairlines between rows, a small label
-          naming what each row is. No markers — the green tick circles read
-          as generated (Radek, 2026-09-15), and a sheet with labelled rows
-          is what a plan actually looks like. */}
-      <View style={styles.planSheet}>
-        {lines.map((line, i) => (
-          <Reveal
-            key={line.label}
-            active={isCurrent}
-            // Spread across the bar's run, with the last landing before it
-            // completes — a line arriving after "100%" would read as an
-            // afterthought.
-            delay={300 + i * ((PLAN_BUILD_MS - 900) / (lines.length - 1))}
-          >
-            <View style={[styles.planSheetRow, i > 0 && styles.planSheetRowNext]}>
-              <Text style={styles.planLabel}>{line.label}</Text>
-              <Text style={styles.planText}>{line.text}</Text>
-            </View>
-          </Reveal>
+      <View style={styles.planChecks}>
+        {lines.map((text, i) => (
+          <PlanCheck key={i} progress={progress} at={0.22 + i * 0.24} text={text} />
         ))}
       </View>
-
-      {/* THE SUM, LAST — the payoff the lines build to, landing just before
-          the bar completes. Their pace times their window, as hours of real
-          Spanish: the one number this screen may show, because it is the
-          user's own two answers multiplied and nothing else (see
-          WEEKLY_MINUTES). "About" and the rounding in planHours keep it from
-          pretending precision. */}
-      {pace && hours > 0 && (
-        <Reveal active={isCurrent} delay={PLAN_BUILD_MS - 400}>
+      {hours > 0 && (
+        <Reveal active={done} delay={0}>
           <View style={styles.planTotal}>
-            <Text style={styles.planTotalLead}>{PLAN_BUILD.totalLead}</Text>
             <Text style={styles.planTotalValue}>
-              ≈ {hours}{' '}
-              <Text style={styles.planTotalUnit}>{PLAN_BUILD.totalUnit}</Text>
+              ≈ {hours} <Text style={styles.planTotalUnit}>{PLAN_BUILD.totalUnit}</Text>
             </Text>
             <Text style={styles.planTotalBody}>
               {PLAN_BUILD.totalBodyPrefix}
               {goalDate}
             </Text>
-            <Text style={styles.planVerdict}>{planVerdict(hours)}</Text>
           </View>
         </Reveal>
       )}
@@ -1291,20 +731,6 @@ function PlanBuildStep({ state, next, isCurrent }: StepProps) {
 
 // ----------------------------------------------------------- 11b. plan ready
 
-/** "About 10 minutes a day, every day": the frequency card, as a pace line. */
-function paceLine(frequency: string | null): string | null {
-  switch (frequency) {
-    case 'light':
-      return 'About 5 minutes a day, a few times a week';
-    case 'daily':
-      return 'About 10 minutes a day, every day';
-    case 'serious':
-      return '20 minutes or more, every day';
-    default:
-      return null;
-  }
-}
-
 /** The picked topics as a phrase — "food", "food and travel", "food, travel and money and work". */
 function topicPhrase(topics: string[]): string | null {
   const names = TOPICS.options.filter((o) => topics.includes(o.id)).map((o) => TOPICS.short[o.id] ?? o.label.toLowerCase());
@@ -1312,70 +738,33 @@ function topicPhrase(topics: string[]): string | null {
   return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-/** The reasons from screen 2, read back in the second person. */
-const WHY_CLAUSE: Record<string, string> = {
-  travel: 'so you can actually talk when you get there',
-  people: 'for the people in your life who speak it',
-  work: 'because your work needs it',
-  culture: 'for the music, the film, the football and the books',
-};
-
-function whyLine(motivation: string[]): { head: string; body: string } {
-  const chosen = MOTIVATION.options.filter((o) => motivation.includes(o.id));
-  if (chosen.length === 0) return { head: PLAN_READY.whyFallback, body: PLAN_READY.whyTail };
-  const names = chosen.map((o) => o.label.toLowerCase());
-  const list =
-    names.length === 1
-      ? names[0]
-      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-  const clause = WHY_CLAUSE[chosen[0].id];
-  const lead = clause ? `${clause.charAt(0).toUpperCase()}${clause.slice(1)}. ` : '';
-  return { head: `For ${list}`, body: `${lead}${PLAN_READY.whyTail}` };
+/** Up to two answers, capitalised, for a pass field that has two lines. */
+function shortList(labels: string[], fallback: string): string {
+  if (labels.length === 0) return fallback;
+  const head = labels.slice(0, 2).join(' & ');
+  const text = labels.length > 2 ? `${head} +${labels.length - 2}` : head;
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/** The pace as a pass field. */
+const PASS_PACE: Record<string, string> = {
+  light: '5 min, 3× a week',
+  daily: '10 min a day',
+  serious: '20+ min a day',
+};
+
 /**
- * The plan, finished, said back as four lines the user can check against
- * their own answers, and the last thing they read before the wall. It takes
- * over the handoff's job while the taste reel is benched (see STEPS), which
- * is why the mascot waves here and the button says ¡Vamos!.
+ * The plan, finished, as a BOARDING PASS (Radek, 2026-10-27: "Enhorabuena
+ * page I hate, the colourful squares don't make any sense"). The app is a
+ * trip, Madrid first, so the plan is the ticket: from their level today to
+ * fluent by their month, with pace, focus, why and the first stop. Every
+ * field is their own answer, or the trip's real first city.
  */
 function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
   const leave = isLast ? finish : next;
-  const plan = planFor(state.frequency);
-  const pace = paceLine(state.frequency);
   const goalDate = targetLabel(state.goalMonths ?? DEFAULT_MONTHS);
-  const level = state.derived ?? 'A1';
-  const why = whyLine(state.motivation);
-  const feedFor = topicPhrase(state.topics);
-  const rows = [
-    {
-      label: 'Pace',
-      head: pace ?? `${plan.wordsPerDay} words a day`,
-      body: `${plan.wordsPerDay}${PLAN_READY.goalBody}`,
-    },
-    { label: 'Why', ...why },
-    { label: 'Level', head: `Starting at ${level}`, body: PLAN_READY.clips },
-    { label: 'Recall', head: PLAN_READY.recallHead, body: PLAN_READY.recall },
-  ];
-
-  /**
-   * ONE SCREEN, NO SCROLL (Radek, 2026-09-22: "make the page not
-   * scrolling, just the titles next to each other, smooth, and vamos").
-   * The parrot and the title share a row, the date is one line, and the
-   * four facts are their HEADLINES only, as a 2×2 of tinted tiles — the
-   * explanatory bodies from the sheet are gone; the paywall's own copy
-   * picks the story up next. Every line is still the user's own answer.
-   */
-  const tiles: { label: string; head: string; tint: Tint }[] = [
-    { label: rows[0].label, head: rows[0].head, tint: 'mint' },
-    { label: rows[1].label, head: rows[1].head, tint: 'sky' },
-    { label: rows[2].label, head: rows[2].head, tint: 'amber' },
-    // Picked topics take the fourth tile: their feed is more theirs than
-    // the recall line, which the plan screen before has already said.
-    feedFor
-      ? { label: 'Feed', head: `More ${feedFor}`, tint: 'violet' as Tint }
-      : { label: rows[3].label, head: rows[3].head, tint: 'violet' },
-  ];
+  const why = MOTIVATION.options.filter((o) => state.motivation.includes(o.id)).map((o) => o.label);
+  const focus = TOPICS.options.filter((o) => state.topics.includes(o.id)).map((o) => TOPICS.short[o.id] ?? o.label);
   return (
     <Screen footer={<PrimaryButton label={PLAN_READY.cta} onPress={leave} />}>
       <View style={styles.readyHero}>
@@ -1389,41 +778,23 @@ function PlanReadyStep({ state, next, finish, isLast, isCurrent }: StepProps) {
         <View style={styles.readyTitles}>
           <Title>{PLAN_READY.title}</Title>
           <Text style={styles.planReadyGloss}>{PLAN_READY.gloss}</Text>
+          <Text style={styles.readySub}>{PLAN_READY.sub}</Text>
         </View>
       </View>
-      <Text style={styles.readyDate}>
-        Fluent by <Text style={styles.readyDateStrong}>{goalDate}</Text>
-      </Text>
-
-      <View style={styles.readyGrid}>
-        {tiles.map((tile, i) => (
-          // The cell owns the column width; Reveal is a plain wrapper.
-          <View key={tile.label} style={styles.readyCell}>
-            <Reveal active={isCurrent} delay={200 + i * 140}>
-              <View
-                style={[
-                  styles.readyTile,
-                  { backgroundColor: readyTileBg(tile.tint), borderColor: readyTileBorder(tile.tint) },
-                ]}
-              >
-                <Text style={[styles.readyTileLabel, { color: TINTS[tile.tint] }]}>{tile.label}</Text>
-                <Text style={styles.readyTileHead} numberOfLines={3}>
-                  {tile.head}
-                </Text>
-              </View>
-            </Reveal>
-          </View>
-        ))}
-      </View>
+      <BoardingPass
+        active={isCurrent}
+        fields={{
+          from: state.derived ?? 'A1',
+          to: 'Fluent',
+          toDate: goalDate,
+          pace: (state.frequency && PASS_PACE[state.frequency]) || 'Your pace',
+          focus: shortList(focus, 'Everything'),
+          why: shortList(why, 'For me'),
+          firstStop: TRIP[0]?.city ?? 'Madrid',
+        }}
+      />
     </Screen>
   );
-}
-
-function readyTileBg(tint: Tint): string {
-  return TINTS[tint] + '1f'; // ~12% — hex alpha on the tint
-}
-function readyTileBorder(tint: Tint): string {
-  return TINTS[tint] + '4d'; // ~30%
 }
 
 // -------------------------------------------------------------- 12. paywall
@@ -1495,9 +866,6 @@ export type StepDef = {
   fullBleed?: boolean;
 };
 
-/** A 'zero' self-assessment has no grid to fill: the deck calibrates instead
-    (and until it lands, nothing does — see the seam in SelfLevelStep). */
-const zeroPath = (state: FlowState) => state.selfLevel === 'zero';
 
 /**
  * THE TASTE REEL IS BENCHED (2026-09-01, owner's call) — this update ships
@@ -1529,11 +897,16 @@ export const STEPS: StepDef[] = [
   { id: 'hook', Component: HookStep },
   { id: 'motivation', Component: MotivationStep },
   { id: 'selfLevel', Component: SelfLevelStep },
-  { id: 'calibrationIntro', Component: CalibrationIntroStep, skip: zeroPath },
-  { id: 'grid', Component: GridStep, skip: zeroPath },
-  { id: 'result', Component: ResultStep, skip: zeroPath },
-  { id: 'howItWorks', Component: HowItWorksStep },
-  { id: 'blanks', Component: BlanksStep },
+  /**
+   * THE LESSON (2026-10-27): tap a word and save it, then type it back into
+   * a gap — the old "how it works" animation and the looping blank mock,
+   * replaced by the user doing both (WordLesson.tsx). New step ids on
+   * purpose, so the funnel compares these screens against the old ones
+   * instead of blending them.
+   */
+  { id: 'lessonIntro', Component: LessonIntroScreen },
+  { id: 'tapWord', Component: TapWordScreen },
+  { id: 'wordBack', Component: WordBackScreen },
   /**
    * WHAT THEY LOVE WATCHING sits here, not beside motivation (Radek,
    * 2026-10-06: not right after "the same looking page of taps"). The two
@@ -1640,8 +1013,24 @@ const styles = StyleSheet.create({
    * the logo 660pt wide; and a resizeMode of 'contain' with only a width would
    * still reserve the full intrinsic height, pushing the title off screen.
    */
-  logo: { alignSelf: 'flex-start', height: 88, marginBottom: 14, width: 178 },
-  hookStage: { alignItems: 'center', marginBottom: 22, marginTop: 4 },
+  logo: { alignSelf: 'center', height: 56, marginBottom: 4, width: 113 },
+  hookTitle: {
+    color: TEXT,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    lineHeight: 38,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  hookBody: {
+    color: MUTED,
+    fontSize: 16,
+    lineHeight: 23,
+    marginTop: 10,
+    paddingHorizontal: 8,
+    textAlign: 'center',
+  },
 
   // ---- calibration intro ----
   introStage: {
@@ -1741,7 +1130,7 @@ const styles = StyleSheet.create({
   topicGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
   topicCell: { width: '48.5%' },
   /** One fixed size for every tile: a two-line label must not make its square taller than its neighbour. */
-  topicTile: { alignItems: 'flex-start', borderRadius: 20, borderWidth: 1, height: 128, justifyContent: 'space-between', padding: 14 },
+  topicTile: { alignItems: 'flex-start', borderRadius: 20, borderWidth: 1, height: 132, justifyContent: 'space-between', padding: 14 },
   topicTick: {
     alignItems: 'center',
     borderRadius: 999,
@@ -1754,6 +1143,7 @@ const styles = StyleSheet.create({
   },
   topicTickMark: { color: ON_ACCENT, fontSize: 11, fontWeight: '900' },
   topicLabel: { fontSize: 15, fontWeight: '800', lineHeight: 19 },
+  topicEs: { color: 'rgba(94,230,168,0.7)', fontSize: 12, fontStyle: 'italic', fontWeight: '600', marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 22 },
   chip: {
     backgroundColor: '#141a17',
@@ -1888,8 +1278,9 @@ const styles = StyleSheet.create({
   planReadyGloss: { color: MUTED, fontSize: 13, fontWeight: '600', marginTop: -6, marginBottom: 10 },
   // ---- plan ready ----
   readyHero: { alignItems: 'center', flexDirection: 'row', gap: 14 },
-  readyParrot: { height: 118, width: 105 },
+  readyParrot: { height: 104, width: 93 },
   readyTitles: { flex: 1 },
+  readySub: { color: TEXT, fontSize: 15, fontWeight: '600', lineHeight: 21 },
   readyDate: { color: MUTED, fontSize: 16, marginTop: 6 },
   readyDateStrong: { color: TEXT, fontWeight: '800' },
   readyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 22 },
@@ -1900,7 +1291,17 @@ const styles = StyleSheet.create({
   planReadyText: { flex: 1, gap: 2 },
   planReadyHead: { color: TEXT, fontSize: 15, fontWeight: '700', lineHeight: 21 },
   planReadyBody: { color: MUTED, fontSize: 13, lineHeight: 19 },
-  planTotal: { marginTop: 30 },
+  planTitle: {
+    color: TEXT,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    lineHeight: 33,
+    textAlign: 'center',
+  },
+  planRingSeat: { alignItems: 'center', marginTop: 22 },
+  planChecks: { alignSelf: 'stretch', marginTop: 20, paddingHorizontal: 12 },
+  planTotal: { alignItems: 'center', marginTop: 18 },
   planTotalLead: { color: MUTED, fontSize: 13, fontWeight: '600' },
   planTotalValue: {
     color: TEXT,
@@ -1910,7 +1311,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   planTotalUnit: { color: ACCENT, fontSize: 22, fontWeight: '800' },
-  planTotalBody: { color: MUTED, fontSize: 13, lineHeight: 19, marginTop: 2 },
+  planTotalBody: { color: MUTED, fontSize: 14, lineHeight: 19, marginTop: 2, textAlign: 'center' },
   planVerdict: {
     color: TEXT,
     fontSize: 13,

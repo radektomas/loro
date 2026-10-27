@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getPaywallStyle, getPaywallVariant } from '../platform/remoteFlags';
 import {
   ActivityIndicator,
@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { Easing, FadeInDown, FadeInRight } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated';
 import type {
   PurchasesPackage,
   PurchasesStoreProduct,
@@ -29,6 +29,7 @@ import { TRIP, buildRoadmap, citySize, splitCities, tripStop, withLevelKnown } f
 import { cleanWord } from '@loro/core/dictionary';
 import { KNOWN_BOX } from '@loro/core/srs';
 import { DemoIntro, paywallDemoDue } from './DemoIntro';
+import { EXIT_OFFERING_ID, ExitOffer } from './ExitOffer';
 import { PaywallFeedback, markPaywallFeedbackAsked, paywallFeedbackDue, takeDevPaywallFeedback } from './PaywallFeedback';
 import { getPlan, type Plan } from '../progress/plan';
 import { devReleaseForcedPaywall, getPackageTypes, getPurchasesApi } from '../platform/purchases';
@@ -370,6 +371,26 @@ function videoCount(): number {
   return Math.floor((getCatalog().length + collectionVideos.length) / 10) * 10;
 }
 
+/** Down to a round figure for a headline: thousands from 1,000 up,
+    hundreds below. 10,430 → 10,000; 547 → 500. Never rounds up. */
+function niceFloor(n: number): number {
+  if (n >= 1000) return Math.floor(n / 1000) * 1000;
+  if (n >= 100) return Math.floor(n / 100) * 100;
+  return n;
+}
+
+/**
+ * THE WORDS HEADLINE ROUNDS UP, and that is the owner's call, made knowing
+ * it (Radek, 2026-10-27: "make it 10,000+ … I know it's a bit of a lie, but
+ * we can round the number"). On that day the device counted ~9,400
+ * distinct words, so "10,000+" ran ahead of the catalog by ~600; each
+ * harvest closes the gap. Below 1,000 (a catalog that failed to load) it
+ * shows the real count rather than inventing one.
+ */
+function wordsHeadline(n: number): number {
+  return n >= 1000 ? Math.ceil(n / 1000) * 1000 : n;
+}
+
 function wordCount(): number {
   const keys = new Set<string>();
   for (const video of [...getCatalog(), ...collectionVideos]) {
@@ -414,6 +435,21 @@ export function PaywallScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<'purchase' | 'restore' | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  /**
+   * THE EXIT OFFER (ExitOffer.tsx): the package from the RevenueCat
+   * offering EXIT_OFFERING_ID, null when there is none — then neither the ✕
+   * nor the sheet exists. `exitPreview` is dev only: no offering yet, so the
+   * wall's own annual stands in to show the design.
+   */
+  const [exitPkg, setExitPkg] = useState<PurchasesPackage | null>(null);
+  const [exitPreview, setExitPreview] = useState(false);
+  const [exitOpen, setExitOpen] = useState(false);
+  /** The sheet-close trigger fires once per wall; the ✕ always works. */
+  const exitAutoShown = useRef(false);
+  const openExit = useCallback((from: 'close' | 'sheet') => {
+    track('exit_offer_shown', { from });
+    setExitOpen(true);
+  }, []);
   /**
    * THE MULTI-PAGE WALL (Radek, 2026-10-12: "multi page paywall converts
    * better … it solves the problem, I couldn't fit everything into one
@@ -468,6 +504,15 @@ export function PaywallScreen({
         }
         setOffer({ status: 'ready', packages });
         setSelectedId(defaultPackage(packages).identifier);
+        const exit = offerings.all?.[EXIT_OFFERING_ID];
+        const exitChoice = exit?.annual ?? exit?.availablePackages[0] ?? null;
+        if (exitChoice) {
+          setExitPkg(exitChoice);
+        } else if (__DEV__) {
+          const annual = packages.find((p) => p.packageType === getPackageTypes()?.ANNUAL) ?? null;
+          setExitPkg(annual);
+          setExitPreview(annual !== null);
+        }
       })
       .catch((err) => {
         console.warn('[loro] offerings fetch failed', err);
@@ -490,9 +535,14 @@ export function PaywallScreen({
       ? (offer.packages.find((p) => p.identifier === selectedId) ??
         offer.packages[0])
       : null;
+  /** The wall's chosen plan, under a name the purchase handler can shadow. */
+  const selectedPkg = selected;
 
-  const purchase = useCallback(async () => {
+  const purchase = useCallback(async (chosen?: PurchasesPackage) => {
+    const selected = chosen ?? selectedPkg;
     if (!selected || busy) return;
+    /** Bought through the exit offer, not the wall's own plans. */
+    const viaExit = chosen !== undefined && chosen === exitPkg;
     setBusy('purchase');
     /**
      * INTENT, RECORDED BEFORE THE SHEET OPENS. This is the event that splits
@@ -511,6 +561,7 @@ export function PaywallScreen({
       // What Apple's sheet led with: "free for 7 days" or the price itself.
       // Without this the cancels above could not be told apart.
       trial: trialLength(selected.product),
+      offer: viaExit ? 'exit' : null,
     });
     try {
       // Success needs no handling here: the CustomerInfo listener in
@@ -531,6 +582,7 @@ export function PaywallScreen({
         price: selected.product.price,
         currency: selected.product.currencyCode,
         trial: trialLength(selected.product),
+        offer: viaExit ? 'exit' : null,
       });
       // The timeline's "day 5: we remind you" — made true (notifications.ts).
       const days = trialDays(selected.product);
@@ -547,7 +599,15 @@ export function PaywallScreen({
         track('purchase_cancelled', {
           packageId: selected.identifier,
           packageType: selected.packageType,
+          offer: viaExit ? 'exit' : null,
         });
+        // Leaving the wall's own plan: the exit offer first, once per wall
+        // (ExitOffer.tsx). The feedback card waits for the next close.
+        if (!viaExit && exitPkg && !exitAutoShown.current) {
+          exitAutoShown.current = true;
+          openExit('sheet');
+          return;
+        }
         // The one moment their reason is real — asked once ever.
         if (paywallFeedbackDue()) {
           markPaywallFeedbackAsked();
@@ -570,7 +630,7 @@ export function PaywallScreen({
     } finally {
       setBusy(null);
     }
-  }, [selected, busy]);
+  }, [selectedPkg, busy, exitPkg, openExit]);
 
   const restore = useCallback(async () => {
     if (busy) return;
@@ -685,7 +745,14 @@ export function PaywallScreen({
         >
         {arrived ? (
           <ArrivedHead tight={tight} />
-        ) : multi && page === 3 ? null : (
+        ) : multi && page === 3 ? null : multi ? (
+          /* THE VALUE PAGE'S OWN LINE (Radek, 2026-10-27): "Your plan is
+             ready" had just been said by the two plan screens before the
+             wall, so this page says what the numbers under it are for. */
+          <>
+            <Text style={styles.title}>Real Spanish, the way people actually speak it</Text>
+          </>
+        ) : (
           <>
             <Text style={styles.title}>Your plan is ready</Text>
             <View style={styles.chips}>
@@ -700,19 +767,19 @@ export function PaywallScreen({
         )}
         {/* THREE COUNTED NUMBERS on the value page (Radek: "half of the page
             is empty … put something more"). Each is read off the device. */}
+        {/* TWO NUMBERS, BIG (Radek, 2026-10-27: "more simple, only the
+            10,000+ words and 500+ videos, and the review"). Counted on the
+            device and rounded DOWN to a round figure (niceFloor), so the
+            page never claims more than is there. */}
         {multi && page === 2 && (
           <View style={styles.stats}>
             <View style={styles.stat}>
-              <Text style={styles.statNum}>{videos.toLocaleString('en-US')}+</Text>
+              <Text style={styles.statNum}>{wordsHeadline(words).toLocaleString('en-US')}+</Text>
+              <Text style={styles.statLabel}>Spanish words to tap</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{niceFloor(videos).toLocaleString('en-US')}+</Text>
               <Text style={styles.statLabel}>real videos</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statNum}>{words.toLocaleString('en-US')}+</Text>
-              <Text style={styles.statLabel}>words to tap</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statNum}>{TRIP.length}</Text>
-              <Text style={styles.statLabel}>cities to visit</Text>
             </View>
           </View>
         )}
@@ -771,7 +838,9 @@ export function PaywallScreen({
         {/* WHAT THAT BUYS — three lines, each a shipped fact. Not on the
             arrival wall (Radek, 2026-10-08: "put the real clips and Peppa
             Pig away"): there their words and the review carry it. */}
-        {!arrived && (!multi || page === 2) && (
+        {/* Not on the multi wall's value page any more: two numbers and
+            the review carry it (2026-10-27). */}
+        {!arrived && !multi && (
           <View style={[styles.benefits, multi && styles.benefitsBig]}>
             <View style={styles.benefit}>
               <IconTile glyph="▶︎" tint="sky" size={multi ? 42 : 34} />
@@ -794,7 +863,10 @@ export function PaywallScreen({
             Loro's bubble instead (ArrivedHead). */}
         {!arrived && (!multi || page === 2) && (
           <View style={[styles.review, multi && styles.reviewBig]} accessibilityLabel={`${REVIEW.stars} star ${REVIEW.source} by ${REVIEW.author}: ${REVIEW.text}`}>
-            <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
+            <View style={styles.reviewTop}>
+              <Text style={styles.reviewStars}>{'★'.repeat(REVIEW.stars)}</Text>
+              <Text style={styles.reviewBadge}>APP STORE</Text>
+            </View>
             <Text style={[styles.reviewText, multi && styles.reviewTextBig]}>“{REVIEW.text}”</Text>
             <Text style={styles.reviewBy}>
               {REVIEW.author} <Text style={styles.reviewSource}>· {REVIEW.source}</Text>
@@ -937,6 +1009,43 @@ export function PaywallScreen({
         <LegalLinks />
       </View>
 
+      {/* THE ✕ (Radek, 2026-10-27, after Toneadapt): on the price page
+          only, and only when an exit offer exists. It does not leave the
+          wall (there is nowhere to go); it opens the better price. */}
+      {showPrice && !arrived && !demo && exitPkg && !exitOpen && (
+        <Animated.View
+          entering={FadeIn.delay(2500).duration(400)}
+          style={[styles.exitX, { top: insets.top + 6 }]}
+        >
+          <Pressable
+            onPress={() => openExit('close')}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            hitSlop={12}
+          >
+            <Text style={styles.exitXText}>✕</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {exitOpen && exitPkg && (
+        <ExitOffer
+          offer={exitPkg}
+          regular={
+            offer.status === 'ready'
+              ? offer.packages.find((p) => p.packageType === getPackageTypes()?.ANNUAL) ?? null
+              : null
+          }
+          busy={busy === 'purchase'}
+          preview={exitPreview}
+          onClaim={() => void purchase(exitPkg)}
+          onClose={() => {
+            track('exit_offer_closed');
+            setExitOpen(false);
+          }}
+        />
+      )}
+
       {feedbackFor !== null && (
         <PaywallFeedback packageId={feedbackFor} onClose={() => setFeedbackFor(null)} />
       )}
@@ -991,6 +1100,8 @@ export function PaywallScreen({
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: GROUND, flex: 1 },
+  exitX: { left: 18, position: 'absolute' },
+  exitXText: { color: 'rgba(242,245,243,0.35)', fontSize: 20, fontWeight: '600' },
   scroll: { flexGrow: 1, paddingHorizontal: 24 },
   // ---- out of the arrival ----
   arrived: { alignItems: 'center' },
@@ -1089,40 +1200,44 @@ const styles = StyleSheet.create({
   benefitsBig: { gap: 16, marginTop: 26 },
   benefitTextBig: { fontSize: 16.5, lineHeight: 22 },
   pageFill: { flexGrow: 1, justifyContent: 'center' },
-  stats: { flexDirection: 'row', gap: 10, marginTop: 22 },
+  stats: { flexDirection: 'row', gap: 12, marginTop: 34 },
   stat: {
     alignItems: 'center',
     backgroundColor: 'rgba(20,26,23,0.92)',
-    borderColor: 'rgba(242,245,243,0.08)',
-    borderRadius: 16,
+    borderColor: 'rgba(94,230,168,0.18)',
+    borderRadius: 22,
     borderWidth: 1,
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 24,
   },
-  statNum: { color: ACCENT, fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
-  statLabel: { color: MUTED, fontSize: 12.5, fontWeight: '600', marginTop: 2 },
+  statNum: { color: ACCENT, fontSize: 36, fontWeight: '900', letterSpacing: -1 },
+  statLabel: { color: TEXT, fontSize: 14, fontWeight: '700', marginTop: 4 },
   benefit: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   benefitText: { color: TEXT, flex: 1, fontSize: 14, fontWeight: '600', lineHeight: 19 },
   // ---- the review ----
+  /** A touch of gold (Radek, 2026-10-27): the review is the one piece of
+      social proof on the wall, so it gets the App Store's star colour. */
   review: {
-    backgroundColor: 'rgba(20,26,23,0.92)',
-    borderColor: 'rgba(242,245,243,0.08)',
+    backgroundColor: 'rgba(255,196,77,0.07)',
+    borderColor: 'rgba(255,196,77,0.45)',
     borderRadius: 16,
     borderWidth: 1,
     marginTop: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  reviewStars: { color: '#ffc46b', fontSize: 14, letterSpacing: 1.5 },
+  reviewTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  reviewStars: { color: '#ffc44d', fontSize: 18, letterSpacing: 2 },
+  reviewBadge: { color: '#ffc44d', fontSize: 10.5, fontWeight: '900', letterSpacing: 1.4 },
   reviewText: { color: TEXT, fontSize: 14, fontStyle: 'italic', lineHeight: 20, marginTop: 6 },
-  reviewBy: { color: MUTED, fontSize: 12, fontWeight: '700', marginTop: 8 },
+  reviewBy: { color: 'rgba(255,196,77,0.85)', fontSize: 12, fontWeight: '700', marginTop: 8 },
   reviewSource: { fontWeight: '600' },
   // ---- Loro and the bubble ----
   hero: { alignItems: 'flex-end', flexDirection: 'row', gap: 10, marginTop: 18 },
   heroParrot: { height: 96, width: 64 },
   heroBig: { alignItems: 'center', flexDirection: 'column-reverse', gap: 4, marginTop: 56 },
   bubbleBig: { alignSelf: 'stretch', borderBottomLeftRadius: 18, flex: 0, marginBottom: 0, paddingHorizontal: 20, paddingVertical: 18 },
-  reviewBig: { marginTop: 22, paddingHorizontal: 18, paddingVertical: 16 },
+  reviewBig: { marginTop: 18, paddingHorizontal: 18, paddingVertical: 18 },
   reviewTextBig: { fontSize: 16.5, lineHeight: 23 },
   heroParrotBig: { height: 190, width: 128 },
   dots: { alignSelf: 'center', flexDirection: 'row', gap: 6, marginBottom: 14 },
