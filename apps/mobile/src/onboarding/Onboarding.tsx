@@ -224,10 +224,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   /** What the steps get: reaching the end of the flow is completing it. */
   const finish = useCallback(() => finishWith(false), [finishWith]);
-  /** What the chrome's Skip gets. Same commit, different verdict — the two
-      were one handler before, which made the funnel unable to tell a finished
-      intro from an abandoned one. */
-  const skip = useCallback(() => finishWith(true), [finishWith]);
+  /**
+   * NO SKIP SINCE 1.9.5 (Radek, 2026-10-27). 19% of installs skipped on
+   * screen one and skippers started trials at 2% against 13.5% for people
+   * who finished; with a lesson that teaches a first word before the wall,
+   * skipping threw away the part built to change their mind. finishWith
+   * keeps its `skipped` flag so old and new rows stay comparable; to bring
+   * Skip back, restore `finishWith(true)` on a chrome button.
+   */
 
   /**
    * Android's hardware back walks the flow instead of closing the app —
@@ -298,17 +302,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           />
         </View>
 
-        <View style={[styles.chromeSide, styles.chromeSideEnd]}>
-          <Pressable
-            onPress={skip}
-            accessibilityRole="button"
-            accessibilityLabel={CHROME.skip}
-            hitSlop={10}
-            style={({ pressed }) => [styles.chromeButton, pressed && styles.pressed]}
-          >
-            <Text style={styles.skipText}>{CHROME.skip}</Text>
-          </Pressable>
-        </View>
+        {/* Empty on purpose: it balances the back arrow so the bar stays
+            centred. Skip lived here until 1.9.5. */}
+        <View style={[styles.chromeSide, styles.chromeSideEnd]} />
       </View>
       )}
 
@@ -394,7 +390,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 26,
   },
-  skipText: { color: 'rgba(242,245,243,0.45)', fontSize: 14, fontWeight: '600' },
   track: {
     backgroundColor: 'rgba(242,245,243,0.10)',
     borderRadius: 999,
