@@ -1,44 +1,30 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { splitFunctionWords } from '@loro/core/progress';
 import { BRAND } from '../onboarding/brand';
 import { usePlayerApi } from '../player/PlayerHost';
-import { subscribeToDayDone, type DayDoneRaise } from './dayDone';
 import { subscribeToReviewEnd, type ReviewSessionEnd } from './reviewSession';
 
 /**
- * THE DAY-DONE CARD — the app's first ending — and, since 2026-09-07, the
- * review session's too. ONE CARD, TWO FACES, because they are the same
- * moment ("you're done") with different arithmetic, and because a session
- * whose last answer also finishes the day must say both on one card, not
- * stack two.
+ * THE REVIEW SESSION'S CARD. It used to be the day-done card too, with two
+ * faces; the day's face was retired on 2026-11-03 (Radek: "put away the día
+ * hecho modal and make it lighter") and that moment now plays in the feed's
+ * goal dots (CollectionChips DayDots), without stopping the video. The
+ * session keeps its card: a review's whole point is which words came back,
+ * and a session that also finished the day still says so in one line here
+ * (reviewSession.ts folds the day in).
  *
- *   day      raised through dayDone.ts after the celebration for the
- *            answer that completed today's goal: the day is done, what
- *            today added up to (answers, streak), the words that did it.
- *   session  raised through reviewSession.ts when the session hit its size
- *            or the feed ran out of the user's words: N of M right, the
- *            words with a tick or a cross, and the day-done line when the
- *            session earned it.
- *
- * Then one button to carry on and one to go and look.
+ * Raised through reviewSession.ts when the session hit its size or the feed
+ * ran out of the user's words: N of M right, the words with a tick or a
+ * cross, and the day-done line when the session earned it. Then one button
+ * to carry on and one to go and look.
  *
  * PRESENTATION IS NotificationPrompt's SHELL — a card over a dimmed backdrop,
  * onObscurePlayer while up (the embed-terms rule: nothing floats over a
  * visible player). The player is PAUSED on the way in, not merely hidden:
  * the video resumed 600ms after the grade, and a win that plays over
- * someone else's sentence is not a moment. "Keep going" resumes it.
- *
- * THE CHIPS NAME CONTENT WORDS ONLY. "de" and "que" were real answers and
- * counted toward the goal, but on a card they read as padding; they are
- * summed into one line instead (splitFunctionWords), the same treatment the
- * Progress page gives the week.
+ * someone else's sentence is not a moment. "Keep watching" resumes it.
  */
 const MAX_CHIPS = 8;
-
-type Raise =
-  | { kind: 'day'; day: DayDoneRaise }
-  | { kind: 'session'; session: ReviewSessionEnd };
 
 function streakLineFor(streak: number): string {
   return streak >= 2
@@ -56,15 +42,11 @@ export function DayDoneCard({
   onGoToProgress?: () => void;
 }) {
   const api = usePlayerApi();
-  const [raise, setRaise] = useState<Raise | null>(null);
+  const [end, setEnd] = useState<ReviewSessionEnd | null>(null);
 
-  useEffect(() => subscribeToDayDone((day) => setRaise({ kind: 'day', day })), []);
-  useEffect(
-    () => subscribeToReviewEnd((session) => setRaise({ kind: 'session', session })),
-    []
-  );
+  useEffect(() => subscribeToReviewEnd(setEnd), []);
 
-  const open = raise !== null;
+  const open = end !== null;
   useEffect(() => {
     onObscurePlayer(open);
     if (open) api.pause();
@@ -72,14 +54,14 @@ export function DayDoneCard({
     return () => onObscurePlayer(false);
   }, [open, onObscurePlayer, api]);
 
-  if (!raise) return null;
+  if (!end) return null;
 
   const keepGoing = () => {
-    setRaise(null);
+    setEnd(null);
     api.play();
   };
   const seeProgress = () => {
-    setRaise(null);
+    setEnd(null);
     onGoToProgress?.();
   };
 
@@ -93,15 +75,15 @@ export function DayDoneCard({
           accessibilityRole="image"
           accessibilityLabel="Loro the parrot, waving"
         />
-        {raise.kind === 'day' ? <DayFace raise={raise.day} /> : <SessionFace end={raise.session} />}
+        <SessionFace end={end} />
 
         <Pressable
           onPress={keepGoing}
           accessibilityRole="button"
-          accessibilityLabel="Keep going"
+          accessibilityLabel="Keep watching"
           style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
         >
-          <Text style={styles.ctaText}>{raise.kind === 'day' ? 'Keep going' : 'Keep watching'}</Text>
+          <Text style={styles.ctaText}>Keep watching</Text>
         </Pressable>
 
         {onGoToProgress && (
@@ -116,47 +98,6 @@ export function DayDoneCard({
         )}
       </View>
     </View>
-  );
-}
-
-function DayFace({ raise }: { raise: DayDoneRaise }) {
-  const { content, small } = splitFunctionWords(raise.words);
-  const chips = content.slice(0, MAX_CHIPS);
-  const moreContent = content.length - chips.length;
-
-  return (
-    <>
-      <Text style={styles.title}>¡Día hecho!</Text>
-      <Text style={styles.gloss}>day done</Text>
-      <Text style={styles.body}>
-        {raise.count} {raise.count === 1 ? 'word' : 'words'} right today.{' '}
-        {streakLineFor(raise.streak)}
-      </Text>
-
-      {(chips.length > 0 || small.length > 0) && (
-        <View style={styles.chips} accessibilityLabel="Today's words">
-          {chips.map((word) => (
-            <View key={`${word.videoId}:${word.text}`} style={styles.chip}>
-              <Text style={styles.chipText}>{word.text}</Text>
-            </View>
-          ))}
-          {moreContent > 0 && (
-            <View style={[styles.chip, styles.chipQuiet]}>
-              <Text style={[styles.chipText, styles.chipTextQuiet]}>
-                +{moreContent} more
-              </Text>
-            </View>
-          )}
-          {small.length > 0 && (
-            <View style={[styles.chip, styles.chipQuiet]}>
-              <Text style={[styles.chipText, styles.chipTextQuiet]}>
-                +{small.length} small {small.length === 1 ? 'word' : 'words'}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-    </>
   );
 }
 

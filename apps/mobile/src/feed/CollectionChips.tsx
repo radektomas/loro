@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { COLLECTIONS, REELS, findCollection, isEpisodes } from '@loro/core/collections';
+import { cleanWord } from '@loro/core/dictionary';
+import { subscribeToDayDone } from './dayDone';
+import { subscribeToWordLearned } from './wordLearned';
+import { subscribeToTripMoment } from './tripMoments';
 
 /**
  * THE SHELF PILL AND ITS MENU.
@@ -108,8 +112,24 @@ export function CollectionPill({
     loop.start();
     return () => loop.stop();
   }, [refreshing, spin]);
+  /**
+   * While a win plays in the strip (DayDots), the shelf pill steps aside so
+   * the win can use the strip's width: "¡Llegaste! · Buenos Aires" does not
+   * fit beside "Reels".
+   */
+  const [stripBusy, setStripBusy] = useState(false);
+  const shelfShown = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.timing(shelfShown, {
+      toValue: stripBusy ? 0 : 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [stripBusy, shelfShown]);
   return (
     <View style={[styles.strip, { paddingTop: topInset, height: topInset + CHIP_ROW_H }]}>
+      <Animated.View style={{ opacity: shelfShown }} pointerEvents={stripBusy ? 'none' : 'auto'}>
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
@@ -135,7 +155,8 @@ export function CollectionPill({
           )}
         </Animated.View>
       </Pressable>
-      {today && <DayDots count={today.count} goal={today.goal} topInset={topInset} />}
+      </Animated.View>
+      {today && <DayDots count={today.count} goal={today.goal} topInset={topInset} onBusy={setStripBusy} />}
       {/* REFRESH (Radek, 2026-10-06: "a possibility to refresh the feed").
           In the top strip, never over the player: a pull on the list itself
           moves the slides but not the YouTube player above them. */}
@@ -205,8 +226,37 @@ function LoadingDots() {
  * goal (3, 5 or 10), each popping mint as an answer lands. Full, they all
  * glow — the session has its finish line. Read-only, like the ring it
  * mirrors (Journal DayCoin).
+ *
+ * THE DAY-DONE MOMENT LIVES HERE NOW (Radek, 2026-11-03: "put away the día
+ * hecho modal and make it lighter, playing with the filling dots up left").
+ * It used to be a card that paused the video; now the raise from dayDone.ts
+ * runs a wave through the dots, the dots hand over to a small mint
+ * "¡Día hecho!" pill for a moment, and the dots come back lit. All of it in
+ * the strip above the player, so the video never stops.
  */
-function DayDots({ count, goal, topInset }: { count: number; goal: number; topInset: number }) {
+const WAVE_STEP_MS = 70;
+const CHEER_HOLD_MS = 2200;
+const LEARNED_HOLD_MS = 2000;
+
+type Cheer = { id: number } & (
+  | { kind: 'day' }
+  | { kind: 'learned'; word: string }
+  /** A trip step (tripMoments: one word to the next city, or arrived). */
+  | { kind: 'trip'; lead: string; rest: string }
+);
+
+function DayDots({
+  count,
+  goal,
+  topInset,
+  onBusy,
+}: {
+  count: number;
+  goal: number;
+  topInset: number;
+  /** A win is playing: the shelf pill steps aside for it. */
+  onBusy: (busy: boolean) => void;
+}) {
   const n = Math.max(1, Math.min(10, goal));
   const filled = Math.min(n, count);
   const done = count >= goal;
@@ -219,28 +269,160 @@ function DayDots({ count, goal, topInset }: { count: number; goal: number; topIn
     }
     last.current = filled;
   }, [filled, pop]);
+
+  /** One value per dot for the wave, and one for the dots → pill hand-over. */
+  const wave = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
+  const cheer = useRef(new Animated.Value(0)).current;
+  /**
+   * The strip's wins, one at a time: the day done, and since 2026-11-03 a
+   * word learned ("★ playa · learned", Radek's "A"). The answer that makes a
+   * word learned can also finish the day, so they queue rather than fight.
+   */
+  const [queue, setQueue] = useState<Cheer[]>([]);
+  const nextId = useRef(0);
+  useEffect(() => subscribeToDayDone(() => setQueue((q) => [...q, { id: nextId.current++, kind: 'day' }])), []);
+  useEffect(
+    () =>
+      subscribeToWordLearned((raise) =>
+        setQueue((q) => [...q, { id: nextId.current++, kind: 'learned', word: cleanWord(raise.text) }])
+      ),
+    []
+  );
+  // The trip's two steps that used to rise out of the Words tab over the
+  // subtitles (Radek, 2026-11-03: "change the one word to and arrived to
+  // that so it doesn't jump in the subtitles"). The first-save and
+  // first-blue tips still rise from the tab: they teach, they need room.
+  useEffect(
+    () =>
+      subscribeToTripMoment((m) => {
+        if (m.kind !== 'oneAway' && m.kind !== 'arrived') return;
+        const cheer: Cheer =
+          m.kind === 'arrived'
+            ? { id: nextId.current++, kind: 'trip', lead: '¡Llegaste!', rest: ` · ${m.word}` }
+            : { id: nextId.current++, kind: 'trip', lead: m.word, rest: '' };
+        setQueue((q) => [...q, cheer]);
+      }),
+    []
+  );
+  const current = queue[0] ?? null;
+  const busy = current !== null;
+  useEffect(() => onBusy(busy), [busy, onBusy]);
+  useEffect(() => {
+    if (!current) return;
+    AccessibilityInfo.announceForAccessibility(
+      current.kind === 'day'
+        ? "¡Día hecho! Today's goal is done."
+        : current.kind === 'learned'
+          ? `${current.word}, learned.`
+          : `${current.lead}${current.rest}`
+    );
+    wave.forEach((v) => v.setValue(0));
+    cheer.setValue(0);
+    const steps: Animated.CompositeAnimation[] = [];
+    // The wave is the day's: the dots completing is what it celebrates.
+    if (current.kind === 'day') {
+      steps.push(
+        Animated.stagger(
+          WAVE_STEP_MS,
+          wave.slice(0, n).map((v) =>
+            Animated.sequence([
+              Animated.timing(v, { useNativeDriver: true, toValue: 1, duration: 170, easing: Easing.out(Easing.cubic) }),
+              Animated.timing(v, { useNativeDriver: true, toValue: 0, duration: 280, easing: Easing.inOut(Easing.cubic) }),
+            ])
+          )
+        )
+      );
+    }
+    steps.push(
+      Animated.timing(cheer, { useNativeDriver: true, toValue: 1, duration: 300, easing: Easing.out(Easing.cubic) }),
+      Animated.delay(current.kind === 'learned' ? LEARNED_HOLD_MS : CHEER_HOLD_MS),
+      Animated.timing(cheer, { useNativeDriver: true, toValue: 0, duration: 360, easing: Easing.inOut(Easing.cubic) })
+    );
+    const anim = Animated.sequence(steps);
+    anim.start(({ finished }) => {
+      if (finished) setQueue((q) => q.slice(1));
+    });
+    return () => anim.stop();
+    // Keyed on the cheer's id: a new raise appended behind it must not restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id, n, wave, cheer]);
+
+  /** The shelf pill steps aside while a win plays, so the pill may use the
+      strip up to the refresh button on the right. */
+  const { width } = useWindowDimensions();
+  const seatWidth = Math.max(110, width - 18 - 64);
+
+  const popScale = pop.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] });
   return (
     <View
       accessible
       accessibilityLabel={done ? `Today's goal done: ${count} words` : `${filled} of ${goal} words today`}
       style={[styles.dots, { top: topInset, height: CHIP_ROW_H }]}
     >
-      {Array.from({ length: n }, (_, i) => {
-        const on = i < filled;
-        const newest = on && i === filled - 1;
-        return (
+      <Animated.View
+        style={[
+          styles.dotsRow,
+          { opacity: cheer.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
+        ]}
+      >
+        {Array.from({ length: n }, (_, i) => {
+          const on = i < filled;
+          const newest = on && i === filled - 1;
+          const lift = wave[i].interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] });
+          return (
+            <Animated.View
+              key={i}
+              style={[
+                styles.dot,
+                n > 5 && styles.dotSmall,
+                on && styles.dotOn,
+                done && styles.dotDone,
+                {
+                  transform: [
+                    { translateY: wave[i].interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) },
+                    { scale: newest ? Animated.multiply(popScale, lift) : lift },
+                  ],
+                },
+              ]}
+            />
+          );
+        })}
+      </Animated.View>
+      {current && (
+        <View pointerEvents="none" style={[styles.cheerSeat, { width: seatWidth }]}>
           <Animated.View
-            key={i}
             style={[
-              styles.dot,
-              n > 5 && styles.dotSmall,
-              on && styles.dotOn,
-              done && styles.dotDone,
-              newest && { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1.9, 1] }) }] },
+              styles.cheer,
+              current.kind === 'learned' && styles.cheerLearned,
+              current.kind === 'trip' && styles.cheerTrip,
+              {
+                opacity: cheer,
+                transform: [
+                  { translateX: cheer.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) },
+                  { scale: cheer.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
+                ],
+              },
             ]}
-          />
-        );
-      })}
+          >
+            {current.kind === 'day' ? (
+              <Text style={styles.cheerText} numberOfLines={1}>
+                ¡Día hecho!
+              </Text>
+            ) : current.kind === 'learned' ? (
+              <Text style={styles.cheerText} numberOfLines={1}>
+                <Text style={styles.cheerStar}>★ </Text>
+                {current.word}
+                <Text style={styles.cheerQuiet}> · learned</Text>
+              </Text>
+            ) : (
+              <Text style={styles.cheerText} numberOfLines={1}>
+                {current.lead}
+                <Text style={styles.cheerQuiet}>{current.rest}</Text>
+              </Text>
+            )}
+          </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -437,7 +619,26 @@ const styles = StyleSheet.create({
     right: 16,
     width: 34,
   },
-  dots: { alignItems: 'center', flexDirection: 'row', gap: 4, left: 18, position: 'absolute' },
+  dots: { justifyContent: 'center', left: 18, position: 'absolute' },
+  dotsRow: { alignItems: 'center', flexDirection: 'row', gap: 4 },
+  /** Where the strip's pills sit, laid over the dots and growing from their
+      left edge. Its own width: an absolute child is otherwise only as wide
+      as the dots, and the words wrapped a letter per line (2026-11-03). */
+  cheerSeat: { alignItems: 'flex-start', left: -6, position: 'absolute' },
+  cheer: {
+    backgroundColor: '#5ee6a8',
+    borderRadius: 999,
+    maxWidth: '100%',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  /** A word learned: gold, the same gold as its reveal in the subtitle. */
+  cheerLearned: { backgroundColor: '#ffb627' },
+  cheerStar: { color: '#06130d' },
+  /** A trip step: the map's blue. */
+  cheerTrip: { backgroundColor: '#57b3f2' },
+  cheerQuiet: { color: 'rgba(6,19,13,0.6)', fontWeight: '700' },
+  cheerText: { color: '#06130d', fontSize: 13, fontWeight: '800', letterSpacing: -0.1 },
   dot: { backgroundColor: 'rgba(242,245,243,0.18)', borderRadius: 999, height: 7, width: 7 },
   dotSmall: { height: 6, width: 6 },
   dotOn: { backgroundColor: '#5ee6a8' },

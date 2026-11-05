@@ -22,6 +22,7 @@ import {
 import type { Gloss, Video, Word } from '@loro/core/types';
 import { glossText, lookupGloss, normalizeSurface, wordForSave } from '@loro/core/dictionary';
 import { noteWordSaved } from './tripMoments';
+import { maybeOfferWidget } from './widgetOfferBus';
 import { pulseWordsTab } from '../shell/tabBar';
 import { storage } from '@loro/core/storage';
 import { track } from '../platform/analytics';
@@ -190,7 +191,11 @@ export function WordSheet(props: WordSheetProps) {
     },
     [notify, props.data]
   );
-  const handleToastDone = useCallback(() => setSavedWord(null), []);
+  const handleToastDone = useCallback(() => {
+    setSavedWord(null);
+    // The chip has landed: the calm beat for the one-time widget card.
+    maybeOfferWidget();
+  }, []);
 
   return (
     <>

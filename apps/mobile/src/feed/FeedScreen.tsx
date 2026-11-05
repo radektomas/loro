@@ -58,6 +58,7 @@ import { LearnedToast } from './LearnedToast';
 import { SoundIcon } from './SoundIcon';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
+import { WidgetOffer } from './WidgetOffer';
 import { RecallBar } from './RecallBar';
 import { RecallHost, useHeldBlank, useRecallReplay } from './RecallHost';
 import { noteReviewSlide, raiseReviewEnd, setReviewSessionBlock } from './reviewSession';
@@ -1510,11 +1511,12 @@ function FeedBody({
               before the paywall. Not rendering them cannot be defeated. */}
           {!walkthrough && (
             <>
-              {/* A word earned (wordLearned.ts) or a trip milestone
-                  (tripMoments.ts): a small Loro rising from the Words tab at
-                  the bottom of the feed, the video playing on above — nothing
-                  is drawn over a playing frame. Before the cards in paint
-                  order, so any card raised at the same moment covers it. */}
+              {/* A trip milestone (tripMoments.ts): a small Loro rising from
+                  the Words tab at the bottom of the feed, the video playing on
+                  above. A word earned (wordLearned.ts) shows in the line (gold
+                  reveal) and the top strip instead since 2026-11-03 (the
+                  bubble covered the subtitles). Before the cards in paint order, so any card
+                  raised at the same moment covers it. */}
               <LearnedToast
                 active={active}
                 onObscurePlayer={setPromptObscured}
@@ -1525,15 +1527,18 @@ function FeedBody({
                   celebration, and silent every other time. Last child so it
                   covers the band and the answer bar as well as the slide. */}
               <NotificationPrompt onObscurePlayer={setPromptObscured} />
+              {/* Once, after the third saved word: the lock screen widget,
+                  with the word just saved in it (WidgetOffer.tsx). */}
+              <WidgetOffer onObscurePlayer={setPromptObscured} />
               {/* Raised by RecallHost after the celebration for the grade that
                   emptied the due queue — and it wins that moment over the
                   notification explainer (see RecallHost's priority note). Same
                   obscure contract, same layering reason. */}
               <SessionSavePrompt onObscurePlayer={setPromptObscured} />
-              {/* The wins: the review session's end (reviewSession.ts) and
-                  the day's goal (dayDone.ts), one card with two faces.
-                  Raised by RecallHost after the celebration, ahead of both
-                  asks above; the day once a day at most. Same obscure
+              {/* The review session's end (reviewSession.ts). The day's goal
+                  no longer has a card: it plays in the goal dots in the top
+                  strip (CollectionChips DayDots). Raised by RecallHost after
+                  the celebration, ahead of both asks above. Same obscure
                   contract, same layering reason. */}
               <DayDoneCard
                 onObscurePlayer={setPromptObscured}

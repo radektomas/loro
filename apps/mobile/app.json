@@ -2,7 +2,7 @@
   "expo": {
     "name": "Loro",
     "slug": "radektomas",
-    "version": "1.9.5",
+    "version": "1.9.6",
     "icon": "./assets/icon.png",
     "scheme": "loro",
     "orientation": "portrait",
@@ -15,6 +15,12 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryAddUsageDescription": "Loro saves your trip postcards to your photos when you ask it to."
+      },
+      "appleTeamId": "L7AA982X86",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.getloro"
+        ]
       }
     },
     "extra": {
@@ -34,7 +40,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      "@bacons/apple-targets"
     ]
   }
 }

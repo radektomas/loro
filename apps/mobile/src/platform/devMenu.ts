@@ -2,6 +2,7 @@ import { DevSettings } from 'react-native';
 import { storage } from '@loro/core/storage';
 import { signOut } from '@loro/core/auth';
 import { devRaiseDayDone } from '../feed/dayDone';
+import { devRaiseWidgetOffer } from '../feed/widgetOfferBus';
 import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
 import { devRaiseWordLearned } from '../feed/wordLearned';
@@ -141,6 +142,9 @@ export function installDevMenu(): void {
     /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
         "so i can see it right away and not search it like a crazy man").
         Open the Feed tab, then tap. */
+    { name: '★★ NEW · Lock screen widget card', run: () => devRaiseWidgetOffer() },
+    { name: '★★ NEW · ¡Día hecho! (goal dots)', run: () => devRaiseDayDone() },
+    { name: '★★ NEW · Word learned (gold pill, top strip)', run: () => devRaiseWordLearned() },
     { name: '★ Share · Postcard, city to city (Bogotá → Medellín)', run: () => devShowCityCard('city') },
     { name: '★ Share · Postcard, country to country (Cartagena → Quito)', run: () => devShowCityCard('country') },
     { name: '★ Loro · Toast: word learned', run: () => devRaiseWordLearned() },
@@ -310,7 +314,6 @@ export function installDevMenu(): void {
     { name: 'Loro · Card: level up → Casi Local', run: () => devRaiseLevelUp(4) },
     { name: 'Loro · Card: level up → Local', run: () => devRaiseLevelUp(5) },
     { name: 'Loro · Card: level up → Nativo', run: () => devRaiseLevelUp(6) },
-    { name: 'Loro · Card: day done', run: () => devRaiseDayDone() },
     { name: 'Loro · Card: review session done', run: () => devRaiseReviewEnd() },
     /** The Madrid-pass A/B (remoteFlags.ts): pin this device to an arm, or
         clear it so the next launch decides from the remote percent. Pair

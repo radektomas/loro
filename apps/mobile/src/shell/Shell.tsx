@@ -2,6 +2,8 @@ import { memo, useCallback, useEffect, useRef, useState, type ReactElement } fro
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { subscribeToNotificationRoute } from '../platform/notifications';
+import { subscribeToWidgetTap } from '../platform/lockWidget';
+import { requestWordFocus } from '../vocab/wordsView';
 import { track } from '../platform/analytics';
 import { launchReview } from '../feed/launchReview';
 import { FeedScreen } from '../feed/FeedScreen';
@@ -231,6 +233,19 @@ export function Shell() {
    * which covers both a launch-from-notification and a tap that arrived during
    * onboarding, when this component was not rendered at all.
    */
+  /**
+   * THE LOCK SCREEN WIDGET'S TAP (platform/lockWidget.ts): Words, landed on
+   * the word the widget showed, which is the path's next word to train.
+   */
+  useEffect(
+    () =>
+      subscribeToWidgetTap(() => {
+        requestWordFocus();
+        setTab('vocab');
+      }),
+    []
+  );
+
   useEffect(
     () =>
       subscribeToNotificationRoute((route) => {

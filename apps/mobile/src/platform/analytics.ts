@@ -147,6 +147,9 @@ export type EventName =
   | 'practice_set'        // { right, early, stepOne } — the Words tab's three-exercise set
   | 'tab_opened'          // { tab } — a tab-bar tap (the launch tab is not one)
   | 'postcard_opened'     // { stage } — the arrival postcard was opened
+  | 'widget_offer_shown'  // { words } — the one-time lock screen widget card (feed/WidgetOffer.tsx)
+  | 'widget_offer_closed' // { action: 'got_it' | 'later' }
+  | 'widget_opened'       // the lock screen widget was tapped (loro://words, platform/lockWidget.ts)
   | 'postcard_shared'     // { stage, action, to } — the share sheet closed; to = the app it went to
   | 'topics_changed'      // { topics } — the feed topics edited in Progress settings
   | 'feed_refreshed'      // { how: 'button' | 'topics', fresh } (pull removed 2026-10-06) — the reels feed was re-ranked on demand

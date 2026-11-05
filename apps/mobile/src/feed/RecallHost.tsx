@@ -99,6 +99,9 @@ export type RecallView = {
       three-way: 'almost' is a spelling near-miss that grades as correct but
       reveals yellow instead of celebrating. */
   results: ReadonlyMap<number, AnswerMatch>;
+  /** cueIndex of answers that just made their word LEARNED: the reveal goes
+      gold with a star (Radek, 2026-11-03), then the top strip names it. */
+  learned: ReadonlySet<number>;
 };
 
 /** What the answer bar needs. */
@@ -434,6 +437,7 @@ export function RecallHost({
 
   const [plan, setPlan] = useState(EMPTY_PLAN);
   const [results, setResults] = useState<Map<number, AnswerMatch>>(new Map());
+  const [learnedCues, setLearnedCues] = useState<Set<number>>(new Set());
   const [heldIndex, setHeldIndex] = useState(-1);
 
   /**
@@ -694,6 +698,7 @@ export function RecallHost({
    */
   useEffect(() => {
     setResults(new Map());
+    setLearnedCues(new Set());
     setHeldIndex(-1);
     heldSv.value = -1;
     resolvedMask.value = 0;
@@ -965,6 +970,11 @@ export function RecallHost({
         );
         learnedNow =
           word !== null && !wasLearned && surfaceLearned(entry.word.text, storage.getSavedWords());
+        if (learnedNow) {
+          // Same handler as setResults above, so React batches both into the
+          // render that reveals the word: it is gold from its first frame.
+          setLearnedCues((prev) => new Set(prev).add(entry.cueIndex));
+        }
         flog(
           `grade "${entry.word.text}" ${match.toUpperCase()} -> ` +
             (word
@@ -1058,7 +1068,8 @@ export function RecallHost({
        * empty the queue. The moment fires whether or not the last answer was
        * correct — a wrong answer still finishes the session.
        *
-       * PRIORITY AT THE SHARED CELEBRATION MOMENT: the day-done card first —
+       * PRIORITY AT THE SHARED CELEBRATION MOMENT: the day-done first (the
+       * goal dots' cheer since 2026-11-03, no longer a card) —
        * it is the product's own win, the answer that just completed today's
        * goal, and it is raised at most once a day (dayDone.ts). Then the
        * save-progress card over the notification explainer: the rarer ask
@@ -1100,7 +1111,12 @@ export function RecallHost({
             // A tier crossing is rarer than any of the rest and wins the
             // moment; a parked session end shows on the next answer.
             if (wasCorrect && maybeLevelUp()) return;
-            if (wasCorrect && !reviewSessionActive() && maybeCelebrateDayDone()) return;
+            if (wasCorrect && !reviewSessionActive() && maybeCelebrateDayDone()) {
+              // Both live in the top strip now and queue there (DayDots), so
+              // the day no longer swallows the word that finished it.
+              if (learnedNow) raiseWordLearned(entry.word);
+              return;
+            }
             // The one that happens most: a word earned. A toast, not a
             // card — it only shows when no card took the moment.
             if (learnedNow) raiseWordLearned(entry.word);
@@ -1239,8 +1255,8 @@ export function RecallHost({
       }
       byCue.set(entry.cueIndex, entry);
     });
-    return { videoKey: video.id, byCue, results };
-  }, [planned, video, plan, results, skippedBits, revealBlanksUntilHeld, heldIndex]);
+    return { videoKey: video.id, byCue, results, learned: learnedCues };
+  }, [planned, video, plan, results, learnedCues, skippedBits, revealBlanksUntilHeld, heldIndex]);
 
   const entry = heldIndex >= 0 ? (plan.entries[heldIndex] ?? null) : null;
 
