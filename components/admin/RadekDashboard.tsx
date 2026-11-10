@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AbRow, DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
+import type { AbRow, DailyPoint, DauPoint, FeedbackRow, FirstRunRow, FirstRunWindow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
 
 /**
  * THE OWNER'S DASHBOARD, in the house style of RevenueCat and App Store
@@ -742,6 +742,160 @@ function DauChart({ points }: { points: DauPoint[] }) {
 
 // ------------------------------------------------------------------- page
 
+// --------------------------------------------------------------- first run
+
+/**
+ * THE FIRST RUN, SCREEN BY SCREEN (Radek, 2026-11-10: "a section where I
+ * can track the numbers just like in the artifact"). Every onboarding
+ * screen in the order the app shows it, then the wall and Apple's sheet,
+ * with how many installs got there, what share of the starters that is,
+ * how many the step before lost, and the median time on each screen.
+ *
+ * Read per app version on purpose: each onboarding change ships in a
+ * build, so the way to see whether it worked is that build against the
+ * one before it, over the same days.
+ */
+const FIRST_RUN_NAMES: Record<string, string> = {
+  hook: 'First screen',
+  motivation: 'Why Spanish',
+  selfLevel: 'Level',
+  lessonIntro: 'Lesson intro',
+  tapWord: 'Tap the word',
+  wordBack: 'Type it back',
+  topics: 'What they watch',
+  frequency: 'Pace',
+  fluencyGoal: 'Fluency goal',
+  planBuild: 'Plan build',
+  planReady: 'Boarding pass',
+  handoff: 'Handoff',
+  taste: 'Taste reel',
+  paywall: 'Paywall (in flow)',
+  paywall_shown: 'Saw the paywall',
+  purchase_started: 'Tapped the button',
+  purchase_cancelled: 'Closed Apple’s sheet',
+  exit_offer_shown: 'Saw the exit offer',
+  purchase_completed: 'Trial or purchase',
+  paywall_feedback: 'Said what holds them back',
+};
+/** Side branches: counted, but not a step of the main line, so they do not
+    take part in the drop-off arithmetic. */
+const FIRST_RUN_SIDE = new Set(['purchase_cancelled', 'exit_offer_shown', 'paywall_feedback']);
+
+function secs(s: number | null): string {
+  if (s == null) return '';
+  if (s < 60) return `${Math.round(s)} s`;
+  return `${Math.floor(s / 60)} m ${Math.round(s % 60)} s`;
+}
+
+function FirstRun({ windows }: { windows: FirstRunWindow[] }) {
+  const [days, setDays] = useState<7 | 14 | 30>(14);
+  const [version, setVersion] = useState<string | null>(null);
+  const win = windows.find((w) => w.days === days) ?? windows[0];
+  const versions = useMemo(() => {
+    const starts = new Map<string, number>();
+    for (const r of win.rows) if (r.appVersion && r.step === 'hook') starts.set(r.appVersion, r.installs);
+    return [...starts.entries()].sort((a, b) => b[0].localeCompare(a[0], undefined, { numeric: true }));
+  }, [win]);
+  const rows: FirstRunRow[] = win.rows
+    .filter((r) => (version ? r.appVersion === version : r.appVersion === null))
+    .sort((a, b) => a.stepOrder - b.stepOrder);
+  const start = rows.find((r) => r.step === 'hook')?.installs ?? 0;
+  const main = rows.filter((r) => !FIRST_RUN_SIDE.has(r.step));
+  const loss = new Map<string, number>();
+  main.forEach((r, i) => {
+    if (i > 0) loss.set(r.step, Math.max(0, main[i - 1].installs - r.installs));
+  });
+  const worst = [...loss.entries()].sort((a, b) => b[1] - a[1])[0];
+  const toggle = (on: boolean) =>
+    on ? { background: DASH.card, color: DASH.ink, boxShadow: `0 1px 2px ${DASH.shadow}` } : { color: DASH.muted };
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 rounded-lg p-0.5" style={{ background: DASH.track }}>
+          {([7, 14, 30] as const).map((d) => (
+            <button key={d} onClick={() => setDays(d)} className="rounded-md px-3 py-1 text-xs font-semibold" style={toggle(days === d)}>
+              {d} days
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1 rounded-lg p-0.5" style={{ background: DASH.track }}>
+          <button onClick={() => setVersion(null)} className="rounded-md px-3 py-1 text-xs font-semibold" style={toggle(version === null)}>
+            All versions
+          </button>
+          {versions.map(([v, n]) => (
+            <button key={v} onClick={() => setVersion(v)} className="rounded-md px-3 py-1 text-xs font-semibold tabular-nums" style={toggle(version === v)}>
+              {v} <span style={{ color: DASH.faint }}>· {n}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {start === 0 ? (
+        <p className="text-sm" style={{ color: DASH.muted }}>Nobody started onboarding in these days{version ? ` on ${version}` : ''}.</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead>
+                <tr className="text-left text-xs" style={{ color: DASH.faint }}>
+                  <th className="pb-2 font-medium">Step</th>
+                  <th className="pb-2 font-medium">Reached</th>
+                  <th className="w-[34%] pb-2 font-medium" />
+                  <th className="pb-2 text-right font-medium">Of starters</th>
+                  <th className="pb-2 text-right font-medium">Lost here</th>
+                  <th className="pb-2 text-right font-medium">Median time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const side = FIRST_RUN_SIDE.has(r.step);
+                  const lost = loss.get(r.step) ?? 0;
+                  const isWorst = worst && worst[1] > 0 && worst[0] === r.step;
+                  return (
+                    <tr key={r.step} style={{ borderTop: `1px solid ${DASH.line}` }}>
+                      <td className="py-2 pr-3" style={{ color: side ? DASH.muted : DASH.ink, paddingLeft: side ? 16 : 0 }}>
+                        {side ? '↳ ' : ''}
+                        {FIRST_RUN_NAMES[r.step] ?? r.step}
+                      </td>
+                      <td className="py-2 pr-3 font-semibold tabular-nums">{fmt.format(r.installs)}</td>
+                      <td className="py-2 pr-3">
+                        <div className="h-2 rounded-full" style={{ background: DASH.track }}>
+                          <div
+                            className="h-2 rounded-full"
+                            style={{ width: `${Math.min(100, (100 * r.installs) / start)}%`, background: side ? DASH.faint : r.stepOrder >= 100 ? DASH.violet : DASH.green }}
+                          />
+                        </div>
+                      </td>
+                      <td className="py-2 text-right tabular-nums" style={{ color: DASH.muted }}>{pct(r.installs, start)}</td>
+                      <td className="py-2 text-right tabular-nums">
+                        {!side && lost > 0 ? (
+                          <span
+                            className="rounded-md px-1.5 py-0.5 text-xs font-semibold"
+                            style={{ background: isWorst ? DASH.redSoft : 'transparent', color: isWorst ? DASH.red : DASH.muted }}
+                          >
+                            −{lost}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="py-2 text-right tabular-nums" style={{ color: DASH.muted }}>{secs(r.medianSecs)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {worst && worst[1] > 0 && (
+            <p className="mt-3 rounded-xl px-4 py-3 text-sm" style={{ background: DASH.redSoft, color: DASH.red }}>
+              The biggest loss is at <b>{FIRST_RUN_NAMES[worst[0]] ?? worst[0]}</b>: {worst[1]} of {start} starters ({pct(worst[1], start)}) stop right before it.
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function RadekDashboardView({ data }: { data: RadekDashboard }) {
   const [metricKey, setMetricKey] = useState<MetricKey>('installs');
   const [range, setRange] = useState<30 | 60>(30);
@@ -860,6 +1014,21 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
           ))}
         </div>
         <MainChart days={shown} metric={metric} />
+      </Card>
+
+      {/* THE FIRST RUN — onboarding, the wall, Apple's sheet, screen by screen */}
+      <Card>
+        <CardTitle
+          title="First run: onboarding → paywall"
+          hint="Installs that opened the first onboarding screen in these days, and how far they got. Pick a version to compare a build against the one before it. Median time is how long people stayed on that screen."
+        />
+        {data.firstRun ? (
+          <FirstRun windows={data.firstRun} />
+        ) : (
+          <p className="text-sm" style={{ color: DASH.muted }}>
+            Paste <code>supabase/migrations/20261110000000_analytics_first_run.sql</code> into the Supabase SQL editor to see this.
+          </p>
+        )}
       </Card>
 
       {/* THE WALL */}

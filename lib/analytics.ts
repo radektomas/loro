@@ -326,7 +326,24 @@ export type DailyPoint = {
   videosWatched: number;
 };
 
+/** One step of the first run (loro_analytics_first_run, 20261110000000):
+    an onboarding screen or a paywall event, for one app version, or for
+    every version when appVersion is null. */
+export type FirstRunRow = {
+  appVersion: string | null;
+  step: string;
+  stepOrder: number;
+  installs: number;
+  /** Median seconds on an onboarding screen; null for the wall's events. */
+  medianSecs: number | null;
+};
+
+/** The first-run report for one window of days. */
+export type FirstRunWindow = { days: 7 | 14 | 30; rows: FirstRunRow[] };
+
 export type RadekDashboard = {
+  /** null until 20261110000000_analytics_first_run.sql is applied. */
+  firstRun: FirstRunWindow[] | null;
   daily: DailyPoint[];
   windows: WallWindow[];
   subscribers: SubscriberRow[] | null; // null until the migration is applied
@@ -440,10 +457,35 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
     } catch (err) {
       if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
     }
+    let firstRun: FirstRunWindow[] | null = null;
+    try {
+      firstRun = await Promise.all(
+        ([7, 14, 30] as const).map(async (days) => {
+          const rows = await call('loro_analytics_first_run', {
+            p_from: d(days).toISOString(),
+            p_to: now.toISOString(),
+            p_all_builds: allBuilds,
+          });
+          return {
+            days,
+            rows: rows.map((r) => ({
+              appVersion: r.app_version ? str(r.app_version) : null,
+              step: str(r.step),
+              stepOrder: num(r.step_order),
+              installs: num(r.installs),
+              medianSecs: r.median_secs == null ? null : num(r.median_secs),
+            })),
+          };
+        })
+      );
+    } catch (err) {
+      if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
+    }
     const rt = retentionRows[0] ?? {};
     return {
       ok: true,
       data: {
+        firstRun,
         daily: daily.map((r) => ({
           day: str(r.day),
           newInstalls: num(r.new_installs),
