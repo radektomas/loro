@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AbRow, DailyPoint, DauPoint, FeedbackRow, FirstRunRow, FirstRunWindow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
 
@@ -787,9 +787,32 @@ function secs(s: number | null): string {
   return `${Math.floor(s / 60)} m ${Math.round(s % 60)} s`;
 }
 
+/**
+ * The replica of the first run (public/first-run/preview.html?embed): the
+ * same tappable phone as the onboarding artifact, live version by default.
+ * It tells this page which screen it is on, and a tapped row in the table
+ * tells it which screen to show. Hand-built from apps/mobile/src/onboarding
+ * and paywall, so it is updated by hand when they change.
+ */
+const PREVIEW_SRC = '/first-run/preview.html?embed';
+
 function FirstRun({ windows }: { windows: FirstRunWindow[] }) {
   const [days, setDays] = useState<7 | 14 | 30>(14);
   const [version, setVersion] = useState<string | null>(null);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [at, setAt] = useState<string>('hook');
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin || e.source !== frame.current?.contentWindow) return;
+      if (e.data?.type === 'loro-at' && typeof e.data.step === 'string') setAt(e.data.step);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+  const show = (step: string) => {
+    setAt(step);
+    frame.current?.contentWindow?.postMessage({ type: 'loro-goto', step }, window.location.origin);
+  };
   const win = windows.find((w) => w.days === days) ?? windows[0];
   const versions = useMemo(() => {
     const starts = new Map<string, number>();
@@ -810,7 +833,17 @@ function FirstRun({ windows }: { windows: FirstRunWindow[] }) {
     on ? { background: DASH.card, color: DASH.ink, boxShadow: `0 1px 2px ${DASH.shadow}` } : { color: DASH.muted };
 
   return (
-    <div>
+    <div className="grid gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
+      <div className="mx-auto w-full max-w-[440px]">
+        <iframe
+          ref={frame}
+          src={PREVIEW_SRC}
+          title="The first run, as the app shows it"
+          className="block h-[1010px] w-full rounded-2xl"
+          style={{ background: '#070908', border: 0 }}
+        />
+      </div>
+    <div className="min-w-0">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex gap-1 rounded-lg p-0.5" style={{ background: DASH.track }}>
           {([7, 14, 30] as const).map((d) => (
@@ -852,8 +885,15 @@ function FirstRun({ windows }: { windows: FirstRunWindow[] }) {
                   const side = FIRST_RUN_SIDE.has(r.step);
                   const lost = loss.get(r.step) ?? 0;
                   const isWorst = worst && worst[1] > 0 && worst[0] === r.step;
+                  const here = at === r.step;
                   return (
-                    <tr key={r.step} style={{ borderTop: `1px solid ${DASH.line}` }}>
+                    <tr
+                      key={r.step}
+                      onClick={() => show(r.step)}
+                      className="cursor-pointer"
+                      title="Show this screen on the phone"
+                      style={{ borderTop: `1px solid ${DASH.line}`, background: here ? DASH.greenSoft : undefined }}
+                    >
                       <td className="py-2 pr-3" style={{ color: side ? DASH.muted : DASH.ink, paddingLeft: side ? 16 : 0 }}>
                         {side ? '↳ ' : ''}
                         {FIRST_RUN_NAMES[r.step] ?? r.step}
@@ -890,8 +930,12 @@ function FirstRun({ windows }: { windows: FirstRunWindow[] }) {
               The biggest loss is at <b>{FIRST_RUN_NAMES[worst[0]] ?? worst[0]}</b>: {worst[1]} of {start} starters ({pct(worst[1], start)}) stop right before it.
             </p>
           )}
+          <p className="mt-3 text-xs" style={{ color: DASH.faint }}>
+            Tap a row to see that screen on the phone. Use Back and Next under the phone to step through, and the switch to compare what&rsquo;s live with the branch.
+          </p>
         </>
       )}
+    </div>
     </div>
   );
 }
@@ -1020,7 +1064,7 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
       <Card>
         <CardTitle
           title="First run: onboarding → paywall"
-          hint="Installs that opened the first onboarding screen in these days, and how far they got. Pick a version to compare a build against the one before it. Median time is how long people stayed on that screen."
+          hint="The onboarding and paywall as the app shows them, next to how far people got. Installs that opened the first screen in these days; pick a version to compare a build with the one before it. Median time is how long people stayed on that screen."
         />
         {data.firstRun ? (
           <FirstRun windows={data.firstRun} />
