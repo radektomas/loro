@@ -25,7 +25,7 @@ function post(id: string, postedAt: string, views: number | null): MarketingPost
     latest:
       views === null
         ? null
-        : { views, reach: null, likes: null, comments: null, shares: null, saved: null, reposts: null, avgWatchMs: null },
+        : { views, reach: null, likes: null, comments: null, shares: null, saved: null, reposts: null, avgWatchMs: null, skipRate: null, viewTotalMs: null },
     viewsByDay: [],
   };
 }
@@ -61,7 +61,7 @@ test('multiple is null when the baseline is unknown or zero', () => {
 });
 
 test('shares and saves per 1k views', () => {
-  const m = { views: 2000, reach: null, likes: null, comments: null, shares: 6, saved: 4, reposts: null, avgWatchMs: null };
+  const m = { views: 2000, reach: null, likes: null, comments: null, shares: 6, saved: 4, reposts: null, avgWatchMs: null, skipRate: null, viewTotalMs: null };
   assert.equal(sharesSavesPer1k(m), 5);
   assert.equal(sharesSavesPer1k({ ...m, views: 0 }), null);
   assert.equal(sharesSavesPer1k(null), null);

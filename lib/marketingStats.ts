@@ -20,6 +20,10 @@ export type ReelMetrics = {
   saved: number | null;
   reposts: number | null;
   avgWatchMs: number | null;
+  /** reels_skip_rate, 0..100 as Meta reports it; null when Meta returned none. */
+  skipRate: number | null;
+  /** ig_reels_video_view_total_time in ms. */
+  viewTotalMs: number | null;
 };
 
 export type MarketingAccount = {
