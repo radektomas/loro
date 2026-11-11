@@ -27,7 +27,7 @@ const POLL_S = 10;
 const QUIET_S = 20;
 const HEARTBEAT_S = 60;
 const STALE_MIN = 30;
-const LOCK = `${process.env.HOME}/Desktop/Reels/.recut-claim`;
+const LOCK = `${process.env.HOME}/.loro-cut-claim`; // outside the Desktop: Radek's reel folders live there
 
 const s = getAdminClient();
 

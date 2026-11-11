@@ -96,7 +96,7 @@ export function CutStudio({ data, api, reload }: { data: CutData; api: Api; relo
           {visible.length === 0 ? (
             <p className="rounded-2xl p-8 text-center text-sm" style={{ background: DASH.card, border: `1px solid ${DASH.line}`, color: DASH.muted }}>
               {data.reels.length === 0
-                ? 'No reels yet. Drop clips into ~/Desktop/Reels/<account>/me and /demo, then ask Claude to cut them.'
+                ? 'No reels yet. Drop clips into the green REELS folders on the Desktop (me + demo), then tell Claude “cut the reels”.'
                 : 'Nothing here.'}
             </p>
           ) : (

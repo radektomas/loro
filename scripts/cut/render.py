@@ -17,7 +17,7 @@ job.json (paths relative to the job file unless absolute):
     "beat": 3,                    seconds per text (hook and each line); "slot" is the reel's place in the batch (publish.mts)
     "me_from": 0, "me_to": null,  part of Radek's clip to use (seconds)
     "demo_from": 0,               where the demo starts in the source
-    "demo_speed": 1,              >1 plays the demo faster
+    "demo_speed": 1.5,            the demo always plays at 1.5x (Radek, 2026-11-11)
     "hook_top": 282, "line_top": 256,   y of the first text line on the 1080x1920 frame
     "hook_size": 86, "line_size": 70,
     "hook_style": "outline", "line_style": "plain",
@@ -201,14 +201,34 @@ def probe(path):
     return float(j['format']['duration']), (j.get('streams') or [{}])[0].get('color_transfer', '')
 
 
-def sdr(transfer):
-    # iPhone records HLG HDR by default; without this the reel comes out grey and flat.
-    if transfer in ('arib-std-b67', 'smpte2084'):
-        return 'colorspace=all=bt709:iall=bt2020:itrc=bt2020-10:fast=0,'
-    return ''
+HDR = ('arib-std-b67', 'smpte2084')  # HLG (iPhone default) and PQ
+CACHE = os.path.expanduser('~/.cache/loro-cut/sdr')
 
 
-FIT = f'scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1'
+def to_sdr(path):
+    """An HDR clip, tone-mapped to normal video by Apple's own pipeline
+    (scripts/cut/sdr.swift), cached by path + size + mtime.
+
+    Until 2026-11-11 this was ffmpeg's colorspace filter reading HLG as plain
+    BT.2020 gamma: bright areas blew out and the picture went washed and pale
+    (Radek: "kinda light up, something happened with the quality"). This Mac's
+    ffmpeg has no zscale/libplacebo to tone-map properly, so Apple does it.
+    """
+    st = os.stat(path)
+    key = f'{os.path.basename(path)}-{st.st_size}-{int(st.st_mtime)}.mov'
+    out = os.path.join(CACHE, key)
+    if not os.path.exists(out):
+        os.makedirs(CACHE, exist_ok=True)
+        print(f'HDR source, tone-mapping with Apple: {os.path.basename(path)}')
+        subprocess.run(['swift', os.path.join(HERE, 'sdr.swift'), path, out + '.part.mov'],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        os.replace(out + '.part.mov', out)
+    return out
+
+
+# lanczos: the demo is usually 4K phone footage shrunk ~2x, where lanczos keeps
+# the app's small text crisper than the default bicubic.
+FIT = f'scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},setsar=1'
 
 
 def render(job_path):
@@ -224,14 +244,19 @@ def render(job_path):
     demo_len = sum(durs)
     total = beat + demo_len
 
+    names = (os.path.basename(me), os.path.basename(demo))  # what Radek dropped in, for the record
     me_dur, me_tr = probe(me)
+    if me_tr in HDR:
+        me = to_sdr(me)
     me_from = float(job.get('me_from', 0))
     me_to = float(job['me_to']) if job.get('me_to') is not None else me_dur
     me_speed = (me_to - me_from) / beat  # the whole chosen part plays inside the hook beat
 
     demo_dur, demo_tr = probe(demo)
+    if demo_tr in HDR:
+        demo = to_sdr(demo)
     demo_from = float(job.get('demo_from', 0))
-    demo_speed = float(job.get('demo_speed', 1))
+    demo_speed = float(job.get('demo_speed', 1.5))
     if (demo_dur - demo_from) / demo_speed < demo_len:
         # not enough demo for the lines: slow it down rather than run out
         demo_speed = (demo_dur - demo_from) / demo_len
@@ -254,8 +279,8 @@ def render(job_path):
     # demo_drop: slide the demo down N px so the lines sit in clear dark space
     # above the phone; a black band fades into the footage on top.
     drop = int(job.get('demo_drop', 0))
-    demo_chain = f'[1:v]trim={demo_from}:duration={demo_len * demo_speed},setpts=(PTS-STARTPTS)/{demo_speed},{sdr(demo_tr)}{FIT},fps={FPS},trim=duration={demo_len}'
-    fc = [f'[0:v]trim={me_from}:{me_to},setpts=(PTS-STARTPTS)/{me_speed},{sdr(me_tr)}{FIT},fps={FPS},trim=duration={beat}[m]']
+    demo_chain = f'[1:v]trim={demo_from}:duration={demo_len * demo_speed},setpts=(PTS-STARTPTS)/{demo_speed},{FIT},fps={FPS},trim=duration={demo_len}'
+    fc = [f'[0:v]trim={me_from}:{me_to},setpts=(PTS-STARTPTS)/{me_speed},{FIT},fps={FPS},trim=duration={beat}[m]']
     first_card = 2
     if drop:
         fade = os.path.join(tmp, 'fade.png')
@@ -279,7 +304,8 @@ def render(job_path):
     for pth, _, _ in pngs:
         cmd += ['-loop', '1', '-t', f'{total}', '-i', pth]
     cmd += ['-filter_complex', ';'.join(fc), '-map', f'[{last}]', '-t', f'{total}',
-            '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
+            '-c:v', 'libx264', '-preset', 'slow', '-crf', '15', '-tune', 'film',  # near-lossless: Instagram recompresses, so give it the cleanest master (Radek, 2026-11-11)
+            '-pix_fmt', 'yuv420p',
             '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
             '-movflags', '+faststart', '-an', out]
     subprocess.run(cmd, check=True)
@@ -289,7 +315,7 @@ def render(job_path):
         'duration': round(total, 3),
         'hook': job['hook'],
         'lines': [{'text': x[0], 'from': round(x[1], 3), 'to': round(x[2], 3)} for x in texts[1:]],
-        'me': os.path.basename(me), 'demo': os.path.basename(demo),
+        'me': names[0], 'demo': names[1],
         'me_speed': round(me_speed, 2), 'demo_speed': round(demo_speed, 2),
     }
     json.dump(meta, open(out + '.json', 'w'), ensure_ascii=False, indent=1)

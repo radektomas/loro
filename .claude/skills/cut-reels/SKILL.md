@@ -1,6 +1,6 @@
 ---
 name: cut-reels
-description: Cut Radek's raw clips into finished Instagram reels for @radek.spanish, @radek.explains.spanish and @loro.app (sped-up clip of him + hook, then the Loro demo with 3 lines, text burned in Instagram-style), publish them to getloro.app/cut, and recut from the notes he leaves there. Use when Radek says "cut the reels", "cut my videos", "new batch", "check the cut notes", "recut", or drops clips into ~/Desktop/Reels.
+description: Cut Radek's raw clips into finished Instagram reels for @radek.spanish, @radek.explains.spanish and @loro.app (sped-up clip of him + hook, then the Loro demo with 3 lines, text burned in Instagram-style), publish them to getloro.app/cut, and recut from the notes he leaves there. Use when Radek says "cut the reels", "cut my videos", "new batch", "check the cut notes", "recut", or drops clips into the REELS folders on his Desktop.
 ---
 
 # Cut reels
@@ -37,14 +37,18 @@ hook with NO space before it (😭 💀 😳 🤯 😩). Lines carry no emoji, o
 
 ## New batch
 
-1. **Look at the inbox.** `~/Desktop/Reels/<account>/me/` holds clips of Radek, `~/Desktop/Reels/<account>/demo/`
-   holds demo clips. Pair them in filename order (1st me with 1st demo…). If the counts differ, cut the pairs
+1. **Look at the inbox.** Three green folders sit straight on Radek's Desktop (he has ~100 files there, and a folder
+   inside a folder was "super hidden"): `~/Desktop/REELS radek.spanish/`, `~/Desktop/REELS radek.explains.spanish/`,
+   `~/Desktop/REELS loro app/` (= @loro.app; a folder ending in `.app` shows as a broken app in Finder, never name one
+   that). Each has `me/` (clips of Radek) and `demo/` (demo clips). Pair them in filename order (1st me with 1st demo…). If the counts differ, cut the pairs
    you have and tell him which files were left over. Probe each: `ffprobe -v error -show_entries format=duration -of csv=p=0 <file>`.
 2. **Watch every demo** before writing its lines. Make a contact sheet and read it:
    `ffmpeg -v error -y -i <demo> -vf "fps=1,scale=240:-2,tile=6x3" -frames:v 1 /tmp/x.png`.
    Note what is on the phone (reels? Peppa Pig? which word does he type, when does he tap a word?), and where
-   the action is: pick `demo_from` so writing happens in 6–9 s and tapping in 9–12 s. Speed up with
-   `demo_speed` (up to 1.5) if the action is spread out. If the phone's top edge is high in the frame, set
+   the action is. The demo ALWAYS plays at 1.5x (render.py default, Radek 2026-11-11), so source second s lands
+   at reel time 3 + (s − demo_from) / 1.5. Pick `demo_from` so writing lands under the writing line and tapping
+   under the tapping line; if the clip's order doesn't allow that, reorder the lines to match the footage rather
+   than slowing the demo down. If the phone's top edge is high in the frame, set
    `demo_drop` (100–200) so the lines sit on dark space above it.
 3. **Watch every clip of Radek** the same way. If the start or end is junk (him walking to the camera,
    reaching for the phone), trim with `me_from` / `me_to`.
@@ -52,11 +56,13 @@ hook with NO space before it (😭 💀 😳 🤯 😩). Lines carry no emoji, o
    never the same hook twice in one batch, and prefer hooks not used on the OTHER accounts in the last batch
    (Instagram demotes identical content across accounts). Match line 1 to the hook's kind (question → "ummm by…").
    New hooks Radek gives you go into `scripts/cut/hooks.json`.
-5. **Write one job per reel** in `~/Desktop/Reels/<account>/cut/<YYYY-MM-DD>/NN.json`. Absolute source paths. Example:
+   Hooks under `banned` in hooks.json are OUT for good (Radek: "never use this hook again"): never pick one, and
+   when he bans another, move it there with the reason. Before publishing a batch, check no two reels share a hook.
+5. **Write one job per reel** in `~/Desktop/REELS <account>/cut/<YYYY-MM-DD>/NN.json`. Absolute source paths. Example:
    ```json
    {"account": "radek.spanish", "batch": "2026-11-10", "slot": 1,
-    "me": "/Users/macbook/Desktop/Reels/radek.spanish/cut/2026-11-10/me/IMG_1.MOV",
-    "demo": "/Users/macbook/Desktop/Reels/radek.spanish/cut/2026-11-10/demo/IMG_2.MOV",
+    "me": "/Users/macbook/Desktop/REELS radek.spanish/cut/2026-11-10/me/IMG_1.MOV",
+    "demo": "/Users/macbook/Desktop/REELS radek.spanish/cut/2026-11-10/demo/IMG_2.MOV",
     "hook": "How did you learn 1000 Spanish words after just ONE month??😭",
     "lines": ["ummm by scrolling Spanish reels", "The app makes me write the words i hear",
               "and i tap the words i dont know to see the translation"],
@@ -99,7 +105,18 @@ compared with that account's usual reel. Use that ranking when picking hooks (st
 
 ## Facts that cost time to learn
 
-- iPhone clips are often HLG HDR (`color_transfer=arib-std-b67`); render.py converts them, without it the reel is grey.
+- iPhone clips are often HLG HDR (`color_transfer=arib-std-b67`). render.py tone-maps them with Apple's own pipeline
+  (`scripts/cut/sdr.swift`, cached in ~/.cache/loro-cut/sdr). NEVER go back to ffmpeg's colorspace filter for HDR: it
+  read HLG as plain gamma and blew out the bright areas (Radek, 2026-11-11: "kinda light up, something happened with
+  the quality"). When checking a reel, compare an HDR clip's frame against `sdr.swift`'s output, not by eye alone.
+- Radek films with HDR Video OFF since 2026-11-11 (Settings → Camera → Record Video). The SDR test reel looked "much
+  better" to him than the Apple-tone-mapped HLG one. If a clip arrives as HLG anyway, still cut it, but remind him of
+  the setting.
+- "The demo looks dark" (Radek, 2026-11-11): measured, render.py does NOT darken SDR demos. Average luma was 35.15 in
+  the source and 35.17 in the reel over the same 270 frames. The iPad demo was filmed at night (YAVG ~35/255), so it IS
+  dark. Encoding is now x264 `-crf 15 -preset slow -tune film` + lanczos scaling (PSNR 46 dB vs the source, was 43 at
+  crf 20). Check a "darker/worse" complaint by measuring source vs reel YAVG on the aligned region (shift by
+  `demo_drop`) before changing anything. A dark demo is fixed by filming with the lights on, not by grading it.
 - This Mac's ffmpeg has no `drawtext` and no `zscale`; text is drawn with Pillow (Figtree at weight 800, the closest
   free match to Instagram's text font; an `InstagramSans-Bold.ttf` next to render.py is used instead if present).
 - The Mac is Intel: no CapCut/Edits desktop. Everything goes through ffmpeg.

@@ -1,23 +1,79 @@
 {
   "_": "Radek's hook bank (2026-11-10). The cut skill picks from here, least-used per account first; getloro.app/cut → Hooks ranks them once reels are posted. kind: 'question' = a viewer asking him (line 1 answers it: 'ummm by…'), 'statement' = his own reaction (line 1 explains: 'I learn by literally…'). Typos from the original list fixed; the emoji is chosen per reel.",
   "hooks": [
-    { "text": "3 years of studying Spanish and i just find this now…. like wtf", "kind": "statement" },
-    { "text": "How did you memorize so much Spanish in just ONE month??", "kind": "question" },
-    { "text": "3 years of learning Spanish in chaos and I just find this now…. like wtf", "kind": "statement" },
-    { "text": "wdym ive been learning Spanish for 3+ years and now im finding this….", "kind": "statement" },
-    { "text": "wdym i spent 3 years learning Spanish and I JUST found this??", "kind": "statement" },
-    { "text": "Why is your Spanish so much better than last month???", "kind": "question" },
-    { "text": "Why did you quit Duolingo after 4 years and still learn more?", "kind": "question" },
-    { "text": "How did you learn Spanish SO FAST?", "kind": "question" },
-    { "text": "Struggling to learn Spanish?? this app makes it easy", "kind": "statement" },
-    { "text": "\"i use duolingo to learn Spanish\"\nLearn by doomscrolling instead", "kind": "statement" },
-    { "text": "How did you learn 2000 Spanish words so easily??", "kind": "question" },
-    { "text": "i have a 418 day streak of learning Spanish with duolingo and i just find this now", "kind": "statement" },
-    { "text": "How to actually learn Spanish in a year", "kind": "question" },
-    { "text": "some people STILL use duolingo to learn Spanish", "kind": "statement" },
-    { "text": "I cant believe i found this after 3 years of learning Spanish with duolingo", "kind": "statement" },
-    { "text": "How did you memorize 2000 Spanish words so FAST?", "kind": "question" },
-    { "text": "How did you learn 1000 Spanish words after just ONE month??", "kind": "question" },
-    { "text": "How did you learn to speak Spanish in just ONE month?", "kind": "question" }
+    {
+      "text": "3 years of studying Spanish and i just find this now…. like wtf",
+      "kind": "statement"
+    },
+    {
+      "text": "How did you memorize so much Spanish in just ONE month??",
+      "kind": "question"
+    },
+    {
+      "text": "3 years of learning Spanish in chaos and I just find this now…. like wtf",
+      "kind": "statement"
+    },
+    {
+      "text": "wdym ive been learning Spanish for 3+ years and now im finding this….",
+      "kind": "statement"
+    },
+    {
+      "text": "wdym i spent 3 years learning Spanish and I JUST found this??",
+      "kind": "statement"
+    },
+    {
+      "text": "Why is your Spanish so much better than last month???",
+      "kind": "question"
+    },
+    {
+      "text": "Why did you quit Duolingo after 4 years and still learn more?",
+      "kind": "question"
+    },
+    {
+      "text": "How did you learn Spanish SO FAST?",
+      "kind": "question"
+    },
+    {
+      "text": "\"i use duolingo to learn Spanish\"\nLearn by doomscrolling instead",
+      "kind": "statement"
+    },
+    {
+      "text": "How did you learn 2000 Spanish words so easily??",
+      "kind": "question"
+    },
+    {
+      "text": "i have a 418 day streak of learning Spanish with duolingo and i just find this now",
+      "kind": "statement"
+    },
+    {
+      "text": "How to actually learn Spanish in a year",
+      "kind": "question"
+    },
+    {
+      "text": "some people STILL use duolingo to learn Spanish",
+      "kind": "statement"
+    },
+    {
+      "text": "I cant believe i found this after 3 years of learning Spanish with duolingo",
+      "kind": "statement"
+    },
+    {
+      "text": "How did you memorize 2000 Spanish words so FAST?",
+      "kind": "question"
+    },
+    {
+      "text": "How did you learn 1000 Spanish words after just ONE month??",
+      "kind": "question"
+    },
+    {
+      "text": "How did you learn to speak Spanish in just ONE month?",
+      "kind": "question"
+    }
+  ],
+  "banned": [
+    {
+      "text": "Struggling to learn Spanish?? this app makes it easy",
+      "why": "Radek's note on @loro.app 2026-11-11 #3: \"never use this hook again\""
+    }
   ]
 }

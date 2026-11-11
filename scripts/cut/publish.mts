@@ -13,8 +13,10 @@
  *   optional "replies": { "<note id>": "what I changed" }   — closes those notes
  *
  * First publish of (account, batch, slot) creates the reel at version 1. A
- * later publish is a recut: version + 1, status back to "review", and every
- * note named in "replies" is marked answered by the new version.
+ * later publish is a recut: version + 1, status back to "review" (unless the
+ * reel is already "posted": then it stays posted with its link and views, so
+ * tracking survives a recut), and every note named in "replies" is marked
+ * answered by the new version.
  *
  * Videos go to the PRIVATE loro-cuts bucket (created on first run); the page
  * reads them through signed URLs. Needs SUPABASE_SERVICE_ROLE_KEY in .env.
@@ -51,7 +53,7 @@ async function publish(jobPath: string) {
 
   const { data: prev, error: e1 } = await s
     .from('loro_cut_reels')
-    .select('id, version')
+    .select('id, version, status')
     .eq('account', account)
     .eq('batch', job.batch)
     .eq('slot', job.slot)
@@ -79,7 +81,9 @@ async function publish(jobPath: string) {
     me_file: meta.me,
     demo_file: meta.demo,
     job: storedJob,
-    status: 'review',
+    // a posted reel keeps its status: "review" would hide its link + views
+    // boxes on /cut and drop it out of hook tracking (happened 2026-11-11)
+    status: prev?.status === 'posted' ? 'posted' : 'review',
     updated_at: new Date().toISOString(),
   };
   const { data: saved, error: e2 } = prev
