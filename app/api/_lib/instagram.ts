@@ -326,12 +326,13 @@ export async function syncAll(db: SupabaseClient): Promise<SyncResult[]> {
 }
 
 /** Every row of a query, paged past PostgREST's 1000-row cap. */
-async function allRows(q: () => any, table: string): Promise<Record<string, unknown>[]> {
+type Ranged = { range: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> };
+async function allRows(q: () => Ranged, table: string): Promise<Record<string, unknown>[]> {
   const out: Record<string, unknown>[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await q().range(from, from + 999);
     if (error) throw new Error(`${table}: ${error.message}`);
-    out.push(...(data ?? []));
+    out.push(...((data ?? []) as Record<string, unknown>[]));
     if (!data || data.length < 1000) return out;
   }
 }
