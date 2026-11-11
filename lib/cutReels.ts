@@ -51,6 +51,8 @@ export type CutReel = {
   /** Instagram's number when the post is synced on /marketing, else the typed one. */
   views: number | null;
   viewsSource: 'instagram' | 'manual' | null;
+  /** Views against the channel's usual reel when it was posted (lib/scaleStats.ts); null until synced and 48h old. */
+  multiple: number | null;
   postedAt: string | null;
   createdAt: string;
   notes: CutNote[];

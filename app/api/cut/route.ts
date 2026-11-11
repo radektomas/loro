@@ -8,6 +8,8 @@ import {
   type CutReel,
   type CutStatus,
 } from '@/lib/cutReels';
+import { scorePosts } from '@/lib/scaleStats';
+import type { MarketingPost } from '@/lib/marketingStats';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +33,7 @@ export async function GET(req: Request) {
     const [{ data: reels, error: e1 }, { data: notes, error: e2 }, { data: media }] = await Promise.all([
       s.from('loro_cut_reels').select('*').order('created_at', { ascending: false }).limit(500),
       s.from('loro_cut_notes').select('*').order('at_s'),
-      s.from('loro_marketing_ig_media').select('media_id, permalink'),
+      s.from('loro_marketing_ig_media').select('media_id, ig_user_id, permalink, posted_at, media_type, media_product_type').limit(5000),
     ]);
     if (e1) throw new Error(e1.message);
     if (e2) throw new Error(e2.message);
@@ -44,16 +46,34 @@ export async function GET(req: Request) {
     const mediaIdOf = (r: Row): string | null =>
       (r.ig_media_id as string) ?? mediaByCode.get(shortcodeOf(r.permalink as string) ?? '') ?? null;
 
-    const mediaIds = [...new Set((reels ?? []).map(mediaIdOf).filter((x): x is string => !!x))];
-    const igViews = new Map<string, number>();
-    if (mediaIds.length) {
-      const { data: daily } = await s
-        .from('loro_marketing_ig_media_daily')
-        .select('media_id, day, views')
-        .in('media_id', mediaIds)
-        .order('day');
-      for (const d of (daily ?? []) as Row[]) if (d.views != null) igViews.set(String(d.media_id), Number(d.views)); // last day wins
+    // every synced reel's latest views, so a /cut reel can be scored against
+    // its channel's usual reel at the time it went up
+    const daily: Row[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await s.from('loro_marketing_ig_media_daily').select('media_id, day, views').order('day').range(from, from + 999);
+      if (error) throw new Error(error.message);
+      daily.push(...((data ?? []) as Row[]));
+      if (!data || data.length < 1000) break;
     }
+    const igViews = new Map<string, number>();
+    for (const d of daily) if (d.views != null) igViews.set(String(d.media_id), Number(d.views)); // last day wins
+    const igPosts: MarketingPost[] = ((media ?? []) as Row[])
+      .filter((m) => m.media_product_type === 'REELS' || m.media_type === 'VIDEO')
+      .map((m) => ({
+        mediaId: String(m.media_id),
+        igUserId: String(m.ig_user_id),
+        caption: null,
+        mediaType: (m.media_type as string) ?? null,
+        productType: (m.media_product_type as string) ?? null,
+        permalink: (m.permalink as string) ?? null,
+        thumbnailUrl: null,
+        postedAt: String(m.posted_at),
+        latest: igViews.has(String(m.media_id))
+          ? { views: igViews.get(String(m.media_id))!, reach: null, likes: null, comments: null, shares: null, saved: null, reposts: null, avgWatchMs: null, skipRate: null, viewTotalMs: null }
+          : null,
+        viewsByDay: [],
+      }));
+    const scored = new Map(scorePosts(igPosts, new Map()).map((p) => [p.mediaId, p]));
 
     const paths = (reels ?? []).flatMap((r) => [r.video_path, r.poster_path].filter(Boolean) as string[]);
     const signed = new Map<string, string>();
@@ -85,6 +105,7 @@ export async function GET(req: Request) {
         igMediaId: mid,
         views: ig ?? manual,
         viewsSource: ig != null ? 'instagram' : manual != null ? 'manual' : null,
+        multiple: mid && scored.get(mid)?.settled ? scored.get(mid)!.multiple : null,
         postedAt: (r.posted_at as string) ?? null,
         createdAt: String(r.created_at),
         notes: ((notes ?? []) as Row[])

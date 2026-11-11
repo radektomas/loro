@@ -288,6 +288,19 @@ function ReelReview({ reel, api, reload, working }: { reel: CutReel; api: Api; r
             <p className="p-6 text-sm text-white">Video link expired, refresh.</p>
           )}
         </ReelFrame>
+        {reel.status === 'posted' && reel.views != null && (
+          <p className="mt-3 text-center text-sm" style={{ color: DASH.muted }}>
+            <b style={{ color: DASH.ink }}>{reel.views.toLocaleString('en-GB')} views</b>
+            {reel.multiple != null && (
+              <>
+                {' · '}
+                <b style={{ color: reel.multiple >= 1.5 ? DASH.green : reel.multiple < 0.8 ? DASH.red : DASH.ink }}>{reel.multiple.toFixed(1)}× its channel</b>
+              </>
+            )}
+            {' · '}
+            <a href="/marketing#reels" style={{ color: DASH.green }}>numbers →</a>
+          </p>
+        )}
 
         {/* timeline */}
         <div className="mt-6">
