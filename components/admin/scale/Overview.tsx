@@ -28,6 +28,8 @@ export function Overview({ m, accountsPanel, goto }: { m: Model; accountsPanel: 
         .slice(0, 5),
     [reels]
   );
+  const justPosted = useMemo(() => reels.filter((r) => !r.settled).sort((a, b) => b.postedAt.localeCompare(a.postedAt)), [reels]);
+  const lastSync = data.accounts.map((a) => a.lastSyncedAt).filter(Boolean).sort().pop();
 
   if (data.accounts.length === 0) {
     return (
@@ -40,6 +42,41 @@ export function Overview({ m, accountsPanel, goto }: { m: Model; accountsPanel: 
 
   return (
     <div className="grid gap-5">
+      {justPosted.length > 0 && (
+        <Card>
+          <CardTitle
+            title="Just posted"
+            hint={`Reels under 48 hours old: Instagram's numbers are still climbing, so "so far" is a first read, not a score. Numbers as of the last sync${lastSync ? ` (${new Date(lastSync).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})` : ''}; press Sync now for fresh ones.`}
+          />
+          <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {justPosted.map((r) => {
+              const hours = Math.max(1, Math.round((Date.now() - new Date(r.postedAt).getTime()) / 3600000));
+              const soFar = r.baseline && r.latest?.views != null ? r.latest.views / r.baseline : null;
+              return (
+                <li key={r.mediaId} className="flex gap-3 rounded-xl p-2.5" style={{ background: DASH.inset }}>
+                  <Cover src={r.thumbnailUrl} w={52} href={r.permalink} />
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-[13px] font-semibold leading-snug">{r.tags?.hook ?? <span style={{ color: DASH.faint }}>no hook yet</span>}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]" style={{ color: DASH.muted }}>
+                      <ChannelChip account={m.username(r.igUserId)} />
+                      <span>{hours}h ago</span>
+                    </div>
+                    <p className="mt-1.5 text-sm">
+                      <b className="tabular-nums">{fmt.format(r.latest?.views ?? 0)}</b> <span style={{ color: DASH.muted }}>views</span>
+                      {soFar != null && (
+                        <span className="ml-2 rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold" style={{ background: DASH.track, color: DASH.ink }} title="Views so far against the channel's usual reel (a settled one). Not a final score.">
+                          so far {soFar.toFixed(1)}×
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-3">
         {connected.map(({ c, acct }) => (
           <ChannelCard key={c.account} m={m} account={c.account} color={c.color} igUserId={acct!.igUserId} followers={acct!.followers} />
