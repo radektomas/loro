@@ -42,3 +42,20 @@ test('a text-only match counts when the cover hash is missing', () => {
     'a'
   );
 });
+
+test('a close cover hash is not enough when the cover text names another hook', () => {
+  assert.equal(
+    pickMatch([
+      { mediaId: 'same-room-other-reel', hashDist: 10, textSim: 0.1 },
+      { mediaId: 'far', hashDist: 30, textSim: 0.05 },
+    ]),
+    null
+  );
+});
+
+test('a lone candidate needs both signals to agree, or a near-identical cover', () => {
+  assert.equal(pickMatch([{ mediaId: 'a', hashDist: 10, textSim: null }]), null);
+  assert.equal(pickMatch([{ mediaId: 'a', hashDist: 10, textSim: 0.8 }]), 'a');
+  assert.equal(pickMatch([{ mediaId: 'a', hashDist: 5, textSim: null }]), 'a');
+  assert.equal(pickMatch([{ mediaId: 'a', hashDist: null, textSim: 0.9 }]), null);
+});

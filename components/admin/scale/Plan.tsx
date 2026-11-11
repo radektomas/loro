@@ -14,7 +14,7 @@ const STATUS_STYLE: Record<ScalePlanItem['status'], { label: string; color: stri
   cut: { label: 'Cut', color: DASH.blue, bg: DASH.blueSoft },
 };
 
-const PRETTY_VARIANT: Record<string, string> = { reels: '…scrolling reels', peppa: '…Peppa Pig', answer: '“ummm by…”' };
+const PRETTY_VARIANT: Record<string, string> = { reels: '…scrolling reels', peppa: '…Peppa Pig' };
 
 export function Plan({ m }: { m: Model }) {
   const plans = m.data.plans;

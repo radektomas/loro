@@ -18,7 +18,7 @@ const DIMS: { id: Dimension; label: string; hint: string }[] = [
 
 const PRETTY: Partial<Record<Dimension, Record<string, string>>> = {
   hookKind: { question: 'Question hook ("…?")', statement: 'Statement hook' },
-  line1Variant: { reels: '“…scrolling Spanish reels”', peppa: '“…watching Spanish Peppa Pig”', answer: '“ummm by…” (answers the question)' },
+  line1Variant: { reels: '“…scrolling Spanish reels”', peppa: '“…watching Spanish Peppa Pig”' },
   voice: { i: 'I / me', you: 'You' },
   demoKind: { reels: 'Reels demo', peppa: 'Peppa Pig demo', other: 'Other demo', unknown: 'Not tagged yet' },
   format: { cut: '/cut reel (hook + demo + 3 lines)', phrases: 'Phrases ("Things to say when…")', 'outline-game': 'Outline game', other: 'Other / not tagged' },

@@ -62,8 +62,21 @@ test('baselineAt scores a reel against the posts before it, not later ones', () 
 });
 
 test('baselineAt skips posts under 48h before the reel', () => {
-  const posts = [post('a', '2026-10-01T10:00:00Z', 100), post('recent', '2026-10-19T10:00:00Z', 9999)];
+  const posts = [
+    post('a', '2026-10-01T10:00:00Z', 100),
+    post('b', '2026-10-02T10:00:00Z', 100),
+    post('c', '2026-10-03T10:00:00Z', 100),
+    post('recent', '2026-10-19T10:00:00Z', 9999),
+  ];
   assert.equal(baselineAt(posts, 'A', new Date('2026-10-20T10:00:00Z')), 100);
+});
+
+test('a baseline needs 3 earlier settled reels: 1 or 2 would make fake 10x winners', () => {
+  const posts = [post('a', '2026-10-01T10:00:00Z', 50), post('b', '2026-10-03T10:00:00Z', 500), post('c', '2026-10-06T10:00:00Z', 600)];
+  assert.equal(baselineAt(posts, 'A', new Date('2026-10-06T10:00:00Z')), null);
+  const by = Object.fromEntries(scorePosts(posts, new Map(), NOW).map((x) => [x.mediaId, x]));
+  assert.equal(by.b.multiple, null);
+  assert.equal(by.c.multiple, null);
 });
 
 test('a channel with no earlier settled posts has no baseline and no multiple', () => {
@@ -78,6 +91,7 @@ test('scorePosts gives multiple, comments per 1k and settled', () => {
   const posts = [
     post('a', '2026-10-01T10:00:00Z', 100),
     post('b', '2026-10-02T10:00:00Z', 100),
+    post('b2', '2026-10-03T10:00:00Z', 100),
     post('hit', '2026-10-10T10:00:00Z', 400, 'A', 8),
     post('fresh', '2026-11-11T06:00:00Z', 50),
   ];
@@ -97,7 +111,7 @@ test('verdicts need 3 reels to call a winner', () => {
 });
 
 test('rankBy hook groups the same hook despite emoji and case, and skips unsettled reels', () => {
-  const base = [post('p1', '2026-09-01T10:00:00Z', 100), post('p2', '2026-09-02T10:00:00Z', 100)];
+  const base = [post('p1', '2026-09-01T10:00:00Z', 100), post('p2', '2026-09-02T10:00:00Z', 100), post('p3', '2026-09-03T10:00:00Z', 100)];
   const posts = [
     ...base,
     post('h1', '2026-10-01T10:00:00Z', 300),
@@ -117,7 +131,7 @@ test('rankBy hook groups the same hook despite emoji and case, and skips unsettl
   const day = rows.find((r) => r.key === 'day 400 of my streak')!;
   assert.equal(day.n, 3);
   assert.equal(day.verdict, 'winning');
-  assert.deepEqual(day.examples, ['h1', 'h2', 'h3']); // by multiple: 3x, 2x, 1.67x
+  assert.deepEqual(day.examples, ['h1', 'h3', 'h2']); // by multiple: 3x, 2.5x, 2x
   assert.equal(rows[0].key, 'day 400 of my streak');
   assert.equal(rows.find((r) => r.key === 'why is your spanish so good')!.n, 1);
 });
@@ -155,7 +169,7 @@ test('hook kind, line 1 variant and voice', () => {
   assert.equal(inferHookKind('3 years of studying Spanish and i just find this now'), 'statement');
   assert.equal(line1Variant('ummm by literally scrolling Spanish reels'), 'reels');
   assert.equal(line1Variant('Learn by literally watching Spanish Peppa Pig'), 'peppa');
-  assert.equal(line1Variant('mmm i started with the app'), 'answer');
+  assert.equal(line1Variant('mmm i started with the app'), 'i started with the');
   assert.equal(line1Variant('The English is right under every line'), 'the english is right');
   assert.equal(voiceOf(['The app makes you write the words you hear']), 'you');
   assert.equal(voiceOf(['The app makes me write the words i hear']), 'i');

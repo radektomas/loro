@@ -42,6 +42,8 @@ export type ScoredPost = MarketingPost & {
 };
 
 const SETTLE_MS = 48 * 3600 * 1000;
+/** Fewer earlier reels than this and there is no "usual": a channel's 2nd reel would otherwise score 10x off its 1st. */
+export const MIN_BASELINE_POSTS = 3;
 
 /** Median views of the account's BASELINE_POSTS most recent posts that were already 48h+ old at `at`. */
 export function baselineAt(posts: MarketingPost[], igUserId: string, at: Date): number | null {
@@ -51,7 +53,7 @@ export function baselineAt(posts: MarketingPost[], igUserId: string, at: Date): 
     .sort((a, b) => b.postedAt.localeCompare(a.postedAt))
     .slice(0, BASELINE_POSTS)
     .map((p) => p.latest!.views!);
-  return median(views);
+  return views.length >= MIN_BASELINE_POSTS ? median(views) : null;
 }
 
 export function scorePosts(posts: MarketingPost[], tags: Map<string, PostTags>, now: Date = new Date()): ScoredPost[] {
@@ -149,12 +151,16 @@ export function inferHookKind(hook: string): HookKind {
   return /\?/.test(hook) || /^\s*["“'‘]/.test(hook) ? 'question' : 'statement';
 }
 
-/** What line 1 says about how you learn: the thing the format varies. */
+/**
+ * What line 1 says about how you learn: the thing the format varies. The
+ * "ummm by…" filler that answers a question hook is not a variant of its own
+ * (the hook's kind already records the question); what follows it is.
+ */
 export function line1Variant(line: string): string {
   if (/peppa/i.test(line)) return 'peppa';
   if (/reel|scroll/i.test(line)) return 'reels';
-  if (/^\s*(u+m+|m{2,})\b/i.test(line)) return 'answer';
-  return line.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').trim().split(/\s+/).slice(0, 4).join(' ');
+  const rest = line.replace(/^\s*(u+m+|m{2,})\b[\s.,…]*(by\s+)?/i, '');
+  return rest.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').trim().split(/\s+/).slice(0, 4).join(' ');
 }
 
 export function voiceOf(lines: string[]): Voice | null {

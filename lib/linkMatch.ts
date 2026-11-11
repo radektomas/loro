@@ -26,6 +26,10 @@ export const MATCH_HASH = 12;
 export const MATCH_TEXT = 0.75;
 const GAP_HASH = 6;
 const GAP_TEXT = 0.15;
+/** Cover text this unlike the reel's hook contradicts a close hash. */
+const CONTRADICT_TEXT = 0.4;
+/** A lone candidate on the hash alone must be this close. */
+const LONE_HASH = 6;
 
 export function pickMatch(cands: Candidate[]): string | null {
   const dist = (c: Candidate) => c.hashDist ?? Infinity;
@@ -35,6 +39,13 @@ export function pickMatch(cands: Candidate[]): string | null {
   if (!best) return null;
   const close = dist(best) <= MATCH_HASH || sim(best) >= MATCH_TEXT;
   if (!close) return null;
+  // the cover's own text names a different hook: a look-alike from the same filming session
+  if (best.hashDist != null && best.textSim != null && best.textSim < CONTRADICT_TEXT) return null;
+  if (!next) {
+    // nothing to beat: both signals must agree, or the cover is near-identical
+    const both = dist(best) <= MATCH_HASH && sim(best) >= MATCH_TEXT;
+    return both || dist(best) <= LONE_HASH ? best.mediaId : null;
+  }
   if (next) {
     const hashGap = dist(next) - dist(best); // Infinity - Infinity = NaN → not a gap
     const textGap = sim(best) - sim(next);

@@ -51,6 +51,8 @@ worth betting the batch on. Reels under 48 h old are never judged.
 
      Also by judgment: don't give every reel the same line-1 variant, and don't put the same hook on two
      accounts in consecutive batches.
+   - `line1_variant` is what line 1 says (`reels`, `peppa`, or its first words). A question hook's "ummm by…"
+     answer isn't a variant of its own; the hook's kind already records that.
    - `expected_multiple`: the median multiple of the pattern you're exploiting on that channel. For a
      test, the channel's typical 1.0, unless the hook is promising elsewhere.
    - `reason`: one plain line Radek can judge in two seconds, e.g. "Question hooks win on radek.spanish
@@ -60,7 +62,7 @@ worth betting the batch on. Reels under 48 h old are never judged.
    {"batch": "2026-11-12", "summary": "Lean into question hooks on radek.spanish, test Peppa on loro.app",
     "items": [{"slot": 1, "account": "radek.spanish", "me_file": "/abs/me/IMG_1.MOV", "demo_file": "/abs/demo/IMG_2.MOV",
                "hook": "Why is your Spanish so much better than last month???", "hook_kind": "question",
-               "line1_variant": "answer", "voice": "i", "demo_kind": "reels", "role": "exploit",
+               "line1_variant": "reels", "voice": "i", "demo_kind": "reels", "role": "exploit",
                "reason": "…", "expected_multiple": 2.1}]}
    ```
    Then run `node scripts/scale/plan.mts <file>`. It refuses a plan that breaks the rules and names each

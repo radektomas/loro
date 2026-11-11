@@ -30,16 +30,26 @@ export async function GET(req: Request) {
   if (!admin.ok) return NextResponse.json({ error: admin.error }, { status: admin.status });
   const s = getServiceRole();
   try {
-    const [{ data: reels, error: e1 }, { data: notes, error: e2 }, { data: media }] = await Promise.all([
+    const [{ data: reels, error: e1 }, { data: notes, error: e2 }] = await Promise.all([
       s.from('loro_cut_reels').select('*').order('created_at', { ascending: false }).limit(500),
       s.from('loro_cut_notes').select('*').order('at_s'),
-      s.from('loro_marketing_ig_media').select('media_id, ig_user_id, permalink, posted_at, media_type, media_product_type').limit(5000),
     ]);
+    const media: Row[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await s
+        .from('loro_marketing_ig_media')
+        .select('media_id, ig_user_id, permalink, posted_at, media_type, media_product_type')
+        .order('media_id')
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      media.push(...((data ?? []) as Row[]));
+      if (!data || data.length < 1000) break;
+    }
     if (e1) throw new Error(e1.message);
     if (e2) throw new Error(e2.message);
 
     const mediaByCode = new Map<string, string>();
-    for (const m of (media ?? []) as Row[]) {
+    for (const m of media) {
       const code = shortcodeOf(m.permalink as string);
       if (code) mediaByCode.set(code, String(m.media_id));
     }
@@ -50,15 +60,16 @@ export async function GET(req: Request) {
     // its channel's usual reel at the time it went up
     const daily: Row[] = [];
     for (let from = 0; ; from += 1000) {
-      const { data, error } = await s.from('loro_marketing_ig_media_daily').select('media_id, day, views').order('day').range(from, from + 999);
+      const { data, error } = await s.from('loro_marketing_ig_media_daily').select('media_id, day, views').order('day').order('media_id').range(from, from + 999);
       if (error) throw new Error(error.message);
       daily.push(...((data ?? []) as Row[]));
       if (!data || data.length < 1000) break;
     }
     const igViews = new Map<string, number>();
     for (const d of daily) if (d.views != null) igViews.set(String(d.media_id), Number(d.views)); // last day wins
-    const igPosts: MarketingPost[] = ((media ?? []) as Row[])
-      .filter((m) => m.media_product_type === 'REELS' || m.media_type === 'VIDEO')
+    const igPosts: MarketingPost[] = media
+      // reels only, exactly as /marketing scores them
+      .filter((m) => m.media_product_type === 'REELS' || (m.media_product_type == null && m.media_type === 'VIDEO'))
       .map((m) => ({
         mediaId: String(m.media_id),
         igUserId: String(m.ig_user_id),

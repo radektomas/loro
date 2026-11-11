@@ -20,6 +20,14 @@ export type PlanItemInput = {
 };
 export type PlanInput = { batch: string; summary?: string; items: PlanItemInput[] };
 
+export type ItemStatus = 'proposed' | 'approved' | 'rejected' | 'cut';
+
+/** A plan's status from its items: decided once none is waiting; approved if any item went ahead. */
+export function resolvePlanStatus(items: ItemStatus[]): 'proposed' | 'approved' | 'rejected' {
+  if (items.length === 0 || items.includes('proposed')) return 'proposed';
+  return items.some((s) => s === 'approved' || s === 'cut') ? 'approved' : 'rejected';
+}
+
 /** Everything wrong with a plan, in plain words; empty = it can go to Radek. */
 export function planProblems(plan: PlanInput, fileExists: (p: string) => boolean = () => true): string[] {
   const out: string[] = [];

@@ -100,10 +100,9 @@ export type Insight = { name: string; values?: { value: number }[]; total_value?
 
 /** Metrics Meta marks "in development": they come and go, so a rejection drops these first. */
 const IN_DEVELOPMENT = ['reposts', 'ig_reels_avg_watch_time', 'reels_skip_rate', 'ig_reels_video_view_total_time'];
-const REEL_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved', ...IN_DEVELOPMENT];
+// no `reposts` on reels: Instagram refuses it for REELS (checked 2026-11-11), and asking cost every reel its watch time
+const REEL_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved', 'ig_reels_avg_watch_time', 'reels_skip_rate', 'ig_reels_video_view_total_time'];
 const FEED_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved', 'reposts'];
-/** The fallback when Instagram rejects the full list for one media item. */
-const CORE_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved'];
 
 export type InsightRow = {
   views: number | null;
@@ -117,6 +116,28 @@ export type InsightRow = {
   skip_rate: number | null;
   view_total_ms: number | null;
 };
+
+/**
+ * After an insights request failed: the metric list to try next, or null when
+ * the error isn't about metrics (rate limits, a dead token…), which must not
+ * be retried. Drops exactly what Instagram named; an unnamed metric error
+ * drops the in-development ones.
+ */
+export function nextMetrics(list: string[], message: string): string[] | null {
+  const refused = unsupportedMetrics(message);
+  const next = refused.length
+    ? list.filter((m) => !refused.includes(m))
+    : /metric/i.test(message)
+      ? list.filter((m) => !IN_DEVELOPMENT.includes(m))
+      : list;
+  return next.length > 0 && next.length < list.length ? next : null;
+}
+
+/** The metrics an Instagram error says it doesn't support, e.g. "does not support the metrics: reposts." */
+export function unsupportedMetrics(message: string): string[] {
+  const m = message.match(/does not support the metrics?:\s*([a-z_,\s]+)/i);
+  return m ? m[1].split(',').map((x) => x.trim()).filter(Boolean) : [];
+}
 
 /** One insights response → a row. A metric Meta didn't return stays null (not 0). */
 export function readInsights(data: Insight[]): InsightRow {
@@ -143,21 +164,19 @@ async function fetchInsights(media: IgMedia, token: string): Promise<InsightRow>
   const metrics = media.media_product_type === 'REELS' ? REEL_METRICS : FEED_METRICS;
   const ask = async (list: string[]) =>
     (await graph<{ data: Insight[] }>(`/${media.id}/insights`, token, { metric: list.join(',') })).data;
-  // One unsupported metric fails the whole request. Try everything, then
-  // without the in-development ones, then the core six; if even those fail,
-  // that error is the real one and propagates.
-  let data: Insight[];
-  try {
-    data = await ask(metrics);
-  } catch {
-    const stable = metrics.filter((m) => !IN_DEVELOPMENT.includes(m));
+  // One unsupported metric fails the whole request. Instagram names it
+  // ("does not support the metrics: reposts"), so drop exactly those and
+  // retry (nextMetrics). Any other error is the real one and propagates.
+  let list = metrics;
+  for (let attempt = 0; ; attempt++) {
     try {
-      data = await ask(stable);
-    } catch {
-      data = await ask(CORE_METRICS);
+      return readInsights(await ask(list));
+    } catch (e) {
+      const next = attempt < 3 ? nextMetrics(list, (e as Error).message) : null;
+      if (!next) throw e;
+      list = next;
     }
   }
-  return readInsights(data);
 }
 
 /** Swap a long-lived token for a fresh 60-day one (token must be ≥24h old). */
@@ -224,7 +243,8 @@ type AccountRow = {
 
 export type SyncResult = { username: string; ok: boolean; posts: number; insights: number; error?: string; refreshed?: boolean };
 
-export async function syncAccount(db: SupabaseClient, account: AccountRow): Promise<SyncResult> {
+/** rereadAll: read insights for every post, not just recent and never-seen ones (a one-off backfill). */
+export async function syncAccount(db: SupabaseClient, account: AccountRow, opts: { rereadAll?: boolean } = {}): Promise<SyncResult> {
   let token = account.access_token;
   let refreshed = false;
   try {
@@ -277,14 +297,21 @@ export async function syncAccount(db: SupabaseClient, account: AccountRow): Prom
     // Recent posts are re-read every day; older ones once, the first time
     // they are seen, so the history has numbers too.
     const cutoff = Date.now() - INSIGHT_WINDOW_DAYS * 86400 * 1000;
+    // only the out-of-window posts need the check, in chunks (URL length) and
+    // paged (PostgREST returns at most 1000 rows)
     const seen = new Set<string>();
-    {
-      const { data, error } = await db.from(T.mediaDaily).select('media_id').in('media_id', media.map((m) => m.id));
-      if (error) throw new Error(`${T.mediaDaily} (seen): ${error.message}`);
-      for (const r of data ?? []) seen.add(String(r.media_id));
+    const old = media.filter((m) => new Date(m.timestamp).getTime() < cutoff).map((m) => m.id);
+    for (let i = 0; i < old.length && !opts.rereadAll; i += 150) {
+      const chunk = old.slice(i, i + 150);
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await db.from(T.mediaDaily).select('media_id').in('media_id', chunk).order('media_id').order('day').range(from, from + 999);
+        if (error) throw new Error(`${T.mediaDaily} (seen): ${error.message}`);
+        for (const r of data ?? []) seen.add(String(r.media_id));
+        if (!data || data.length < 1000) break;
+      }
     }
     const recent = media.filter(
-      (m) => m.media_product_type !== 'STORY' && (new Date(m.timestamp).getTime() >= cutoff || !seen.has(m.id))
+      (m) => m.media_product_type !== 'STORY' && (opts.rereadAll || new Date(m.timestamp).getTime() >= cutoff || !seen.has(m.id))
     );
     const failures: string[] = [];
     const rows = (
@@ -315,13 +342,13 @@ export async function syncAccount(db: SupabaseClient, account: AccountRow): Prom
   }
 }
 
-export async function syncAll(db: SupabaseClient): Promise<SyncResult[]> {
+export async function syncAll(db: SupabaseClient, opts: { rereadAll?: boolean } = {}): Promise<SyncResult[]> {
   const { data, error } = await db
     .from(T.accounts)
     .select('ig_user_id, username, access_token, token_expires_at, connected_at');
   if (error) throw new Error(`${T.accounts}: ${error.message}`);
   const results: SyncResult[] = [];
-  for (const account of (data ?? []) as AccountRow[]) results.push(await syncAccount(db, account));
+  for (const account of (data ?? []) as AccountRow[]) results.push(await syncAccount(db, account, opts));
   return results;
 }
 
@@ -340,14 +367,18 @@ async function allRows(q: () => Ranged, table: string): Promise<Record<string, u
 /** Everything the dashboard shows. Tokens are never selected. */
 export async function loadMarketingData(db: SupabaseClient) {
   const tapsSince = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
+  // old reels keep their single row from the day they were first read, so a
+  // 400-day window still holds every post's latest numbers for a year
+  const dailySince = new Date(Date.now() - 400 * 86400 * 1000).toISOString().slice(0, 10);
   const [accounts, media, mediaDaily, accountDaily, tags, taps, installs, plans, planItems, cutReels] = await Promise.all([
     allRows(() => db.from(T.accounts).select('ig_user_id, username, connected_at, last_synced_at, last_error, token_expires_at').order('username'), T.accounts),
     allRows(() => db.from(T.media).select('*').order('posted_at', { ascending: false }), T.media),
     // every synced day: old reels have a single row from their first sync
-    allRows(() => db.from(T.mediaDaily).select('*').order('day'), T.mediaDaily),
-    allRows(() => db.from(T.accountDaily).select('*').order('day'), T.accountDaily),
+    // a unique order (day, then id) so paging never skips or repeats a row
+    allRows(() => db.from(T.mediaDaily).select('*').gte('day', dailySince).order('day').order('media_id'), T.mediaDaily),
+    allRows(() => db.from(T.accountDaily).select('*').gte('day', dailySince).order('day').order('ig_user_id'), T.accountDaily),
     allRows(() => db.from('loro_marketing_post_tags').select('*'), 'loro_marketing_post_tags'),
-    allRows(() => db.from('loro_marketing_link_taps').select('channel, at').eq('ua_kind', 'human').gte('at', tapsSince).order('at'), 'loro_marketing_link_taps'),
+    allRows(() => db.from('loro_marketing_link_taps').select('channel, at').eq('ua_kind', 'human').gte('at', tapsSince).order('id'), 'loro_marketing_link_taps'),
     allRows(() => db.from('loro_marketing_installs').select('*').order('week'), 'loro_marketing_installs'),
     allRows(() => db.from('loro_scale_plans').select('*').order('created_at', { ascending: false }), 'loro_scale_plans'),
     allRows(() => db.from('loro_scale_plan_items').select('*').order('slot'), 'loro_scale_plan_items'),

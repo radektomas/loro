@@ -57,3 +57,13 @@ test('workerView: a chat is watching only while its heartbeat is fresh', () => {
   assert.equal(workerView({ state: 'working', noteIds: ['a'], at: at(10) }, now), 'working');
   assert.equal(workerView({ state: 'working', noteIds: ['a'], at: at(60) }, now), 'offline'); // chat closed mid-recut
 });
+
+test('hookStats uses each reel\'s own multiple when the route has one (the same number as /marketing)', () => {
+  const s = hookStats([
+    { account: 'loro.app', hook: 'A', views: 100, status: 'posted', multiple: 3 },
+    { account: 'loro.app', hook: 'A', views: 9000, status: 'posted', multiple: 1 },
+    { account: 'loro.app', hook: 'B', views: 50, status: 'posted', multiple: 0.5 },
+  ]);
+  assert.equal(s.find((h) => h.hook === 'A')!.avgMultiple, 2);
+  assert.equal(s.find((h) => h.hook === 'B')!.avgMultiple, 0.5);
+});

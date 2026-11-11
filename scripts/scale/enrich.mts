@@ -16,7 +16,7 @@
  * Rows Radek edited (manual) are never overwritten.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { getAdminClient } from '../lib/supabaseAdmin.mts';
@@ -94,7 +94,8 @@ function dhash(files: string[]): Map<string, string | null> {
 /** Our reel's hook beat at 10 fps, hashed (cached per rendered file). */
 function reelHashes(out: string, beat: number): string[] {
   if (!existsSync(out)) return [];
-  const dir = `${FRAMES}/${Buffer.from(out).toString('base64url').slice(-60)}`;
+  // keyed by path AND mtime: a recut overwrites the same file
+  const dir = `${FRAMES}/${Buffer.from(`${out}@${statSync(out).mtimeMs}`).toString('base64url').slice(-80)}`;
   if (!existsSync(dir) || readdirSync(dir).length === 0) {
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
@@ -202,8 +203,11 @@ for (const m of todo) {
   else unreadable++;
 }
 
-for (let i = 0; i < upserts.length; i += 200) {
-  const { error } = await db.from('loro_marketing_post_tags').upsert(upserts.slice(i, i + 200), { onConflict: 'media_id' });
+// one row per post: two /cut reels can carry the same link (an old slot, a pasted twice link), and
+// Postgres refuses to upsert the same row twice in one statement. The first one seen wins.
+const unique = [...new Map([...upserts].reverse().map((u) => [u.media_id, u])).values()];
+for (let i = 0; i < unique.length; i += 200) {
+  const { error } = await db.from('loro_marketing_post_tags').upsert(unique.slice(i, i + 200), { onConflict: 'media_id' });
   if (error) throw new Error(`loro_marketing_post_tags: ${error.message}`);
 }
 console.log(`linked ${linked} · tagged from /cut ${fromCut} · hooks read ${read} · unreadable ${unreadable}`);

@@ -96,7 +96,7 @@ export function shortcodeOf(permalink: string | null | undefined): string | null
   return m ? m[1] : null;
 }
 
-type Measurable = Pick<CutReel, 'account' | 'hook' | 'views' | 'status'>;
+type Measurable = Pick<CutReel, 'account' | 'hook' | 'views' | 'status'> & { multiple?: number | null };
 
 /** Ranks hooks: measured ones by average multiple (best first), then the unmeasured. */
 export function hookStats(reels: Measurable[]): HookStat[] {
@@ -116,6 +116,8 @@ export function hookStats(reels: Measurable[]): HookStat[] {
     const measured = rs.filter((r) => r.views != null);
     const multiples = measured
       .map((r) => {
+        // the route's per-reel multiple (vs the channel's usual reel at post time, as on /marketing) wins
+        if (r.multiple !== undefined) return r.multiple;
         const m = medians.get(r.account);
         return m && m > 0 ? r.views! / m : null;
       })
