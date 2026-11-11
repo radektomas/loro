@@ -87,6 +87,8 @@ export type RankRow = {
   verdict: Verdict;
   /** mediaIds, best multiple first, at most 3. */
   examples: string[];
+  /** Hooks only: how many distinct wordings were folded into this family. */
+  variants?: number;
 };
 
 /** Winning needs 3+ reels at a 1.5x median; fewer is only promising. */
@@ -99,7 +101,33 @@ export function verdictOf(n: number, med: number | null): Verdict {
 
 const VERDICT_ORDER: Verdict[] = ['winning', 'promising', 'ordinary', 'losing'];
 
-function keyOf(p: ScoredPost, dim: Dimension): { key: string; label: string } | null {
+/** Wordings this alike are the same hook ("1000 words in ONE MONTH" / "2000 words in one month"). */
+const FAMILY_SIMILARITY = 0.8;
+
+/**
+ * hookKey → family key. Greedy: the most used wording founds a family and
+ * every later wording joins the first family it's FAMILY_SIMILARITY alike.
+ */
+export function hookFamilies(hooks: string[]): Map<string, string> {
+  const count = new Map<string, number>();
+  for (const h of hooks) {
+    const k = hookKey(h);
+    if (k) count.set(k, (count.get(k) ?? 0) + 1);
+  }
+  const reps: string[] = [];
+  const out = new Map<string, string>();
+  for (const k of [...count.keys()].sort((a, b) => count.get(b)! - count.get(a)! || a.localeCompare(b))) {
+    const rep = reps.find((r) => textSimilarity(r, k) >= FAMILY_SIMILARITY);
+    if (rep) out.set(k, rep);
+    else {
+      reps.push(k);
+      out.set(k, k);
+    }
+  }
+  return out;
+}
+
+function keyOf(p: ScoredPost, dim: Dimension, families: Map<string, string>): { key: string; label: string } | null {
   const t = p.tags;
   switch (dim) {
     case 'account':
@@ -107,7 +135,7 @@ function keyOf(p: ScoredPost, dim: Dimension): { key: string; label: string } | 
     case 'hook': {
       if (!t?.hook) return null;
       const k = hookKey(t.hook);
-      return k ? { key: k, label: t.hook } : null;
+      return k ? { key: families.get(k) ?? k, label: t.hook } : null;
     }
     default: {
       const v = t?.[dim];
@@ -117,16 +145,22 @@ function keyOf(p: ScoredPost, dim: Dimension): { key: string; label: string } | 
 }
 
 export function rankBy(posts: ScoredPost[], dim: Dimension): RankRow[] {
-  const groups = new Map<string, { label: string; ps: ScoredPost[] }>();
-  for (const p of posts) {
-    if (!p.settled || p.multiple == null) continue;
-    const k = keyOf(p, dim);
+  const ranked = posts.filter((p) => p.settled && p.multiple != null);
+  const families = dim === 'hook' ? hookFamilies(ranked.map((p) => p.tags?.hook ?? '').filter(Boolean)) : new Map<string, string>();
+  const groups = new Map<string, { labels: Map<string, number>; ps: ScoredPost[] }>();
+  for (const p of ranked) {
+    const k = keyOf(p, dim, families);
     if (!k) continue;
-    if (!groups.has(k.key)) groups.set(k.key, { label: k.label, ps: [] });
-    groups.get(k.key)!.ps.push(p);
+    if (!groups.has(k.key)) groups.set(k.key, { labels: new Map(), ps: [] });
+    const g = groups.get(k.key)!;
+    g.labels.set(k.label, (g.labels.get(k.label) ?? 0) + 1);
+    g.ps.push(p);
   }
   const rows: RankRow[] = [];
-  for (const [key, { label, ps }] of groups) {
+  for (const [key, { labels, ps }] of groups) {
+    // the most common wording names the family
+    const label = [...labels].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+    const wordings = new Set(ps.map((p) => hookKey(p.tags?.hook ?? ''))).size;
     const ms = ps.map((p) => p.multiple!);
     const med = median(ms);
     rows.push({
@@ -139,6 +173,7 @@ export function rankBy(posts: ScoredPost[], dim: Dimension): RankRow[] {
       totalViews: ps.reduce((s, p) => s + (p.latest?.views ?? 0), 0),
       verdict: verdictOf(ps.length, med),
       examples: [...ps].sort((a, b) => b.multiple! - a.multiple!).slice(0, 3).map((p) => p.mediaId),
+      ...(dim === 'hook' ? { variants: wordings } : {}),
     });
   }
   return rows.sort(
@@ -204,6 +239,9 @@ export function cleanCoverText(lines: OcrLine[]): string | null {
     .replace(/ -(\w)/g, ' $1') // "soo -quick": a stray dash from the line break
     .replace(/([?!])\s*[A-Za-z]\s*(["”]?)\s*$/, '$1$2') // "month??t\"": the emoji after the hook misread as a letter
     .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
+    .replace(/(\s+\d{1,3})+$/, '') // " 6", " 338": an emoji read as digits
+    .replace(/\b([A-Z]{3,})[\d&%$#]+$/, '$1') // "MONTH83", "MONTH&": glued to a capitalised word
+    .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
     .trim();
   const words = text.split(/\s+/);
   const last = words[words.length - 1]?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
@@ -215,7 +253,9 @@ export function cleanCoverText(lines: OcrLine[]): string | null {
 
 /** Phrase reels ("Things to say when…", "Spanish phrases to use…") by their hook; everything else stays "other" until tagged. */
 export function inferFormat(hook: string): Format {
-  return /^\W*(things (to say|a|you|people)|spanish phrases|phrases|words to|how to say|ways to say)\b/i.test(hook) ? 'phrases' : 'other';
+  return /^\W*(things (to say|a|you|people)|((basic|useful|common|essential) )?spanish (phrases|words)|phrases|words to|how to (say|call|flirt|ask|tell|order|reply)|ways to say|stages of)\b/i.test(hook)
+    ? 'phrases'
+    : 'other';
 }
 
 /** Dice coefficient on lowercase letter/digit bigrams, 0..1. */

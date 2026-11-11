@@ -7,7 +7,7 @@ import type { Model } from './ScaleDashboard';
 import { CHANNELS, ChannelChip, Cover, Empty, Pill, PillRow, VERDICT, VerdictTag, compact } from './ui';
 
 const DIMS: { id: Dimension; label: string; hint: string }[] = [
-  { id: 'hook', label: 'Hooks', hint: 'The exact hook (case, emoji and punctuation ignored).' },
+  { id: 'hook', label: 'Hooks', hint: 'Near-identical wordings count as one hook ("1000 words in ONE MONTH" and "2000 words in one month").' },
   { id: 'hookKind', label: 'Hook style', hint: 'A viewer’s question in quotes, or a statement.' },
   { id: 'line1Variant', label: 'Line 1', hint: 'What the first line says about how you learn (/cut reels).' },
   { id: 'voice', label: 'Voice', hint: '“I / me” or speaking to the viewer as “you” (/cut reels).' },
@@ -34,13 +34,15 @@ export function Winners({ m }: { m: Model }) {
   const [dim, setDim] = useState<Dimension>('hook');
   const [channel, setChannel] = useState('all');
   const [format, setFormat] = useState('all');
+  const [proven, setProven] = useState(false);
 
   const rows = useMemo(() => {
     const posts = m.reels.filter(
       (r) => (channel === 'all' || m.username(r.igUserId) === channel) && (format === 'all' || (r.tags?.format ?? 'other') === format)
     );
-    return rankBy(posts, dim);
-  }, [m, dim, channel, format]);
+    const all = rankBy(posts, dim);
+    return proven ? all.filter((r) => r.n >= 3) : all;
+  }, [m, dim, channel, format, proven]);
 
   const label = (r: RankRow) => (dim === 'account' ? null : PRETTY[dim]?.[r.key] ?? r.label);
   const d = DIMS.find((x) => x.id === dim)!;
@@ -62,6 +64,7 @@ export function Winners({ m }: { m: Model }) {
               <Pill key={c.account} on={channel === c.account} onClick={() => setChannel(c.account)} color={c.color}>{c.short}</Pill>
             ))}
           </PillRow>
+          <Pill on={proven} onClick={() => setProven(!proven)}>3+ reels only</Pill>
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value)}
@@ -100,7 +103,10 @@ export function Winners({ m }: { m: Model }) {
               <div className="min-w-0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <VerdictTag v={r.verdict} />
-                  <span className="text-xs" style={{ color: DASH.muted }}>{r.n} reel{r.n === 1 ? '' : 's'} · {compact.format(r.totalViews)} views</span>
+                  <span className="text-xs" style={{ color: DASH.muted }}>
+                    {r.n} reel{r.n === 1 ? '' : 's'} · {compact.format(r.totalViews)} views
+                    {r.variants != null && r.variants > 1 && ` · ${r.variants} wordings`}
+                  </span>
                 </div>
                 {dim === 'account' ? <ChannelChip account={m.username(r.key)} full /> : <p className="text-[15px] font-semibold leading-snug">{label(r)}</p>}
               </div>

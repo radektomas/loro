@@ -216,3 +216,46 @@ test('inferFormat spots phrase reels by their hook', async () => {
   assert.equal(inferFormat('Things a Spanish-speaking Mom will say to you'), 'phrases');
   assert.equal(inferFormat('"Why is your Spanish SO much better than last month??"'), 'other');
 });
+
+test('hook families: near-identical wordings rank together', async () => {
+  const { hookFamilies } = await import('../../../lib/scaleStats.ts');
+  const fam = hookFamilies([
+    'How did you memorize 1000 Spanish words in just ONE MONTH??',
+    'How did you memorize 2000 Spanish words in ONE MONTH',
+    'how did you memorize 2000 spanish words in one month',
+    'Youre still trying to learn Spanish with Duolingo??',
+    'Stages of love in Spanish',
+  ]);
+  const a = fam.get('how did you memorize 2000 spanish words in one month');
+  assert.equal(fam.get('how did you memorize 1000 spanish words in just one month'), a);
+  assert.notEqual(fam.get('youre still trying to learn spanish with duolingo'), a);
+  assert.notEqual(fam.get('stages of love in spanish'), fam.get('youre still trying to learn spanish with duolingo'));
+});
+
+test('rankBy hook counts a family as one row, labelled by its most common wording', () => {
+  const base = [post('p1', '2026-09-01T10:00:00Z', 100), post('p2', '2026-09-02T10:00:00Z', 100), post('p3', '2026-09-03T10:00:00Z', 100)];
+  const posts = [...base, post('a', '2026-10-01T10:00:00Z', 300), post('b', '2026-10-03T10:00:00Z', 300), post('c', '2026-10-05T10:00:00Z', 300)];
+  const t = new Map<string, PostTags>([
+    ['a', tags('How did you memorize 1000 Spanish words in just ONE MONTH??')],
+    ['b', tags('How did you memorize 2000 Spanish words in ONE MONTH')],
+    ['c', tags('How did you memorize 2000 Spanish words in ONE MONTH')],
+  ]);
+  const rows = rankBy(scorePosts(posts, t, NOW), 'hook');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].n, 3);
+  assert.equal(rows[0].label, 'How did you memorize 2000 Spanish words in ONE MONTH');
+  assert.equal(rows[0].variants, 2);
+});
+
+test('cleanCoverText drops digit junk an emoji leaves at the end', () => {
+  assert.equal(cleanCoverText([{ text: '"How did you memorize 1000', h: 0.04 }, { text: 'Spanish words in just', h: 0.04 }, { text: 'ONE MONTH83 6', h: 0.04 }]), '"How did you memorize 1000 Spanish words in just ONE MONTH');
+  assert.equal(cleanCoverText([{ text: 'Some people still use', h: 0.04 }, { text: 'Duolingo to learn Spanish 0', h: 0.04 }]), 'Some people still use Duolingo to learn Spanish');
+  assert.equal(cleanCoverText([{ text: '3000 Spanish words in 40', h: 0.04 }, { text: 'seconds', h: 0.04 }]), '3000 Spanish words in 40 seconds');
+});
+
+test('inferFormat also knows the explainer phrase reels', async () => {
+  const { inferFormat } = await import('../../../lib/scaleStats.ts');
+  for (const h of ['Basic Spanish phrases i learned with Loro: hello = hola', 'How to call a latina beautiful in Spanish', 'Spanish words you NEED when dating', 'Stages of love in Spanish', 'How to flirt with your latina mamii'])
+    assert.equal(inferFormat(h), 'phrases', h);
+  assert.equal(inferFormat('How did you learn 2000 Spanish words so FAST?'), 'other');
+});

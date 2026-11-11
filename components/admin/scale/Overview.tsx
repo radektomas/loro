@@ -251,7 +251,7 @@ function TapsTimeline({ m }: { m: Model }) {
       />
       {total === 0 ? (
         <Empty>No taps yet. Once the three bios link to getloro.app/go/radek-spanish, /go/radek-explains and /go/loro-app, every tap shows up here.</Empty>
-      ) : null}
+      ) : (
       <div className="grid gap-4" onMouseLeave={() => setHover(null)}>
         {rows.map(({ c, counts, posted }) => (
           <div key={c.account}>
@@ -295,6 +295,7 @@ function TapsTimeline({ m }: { m: Model }) {
           <span>today</span>
         </div>
       </div>
+      )}
       {h && hi >= 0 && (
         <div className="mt-3 rounded-xl p-3 text-sm" style={{ background: DASH.inset }}>
           <div className="flex items-center gap-2">
