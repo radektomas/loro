@@ -3,6 +3,7 @@
  * reel won. Runs on Radek's Mac (Apple Vision, ffmpeg, the rendered reels):
  *
  *   node scripts/scale/enrich.mts
+ *   node scripts/scale/enrich.mts --reread   (read every cover again, keeping Radek's edits)
  *
  * 1. Auto-link: each approved/posted /cut reel without a link is matched to
  *    its Instagram post by comparing the cover with our frames (dHash over the
@@ -22,7 +23,7 @@ import path from 'node:path';
 import { getAdminClient } from '../lib/supabaseAdmin.mts';
 import { shortcodeOf } from '../../lib/cutReels.ts';
 import { hamming, pickMatch, type Candidate } from '../../lib/linkMatch.ts';
-import { cleanCoverText, inferHookKind, line1Variant, textSimilarity, voiceOf, type OcrLine } from '../../lib/scaleStats.ts';
+import { cleanCoverText, inferFormat, inferHookKind, line1Variant, textSimilarity, voiceOf, type OcrLine } from '../../lib/scaleStats.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const PY = `${homedir()}/.venvs/reels/bin/python`;
@@ -178,7 +179,9 @@ for (const r of cutReels) {
 
 // ---------- 3. hooks off covers ----------
 const fromCutIds = new Set(upserts.map((u) => u.media_id));
-const todo = reels.filter((m) => !tags.has(m.media_id) && !fromCutIds.has(m.media_id));
+// --reread: read every cover again (after the cleaning rules improve); rows Radek edited are kept
+const reread = process.argv.includes('--reread');
+const todo = reels.filter((m) => !fromCutIds.has(m.media_id) && (reread ? !tags.get(m.media_id)?.manual && tags.get(m.media_id)?.cut_reel_id == null : !tags.has(m.media_id)));
 const files = new Map<string, string>();
 for (const m of todo) {
   const f = await cover(m);
@@ -194,7 +197,7 @@ for (const m of todo) {
     hook,
     hook_source: hook ? 'cover' : null,
     hook_kind: hook ? inferHookKind(hook) : null,
-    format: 'other',
+    format: hook ? inferFormat(hook) : 'other',
     demo_kind: 'unknown',
     manual: false,
     updated_at: new Date().toISOString(),

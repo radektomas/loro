@@ -195,3 +195,24 @@ test('trackRecord compares exploit with test and counts hits', () => {
   assert.equal(r.hitRate, 0.5);
   assert.equal(trackRecord([]).hitRate, null);
 });
+
+test('cleanCoverText drops an emoji misread after ?? and mends words split across lines', async () => {
+  assert.equal(
+    cleanCoverText([
+      { text: '"How did you get soo', h: 0.04 },
+      { text: 'good in Spanish soo', h: 0.04 },
+      { text: '-quick?? t"', h: 0.04 },
+    ]),
+    '"How did you get soo good in Spanish soo quick??"'
+  );
+  assert.equal(cleanCoverText([{ text: '"How did your Spanish', h: 0.04 }, { text: 'improve SO MUCH in', h: 0.04 }, { text: 'just one month??t"', h: 0.04 }]), '"How did your Spanish improve SO MUCH in just one month??"');
+  assert.equal(cleanCoverText([{ text: 'Things a Spanish-', h: 0.04 }, { text: 'speaking Mom will say to', h: 0.04 }, { text: 'you', h: 0.04 }]), 'Things a Spanish-speaking Mom will say to you');
+});
+
+test('inferFormat spots phrase reels by their hook', async () => {
+  const { inferFormat } = await import('../../../lib/scaleStats.ts');
+  assert.equal(inferFormat('Things to say at a restaurant in Spanish'), 'phrases');
+  assert.equal(inferFormat('Spanish phrases to use in a bar'), 'phrases');
+  assert.equal(inferFormat('Things a Spanish-speaking Mom will say to you'), 'phrases');
+  assert.equal(inferFormat('"Why is your Spanish SO much better than last month??"'), 'other');
+});

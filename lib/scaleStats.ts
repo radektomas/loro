@@ -197,13 +197,25 @@ export function cleanCoverText(lines: OcrLine[]): string | null {
       started = true;
     } else if (started) break;
   }
-  let text = run.join(' ').replace(/[®©™°]+/g, '').replace(/[^A-Za-z0-9.!?…'"]+$/, '').trim();
+  let text = run
+    .join(' ')
+    .replace(/[®©™°]+/g, '')
+    .replace(/(\w)- (\w)/g, '$1-$2') // "Spanish- speaking" split across lines
+    .replace(/ -(\w)/g, ' $1') // "soo -quick": a stray dash from the line break
+    .replace(/([?!])\s*[A-Za-z]\s*(["”]?)\s*$/, '$1$2') // "month??t\"": the emoji after the hook misread as a letter
+    .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
+    .trim();
   const words = text.split(/\s+/);
   const last = words[words.length - 1]?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
   const glued = SHORT_WORDS.find((w) => last.length === w.length + 1 && last.startsWith(w));
   if (glued) words[words.length - 1] = words[words.length - 1].slice(0, glued.length);
   text = words.join(' ');
   return words.length >= 3 ? text : null;
+}
+
+/** Phrase reels ("Things to say when…", "Spanish phrases to use…") by their hook; everything else stays "other" until tagged. */
+export function inferFormat(hook: string): Format {
+  return /^\W*(things (to say|a|you|people)|spanish phrases|phrases|words to|how to say|ways to say)\b/i.test(hook) ? 'phrases' : 'other';
 }
 
 /** Dice coefficient on lowercase letter/digit bigrams, 0..1. */
