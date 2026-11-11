@@ -64,6 +64,8 @@ export async function GET(req: Request) {
               saved: num(last.saved),
               reposts: num(last.reposts),
               avgWatchMs: num(last.avg_watch_ms),
+              skipRate: num(last.skip_rate),
+              viewTotalMs: num(last.view_total_ms),
             }
           : null,
         viewsByDay: days.filter((d) => d.views != null).map((d) => ({ day: String(d.day), views: Number(d.views) })),
