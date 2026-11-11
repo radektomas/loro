@@ -10,6 +10,8 @@
  *
  * Plain relative imports only — this file is also imported by node --test.
  */
+import type { PostTags } from './scaleStats.ts';
+import type { Account } from './cutReels.ts';
 
 export type ReelMetrics = {
   views: number | null;
@@ -52,9 +54,46 @@ export type MarketingPost = {
   viewsByDay: { day: string; views: number }[];
 };
 
+export type ScalePlanItem = {
+  id: string;
+  slot: number;
+  account: Account;
+  meFile: string;
+  demoFile: string;
+  hook: string;
+  hookKind: string | null;
+  line1Variant: string | null;
+  voice: string | null;
+  demoKind: string | null;
+  role: 'exploit' | 'test';
+  reason: string;
+  expectedMultiple: number | null;
+  status: 'proposed' | 'approved' | 'rejected' | 'cut';
+  cutReelId: string | null;
+};
+
+export type ScalePlan = {
+  id: string;
+  batch: string;
+  status: 'proposed' | 'approved' | 'rejected' | 'cut';
+  summary: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+  items: ScalePlanItem[];
+};
+
 export type MarketingData = {
   accounts: MarketingAccount[];
   posts: MarketingPost[];
+  /** What each post is (hook, format, demo…), by mediaId. */
+  tags: Record<string, PostTags>;
+  /** Human bio-link taps per channel per day, last 90 days. */
+  taps: { channel: Account; day: string; taps: number }[];
+  installs: { channel: Account; week: string; installs: number }[];
+  /** Newest first. */
+  plans: ScalePlan[];
+  /** The /cut reel behind a post, by mediaId. */
+  cutReels: Record<string, { id: string; account: Account; batch: string; slot: number }>;
 };
 
 /** How many recent posts form an account's "usual" number. */

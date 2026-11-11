@@ -325,27 +325,32 @@ export async function syncAll(db: SupabaseClient): Promise<SyncResult[]> {
   return results;
 }
 
+/** Every row of a query, paged past PostgREST's 1000-row cap. */
+async function allRows(q: () => any, table: string): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await q().range(from, from + 999);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    out.push(...(data ?? []));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
 /** Everything the dashboard shows. Tokens are never selected. */
 export async function loadMarketingData(db: SupabaseClient) {
-  const since = new Date(Date.now() - 90 * 86400 * 1000).toISOString().slice(0, 10);
-  const [accounts, media, mediaDaily, accountDaily] = await Promise.all([
-    db.from(T.accounts).select('ig_user_id, username, connected_at, last_synced_at, last_error, token_expires_at').order('username'),
-    db.from(T.media).select('*').order('posted_at', { ascending: false }).limit(300),
-    db.from(T.mediaDaily).select('*').gte('day', since).order('day'),
-    db.from(T.accountDaily).select('*').gte('day', since).order('day'),
+  const tapsSince = new Date(Date.now() - 90 * 86400 * 1000).toISOString();
+  const [accounts, media, mediaDaily, accountDaily, tags, taps, installs, plans, planItems, cutReels] = await Promise.all([
+    allRows(() => db.from(T.accounts).select('ig_user_id, username, connected_at, last_synced_at, last_error, token_expires_at').order('username'), T.accounts),
+    allRows(() => db.from(T.media).select('*').order('posted_at', { ascending: false }), T.media),
+    // every synced day: old reels have a single row from their first sync
+    allRows(() => db.from(T.mediaDaily).select('*').order('day'), T.mediaDaily),
+    allRows(() => db.from(T.accountDaily).select('*').order('day'), T.accountDaily),
+    allRows(() => db.from('loro_marketing_post_tags').select('*'), 'loro_marketing_post_tags'),
+    allRows(() => db.from('loro_marketing_link_taps').select('channel, at').eq('ua_kind', 'human').gte('at', tapsSince).order('at'), 'loro_marketing_link_taps'),
+    allRows(() => db.from('loro_marketing_installs').select('*').order('week'), 'loro_marketing_installs'),
+    allRows(() => db.from('loro_scale_plans').select('*').order('created_at', { ascending: false }), 'loro_scale_plans'),
+    allRows(() => db.from('loro_scale_plan_items').select('*').order('slot'), 'loro_scale_plan_items'),
+    allRows(() => db.from('loro_cut_reels').select('id, account, batch, slot, permalink, ig_media_id'), 'loro_cut_reels'),
   ]);
-  for (const [name, r] of [
-    [T.accounts, accounts],
-    [T.media, media],
-    [T.mediaDaily, mediaDaily],
-    [T.accountDaily, accountDaily],
-  ] as const) {
-    if (r.error) throw new Error(`${name}: ${r.error.message}`);
-  }
-  return {
-    accounts: accounts.data ?? [],
-    media: media.data ?? [],
-    mediaDaily: mediaDaily.data ?? [],
-    accountDaily: accountDaily.data ?? [],
-  };
+  return { accounts, media, mediaDaily, accountDaily, tags, taps, installs, plans, planItems, cutReels };
 }
