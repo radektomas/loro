@@ -22,8 +22,9 @@ const GRAPH = 'https://graph.instagram.com/v26.0';
 const REFRESH_WHEN_DAYS_LEFT = 20;
 /** Only reels/posts this recent get their insights re-read each day. */
 const INSIGHT_WINDOW_DAYS = 60;
-/** The newest posts listed per account each sync. */
+/** Posts per page when listing an account's media, and how many pages at most (all of it, in practice). */
 const MEDIA_PAGE = 50;
+const MEDIA_MAX_PAGES = 20;
 
 const T = {
   accounts: 'loro_marketing_ig_accounts',
@@ -77,17 +78,29 @@ type IgMedia = {
   timestamp: string;
 };
 
+/** Every post on the account, newest first, following Instagram's paging. */
 async function fetchMedia(token: string): Promise<IgMedia[]> {
-  const page = await graph<{ data: IgMedia[] }>('/me/media', token, {
+  type Page = { data: IgMedia[]; paging?: { next?: string } };
+  const out: IgMedia[] = [];
+  let page = await graph<Page>('/me/media', token, {
     fields: 'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp',
     limit: String(MEDIA_PAGE),
   });
-  return page.data ?? [];
+  for (let i = 0; ; i++) {
+    out.push(...(page.data ?? []));
+    const next = page.paging?.next;
+    if (!next || i + 1 >= MEDIA_MAX_PAGES) break;
+    // the next link already carries the fields and the token
+    page = await graph<Page>(next, token);
+  }
+  return out;
 }
 
-type Insight = { name: string; values?: { value: number }[]; total_value?: { value: number } };
+export type Insight = { name: string; values?: { value: number }[]; total_value?: { value: number } };
 
-const REEL_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved', 'reposts', 'ig_reels_avg_watch_time'];
+/** Metrics Meta marks "in development": they come and go, so a rejection drops these first. */
+const IN_DEVELOPMENT = ['reposts', 'ig_reels_avg_watch_time', 'reels_skip_rate', 'ig_reels_video_view_total_time'];
+const REEL_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved', ...IN_DEVELOPMENT];
 const FEED_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved', 'reposts'];
 /** The fallback when Instagram rejects the full list for one media item. */
 const CORE_METRICS = ['views', 'reach', 'likes', 'comments', 'shares', 'saved'];
@@ -101,19 +114,12 @@ export type InsightRow = {
   saved: number | null;
   reposts: number | null;
   avg_watch_ms: number | null;
+  skip_rate: number | null;
+  view_total_ms: number | null;
 };
 
-async function fetchInsights(media: IgMedia, token: string): Promise<InsightRow> {
-  const metrics = media.media_product_type === 'REELS' ? REEL_METRICS : FEED_METRICS;
-  let data: Insight[];
-  try {
-    data = (await graph<{ data: Insight[] }>(`/${media.id}/insights`, token, { metric: metrics.join(',') })).data;
-  } catch {
-    // One unsupported metric fails the whole request (metrics marked "in
-    // development" come and go). The core six are stable; if even they fail,
-    // that error is the real one and propagates.
-    data = (await graph<{ data: Insight[] }>(`/${media.id}/insights`, token, { metric: CORE_METRICS.join(',') })).data;
-  }
+/** One insights response → a row. A metric Meta didn't return stays null (not 0). */
+export function readInsights(data: Insight[]): InsightRow {
   const read = (name: string): number | null => {
     const m = data.find((d) => d.name === name);
     const v = m?.total_value?.value ?? m?.values?.[0]?.value;
@@ -128,7 +134,30 @@ async function fetchInsights(media: IgMedia, token: string): Promise<InsightRow>
     saved: read('saved'),
     reposts: read('reposts'),
     avg_watch_ms: read('ig_reels_avg_watch_time'),
+    skip_rate: read('reels_skip_rate'),
+    view_total_ms: read('ig_reels_video_view_total_time'),
   };
+}
+
+async function fetchInsights(media: IgMedia, token: string): Promise<InsightRow> {
+  const metrics = media.media_product_type === 'REELS' ? REEL_METRICS : FEED_METRICS;
+  const ask = async (list: string[]) =>
+    (await graph<{ data: Insight[] }>(`/${media.id}/insights`, token, { metric: list.join(',') })).data;
+  // One unsupported metric fails the whole request. Try everything, then
+  // without the in-development ones, then the core six; if even those fail,
+  // that error is the real one and propagates.
+  let data: Insight[];
+  try {
+    data = await ask(metrics);
+  } catch {
+    const stable = metrics.filter((m) => !IN_DEVELOPMENT.includes(m));
+    try {
+      data = await ask(stable);
+    } catch {
+      data = await ask(CORE_METRICS);
+    }
+  }
+  return readInsights(data);
 }
 
 /** Swap a long-lived token for a fresh 60-day one (token must be ≥24h old). */
@@ -245,8 +274,18 @@ export async function syncAccount(db: SupabaseClient, account: AccountRow): Prom
       if (error) throw new Error(`${T.media}: ${error.message}`);
     }
 
+    // Recent posts are re-read every day; older ones once, the first time
+    // they are seen, so the history has numbers too.
     const cutoff = Date.now() - INSIGHT_WINDOW_DAYS * 86400 * 1000;
-    const recent = media.filter((m) => new Date(m.timestamp).getTime() >= cutoff && m.media_product_type !== 'STORY');
+    const seen = new Set<string>();
+    {
+      const { data, error } = await db.from(T.mediaDaily).select('media_id').in('media_id', media.map((m) => m.id));
+      if (error) throw new Error(`${T.mediaDaily} (seen): ${error.message}`);
+      for (const r of data ?? []) seen.add(String(r.media_id));
+    }
+    const recent = media.filter(
+      (m) => m.media_product_type !== 'STORY' && (new Date(m.timestamp).getTime() >= cutoff || !seen.has(m.id))
+    );
     const failures: string[] = [];
     const rows = (
       await pool(recent, 5, async (m) => {
