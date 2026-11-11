@@ -238,11 +238,17 @@ export function cleanCoverText(lines: OcrLine[]): string | null {
     .replace(/(\w)- (\w)/g, '$1-$2') // "Spanish- speaking" split across lines
     .replace(/ -(\w)/g, ' $1') // "soo -quick": a stray dash from the line break
     .replace(/([?!])\s*[A-Za-z]\s*(["”]?)\s*$/, '$1$2') // "month??t\"": the emoji after the hook misread as a letter
-    .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
-    .replace(/(\s+\d{1,3})+$/, '') // " 6", " 338": an emoji read as digits
-    .replace(/\b([A-Z]{3,})[\d&%$#]+$/, '$1') // "MONTH83", "MONTH&": glued to a capitalised word
-    .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
     .trim();
+  // the junk an emoji leaves sits at the end, or just before a closing quote
+  const quote = /["”]$/.test(text) && /^\W*["“]/.test(text) ? text.slice(-1) : '';
+  if (quote) text = text.slice(0, -1);
+  text =
+    text
+      .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
+      .replace(/(\s+\d{1,3})+$/, '') // " 6", " 338": an emoji read as digits
+      .replace(/\b([A-Z]{3,})[\d&%$#]+$/, '$1') // "MONTH83", "FAST838": glued to a capitalised word
+      .replace(/[^A-Za-z0-9.!?…'"”]+$/, '')
+      .trim() + quote;
   const words = text.split(/\s+/);
   const last = words[words.length - 1]?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
   const glued = SHORT_WORDS.find((w) => last.length === w.length + 1 && last.startsWith(w));

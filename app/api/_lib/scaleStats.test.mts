@@ -259,3 +259,8 @@ test('inferFormat also knows the explainer phrase reels', async () => {
     assert.equal(inferFormat(h), 'phrases', h);
   assert.equal(inferFormat('How did you learn 2000 Spanish words so FAST?'), 'other');
 });
+
+test('cleanCoverText cleans junk that sits before a closing quote', () => {
+  assert.equal(cleanCoverText([{ text: '"How did you get fluent', h: 0.04 }, { text: 'in Spanish SO FAST838"', h: 0.04 }]), '"How did you get fluent in Spanish SO FAST"');
+  assert.equal(cleanCoverText([{ text: '"Youre still trying to', h: 0.04 }, { text: 'learn Spanish with Duolingo • "', h: 0.04 }]), '"Youre still trying to learn Spanish with Duolingo"');
+});
