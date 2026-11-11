@@ -37,6 +37,10 @@ hook with NO space before it (😭 💀 😳 🤯 😩). Lines carry no emoji, o
 
 ## New batch
 
+0. **Plan first with the scaler** (`.claude/skills/scaler/SKILL.md`, Radek 2026-11-11): it reads what's winning,
+   proposes a channel, hook and line 1 for every clip pair, and Radek approves on getloro.app/marketing#plan.
+   Cut only approved items, with their hooks, and put `"plan_item_id"` in each job. Steps 1–3 below are still
+   how you look at the clips; step 4 is replaced by the approved plan.
 1. **Look at the inbox.** Three green folders sit straight on Radek's Desktop (he has ~100 files there, and a folder
    inside a folder was "super hidden"): `~/Desktop/REELS radek.spanish/`, `~/Desktop/REELS radek.explains.spanish/`,
    `~/Desktop/REELS loro app/` (= @loro.app; a folder ending in `.app` shows as a broken app in Finder, never name one
@@ -52,7 +56,7 @@ hook with NO space before it (😭 💀 😳 🤯 😩). Lines carry no emoji, o
    `demo_drop` (100–200) so the lines sit on dark space above it.
 3. **Watch every clip of Radek** the same way. If the start or end is junk (him walking to the camera,
    reaching for the phone), trim with `me_from` / `me_to`.
-4. **Pick hooks.** `node scripts/cut/hooks.mts <account>`: take from the top (least used here, best score),
+4. **Pick hooks** (only when Radek skips the scaler for a batch). `node scripts/cut/hooks.mts <account>`: take from the top (least used here, best score),
    never the same hook twice in one batch, and prefer hooks not used on the OTHER accounts in the last batch
    (Instagram demotes identical content across accounts). Match line 1 to the hook's kind (question → "ummm by…").
    New hooks Radek gives you go into `scripts/cut/hooks.json`.

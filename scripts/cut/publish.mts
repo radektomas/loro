@@ -11,6 +11,7 @@
  *   "batch":   "2026-11-10",
  *   "slot":    1,
  *   optional "replies": { "<note id>": "what I changed" }   — closes those notes
+ *   optional "plan_item_id": "<uuid>"   — the scaler plan item this reel was cut from
  *
  * First publish of (account, batch, slot) creates the reel at version 1. A
  * later publish is a recut: version + 1, status back to "review" (unless the
@@ -90,6 +91,13 @@ async function publish(jobPath: string) {
     ? await s.from('loro_cut_reels').update(row).eq('id', prev.id).select('id').single()
     : await s.from('loro_cut_reels').insert(row).select('id').single();
   if (e2) throw new Error(e2.message);
+
+  // cut from an approved scaler plan: mark that plan item as cut, so the
+  // plan's track record can follow the reel once it's posted
+  if (job.plan_item_id) {
+    const { error } = await s.from('loro_scale_plan_items').update({ status: 'cut', cut_reel_id: saved.id }).eq('id', job.plan_item_id);
+    if (error) throw new Error(`plan item ${job.plan_item_id}: ${error.message}`);
+  }
 
   const replies = Object.entries((job.replies ?? {}) as Record<string, string>);
   for (const [noteId, reply] of replies) {
