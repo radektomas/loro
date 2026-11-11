@@ -7,7 +7,8 @@ import { checkAdmin } from '@/lib/analytics';
 import type { MarketingData } from '@/lib/marketingStats';
 import { useSupabaseUser } from '@/components/creator/ugc';
 import { DASH } from '@/components/admin/RadekDashboard';
-import { AccountsPanel, MarketingDashboardView } from '@/components/admin/MarketingDashboard';
+import { AccountsPanel } from '@/components/admin/MarketingDashboard';
+import { ScaleDashboard, type Act } from '@/components/admin/scale/ScaleDashboard';
 
 /**
  * MARKETING — getloro.app/marketing. Same front door as /analyticsforradek:
@@ -99,6 +100,17 @@ export default function MarketingPage() {
     await refresh();
   };
 
+  /** An edit from the dashboard (tags, installs, plan decisions), then a reload. */
+  const act: Act = useCallback(
+    async (path, method, body) => {
+      const r = await api<{ ok: true }>(path, { method, body: JSON.stringify(body) });
+      if (!r.ok) return r.error;
+      await refresh();
+      return null;
+    },
+    [refresh]
+  );
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || !password) return;
@@ -112,46 +124,54 @@ export default function MarketingPage() {
 
   const signedInAsAdmin = Boolean(user) && admin === true;
 
+  const lastSync = data?.accounts.map((a) => a.lastSyncedAt).filter(Boolean).sort().pop();
+  const header = (
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <span
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black"
+          style={{ background: DASH.green, color: DASH.page }}
+        >
+          L
+        </span>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Marketing</h1>
+          <p className="text-sm" style={{ color: DASH.muted }}>
+            Instagram · what wins, and what to make next
+            {lastSync && ` · synced ${new Date(lastSync).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+          </p>
+        </div>
+      </div>
+      {signedInAsAdmin && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => void syncNow()}
+            disabled={syncing}
+            className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            style={{ background: DASH.card, border: `1px solid ${DASH.line}`, color: DASH.ink }}
+          >
+            {syncing ? 'Syncing…' : 'Sync now'}
+          </button>
+          <button
+            onClick={() => void refresh()}
+            disabled={loading}
+            className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            style={{ background: DASH.card, border: `1px solid ${DASH.line}`, color: DASH.ink }}
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button onClick={() => void signOut()} className="rounded-lg px-4 py-2 text-sm font-semibold" style={{ color: DASH.muted }}>
+            Lock
+          </button>
+        </div>
+      )}
+    </header>
+  );
+
   return (
     <main className="min-h-[100dvh] px-4 pb-16 pt-8 sm:px-8" style={{ background: DASH.page, color: DASH.ink }}>
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black"
-              style={{ background: DASH.green, color: DASH.page }}
-            >
-              L
-            </span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Marketing</h1>
-              <p className="text-sm" style={{ color: DASH.muted }}>Instagram · which posts work</p>
-            </div>
-          </div>
-          {signedInAsAdmin && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => void syncNow()}
-                disabled={syncing}
-                className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{ background: DASH.card, border: `1px solid ${DASH.line}`, color: DASH.ink }}
-              >
-                {syncing ? 'Syncing…' : 'Sync now'}
-              </button>
-              <button
-                onClick={() => void refresh()}
-                disabled={loading}
-                className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{ background: DASH.card, border: `1px solid ${DASH.line}`, color: DASH.ink }}
-              >
-                {loading ? 'Refreshing…' : 'Refresh'}
-              </button>
-              <button onClick={() => void signOut()} className="rounded-lg px-4 py-2 text-sm font-semibold" style={{ color: DASH.muted }}>
-                Lock
-              </button>
-            </div>
-          )}
-        </header>
+        {!(signedInAsAdmin && data && !loadError) && <div className="mb-6">{header}</div>}
 
         {syncNote && signedInAsAdmin && (
           <p className="mb-4 rounded-xl px-4 py-2.5 text-sm" style={{ background: DASH.card, border: `1px solid ${DASH.line}`, color: DASH.muted }}>
@@ -196,10 +216,12 @@ export default function MarketingPage() {
         ) : loadError ? (
           <p className="rounded-xl p-4 text-sm" style={{ background: DASH.redSoft, color: DASH.red }}>{loadError}</p>
         ) : data ? (
-          <div className="grid gap-5">
-            {data.accounts.length > 0 && <MarketingDashboardView data={data} />}
-            <AccountsPanel accounts={data.accounts} onConnect={(t) => void connect(t)} connecting={connecting} connectError={connectError} />
-          </div>
+          <ScaleDashboard
+            data={data}
+            act={act}
+            header={header}
+            accountsPanel={<AccountsPanel accounts={data.accounts} onConnect={(t) => void connect(t)} connecting={connecting} connectError={connectError} />}
+          />
         ) : (
           <p className="text-sm" style={{ color: DASH.muted }}>Loading…</p>
         )}
