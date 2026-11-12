@@ -116,6 +116,9 @@ compared with that account's usual reel. Use that ranking when picking hooks (st
 - Radek films with HDR Video OFF since 2026-11-11 (Settings → Camera → Record Video). The SDR test reel looked "much
   better" to him than the Apple-tone-mapped HLG one. If a clip arrives as HLG anyway, still cut it, but remind him of
   the setting.
+- **When the hook would cover his face** (2026-11-12: he stood close to the camera and his head sat behind the hook at
+  top 282), set `"hook_top": 1120` so the hook sits over his legs, still above Instagram's caption area. Check the
+  full-size hook frame of every reel, not only the contact sheet.
 - "The demo looks dark" (Radek, 2026-11-11): measured, render.py does NOT darken SDR demos. Average luma was 35.15 in
   the source and 35.17 in the reel over the same 270 frames. The iPad demo was filmed at night (YAVG ~35/255), so it IS
   dark. Encoding is now x264 `-crf 15 -preset slow -tune film` + lanczos scaling (PSNR 46 dB vs the source, was 43 at
