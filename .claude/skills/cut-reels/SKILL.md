@@ -1,111 +1,96 @@
 ---
 name: cut-reels
-description: Cut Radek's raw clips into finished Instagram reels for @radek.spanish, @radek.explains.spanish and @loro.app (sped-up clip of him + hook, then the Loro demo with 3 lines, text burned in Instagram-style), publish them to getloro.app/cut, and recut from the notes he leaves there. Use when Radek says "cut the reels", "cut my videos", "new batch", "check the cut notes", "recut", or drops clips into the REELS folders on his Desktop.
+description: Cut Radek's raw clips into finished, TEXT-FREE Instagram reels for @radek.spanish, @radek.explains.spanish and @loro.app (his clip sped up into the first 3 s, then the Loro demo at 1.5x) and drop them into the green "REELS <account> DONE" folders on his Desktop. He adds the hook in Instagram himself and reads the hook leaderboard on getloro.app/marketing. Use when Radek says "cut the reels", "cut my videos", "new batch", or drops clips into the REELS folders on his Desktop.
 ---
 
 # Cut reels
 
-Radek records. You cut. He reviews on **getloro.app/cut**, where each reel plays inside an
-Instagram Reels frame, and he leaves notes pinned to exact seconds. You read the notes and recut.
-The text you burn in is FINAL: he posts the file as is, with music added in Instagram.
+Radek records. You cut. **No text** (Radek, 2026-11-13: views were low with our burned-in text, and "I know the
+best which hooks work"). He types the hook in Instagram himself, adds music there, and posts. You don't pick hooks,
+don't write lines, and don't plan with the scaler unless he asks for a plan.
 
-Run everything from the loro checkout that has `scripts/cut/` (branch `cut-tool`, worktree
-`~/loro-cut`, until it is merged). Python: `~/.venvs/reels/bin/python` (Pillow). If it is
-missing, run `python3 -m venv ~/.venvs/reels && ~/.venvs/reels/bin/pip install pillow`.
+What he needs from you, and nothing more:
+1. the cut videos, in one DONE folder per channel next to the inbox folders;
+2. the **hook leaderboard**: getloro.app/marketing (first tab, `#leaderboard`). It ranks the hooks read off the
+   covers of what he actually posted, so it fills in by itself once `node scripts/scale/report.mts` (sync + enrich)
+   has run. Run it at the end of every batch so the board is fresh.
+
+Run everything from the loro checkout that has `scripts/cut/` (`~/loro-cut`). Python: `~/.venvs/reels/bin/python`
+(Pillow). If it is missing: `python3 -m venv ~/.venvs/reels && ~/.venvs/reels/bin/pip install pillow`.
+
+## Folders (all straight on the Desktop, tagged green)
+
+| inbox (Radek drops clips) | done (you put finished reels) |
+|---|---|
+| `~/Desktop/REELS radek.spanish/` `me/` + `demo/` | `~/Desktop/REELS radek.spanish DONE/` |
+| `~/Desktop/REELS radek.explains.spanish/` `me/` + `demo/` | `~/Desktop/REELS radek.explains.spanish DONE/` |
+| `~/Desktop/REELS loro app/` `me/` + `demo/` (= @loro.app) | `~/Desktop/REELS loro app DONE/` |
+
+Sorted by name, each DONE folder sits right under its inbox. A folder inside a folder was "super hidden" to him, and a
+folder ending in `.app` shows as a broken app in Finder: never name one that. If a DONE folder is missing, recreate it
+and copy the green label: `xattr -wx com.apple.FinderInfo "$(xattr -px com.apple.FinderInfo "<inbox>")" "<done>"`.
+A DONE folder holds ONLY the finished videos, named `<YYYY-MM-DD> NN.mp4` (e.g. `2026-11-13 01.mp4`). The raw clips,
+jobs, posters and meta go to the archive `<inbox>/cut/<YYYY-MM-DD>/`.
 
 ## The format (all three accounts)
 
-| time | picture | text |
-|---|---|---|
-| 0–3 s | Radek's clip, the WHOLE clip sped up to fit 3 s (a 30 s clip plays at 10x) | the hook, white with a black outline |
-| 3–6 s | the demo | line 1: how he learns |
-| 6–9 s | the demo | line 2: the app makes him write the words he hears |
-| 9–12 s | the demo | line 3: he taps words he doesn't know to see the translation |
+| time | picture |
+|---|---|
+| 0–3 s | Radek's clip, the WHOLE clip sped up to fit 3 s (a 30 s clip plays at 10x) |
+| 3–12 s | the demo, ALWAYS at 1.5x (render.py default, Radek 2026-11-11) |
 
-Base lines (Radek, 2026-11-10). Adapt them to what the demo actually shows:
-- line 1: "I learn by literally scrolling Spanish reels" / "I learn by literally watching Spanish Peppa Pig" /
-  after a QUESTION hook, answer it: "ummm by scrolling Spanish reels", "mmm i started watching Spanish Peppa Pig"
-- line 2: "The app makes me write the words i hear"
-- line 3: "and i tap the words i dont know to see the translation"
-
-Voice per account: @radek.spanish and @radek.explains.spanish speak as Radek ("I", "me").
-@loro.app speaks to the viewer ("You learn by literally doomscrolling", "The app makes you write the words you hear").
-A QUESTION hook is a viewer asking him, so it goes in straight double quotes with the emoji AFTER the closing
-quote: `"How did you learn 1000 Spanish words after just ONE month??"😭` (Radek's note, 2026-11-11).
-Keep his casual style: lowercase "i", no full stops, CAPS on one word for stress, one emoji at the end of the
-hook with NO space before it (😭 💀 😳 🤯 😩). Lines carry no emoji, or at most one.
+Same timing as the text reels, so his hook fits the first 3 s and the demo shows the app doing its thing
+(writing the words he hears, tapping a word for the translation).
 
 ## New batch
 
-0. **Plan first with the scaler** (`.claude/skills/scaler/SKILL.md`, Radek 2026-11-11): it reads what's winning,
-   proposes a channel, hook and line 1 for every clip pair, and Radek approves on getloro.app/marketing#plan.
-   Cut only approved items, with their hooks, and put `"plan_item_id"` in each job. Steps 1–3 below are still
-   how you look at the clips; step 4 is replaced by the approved plan.
-1. **Look at the inbox.** Three green folders sit straight on Radek's Desktop (he has ~100 files there, and a folder
-   inside a folder was "super hidden"): `~/Desktop/REELS radek.spanish/`, `~/Desktop/REELS radek.explains.spanish/`,
-   `~/Desktop/REELS loro app/` (= @loro.app; a folder ending in `.app` shows as a broken app in Finder, never name one
-   that). Each has `me/` (clips of Radek) and `demo/` (demo clips). Pair them in filename order (1st me with 1st demo…). If the counts differ, cut the pairs
-   you have and tell him which files were left over. Probe each: `ffprobe -v error -show_entries format=duration -of csv=p=0 <file>`.
-2. **Watch every demo** before writing its lines. Make a contact sheet and read it:
-   `ffmpeg -v error -y -i <demo> -vf "fps=1,scale=240:-2,tile=6x3" -frames:v 1 /tmp/x.png`.
-   Note what is on the phone (reels? Peppa Pig? which word does he type, when does he tap a word?), and where
-   the action is. The demo ALWAYS plays at 1.5x (render.py default, Radek 2026-11-11), so source second s lands
-   at reel time 3 + (s − demo_from) / 1.5. Pick `demo_from` so writing lands under the writing line and tapping
-   under the tapping line; if the clip's order doesn't allow that, reorder the lines to match the footage rather
-   than slowing the demo down. If the phone's top edge is high in the frame, set
-   `demo_drop` (100–200) so the lines sit on dark space above it.
-3. **Watch every clip of Radek** the same way. If the start or end is junk (him walking to the camera,
-   reaching for the phone), trim with `me_from` / `me_to`.
-4. **Pick hooks** (only when Radek skips the scaler for a batch). `node scripts/cut/hooks.mts <account>`: take from the top (least used here, best score),
-   never the same hook twice in one batch, and prefer hooks not used on the OTHER accounts in the last batch
-   (Instagram demotes identical content across accounts). Match line 1 to the hook's kind (question → "ummm by…").
-   New hooks Radek gives you go into `scripts/cut/hooks.json`.
-   Hooks under `banned` in hooks.json are OUT for good (Radek: "never use this hook again"): never pick one, and
-   when he bans another, move it there with the reason. Before publishing a batch, check no two reels share a hook.
-5. **Write one job per reel** in `~/Desktop/REELS <account>/cut/<YYYY-MM-DD>/NN.json`. Absolute source paths. Example:
+1. **Look at the inbox.** Pair `me/` and `demo/` in filename order (1st me with 1st demo…). If the counts differ, cut
+   the pairs you have and tell him which files were left over. If he dropped clips loose in the folder, tell them apart
+   by their frames (POV writing / him on camera = me, phone in the dark = demo). Probe each:
+   `ffprobe -v error -show_entries format=duration,stream=color_transfer -of csv=p=0 <file>`.
+2. **Watch every demo**: `ffmpeg -v error -y -i <demo> -vf "fps=1,scale=240:-2,tile=6x3" -frames:v 1 /tmp/x.png`.
+   Pick `demo_from` so the 9 s that play (13.5 s of source at 1.5x) hold the action (him typing a word, tapping a word
+   and its translation popping up), not the phone being picked up or set down.
+3. **Watch every clip of Radek** the same way. Trim junk at the start/end (walking to the camera, reaching for the
+   phone) with `me_from` / `me_to`.
+4. **Archive the sources FIRST**: move them into `<inbox>/cut/<date>/me|demo/`, so the inbox is empty for the next
+   batch and a recut finds them.
+5. **Write one job per reel** in `<inbox>/cut/<YYYY-MM-DD>/NN.json`, absolute paths, NO `hook` and NO `lines`:
    ```json
-   {"account": "radek.spanish", "batch": "2026-11-10", "slot": 1,
-    "me": "/Users/macbook/Desktop/REELS radek.spanish/cut/2026-11-10/me/IMG_1.MOV",
-    "demo": "/Users/macbook/Desktop/REELS radek.spanish/cut/2026-11-10/demo/IMG_2.MOV",
-    "hook": "How did you learn 1000 Spanish words after just ONE month??😭",
-    "lines": ["ummm by scrolling Spanish reels", "The app makes me write the words i hear",
-              "and i tap the words i dont know to see the translation"],
-    "demo_from": 1.2, "out": "01.mp4"}
+   {"account": "radek.spanish", "batch": "2026-11-13", "slot": 1,
+    "me": "/Users/macbook/Desktop/REELS radek.spanish/cut/2026-11-13/me/IMG_1.MOV",
+    "demo": "/Users/macbook/Desktop/REELS radek.spanish/cut/2026-11-13/demo/IMG_2.MOV",
+    "demo_from": 1.2,
+    "out": "/Users/macbook/Desktop/REELS radek.spanish DONE/2026-11-13 01.mp4"}
    ```
-   Move the sources into `cut/<date>/me|demo/` FIRST (so the inbox is empty for the next batch and recuts find them).
-   Other keys (see `scripts/cut/render.py`): seconds per text `"beat": 3`, per-line `{"text", "dur"}`, `hook_top`/`line_top`,
-   `hook_size`/`line_size`. Defaults match his reference cuts; don't change them without a reason.
-6. **Render**: `~/.venvs/reels/bin/python scripts/cut/render.py <job.json> …` (≈20 s each).
-7. **Check every reel yourself before publishing.** Read a sheet of the output:
-   `ffmpeg -v error -y -i 01.mp4 -vf "fps=2,scale=200:-2,tile=8x3" -frames:v 1 /tmp/s.png`.
-   Fail it and fix it if: text covers his face or the phone's key UI (the word being typed, the tapped
-   translation), the hook breaks badly, the demo shows nothing happening during a line, colours look
-   grey/washed (HDR source), or a line describes something the demo doesn't show.
-8. **Publish**: `node scripts/cut/publish.mts <job.json> …`. Then tell Radek how many reels are up on
-   getloro.app/cut, which hooks you used, and anything you were unsure about.
+   Optional: `"beat"` (his clip's seconds, 3), `"demo_len"` (demo seconds, 9), `me_from`/`me_to`, `demo_speed`.
+   `demo_drop` is ignored without text. If a name is taken in DONE (a second batch the same day), keep counting up.
+6. **Render**: `~/.venvs/reels/bin/python scripts/cut/render.py <job.json> …` (≈20 s each). The poster and meta land
+   next to the job, so the DONE folder stays videos only.
+7. **Check every reel yourself**: `ffmpeg -v error -y -i <out> -vf "fps=2,scale=200:-2,tile=8x3" -frames:v 1 /tmp/s.png`.
+   Fail and fix it if the demo shows nothing happening for long stretches, the first 3 s are junk, colours look
+   grey/washed (HDR source), or the reel isn't 12 s.
+8. **Refresh the leaderboard**: `node scripts/scale/report.mts` (reads new covers of what he posted).
+9. **Tell Radek** in a few lines: how many reels are in which DONE folder, any leftover clips, anything odd
+   (an HLG clip, a dark demo).
 
-## Notes → recut
+Do NOT publish to getloro.app/cut any more (`publish.mts` is only for the old text reels).
 
-Every Claude chat in the loro repo waits for notes in the background (`node scripts/cut/wait-notes.mts`,
-started because of the SessionStart hook `scripts/cut/session-start.sh`). It exits with `CLAIMED …` once Radek
-has been quiet for 20 s after a note, and only one open chat wins each claim. Then do the steps below, run
-`node scripts/cut/wait-notes.mts --release`, and start the waiter again. If a note is unclear and Radek isn't
-answering in the chat, ask on the page: `node scripts/cut/ask.mts <note id> "question"`.
+## Hooks
 
-1. `node scripts/cut/notes.mts`: open notes grouped by reel, each with its second, what was on screen then, and
-   the reel's job (the recipe with absolute paths).
-2. For each note, change the job (text, timing, `demo_from`, sizes…). A note means something at THAT second,
-   so read "on screen: …" before you guess. If a note is ambiguous, ask Radek rather than guess twice.
-3. Add `"replies": {"<note id>": "what you changed, in one short line"}` to the job, re-render, check it (step 7),
-   then publish. The reel goes to v+1, back to "To review", and the notes show as answered with your reply.
-4. A note that asks for something general ("always put the hook lower") is a rule: apply it to every reel still
-   in review and record it in this skill's format section.
+He picks them. The leaderboard (`components/admin/scale/Leaderboard.tsx`) ranks hook families by median views vs
+that channel's usual reel at the time: "Proven" = 3+ reels, then "Tried once or twice". If the cover reader garbles a
+hook ("5000 FAST" for "SO FAST"), he fixes it on the Reels tab and that edit is kept. If he asks which hook to use,
+answer from `node scripts/scale/report.mts --no-enrich`, winners in their proven wording.
 
-## Hook tracking
+## Old text reels (before 2026-11-13)
 
-When Radek posts a reel he marks it "Posted" on /cut and pastes its link (+ views until the account is connected
-on getloro.app/marketing; then views fill in by themselves from the link). The Hooks tab ranks hooks by views
-compared with that account's usual reel. Use that ranking when picking hooks (step 4).
+Text reels on /cut still get notes. Every Claude chat in loro waits for them in the background
+(`node scripts/cut/wait-notes.mts`, started by the SessionStart hook `scripts/cut/session-start.sh`). On `CLAIMED`:
+`node scripts/cut/notes.mts`, change the job, re-render, check, `node scripts/cut/publish.mts <job>` with
+`"replies": {"<note id>": "what you changed"}`, then `wait-notes.mts --release` and start the waiter again. The text
+style, for the record: hook 86px white with a black outline at top 282 (1120 when it would cover his face), lines 70px
+at 256, Figtree 800; question hooks in straight double quotes with the emoji after the closing quote.
 
 ## Facts that cost time to learn
 

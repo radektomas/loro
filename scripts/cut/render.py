@@ -27,6 +27,11 @@ job.json (paths relative to the job file unless absolute):
 Timeline: hook 0..beat, then line i at beat*(i+1)..beat*(i+2). A line can also
 be {"text": "...", "dur": 2.5} to hold it for its own length.
 
+NO TEXT (the default since 2026-11-13): leave out "hook" and "lines". The clip
+still fills 0..beat and the demo runs for "demo_len" seconds (default 3 beats);
+Radek types the hook in Instagram. The poster and meta then go next to the job
+file (<job dir>/<out name>.jpg/.json), so the DONE folder holds only videos.
+
 Writes <out> (1080x1920, 30 fps, H.264, no audio), <out>.jpg (a poster frame)
 and <out>.json (the timings, read by scripts/cut/publish.mts).
 """
@@ -239,9 +244,13 @@ def render(job_path):
     os.makedirs(os.path.dirname(out), exist_ok=True)
 
     beat = float(job.get('beat', 3))
-    lines = [l if isinstance(l, dict) else {'text': l} for l in job['lines']]
+    # No hook and no lines = a clean cut with no text at all (Radek, 2026-11-13:
+    # he types the hook in Instagram himself). The timing stays the same:
+    # his clip in 0..beat, then demo_len seconds of demo (default 3 beats).
+    plain = not job.get('hook') and not job.get('lines')
+    lines = [l if isinstance(l, dict) else {'text': l} for l in job.get('lines') or []]
     durs = [float(l.get('dur', beat)) for l in lines]
-    demo_len = sum(durs)
+    demo_len = float(job.get('demo_len', 3 * beat)) if plain else sum(durs)
     total = beat + demo_len
 
     names = (os.path.basename(me), os.path.basename(demo))  # what Radek dropped in, for the record
@@ -262,7 +271,7 @@ def render(job_path):
         demo_speed = (demo_dur - demo_from) / demo_len
         print(f'note: demo is short, playing it at {demo_speed:.2f}x')
 
-    texts = [(job['hook'], 0.0, beat, job.get('hook_top', 282), job.get('hook_size', 86), job.get('hook_style', 'outline'))]
+    texts = [] if plain else [(job['hook'], 0.0, beat, job.get('hook_top', 282), job.get('hook_size', 86), job.get('hook_style', 'outline'))]
     t = beat
     for l, dur in zip(lines, durs):
         texts.append((l['text'], t, t + dur, l.get('top', job.get('line_top', 256)),
@@ -278,7 +287,7 @@ def render(job_path):
 
     # demo_drop: slide the demo down N px so the lines sit in clear dark space
     # above the phone; a black band fades into the footage on top.
-    drop = int(job.get('demo_drop', 0))
+    drop = 0 if plain else int(job.get('demo_drop', 0))  # the drop only makes room for lines
     demo_chain = f'[1:v]trim={demo_from}:duration={demo_len * demo_speed},setpts=(PTS-STARTPTS)/{demo_speed},{FIT},fps={FPS},trim=duration={demo_len}'
     fc = [f'[0:v]trim={me_from}:{me_to},setpts=(PTS-STARTPTS)/{me_speed},{FIT},fps={FPS},trim=duration={beat}[m]']
     first_card = 2
@@ -309,16 +318,19 @@ def render(job_path):
             '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
             '-movflags', '+faststart', '-an', out]
     subprocess.run(cmd, check=True)
+    # A plain cut lands in a DONE folder Radek posts from: keep that folder to
+    # just the videos and put the poster + meta next to the job instead.
+    side = os.path.join(base, os.path.basename(out)) if plain else out
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', f'{min(1.0, beat / 2)}', '-i', out,
-                    '-frames:v', '1', '-vf', 'scale=540:-2', '-q:v', '4', out + '.jpg'], check=True)
+                    '-frames:v', '1', '-vf', 'scale=540:-2', '-q:v', '4', side + '.jpg'], check=True)
     meta = {
         'duration': round(total, 3),
-        'hook': job['hook'],
+        'hook': job.get('hook'),
         'lines': [{'text': x[0], 'from': round(x[1], 3), 'to': round(x[2], 3)} for x in texts[1:]],
         'me': names[0], 'demo': names[1],
         'me_speed': round(me_speed, 2), 'demo_speed': round(demo_speed, 2),
     }
-    json.dump(meta, open(out + '.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(meta, open(side + '.json', 'w'), ensure_ascii=False, indent=1)
     print('wrote', out, f'({total:.1f}s, me {me_speed:.1f}x)')
 
 

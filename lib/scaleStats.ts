@@ -158,12 +158,14 @@ export function rankBy(posts: ScoredPost[], dim: Dimension): RankRow[] {
     if (!k) continue;
     if (!groups.has(k.key)) groups.set(k.key, { labels: new Map(), ps: [] });
     const g = groups.get(k.key)!;
-    g.labels.set(k.label, (g.labels.get(k.label) ?? 0) + 1);
+    // an exact wording (from a /cut job or fixed by Radek) outranks any number of cover misreads
+    const exact = p.tags?.manual || p.tags?.hookSource === 'cut' || p.tags?.hookSource === 'manual';
+    g.labels.set(k.label, (g.labels.get(k.label) ?? 0) + (dim === 'hook' && exact ? 1000 : 1));
     g.ps.push(p);
   }
   const rows: RankRow[] = [];
   for (const [key, { labels, ps }] of groups) {
-    // the most common wording names the family
+    // the most common wording names the family (exact wordings first, see above)
     const label = [...labels].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
     const wordings = new Set(ps.map((p) => hookKey(p.tags?.hook ?? ''))).size;
     const ms = ps.map((p) => p.multiple!);

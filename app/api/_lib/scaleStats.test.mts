@@ -291,3 +291,17 @@ test('a hook still winning lately keeps winning', () => {
   assert.equal(row.verdict, 'winning');
   assert.ok(row.recentMedian! >= 1.5);
 });
+
+test('a hook family is named by its exact wording (edited or from /cut), not the most common cover misread', () => {
+  const base = [post('p1', '2026-09-01T10:00:00Z', 100), post('p2', '2026-09-02T10:00:00Z', 100), post('p3', '2026-09-03T10:00:00Z', 100)];
+  const posts = [...base, post('a', '2026-10-01T10:00:00Z', 200), post('b', '2026-10-03T10:00:00Z', 200), post('c', '2026-10-05T10:00:00Z', 200)];
+  const t = new Map<string, PostTags>([
+    ['a', tags('How did you get fluent in Spanish 5000 FAST')],
+    ['b', tags('How did you get fluent in Spanish 5000 FAST')],
+    ['c', tags('How did you get fluent in Spanish SO FAST', { manual: true, hookSource: 'manual' })],
+  ]);
+  const rows = rankBy(scorePosts(posts, t, NOW), 'hook');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].n, 3);
+  assert.equal(rows[0].label, 'How did you get fluent in Spanish SO FAST');
+});

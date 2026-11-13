@@ -8,9 +8,10 @@ import { Overview } from './Overview';
 import { Reels } from './Reels';
 import { Winners } from './Winners';
 import { Plan } from './Plan';
+import { Leaderboard } from './Leaderboard';
 
 /**
- * The scaler dashboard: /marketing's four tabs. Every reel is scored once,
+ * The scaler dashboard: /marketing's tabs, the hook leaderboard first. Every reel is scored once,
  * here, against its own channel's usual reel at the time it was posted
  * (lib/scaleStats.ts), and every tab reads the same scores.
  */
@@ -28,6 +29,7 @@ export type Model = {
 };
 
 const TABS = [
+  { id: 'leaderboard', label: 'Hook leaderboard' },
   { id: 'overview', label: 'Overview' },
   { id: 'reels', label: 'Reels' },
   { id: 'winners', label: 'Winners' },
@@ -37,11 +39,11 @@ type Tab = (typeof TABS)[number]['id'];
 
 const tabFromHash = (): Tab => {
   const h = typeof window === 'undefined' ? '' : window.location.hash.slice(1);
-  return (TABS.find((t) => t.id === h)?.id ?? 'overview') as Tab;
+  return (TABS.find((t) => t.id === h)?.id ?? 'leaderboard') as Tab;
 };
 
 export function ScaleDashboard({ data, act, accountsPanel, header }: { data: MarketingData; act: Act; accountsPanel: ReactNode; header: ReactNode }) {
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('leaderboard');
   useEffect(() => {
     setTab(tabFromHash());
     const on = () => setTab(tabFromHash());
@@ -92,6 +94,7 @@ export function ScaleDashboard({ data, act, accountsPanel, header }: { data: Mar
         </nav>
       </div>
 
+      {tab === 'leaderboard' && <Leaderboard m={model} />}
       {tab === 'overview' && <Overview m={model} accountsPanel={accountsPanel} goto={go} />}
       {tab === 'reels' && <Reels m={model} />}
       {tab === 'winners' && <Winners m={model} />}

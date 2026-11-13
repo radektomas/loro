@@ -1,6 +1,6 @@
 ---
 name: scaler
-description: Plan Radek's next batch of Instagram reels from what is actually winning on his three accounts (@radek.spanish, @radek.explains.spanish, @loro.app), then cut only what he approves. Use when Radek says "plan the next batch", "/scaler", "what should I post", "scale what works", or "cut the reels" (the scaler plans before anything is cut).
+description: Plan Radek's next batch of Instagram reels from what is actually winning on his three accounts (@radek.spanish, @radek.explains.spanish, @loro.app), then cut only what he approves. Use ONLY when Radek asks for a plan: "plan the next batch", "/scaler", "what should I post", "scale what works". Since 2026-11-13 reels are cut WITHOUT text and Radek picks the hooks himself, so "cut the reels" goes straight to cut-reels, not here.
 ---
 
 # The scaler
