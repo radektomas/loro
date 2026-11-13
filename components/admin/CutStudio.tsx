@@ -10,6 +10,7 @@
  * — approve, drop, posted with its link and views.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SaveToPhone } from './SaveToPhone';
 import { DASH } from '@/components/admin/RadekDashboard';
 import { ReelFrame } from '@/components/admin/ReelFrame';
 import { ACCOUNTS, fmtTime, hookKey, workerView, type CutWorker, type CutReel, type CutStatus, type HookStat } from '@/lib/cutReels';
@@ -483,7 +484,10 @@ function ReelReview({ reel, api, reload, working }: { reel: CutReel; api: Api; r
         </section>
 
         <section className="rounded-2xl p-4" style={{ background: DASH.card, border: `1px solid ${DASH.line}` }}>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start gap-2">
+            {reel.videoUrl && (reel.status === 'approved' || reel.status === 'posted') && (
+              <SaveToPhone key={reel.videoUrl} url={reel.videoUrl} fileName={fileName} preload={reel.status === 'approved'} />
+            )}
             {reel.videoUrl && (
               <a href={`${reel.videoUrl}&download=${encodeURIComponent(fileName)}`} className="rounded-lg px-4 py-2 text-sm font-semibold" style={btn()}>
                 ↓ Download
@@ -509,6 +513,13 @@ function ReelReview({ reel, api, reload, working }: { reel: CutReel; api: Api; r
               </button>
             )}
           </div>
+
+          {reel.status === 'approved' && (
+            <p className="mt-3 text-xs leading-relaxed" style={{ color: DASH.muted }}>
+              On your iPhone: <b style={{ color: DASH.ink }}>Save to phone</b> → <b style={{ color: DASH.ink }}>Save Video</b>, then post it from Instagram with your sound.
+              It links itself to its post here after the next sync.
+            </p>
+          )}
 
           {reel.status === 'posted' && (
             <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_140px_auto]">
