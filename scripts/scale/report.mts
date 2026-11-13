@@ -72,7 +72,7 @@ for (const scope of ['all channels', ...ACCOUNTS] as const) {
     const rows = rankBy(pool, dim).slice(0, top);
     if (!rows.length) continue;
     say(`### ${label}`);
-    for (const r of rows) say(`- ${r.verdict.toUpperCase()} ${x(r.medianMultiple)} (n=${r.n}, ${x(r.min)}–${x(r.max)}) ${r.label}`);
+    for (const r of rows) say(`- ${r.verdict.toUpperCase()} ${x(r.medianMultiple)} (n=${r.n}, ${x(r.min)}–${x(r.max)}, last 3: ${x(r.recentMedian)}) ${r.label}`);
   }
 }
 

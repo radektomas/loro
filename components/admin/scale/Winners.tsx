@@ -46,7 +46,7 @@ export function Winners({ m }: { m: Model }) {
 
   const label = (r: RankRow) => (dim === 'account' ? null : PRETTY[dim]?.[r.key] ?? r.label);
   const d = DIMS.find((x) => x.id === dim)!;
-  const counts = { winning: 0, promising: 0, ordinary: 0, losing: 0 };
+  const counts = { winning: 0, promising: 0, ordinary: 0, fading: 0, losing: 0 };
   for (const r of rows) counts[r.verdict]++;
 
   return (
@@ -84,9 +84,10 @@ export function Winners({ m }: { m: Model }) {
         <span style={{ color: DASH.ink }} className="font-semibold">How to read this: </span>
         1× = that channel&apos;s usual reel when it went up. <b style={{ color: VERDICT.winning.color }}>Winning</b> = 3+ reels at 1.5× or better.{' '}
         <b style={{ color: VERDICT.promising.color }}>Promising</b> = it did well but on fewer than 3 reels, so test it again before trusting it.{' '}
+        <b style={{ color: VERDICT.fading.color }}>Fading</b> = it used to win but its last 3 reels flopped: burned out.{' '}
         <b style={{ color: VERDICT.losing.color }}>Losing</b> = 3+ reels under 0.8×. {d.hint}
         <div className="mt-2 flex flex-wrap gap-3 text-xs">
-          {(['winning', 'promising', 'ordinary', 'losing'] as const).map((v) => (
+          {(['winning', 'promising', 'fading', 'ordinary', 'losing'] as const).map((v) => (
             <span key={v}>
               <b style={{ color: VERDICT[v].color }}>{counts[v]}</b> {VERDICT[v].label.toLowerCase()}
             </span>
@@ -106,6 +107,9 @@ export function Winners({ m }: { m: Model }) {
                   <span className="text-xs" style={{ color: DASH.muted }}>
                     {r.n} reel{r.n === 1 ? '' : 's'} · {compact.format(r.totalViews)} views
                     {r.variants != null && r.variants > 1 && ` · ${r.variants} wordings`}
+                    {r.n > 3 && r.recentMedian != null && (
+                      <span style={{ color: r.recentMedian >= 1.5 ? DASH.green : r.recentMedian < 0.8 ? DASH.red : DASH.muted }}> · lately {r.recentMedian.toFixed(1)}×</span>
+                    )}
                   </span>
                 </div>
                 {dim === 'account' ? <ChannelChip account={m.username(r.key)} full /> : <p className="text-[15px] font-semibold leading-snug">{label(r)}</p>}

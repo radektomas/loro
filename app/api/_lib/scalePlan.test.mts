@@ -17,7 +17,7 @@ const item = (slot: number, hook: string, extra: Partial<PlanInput['items'][numb
 
 test('a good mixed plan has no problems', () => {
   assert.deepEqual(
-    planProblems({ batch: '2026-11-12', items: [item(1, 'Hook one'), item(2, 'Hook two?', { hook_kind: 'question' }), item(3, 'Hook three', { role: 'test' })] }),
+    planProblems({ batch: '2026-11-12', items: [item(1, 'Hook one'), item(2, 'Hook two?', { hook_kind: 'question' }), item(3, 'Hook three')] }),
     []
   );
 });
@@ -27,9 +27,18 @@ test('the same hook twice in a batch is refused, even across accounts and emoji'
   assert.ok(p.some((x) => x.includes('same hook as slot 1')));
 });
 
-test('3+ reels need a test slot and mixed hook styles', () => {
+test('winners first: a batch needs no test, but more than 1 test per 4 reels is refused (Radek, 2026-11-13)', () => {
+  const ok = planProblems({ batch: 'b', items: [item(1, 'a b c'), item(2, 'd e f?', { hook_kind: 'question' }), item(3, 'g h i'), item(4, 'j k l')] });
+  assert.deepEqual(ok, []);
+  const tooMany = planProblems({
+    batch: 'b',
+    items: [item(1, 'a b c', { role: 'test' }), item(2, 'd e f?', { hook_kind: 'question', role: 'test' }), item(3, 'g h i'), item(4, 'j k l')],
+  });
+  assert.ok(tooMany.some((x) => x.includes('too many tests')));
+});
+
+test('3+ reels still mix hook styles', () => {
   const p = planProblems({ batch: 'b', items: [item(1, 'a b c'), item(2, 'd e f'), item(3, 'g h i')] });
-  assert.ok(p.some((x) => x.includes('no test slot')));
   assert.ok(p.some((x) => x.includes('same hook style')));
 });
 

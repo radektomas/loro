@@ -19,8 +19,9 @@ and the evidence is the track record on the Plan tab (repeat-a-winner median vs 
 
 Raw views are not evidence. Every reel is scored as a **multiple of its own channel's usual reel when it
 was posted** (median of the 12 latest reels that were 48 h+ old). 1× = ordinary. A pattern is
-**winning** only with 3+ reels at 1.5× or better. With fewer it's **promising**: worth testing again, not
-worth betting the batch on. Reels under 48 h old are never judged.
+**winning** only with 3+ reels at 1.5× or better **and** recent form holding (last 3 ≥ 1×). With fewer it's
+**promising**: worth testing again, not worth betting the batch on. Won before but flopping lately is
+**fading**: don't push it. Reels under 48 h old are never judged.
 
 ## Steps
 
@@ -35,28 +36,28 @@ worth betting the batch on. Reels under 48 h old are never judged.
 2. **Look at every clip** the way cut-reels step 2 and 3 say (contact sheets). The plan must fit the
    footage: a Peppa demo gets a Peppa line 1, a demo with no word tap gets a line 3 that says what's on
    screen.
-3. **Assign each inbox pair one reel.** Keep the account it was dropped under, unless Radek says
-   otherwise.
-   - **Exploit slots (about 2 in 3): repeat a winner's *pattern*, not its exact hook.** Take what won on
-     that channel: hook style, line-1 variant, voice, demo. Fill it with a **different** hook of the same
-     style from `scripts/cut/hooks.json`, preferring hooks that are promising or winning elsewhere and
-     never posted here. Only re-use the exact winning hook if Radek asks; Instagram demotes repeats.
-   - **Test slots (about 1 in 3): find the next winner.** These get an untested hook, the hook style that
-     is losing or unknown on this channel, a new line-1 variant, or a demo kind with few reels. Say what
-     the test is testing.
-   - **Diversity, which `plan.mts` enforces:**
-     - no hook twice in the batch, on any account
-     - not every reel in the same hook style
-     - at least one test slot in 3+ reels
+3. **Assign each inbox pair one reel. WINNERS FIRST** (Radek, 2026-11-13, after the first plan flopped at
+   ~0.2×: "push mainly the winning hooks, these hooks he gave me were shit"). Keep the account it was dropped
+   under unless Radek says otherwise.
+   - **Exploit slots (at least 3 in 4): post a proven winning hook in its proven wording.** Proven means:
+     - verdict WINNING on that channel, or on all channels
+     - n ≥ 3
+     - **and its last 3 reels are still ≥ 1.0×** (the report prints "last 3")
 
-     Also by judgment: don't give every reel the same line-1 variant, and don't put the same hook on two
-     accounts in consecutive batches.
-   - `line1_variant` is what line 1 says (`reels`, `peppa`, or its first words). A question hook's "ummm by…"
-     answer isn't a variant of its own; the hook's kind already records that.
-   - `expected_multiple`: the median multiple of the pattern you're exploiting on that channel. For a
-     test, the channel's typical 1.0, unless the hook is promising elsewhere.
-   - `reason`: one plain line Radek can judge in two seconds, e.g. "Question hooks win on radek.spanish
-     (2.3×, 5 reels); a fresh one he hasn't posted there".
+     Copy the best-performing wording from the Reels tab. Only small tweaks are allowed (a number, an emoji,
+     caps). Never swap in an "untested wording of a winning pattern": that's what flopped on 2026-11-12.
+   - **Never exploit a FADING hook.** It used to win, but its last 3 reels are under 0.8×. The
+     "3+ years… just found this" family went from 4.0× to ~0.2× (three reels at ~250 views, 2026-11-11/12).
+   - **Tests are optional: at most 1 per 4 reels**, and only when there are fewer proven winners than slots.
+     A test is a PROMISING hook (≥1.5×, under 3 reels) in its original wording, never a brand-new untested
+     line from the bank.
+   - **Diversity (`plan.mts` enforces it):** no hook twice in one batch (on any account), and not every reel in
+     the same hook style. A proven winner may come back batch after batch while its recent form holds.
+   - **Early read:** a reel at ≥ 55% skip rate within its first day is flopping. Say so to Radek before
+     48 hours, and don't plan more of it.
+   - `expected_multiple`: the hook's recent median ("last 3") on that channel, not its all-time median.
+   - `reason`: one plain line Radek can judge in two seconds, e.g. "Duolingo question still wins on radek.spanish:
+     1.7× over 7 reels, last 3 at 1.6×".
 4. **Write the plan** to the batch folder, e.g. `~/Desktop/REELS loro app/plan-2026-11-12.json`:
    ```json
    {"batch": "2026-11-12", "summary": "Lean into question hooks on radek.spanish, test Peppa on loro.app",

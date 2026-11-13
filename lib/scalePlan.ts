@@ -52,7 +52,9 @@ export function planProblems(plan: PlanInput, fileExists: (p: string) => boolean
     if (hooks.has(k)) out.push(`${at}: same hook as slot ${hooks.get(k)} (no hook twice in a batch, on any account)`);
     hooks.set(k, i.slot);
   }
-  if (plan.items.length >= 3 && !plan.items.some((i) => i.role === 'test')) out.push('3+ reels and no test slot: keep about 1 in 3 for tests');
+  // winners first (Radek, 2026-11-13: "push mainly the winning hooks"): tests are optional, at most 1 per 4 reels
+  const tests = plan.items.filter((i) => i.role === 'test').length;
+  if (tests > Math.max(1, Math.floor(plan.items.length / 4))) out.push(`too many tests (${tests}): at most 1 per 4 reels, the rest push winning hooks`);
   const kinds = new Set(plan.items.map((i) => i.hook_kind).filter(Boolean));
   if (plan.items.length >= 3 && kinds.size === 1) out.push('every reel has the same hook style: mix question and statement hooks');
   return out;

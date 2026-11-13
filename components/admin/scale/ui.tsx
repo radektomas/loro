@@ -25,6 +25,7 @@ export const VERDICT: Record<Verdict, { label: string; color: string; soft: stri
   winning: { label: 'Winning', color: DASH.green, soft: DASH.greenSoft },
   promising: { label: 'Promising', color: DASH.violet, soft: 'rgba(167,139,250,0.15)' },
   ordinary: { label: 'Ordinary', color: DASH.muted, soft: DASH.track },
+  fading: { label: 'Fading', color: DASH.orange, soft: 'rgba(251,146,60,0.14)' },
   losing: { label: 'Losing', color: DASH.red, soft: DASH.redSoft },
 };
 
@@ -75,7 +76,7 @@ export function VerdictTag({ v }: { v: Verdict }) {
   const s = VERDICT[v];
   return (
     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide" style={{ background: s.soft, color: s.color }}>
-      {v === 'winning' ? '▲' : v === 'losing' ? '▼' : v === 'promising' ? '◆' : '•'} {s.label}
+      {v === 'winning' ? '▲' : v === 'losing' ? '▼' : v === 'promising' ? '◆' : v === 'fading' ? '↘' : '•'} {s.label}
     </span>
   );
 }

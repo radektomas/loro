@@ -264,3 +264,30 @@ test('cleanCoverText cleans junk that sits before a closing quote', () => {
   assert.equal(cleanCoverText([{ text: '"How did you get fluent', h: 0.04 }, { text: 'in Spanish SO FAST838"', h: 0.04 }]), '"How did you get fluent in Spanish SO FAST"');
   assert.equal(cleanCoverText([{ text: '"Youre still trying to', h: 0.04 }, { text: 'learn Spanish with Duolingo • "', h: 0.04 }]), '"Youre still trying to learn Spanish with Duolingo"');
 });
+
+test('a hook that won before but flopped in its last 3 reels is fading, not winning', () => {
+  const base = [post('p1', '2026-09-01T10:00:00Z', 1000), post('p2', '2026-09-02T10:00:00Z', 1000), post('p3', '2026-09-03T10:00:00Z', 1000)];
+  const posts = [
+    ...base,
+    post('w1', '2026-09-10T10:00:00Z', 5000),
+    post('w2', '2026-09-12T10:00:00Z', 4000),
+    post('w3', '2026-09-14T10:00:00Z', 4500),
+    post('f1', '2026-11-01T10:00:00Z', 250),
+    post('f2', '2026-11-03T10:00:00Z', 260),
+    post('f3', '2026-11-05T10:00:00Z', 246),
+  ];
+  const t = new Map<string, PostTags>(['w1', 'w2', 'w3', 'f1', 'f2', 'f3'].map((id) => [id, tags('Been learning Spanish for 3+ years and i just found this')]));
+  const [row] = rankBy(scorePosts(posts, t, NOW), 'hook');
+  assert.equal(row.n, 6);
+  assert.ok(row.recentMedian! < 0.3, String(row.recentMedian));
+  assert.equal(row.verdict, 'fading');
+});
+
+test('a hook still winning lately keeps winning', () => {
+  const base = [post('p1', '2026-09-01T10:00:00Z', 1000), post('p2', '2026-09-02T10:00:00Z', 1000), post('p3', '2026-09-03T10:00:00Z', 1000)];
+  const posts = [...base, post('a', '2026-10-01T10:00:00Z', 2000), post('b', '2026-10-03T10:00:00Z', 2500), post('c', '2026-10-05T10:00:00Z', 1800)];
+  const t = new Map<string, PostTags>(['a', 'b', 'c'].map((id) => [id, tags('Youre still trying to learn Spanish with Duolingo??')]));
+  const [row] = rankBy(scorePosts(posts, t, NOW), 'hook');
+  assert.equal(row.verdict, 'winning');
+  assert.ok(row.recentMedian! >= 1.5);
+});

@@ -73,7 +73,8 @@ export function scorePosts(posts: MarketingPost[], tags: Map<string, PostTags>, 
 }
 
 export type Dimension = 'hook' | 'hookKind' | 'format' | 'demoKind' | 'line1Variant' | 'voice' | 'account';
-export type Verdict = 'winning' | 'promising' | 'ordinary' | 'losing';
+/** fading = it won overall, but its last 3 reels are under 0.8x: burned out, don't push it. */
+export type Verdict = 'winning' | 'promising' | 'ordinary' | 'fading' | 'losing';
 
 export type RankRow = {
   key: string;
@@ -89,6 +90,8 @@ export type RankRow = {
   examples: string[];
   /** Hooks only: how many distinct wordings were folded into this family. */
   variants?: number;
+  /** Median multiple of its 3 most recent settled reels: recent form, which can differ from the all-time record. */
+  recentMedian: number | null;
 };
 
 /** Winning needs 3+ reels at a 1.5x median; fewer is only promising. */
@@ -99,7 +102,9 @@ export function verdictOf(n: number, med: number | null): Verdict {
   return 'ordinary';
 }
 
-const VERDICT_ORDER: Verdict[] = ['winning', 'promising', 'ordinary', 'losing'];
+const VERDICT_ORDER: Verdict[] = ['winning', 'promising', 'fading', 'ordinary', 'losing'];
+/** How many of a group's newest reels make its recent form. */
+export const RECENT_REELS = 3;
 
 /** Wordings this alike are the same hook ("1000 words in ONE MONTH" / "2000 words in one month"). */
 const FAMILY_SIMILARITY = 0.8;
@@ -163,6 +168,13 @@ export function rankBy(posts: ScoredPost[], dim: Dimension): RankRow[] {
     const wordings = new Set(ps.map((p) => hookKey(p.tags?.hook ?? ''))).size;
     const ms = ps.map((p) => p.multiple!);
     const med = median(ms);
+    const recent = [...ps].sort((a, b) => b.postedAt.localeCompare(a.postedAt)).slice(0, RECENT_REELS).map((p) => p.multiple!);
+    const recentMedian = median(recent);
+    let verdict = verdictOf(ps.length, med);
+    // it won before, but the newest reels flop: the hook is burned out
+    if (ps.length > RECENT_REELS && med != null && med >= 1.5 && recentMedian != null && recentMedian < 0.8) verdict = 'fading';
+    // all-time winning but lately only ordinary: not a winner to push any more
+    else if (verdict === 'winning' && recentMedian != null && recentMedian < 1) verdict = 'ordinary';
     rows.push({
       key,
       label,
@@ -171,7 +183,8 @@ export function rankBy(posts: ScoredPost[], dim: Dimension): RankRow[] {
       min: Math.min(...ms),
       max: Math.max(...ms),
       totalViews: ps.reduce((s, p) => s + (p.latest?.views ?? 0), 0),
-      verdict: verdictOf(ps.length, med),
+      verdict,
+      recentMedian,
       examples: [...ps].sort((a, b) => b.multiple! - a.multiple!).slice(0, 3).map((p) => p.mediaId),
       ...(dim === 'hook' ? { variants: wordings } : {}),
     });
