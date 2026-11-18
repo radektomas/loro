@@ -2,6 +2,7 @@ import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { answeredCorrectToday, computeStreaks, dayKey } from '@loro/core/progress';
 import { track } from '../platform/analytics';
+import { noteGoalDay } from '../platform/rating';
 import { storageDriver } from '../platform/storage';
 import { getPlan } from '../progress/plan';
 
@@ -72,6 +73,9 @@ export function claimDayDone(now: number = Date.now()): DayDoneRaise | null {
   const words = answeredCorrectToday(storage.getSavedWords(), now);
   track('goal_met', { goal: wordsPerDay, count, streak });
   console.log(`[loro:day] goal met: ${count}/${wordsPerDay}, streak ${streak}`);
+  // A second day with the goal met is the rating prompt's happy moment
+  // (platform/rating.ts); it waits for the cheer to play first.
+  noteGoalDay(today);
   return { goal: wordsPerDay, count, streak, words };
 }
 

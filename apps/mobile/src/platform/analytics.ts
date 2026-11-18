@@ -157,7 +157,12 @@ export type EventName =
   | 'city_arrived'        // { stage, city, country, newCountry, empty } — the arrival played
   | 'level_banner_opened' // { tier, learned } — the level chip on Words was tapped open
   | 'trip_moment'         // { kind } — Loro told a trip milestone in the feed (feed/tripMoments)
-  | 'reminder_permission' // { state } — iOS's answer, right after the ask
+  | 'reminder_permission' // { state, from } — iOS's answer, right after the ask; from = feed | purchase | settings
+  | 'reminder_ask_shown'  // { from, pace? } — our own explainer went up: the feed's (NotificationPrompt) or the post-purchase card (ReminderAsk)
+  | 'feedback_shown'      // { from: 'day0' | 'progress', videos } — "How's Loro so far?" went up (feedback/FeedbackCard.tsx)
+  | 'feedback_given'      // { from, mood: 'meh' | 'ok' | 'love' | 'skipped', videos, text? } — read by loro_analytics_app_feedback
+  | 'rating_requested'    // { from: 'city' | 'dayDone', stage? | goalDays? } — Apple's rating sheet REQUESTED (platform/rating.ts); Apple decides whether it shows
+  | 'reminder_ask_answered' // { from, answer: 'allow' | 'later', hour? } — the tap on it; 'allow' is followed by reminder_permission
   | 'paywall_variant'; // { variant: 'madrid' | 'hard', percent, bucket } — the A/B arm, once per install (remoteFlags.ts)
 
 type Props = Record<string, string | number | boolean | null | undefined>;

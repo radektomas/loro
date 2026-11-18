@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BRAND } from '../onboarding/brand';
 import { usePlayerApi } from '../player/PlayerHost';
 import { subscribeToReviewEnd, type ReviewSessionEnd } from './reviewSession';
+import { wordsBackTomorrow } from '../platform/notifications';
 
 /**
  * THE REVIEW SESSION'S CARD. It used to be the day-done card too, with two
@@ -113,6 +114,9 @@ function SessionFace({ end }: { end: ReviewSessionEnd }) {
   const more = end.words.length - shown.length;
   const short = end.reason === 'ranOut' && end.answered < end.size;
   const learned = end.words.filter((w) => w.learned).length;
+  // The same promise as the goal dots' "Mañana" pill (CollectionChips), read
+  // once per card: the words the schedule returns by tomorrow's reminder.
+  const [back] = useState(() => wordsBackTomorrow());
 
   return (
     <>
@@ -126,6 +130,11 @@ function SessionFace({ end }: { end: ReviewSessionEnd }) {
       {end.dayDone && (
         <Text style={styles.dayLine}>
           ¡Día hecho! · {streakLineFor(end.dayDone.streak)}
+        </Text>
+      )}
+      {back > 0 && (
+        <Text style={styles.tomorrowLine}>
+          Mañana · {back === 1 ? '1 of your words comes back' : `${back} of your words come back`}
         </Text>
       )}
 
@@ -222,6 +231,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     marginTop: 8,
+    textAlign: 'center',
+  },
+  tomorrowLine: {
+    color: 'rgba(242,245,243,0.6)',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 6,
     textAlign: 'center',
   },
   cta: {

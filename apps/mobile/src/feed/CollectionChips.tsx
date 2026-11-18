@@ -5,6 +5,7 @@ import { cleanWord } from '@loro/core/dictionary';
 import { subscribeToDayDone } from './dayDone';
 import { subscribeToWordLearned } from './wordLearned';
 import { subscribeToTripMoment } from './tripMoments';
+import { wordsBackTomorrow } from '../platform/notifications';
 
 /**
  * THE SHELF PILL AND ITS MENU.
@@ -237,13 +238,23 @@ function LoadingDots() {
 const WAVE_STEP_MS = 70;
 const CHEER_HOLD_MS = 2200;
 const LEARNED_HOLD_MS = 2000;
+/** The tomorrow pill has a sentence to read, not a word. */
+const TOMORROW_HOLD_MS = 2800;
 
 type Cheer = { id: number } & (
   | { kind: 'day' }
   | { kind: 'learned'; word: string }
   /** A trip step (tripMoments: one word to the next city, or arrived). */
   | { kind: 'trip'; lead: string; rest: string }
+  /** Right after the day: how many words come back by tomorrow's reminder
+      (Radek, 2026-11-18). Tomorrow's notification names the same number. */
+  | { kind: 'tomorrow'; n: number }
 );
+
+/** "3 of your words come back" / "1 of your words comes back". */
+function tomorrowRest(n: number): string {
+  return n === 1 ? '1 of your words comes back' : `${n} of your words come back`;
+}
 
 function DayDots({
   count,
@@ -280,7 +291,20 @@ function DayDots({
    */
   const [queue, setQueue] = useState<Cheer[]>([]);
   const nextId = useRef(0);
-  useEffect(() => subscribeToDayDone(() => setQueue((q) => [...q, { id: nextId.current++, kind: 'day' }])), []);
+  useEffect(
+    () =>
+      subscribeToDayDone(() => {
+        // The day ends pointing at tomorrow: the words the schedule brings
+        // back by the reminder (platform/notifications wordsBackTomorrow).
+        const back = wordsBackTomorrow();
+        setQueue((q) => [
+          ...q,
+          { id: nextId.current++, kind: 'day' },
+          ...(back > 0 ? [{ id: nextId.current++, kind: 'tomorrow' as const, n: back }] : []),
+        ]);
+      }),
+    []
+  );
   useEffect(
     () =>
       subscribeToWordLearned((raise) =>
@@ -312,7 +336,9 @@ function DayDots({
     AccessibilityInfo.announceForAccessibility(
       current.kind === 'day'
         ? "¡Día hecho! Today's goal is done."
-        : current.kind === 'learned'
+        : current.kind === 'tomorrow'
+          ? `Tomorrow, ${tomorrowRest(current.n)}.`
+          : current.kind === 'learned'
           ? `${current.word}, learned.`
           : `${current.lead}${current.rest}`
     );
@@ -335,7 +361,9 @@ function DayDots({
     }
     steps.push(
       Animated.timing(cheer, { useNativeDriver: true, toValue: 1, duration: 300, easing: Easing.out(Easing.cubic) }),
-      Animated.delay(current.kind === 'learned' ? LEARNED_HOLD_MS : CHEER_HOLD_MS),
+      Animated.delay(
+        current.kind === 'learned' ? LEARNED_HOLD_MS : current.kind === 'tomorrow' ? TOMORROW_HOLD_MS : CHEER_HOLD_MS
+      ),
       Animated.timing(cheer, { useNativeDriver: true, toValue: 0, duration: 360, easing: Easing.inOut(Easing.cubic) })
     );
     const anim = Animated.sequence(steps);
@@ -407,6 +435,11 @@ function DayDots({
             {current.kind === 'day' ? (
               <Text style={styles.cheerText} numberOfLines={1}>
                 ¡Día hecho!
+              </Text>
+            ) : current.kind === 'tomorrow' ? (
+              <Text style={styles.cheerText} numberOfLines={1}>
+                Mañana
+                <Text style={styles.cheerQuiet}> · {tomorrowRest(current.n)}</Text>
               </Text>
             ) : current.kind === 'learned' ? (
               <Text style={styles.cheerText} numberOfLines={1}>

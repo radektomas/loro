@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AbRow, DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
+import type { AbRow, AppFeedbackRow, DailyPoint, DauPoint, FeedbackRow, RadekDashboard, SubscriberRow, WallWindow } from '@/lib/analytics';
 
 /**
  * THE OWNER'S DASHBOARD, in the house style of RevenueCat and App Store
@@ -446,6 +446,76 @@ function Feedback({ rows }: { rows: FeedbackRow[] }) {
                 <span className="ml-2 text-xs" style={{ color: DASH.faint }}>
                   {dayLabel(r.answeredAt)}
                   {r.packageId ? ` · looking at ${r.packageId.replace('$rc_', '')}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ app feedback
+
+const MOODS: { key: string; emoji: string; label: string; color: string }[] = [
+  { key: 'love', emoji: '😍', label: 'Love it', color: DASH.green },
+  { key: 'ok', emoji: '🙂', label: 'It’s okay', color: DASH.blue },
+  { key: 'meh', emoji: '😕', label: 'Not great', color: DASH.red },
+];
+
+/**
+ * "HOW'S LORO SO FAR?" (2026-11-18) — asked once on the first day after the
+ * 4th video, and any time from Progress → Send feedback. Moods first (skips
+ * counted apart so they do not drown the answers), then every typed message
+ * word for word, newest first, with where it came from.
+ */
+function AppFeedback({ rows }: { rows: AppFeedbackRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: DASH.muted }}>
+        No answers yet. The first-day ask and the Progress row ship with the next build.
+      </p>
+    );
+  }
+  const answered = rows.filter((r) => r.mood !== 'skipped');
+  const count = (k: string) => rows.filter((r) => r.mood === k).length;
+  const max = Math.max(1, ...MOODS.map((m) => count(m.key)));
+  const notes = rows.filter((r) => r.note);
+  const emoji = (k: string) => MOODS.find((m) => m.key === k)?.emoji ?? '';
+  return (
+    <div>
+      <div className="space-y-2.5">
+        {MOODS.map((m) => {
+          const n = count(m.key);
+          return (
+            <div key={m.key} className="flex items-center gap-3 text-sm">
+              <div className="w-32 shrink-0" style={{ color: DASH.ink }}>{m.emoji} {m.label}</div>
+              <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: DASH.track }}>
+                <div className="h-full rounded-full" style={{ width: `${(n / max) * 100}%`, background: m.color }} />
+              </div>
+              <div className="w-20 shrink-0 text-right tabular-nums" style={{ color: DASH.muted }}>
+                <b style={{ color: DASH.ink }}>{n}</b> · {pct(n, answered.length)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs" style={{ color: DASH.faint }}>
+        {answered.length} answered · {count('skipped')} said not now
+      </p>
+      {notes.length > 0 && (
+        <div className="mt-5">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: DASH.faint }}>In their words</div>
+          <ul className="space-y-2">
+            {notes.map((r, i) => (
+              <li key={i} className="rounded-xl px-4 py-3 text-sm" style={{ background: DASH.inset, border: `1px solid ${DASH.line}` }}>
+                <span className="mr-2">{emoji(r.mood)}</span>
+                <span style={{ color: DASH.ink }}>“{r.note}”</span>
+                <span className="ml-2 text-xs" style={{ color: DASH.faint }}>
+                  {dayLabel(r.answeredAt)}
+                  {r.source === 'progress' ? ' · from Progress' : r.videos != null ? ` · after ${r.videos} videos` : ''}
+                  {` · ${r.installId.slice(0, 8)}`}
                 </span>
               </li>
             ))}
@@ -933,6 +1003,28 @@ export function RadekDashboardView({ data }: { data: RadekDashboard }) {
         ) : (
           <p className="text-sm" style={{ color: DASH.muted }}>
             Paste <code>supabase/migrations/20261009000000_analytics_paywall_feedback.sql</code> into the Supabase SQL editor to see this.
+          </p>
+        )}
+      </Card>
+
+      {/* APP FEEDBACK */}
+      <Card>
+        <CardTitle
+          title="How’s Loro so far?"
+          hint="Asked once on someone’s first day, after their 4th video, and any time from Progress → Send feedback. One tap for the mood, then their own words if they want."
+          aside={
+            data.appFeedback ? (
+              <span className="text-xs font-medium" style={{ color: DASH.muted }}>
+                {data.appFeedback.length} responses
+              </span>
+            ) : null
+          }
+        />
+        {data.appFeedback ? (
+          <AppFeedback rows={data.appFeedback} />
+        ) : (
+          <p className="text-sm" style={{ color: DASH.muted }}>
+            Paste <code>supabase/migrations/20261118000000_analytics_app_feedback.sql</code> into the Supabase SQL editor to see this.
           </p>
         )}
       </Card>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Loro",
     "slug": "radektomas",
-    "version": "1.9.6",
+    "version": "1.9.7",
     "icon": "./assets/icon.png",
     "scheme": "loro",
     "orientation": "portrait",

@@ -3,6 +3,9 @@ import { storage } from '@loro/core/storage';
 import { signOut } from '@loro/core/auth';
 import { devRaiseDayDone } from '../feed/dayDone';
 import { devRaiseWidgetOffer } from '../feed/widgetOfferBus';
+import { devRaiseReminderAsk } from '../feed/reminderAskBus';
+import { devRequestRating } from './rating';
+import { devRaiseFeedback } from '../feedback/feedbackBus';
 import { devRaiseLevelUp } from '../feed/levelUp';
 import { devRaiseReviewEnd } from '../feed/reviewSession';
 import { devRaiseWordLearned } from '../feed/wordLearned';
@@ -142,6 +145,9 @@ export function installDevMenu(): void {
     /** FIRST, so it is the first thing the menu shows (Radek, 2026-09-18:
         "so i can see it right away and not search it like a crazy man").
         Open the Feed tab, then tap. */
+    { name: '★★★ NEW · Reminder ask after purchase', run: () => devRaiseReminderAsk() },
+    { name: '★★★ NEW · Apple rating sheet (dev always shows it)', run: () => devRequestRating() },
+    { name: "★★★ NEW · How's Loro so far? (feedback, open the Feed tab)", run: () => devRaiseFeedback() },
     { name: '★★ NEW · Lock screen widget card', run: () => devRaiseWidgetOffer() },
     { name: '★★ NEW · ¡Día hecho! (goal dots)', run: () => devRaiseDayDone() },
     { name: '★★ NEW · Word learned (gold pill, top strip)', run: () => devRaiseWordLearned() },

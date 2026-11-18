@@ -58,6 +58,9 @@ import { LearnedToast } from './LearnedToast';
 import { SoundIcon } from './SoundIcon';
 import { Karaoke } from './Karaoke';
 import { NotificationPrompt } from './NotificationPrompt';
+import { ReminderAsk } from './ReminderAsk';
+import { FeedbackCard } from '../feedback/FeedbackCard';
+import { noteVideoForFeedback } from '../feedback/feedbackBus';
 import { WidgetOffer } from './WidgetOffer';
 import { RecallBar } from './RecallBar';
 import { RecallHost, useHeldBlank, useRecallReplay } from './RecallHost';
@@ -1527,6 +1530,18 @@ function FeedBody({
                   celebration, and silent every other time. Last child so it
                   covers the band and the answer bar as well as the slide. */}
               <NotificationPrompt onObscurePlayer={setPromptObscured} />
+              {/* Once, right after a purchase: the reminder ask with their own
+                  pace and a time to pick (ReminderAsk.tsx / reminderAskBus.ts). */}
+              <ReminderAsk onObscurePlayer={setPromptObscured} />
+              {/* "How's Loro so far?", once, on the first day (feedbackBus.ts).
+                  Waits while another card holds the screen or the feed is not
+                  the visible tab, then shows on its own. */}
+              <FeedbackCard
+                kind="day0"
+                blocked={!active || promptObscured}
+                pausePlayer
+                onObscurePlayer={setPromptObscured}
+              />
               {/* Once, after the third saved word: the lock screen widget,
                   with the word just saved in it (WidgetOffer.tsx). */}
               <WidgetOffer onObscurePlayer={setPromptObscured} />
@@ -1879,6 +1894,8 @@ const Slide = memo(function Slide({
      * user swiping back to a video has not watched a second video.
      */
     trackOnce(`video:${video.id}`, 'video_watched', { videoId: video.id });
+    // The day-0 "How's Loro so far?" counts videos reached (feedbackBus.ts).
+    noteVideoForFeedback(video.id);
   }, [isActive, video.id]);
 
   /** Stable for as long as this cell shows this video — see Karaoke's memo. */

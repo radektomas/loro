@@ -49,6 +49,12 @@ export type CopyContext = {
   endedRun: number;
   /** Words learned in all. */
   learned: number;
+  /** Words the schedule has brought back by the time this fires (core
+      readyWords, deduped): the count, and one to name. */
+  back: { count: number; word: { text: string; meaning: string } | null };
+  /** Within the user's first days (from their first word): the comeback is
+      the line that day, ahead of the rotation. */
+  early: boolean;
 };
 
 /** Pick one of `n` with the day's number, offset per pool so pools do not move in lockstep. */
@@ -70,6 +76,25 @@ export function recallLine(w: { text: string; meaning: string }, day: number): N
     [`Loro keeps saying ${w.text}`, 'He will not stop until you say it back. Help.'],
   ];
   const [title, body] = pick(lines, day, 1);
+  return { title: cap(title), body, route: 'review' };
+}
+
+/**
+ * THE COMEBACK (Radek, 2026-11-18: day 0 ends pointing at tomorrow). The
+ * day-done pill said "Mañana · 3 of your words come back"; this is the
+ * morning that keeps it. Opens the feed's review, which lands on a due word.
+ */
+export function backLine(back: CopyContext['back'], day: number): NotifCopy {
+  const n = back.count;
+  const w = back.word;
+  const more = n - 1;
+  const lines: [string, string][] = w
+    ? [
+        [`¿Te acuerdas de ${w.text}?`, more > 0 ? `It's back today, with ${more} more of yours. Two minutes in your videos.` : `It's back today. Catch it in your videos.`],
+        [n === 1 ? `${w.text} is back` : `${words(n)} came back today`, n === 1 ? 'Loro brought it back. Can you still say it?' : `Like ${w.text}. Catch them in your videos before Loro does.`],
+      ]
+    : [[`${words(n)} came back today`, 'Loro brought them back. Two minutes in your videos.']];
+  const [title, body] = pick(lines, day, 9);
   return { title: cap(title), body, route: 'review' };
 }
 
@@ -167,7 +192,10 @@ export function dailyCopy(ctx: CopyContext, day: number): NotifCopy {
       route: 'review',
     };
   }
+  // The first days: the words they met yesterday, back today, IS the line.
+  if (ctx.early && ctx.back.count > 0) return backLine(ctx.back, day);
   const options: NotifCopy[] = [];
+  if (ctx.back.count > 0) options.push(backLine(ctx.back, day));
   if (ctx.recall) options.push(recallLine(ctx.recall, day));
   options.push(ctx.toTrain ? trainLine(ctx.toTrain, ctx.trip, day) : tripLine(ctx.trip, day));
   const local = localLine(ctx.trip, day);

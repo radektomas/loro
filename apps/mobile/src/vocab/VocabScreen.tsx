@@ -31,6 +31,7 @@ import { CityArrival } from './CityArrival';
 import { LevelBanner } from './LevelBanner';
 import { countsOnTrip, tripStop } from '@loro/core/roadmap';
 import { track } from '../platform/analytics';
+import { noteCityArrivalClosed } from '../platform/rating';
 import { tierForLearned } from '@loro/core/levels';
 import { learnedTotal } from '../feed/wordLearned';
 import { storageDriver } from '../platform/storage';
@@ -370,6 +371,9 @@ export function VocabScreen({
       // Madrid was the free taste: ¡Vamos! out of the first arrival is
       // where the wall comes in (paywall/freePass.ts). No-op once ended.
       if (arrival.to >= 1) endFreePass('arrival');
+      // ¡Vamos! out of the 2nd city on: Apple's rating sheet, once the
+      // window is gone (platform/rating.ts).
+      noteCityArrivalClosed(arrival.to);
     }
     setArrival(null);
   };
