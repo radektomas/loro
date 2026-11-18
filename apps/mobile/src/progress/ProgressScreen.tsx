@@ -58,6 +58,8 @@ import { track } from '../platform/analytics';
 import { getPlan, type Plan } from './plan';
 import { LearnedSection, LevelRoad, PassportSection, TodaySection } from './Journal';
 import { tierForLearned } from '@loro/core/levels';
+import { FeedbackCard } from '../feedback/FeedbackCard';
+import { openFeedback } from '../feedback/feedbackBus';
 
 /**
  * PROGRESS — redrawn around the week (2026-09-07).
@@ -376,7 +378,7 @@ function NotificationsSection() {
     // the system prompt, for anyone who said "Not now" in the feed. Turning it
     // off never asks anything.
     if (next && permission === 'undetermined') {
-      void requestPermission().then((state) => {
+      void requestPermission('settings').then((state) => {
         setPermission(state);
         if (state === 'granted') {
           setEnabled(true);
@@ -634,6 +636,7 @@ export function ProgressScreen({
         </View>
         <NotificationsSection />
         <TopicsSection />
+        <FeedbackSection />
 
         {/* Outside the empty/populated split for the same reason as the reset
             row: the offer to back up progress is worth making whether or not
@@ -668,6 +671,31 @@ export function ProgressScreen({
         {__DEV__ && <DevResetRow />}
       </ScrollView>
 
+    </View>
+  );
+}
+
+/**
+ * "SEND FEEDBACK" — the door that is always there (Radek, 2026-11-18). The
+ * day-0 ask reaches people once; this is for the bug, the video that will
+ * not play, the idea, whenever it happens. Same card, from: 'progress'.
+ */
+function FeedbackSection() {
+  return (
+    <View style={styles.section}>
+      <SectionTitle>Feedback</SectionTitle>
+      <View style={styles.card}>
+        <Text style={styles.notifTitle}>Something to tell us?</Text>
+        <Text style={styles.notifBody}>A bug, a video that won't play, an idea. Every message is read.</Text>
+        <Pressable
+          onPress={openFeedback}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+        >
+          <Text style={styles.ctaText}>Send feedback</Text>
+        </Pressable>
+      </View>
+      <FeedbackCard kind="progress" />
     </View>
   );
 }

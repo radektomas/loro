@@ -2,6 +2,7 @@ import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { answeredCorrectToday, computeStreaks, dayKey } from '@loro/core/progress';
 import { track } from '../platform/analytics';
+import { noteGoalDay } from '../platform/rating';
 import { storageDriver } from '../platform/storage';
 import { getPlan } from '../progress/plan';
 
@@ -12,12 +13,13 @@ import { getPlan } from '../progress/plan';
  * blanks until they stopped, and the only thing that ever said "enough" was
  * the clock. The daily goal gives the day a finish line, and this is the
  * moment it is crossed: the correct answer that takes today's tally to the
- * plan's number raises the card (DayDoneCard), and the same moment is
+ * plan's number raises the moment (since 2026-11-03 the goal dots in the
+ * feed's top strip, CollectionChips DayDots; it was a card), and the same moment is
  * reported so the dashboard can count days finished rather than days
  * opened.
  *
  * DECISION PLUMBING ONLY, the exact shape of saveProgressAsk.ts: the latch
- * and the raise live here, the card subscribes, and RecallHost owns the
+ * and the raise live here, the dots subscribe, and RecallHost owns the
  * timing because "after the celebration" is a fact about the feed's
  * animation.
  *
@@ -71,6 +73,9 @@ export function claimDayDone(now: number = Date.now()): DayDoneRaise | null {
   const words = answeredCorrectToday(storage.getSavedWords(), now);
   track('goal_met', { goal: wordsPerDay, count, streak });
   console.log(`[loro:day] goal met: ${count}/${wordsPerDay}, streak ${streak}`);
+  // A second day with the goal met is the rating prompt's happy moment
+  // (platform/rating.ts); it waits for the cheer to play first.
+  noteGoalDay(today);
   return { goal: wordsPerDay, count, streak, words };
 }
 

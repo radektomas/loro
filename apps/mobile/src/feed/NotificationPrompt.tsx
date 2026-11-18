@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BRAND } from '../onboarding/brand';
+import { track } from '../platform/analytics';
 import {
   requestPermission,
   snoozePermissionAsk,
@@ -8,8 +9,9 @@ import {
 } from '../platform/notifications';
 
 /**
- * THE IN-APP EXPLAINER, and the only thing in the app that leads to the iOS
- * permission prompt.
+ * THE IN-APP EXPLAINER in the feed. Since 2026-11-18 it is the SECOND chance:
+ * the first is ReminderAsk, right after a purchase (reminderAskBus.ts has the
+ * numbers that moved it). The Progress toggle is the third route.
  *
  * WHY IT EXISTS AT ALL, since it is one more tap than just asking. iOS gives an
  * app exactly one system prompt per install: once denied, every later
@@ -79,7 +81,8 @@ export function NotificationPrompt({
             // Synchronously inside the handler, and only on this branch. This
             // is the one call that spends the system prompt.
             setBusy(true);
-            void requestPermission().then(close, close);
+            track('reminder_ask_answered', { from: 'feed', answer: 'allow' });
+            void requestPermission('feed').then(close, close);
           }}
           accessibilityRole="button"
           accessibilityLabel="Allow notifications"
@@ -94,6 +97,7 @@ export function NotificationPrompt({
         <Pressable
           disabled={busy}
           onPress={() => {
+            track('reminder_ask_answered', { from: 'feed', answer: 'later' });
             snoozePermissionAsk();
             close();
           }}

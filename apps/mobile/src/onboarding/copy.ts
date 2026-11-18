@@ -174,8 +174,9 @@ export const LESSON = {
  * installed, so nothing technical is stopping a prompt here. It is deliberately
  * absent: iOS grants one system prompt per install, and spending it on someone
  * who has not yet felt what a reminder is for is how an app ends up permanently
- * unable to send any. The ask happens after the user's first correct answer,
- * behind an in-app explainer, in the feed. See src/platform/notifications.ts.
+ * unable to send any. The ask happens right after a purchase (feed/ReminderAsk,
+ * which reads this screen's answer back) and again after a first correct
+ * answer in the feed. See src/platform/notifications.ts.
  *
  * Do not add a permission request, a reminder-time step, or a "turn on
  * notifications" screen to this flow. The reminder time is set in Progress, by

@@ -45,6 +45,7 @@ import {
   TextButton,
 } from '../onboarding/chrome';
 import { getPermissionState, noteTrialStarted } from '../platform/notifications';
+import { markReminderAskAfterPurchase } from '../feed/reminderAskBus';
 import { authEnabled } from '../platform/supabaseInit';
 import { LegalLinks } from '../progress/LegalLinks';
 
@@ -587,6 +588,9 @@ export function PaywallScreen({
       // The timeline's "day 5: we remind you" — made true (notifications.ts).
       const days = trialDays(selected.product);
       if (days !== null) noteTrialStarted(days);
+      // The moment they are most committed: ask for reminders in the feed,
+      // with their own pace (feed/reminderAskBus.ts has the numbers behind it).
+      markReminderAskAfterPurchase();
       // Dev only: a forced test wall lets go after a sandbox purchase.
       devReleaseForcedPaywall();
     } catch (err) {
