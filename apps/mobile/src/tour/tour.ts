@@ -16,7 +16,7 @@ import { track } from '../platform/analytics';
  *   save        feed: the video stops, one word glows, tap it, Save word
  *   words       feed: "Saved!" and the Words tab glows → tap it   (Shell)
  *   wordsHere   Words: spotlight on the city and its words        (WordsTour)
- *   wordsTrain  Words: spotlight on the next word to train
+ *   wordsTrain  Words: spotlight on the next word — it comes back in videos
  *   map         Words: spotlight on the map → ¡Vamos! → feed
  *   done
  *

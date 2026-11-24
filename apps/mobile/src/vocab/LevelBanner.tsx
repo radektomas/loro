@@ -82,7 +82,7 @@ export function LevelBanner({ ladder, onClose }: { ladder: LearnedTier; onClose:
             );
           })}
         </View>
-        <Text style={styles.foot}>Words learned to hold each level. Every word you train here counts.</Text>
+        <Text style={styles.foot}>Words learned to hold each level. Every word you get right in your videos counts.</Text>
       </Pressable>
     </Animated.View>
   );

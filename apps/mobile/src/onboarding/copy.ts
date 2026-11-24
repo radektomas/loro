@@ -253,8 +253,8 @@ export const PLAN_BUILD = {
   title: 'Building your plan',
   /** The title once the ring is full. */
   titleDone: 'Your plan is built',
-  /** The checklist's last line: shipped behaviour (the Words path brings
-      trained words back into the feed), said in six words. */
+  /** The checklist's last line: shipped behaviour (the feed brings saved
+      words back as gaps — no training first since 2026-11-24), in six words. */
   recallShort: 'Words come back before you forget',
   /** Under point A, whose badge is the derived level. */
   todayLabel: 'Today',
@@ -327,7 +327,7 @@ export const PLAN_READY = {
   clips: 'Clips at your level from day one, and the feed moves up as you do.',
   /** Row 4. */
   recallHead: 'Nothing you learn slips away',
-  recall: 'Train the words you save in a few quick exercises. Then they come back in your videos until they are yours.',
+  recall: 'The words you save come back in your videos as gaps to fill, until they are yours.',
   cta: '¡Vamos!',
 };
 

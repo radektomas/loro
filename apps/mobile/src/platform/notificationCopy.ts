@@ -73,15 +73,19 @@ export function recallLine(w: { text: string; meaning: string }, day: number): N
   return { title: cap(title), body, route: 'review' };
 }
 
-/** The word they are on. Opens Words, where tapping it trains it. */
+/**
+ * The word they are on — a fresh save. Opens the FEED on a due word
+ * (2026-11-24): it comes back in their videos without training now, so the
+ * reminder sends them where it will be asked, not to the Words tab.
+ */
 export function trainLine(w: string, t: CopyContext['trip'], day: number): NotifCopy {
   const lines: [string, string][] = [
-    [`${w} is waiting for you`, `Three quick exercises and it is yours. ${t.nextCity} is ${words(t.toNext)} away.`],
-    [`Today's word: ${w}`, `Train it in Words. Every word gets you closer to ${t.nextCity}.`],
-    [`Loro saved you a spot`, `Next up on your trip: ${w}. One tap to train it.`],
+    [`${w} is waiting for you`, `It's back in your videos today. Get it right and ${t.nextCity} is closer.`],
+    [`Today's word: ${w}`, `It shows up in your videos. Every word you get right gets you closer to ${t.nextCity}.`],
+    [`Loro saved you a spot`, `Next up on your trip: ${w}. Catch it in your videos.`],
   ];
   const [title, body] = pick(lines, day, 2);
-  return { title: cap(title), body, route: 'words' };
+  return { title: cap(title), body, route: 'review' };
 }
 
 /** The trip itself. Opens Words, on the map. */

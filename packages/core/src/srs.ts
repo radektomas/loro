@@ -206,11 +206,17 @@ export function grade(
 }
 
 /**
- * TRAINED — has this word been through the Words tab's practice set (or,
- * for words saved before that existed, answered anywhere)? A fresh save is
- * 'new' and stays out of the feed's recall blanks until it is trained
- * (computeBlankPlan). Radek, 2026-09-26: "the user trains through them and
- * after that they start showing in the feed for some time so he remembers".
+ * TRAINED — has this word been through the Words tab's practice set (or
+ * been answered anywhere)? A fresh save is 'new'.
+ *
+ * This USED TO GATE THE FEED (1.6.0 → 1.9.7): a fresh save stayed out of
+ * the recall blanks until it was trained in Words (Radek, 2026-09-26: "the
+ * user trains through them and after that they start showing in the feed").
+ * Measured 2026-11-24 on 210 store installs since 2026-10-14: 11 ever did a
+ * practice set (90 sets, 50 of them one person), so almost no saved word
+ * ever came back — and saving a word is the one behaviour that separated
+ * returners from one-day users (67% vs 31%, 2026-09-07). Radek, 2026-11-24:
+ * the feed asks saved words on its own again. Training stays a shortcut.
  */
 export function isTrained(word: SavedWord): boolean {
   return word.state !== 'new';
@@ -406,14 +412,16 @@ export function computeBlankPlan(
   //
   // Words the roadmap has not reached yet are not asked (roadmap.ts). The
   // asked-for word below is exempt: naming a word is louder than the path.
+  //
+  // A fresh save IS asked — no training first (see isTrained for why that
+  // gate went): due a minute after saving, then 10 min, then tomorrow, and
+  // the third right answer files it as learned (grade).
   const locked = lockedKeys(allWords);
   const dueByText = new Map<string, SavedWord>();
   for (const w of allWords) {
     if (w.dueAt > now || now - w.savedAt < MIN_AGE_MS) continue;
     const key = normalizeAnswer(w.text);
-    // Untrained saves wait for the Words tab (isTrained); locked ones for
-    // the path. The asked-for word below is exempt from both.
-    if (!key || locked.has(key) || !isTrained(w)) continue;
+    if (!key || locked.has(key)) continue;
     if (moreUrgent(w, dueByText.get(key))) dueByText.set(key, w);
   }
   const asked = opts.first ? locateAsked(video, allWords, opts.first, now) : null;

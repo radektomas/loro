@@ -1,8 +1,8 @@
 import type { SavedWord } from '@loro/core/types';
 import { storage } from '@loro/core/storage';
 import { getCatalog } from '@loro/core/catalog';
-import { pickFirstBlankTarget, pickReviewTarget, spokenSurfaces } from '@loro/core/occurrences';
-import { distinctWords, readyWords } from '@loro/core/progress';
+import { pickFirstBlankTarget, pickReviewTarget, spokenSurfaces, spokenSurfacesCached } from '@loro/core/occurrences';
+import { distinctWords, dueInVideos, readyWords } from '@loro/core/progress';
 import { onLearnedFace } from './wordLearned';
 import { normalizeSurface } from '@loro/core/dictionary';
 import { track } from '../platform/analytics';
@@ -50,16 +50,23 @@ export type ReviewLaunch = {
   word: string | null;
 };
 
+/**
+ * YOUR WORDS IN TODAY'S VIDEOS — due, opened by the path, said in a video;
+ * fresh saves included (core dueInVideos). The Words tab's Loro bubble, its
+ * tab-bar pill and launchReview below all read this, so the number a door
+ * promises is the number it can land on. The reels catalog only, like the
+ * landing search: a Peppa-only word cannot be landed on from here.
+ */
+export function wordsInVideos(now: number = Date.now()): SavedWord[] {
+  return dueInVideos(storage.getSavedWords(), spokenSurfacesCached(getCatalog()), now);
+}
+
 export function launchReview(source: ReviewSource): ReviewLaunch {
   const all = storage.getSavedWords();
   const at = Date.now();
-  // Most urgent first: slipped words, then earliest due.
-  const due = readyWords(all, at)
-    .sort(
-      (a, b) =>
-        Number(b.state === 'lapsed') - Number(a.state === 'lapsed') ||
-        a.dueAt - b.dueAt
-    );
+  // Most urgent first: slipped words, then earliest due. Fresh saves count
+  // since 2026-11-24 — the feed asks them without training (core srs).
+  const due = wordsInVideos(at);
   const found =
     due.length > 0 ? pickFirstBlankTarget(getCatalog(), due, all, { now: at }) : null;
 

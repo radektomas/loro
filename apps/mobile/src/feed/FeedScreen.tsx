@@ -30,7 +30,7 @@ import type { Video, Word } from '@loro/core/types';
 import { getCatalog, onCatalogChanged } from '@loro/core/catalog';
 import { collectionVideos } from '@loro/core/catalog/collectionVideos';
 import { REELS, collectionOf, findCollection, isEpisodes } from '@loro/core/collections';
-import { liftDueBlock } from '@loro/core/feedOrder';
+import { LAUNCH_LIFT_MAX, liftDueBlock } from '@loro/core/feedOrder';
 import { storage } from '@loro/core/storage';
 import { feedLevelFor, rankFeed } from '@loro/core/feedRank';
 import { getFeedScores, refreshFeedScores } from './feedScores';
@@ -754,9 +754,10 @@ function EmptyFeed() {
 function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
   if (list.length > 0) feedLog(`order: ranking ${list.length}`);
   refreshFeedScores();
-  return rankFeed(list, {
+  const scores = getFeedScores();
+  const ranked = rankFeed(list, {
     watchedIds: new Set(storage.getWatchedVideoIds()),
-    scores: getFeedScores(),
+    scores,
     // What they said they like watching leans the order (onboarding 'topics').
     liked: new Set(getLikedTopics()),
     // Beginners open on slow videos, strong speakers on native speed: the
@@ -764,6 +765,18 @@ function orderFeed(list: EmbedVideo[]): EmbedVideo[] {
     // a skipped onboarding — is a beginner).
     level: feedLevelFor(storage.getStartLevel(), storage.getLevelState().level),
   });
+  // Then the first few that will ask a word you saved go on top (core
+  // LAUNCH_LIFT_MAX carries the why). Ranked order holds inside both groups.
+  // Benched videos are never lifted: a word is no reason to open on a clip
+  // the data sent to the back.
+  const benched = new Set(scores.benched);
+  const { videos, block } = liftDueBlock(
+    ranked.filter((v) => !benched.has(v.id)),
+    storage.getSavedWords(),
+    { max: LAUNCH_LIFT_MAX }
+  );
+  if (block.length > 0) feedLog(`order: ${block.length} video(s) with due words lifted to the top`);
+  return [...videos, ...ranked.filter((v) => benched.has(v.id))];
 }
 
 /**

@@ -30,8 +30,11 @@ export const WORDS_LINES: Record<'wordsHere' | 'wordsTrain' | 'map', TourLine & 
   },
   wordsTrain: {
     key: 'wordsTrain',
-    title: 'Tap a word to train it',
-    body: 'A few quick rounds and it’s learned. Then it pops up as a gap in videos.',
+    // 2026-11-24: nothing is trained here now — the feed brings the word
+    // back. The beat keeps its key ('wordsTrain') so tour_step stays
+    // comparable across versions.
+    title: 'It comes back in your videos',
+    body: 'Get it right when it pops up as a gap and it moves along. Tap it to hear it again.',
     cta: 'Next',
   },
   map: {

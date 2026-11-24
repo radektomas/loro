@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { storage } from '@loro/core/storage';
-import { waitingInWords } from '@loro/core/roadmap';
+import { wordsInVideos } from '../feed/launchReview';
 
 /**
  * HOW MANY WORDS ARE READY — for the bubble on the Words tab.
@@ -21,12 +21,14 @@ const TICK_MS = 60_000;
 
 /**
  * Since 2026-10-04 (Radek: "in the down bar a small pill with a number of
- * the words to review") it counts what Words actually holds for you: words
- * open on the path to train, plus learned words due back (roadmap
- * waitingInWords). Scheduled returns alone read 0 for almost everyone.
+ * the words to review") it counted words open on the path to TRAIN. Since
+ * 2026-11-24 nothing is trained first — the feed asks saved words on its
+ * own — so it counts your words in today's videos (launchReview
+ * wordsInVideos): the same number Loro says on the Words tab, beside the
+ * Play that lands on them.
  */
 function countDue(now = Date.now()): number {
-  return waitingInWords(storage.getSavedWords(), now);
+  return wordsInVideos(now).length;
 }
 
 export function useDueCount(): number {

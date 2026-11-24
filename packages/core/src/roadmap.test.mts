@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildRoadmap, isLocked, lockedKeys, newlyOpened, nextUp, OPEN_SLOTS, STAGE_SIZE, TRIP, CITY_SIZES, cityArrivals, citySize, cityStart, splitCities, tripPosition, tripStop, waitingInWords, withLevelKnown } from './roadmap.ts';
-import { dueCount, nextDueAt, readyWords } from './progress.ts';
+import { dueCount, dueInVideos, nextDueAt, readyWords } from './progress.ts';
 import { computeBlankPlan, grade, isEarlyAnswer, isTrained, trainWord, TRAINED_FIRST_ASK_MS } from './srs.ts';
 import type { SavedWord, Video } from './types.ts';
 
@@ -175,10 +175,30 @@ describe('train in Words, keep in the feed', () => {
     })),
   } as unknown as Video;
 
-  it('an untrained save is not asked in the feed', () => {
-    const fresh = word('quedemos', 0, { state: 'new', box: 0, correct: 0, lastReviewedAt: null });
+  it('a fresh save is asked in the feed on its own, a minute after saving', () => {
+    // 2026-11-24: no training first. initialSrs makes it due in one minute.
+    const fresh = word('quedemos', 0, { state: 'new', box: 0, correct: 0, lastReviewedAt: null, savedAt: NOW, dueAt: NOW + 60_000 });
     assert.equal(isTrained(fresh), false);
-    assert.equal(computeBlankPlan(video, [fresh], NOW).size, 0);
+    assert.equal(computeBlankPlan(video, [fresh], NOW + 30_000).size, 0, 'not inside the first minute');
+    assert.equal(computeBlankPlan(video, [fresh], NOW + 60_000).size, 1);
+  });
+
+  it('three spaced right answers in the feed make a fresh save learned', () => {
+    let w = word('quedemos', 0, { state: 'new', box: 0, correct: 0, lastReviewedAt: null, savedAt: NOW, dueAt: NOW + 60_000 });
+    w = grade(w, true, NOW + 60_000); // 1 min
+    assert.equal(w.state, 'learning');
+    assert.equal(computeBlankPlan(video, [w], NOW + 2 * 60_000).size, 0, 'not again straight away');
+    w = grade(w, true, w.dueAt); // 10 min later
+    assert.equal(w.learnedAt, null, 'not learned in the same sitting');
+    w = grade(w, true, w.dueAt); // the next day
+    assert.equal(w.state, 'known');
+    assert.equal(w.learnedAt, w.lastReviewedAt);
+  });
+
+  it('a fresh save beyond the open window still waits for the path', () => {
+    const words = [...many(OPEN_SLOTS).map((w) => ({ ...w, text: `o${w.text}` })),
+      word('quedemos', OPEN_SLOTS, { state: 'new', box: 0, correct: 0, lastReviewedAt: null })];
+    assert.equal(computeBlankPlan(video, words, NOW).size, 0);
   });
 
   it('training makes it learned and puts it in the feed ten minutes later', () => {
@@ -324,5 +344,32 @@ describe('waitingInWords — the Words tab number', () => {
 
   it('never counts a locked word', () => {
     assert.equal(waitingInWords(many(OPEN_SLOTS + 5), NOW), OPEN_SLOTS);
+  });
+});
+
+describe('dueInVideos — your words in today\'s videos', () => {
+  const spoken = new Set(['w0', 'w1', 'w2', 'casa']);
+
+  it('counts a fresh save once it is due, unlike readyWords', () => {
+    const fresh = word('casa', 0, { state: 'new', box: 0, correct: 0, lastReviewedAt: null, dueAt: NOW - 1000 });
+    assert.equal(readyWords([fresh], NOW).length, 0);
+    assert.equal(dueInVideos([fresh], spoken, NOW).length, 1);
+    assert.equal(dueInVideos([{ ...fresh, dueAt: NOW + 1000 }], spoken, NOW).length, 0, 'not before it is due');
+  });
+
+  it('drops words no video says, and locked ones', () => {
+    assert.equal(dueInVideos([word('nadie', 0)], spoken, NOW).length, 0);
+    const words = many(OPEN_SLOTS + 1);
+    const allSpoken = new Set(words.map((w) => w.text));
+    assert.equal(dueInVideos(words, allSpoken, NOW).length, OPEN_SLOTS);
+  });
+
+  it('one per word, slipped first', () => {
+    const a = word('w0', 0, { dueAt: NOW - 5000 });
+    const a2 = { ...word('w0', 1, { dueAt: NOW - 9000 }), videoId: 'other' };
+    const b = word('w1', 2, { state: 'lapsed', box: 0, dueAt: NOW - 1000 });
+    const out = dueInVideos([a, a2, b], spoken, NOW);
+    assert.deepEqual(out.map((w) => w.text), ['w1', 'w0']);
+    assert.equal(out[1].dueAt, NOW - 9000);
   });
 });

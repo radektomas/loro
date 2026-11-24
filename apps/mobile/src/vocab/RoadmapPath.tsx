@@ -10,6 +10,10 @@ import { storageDriver } from '../platform/storage';
 import { track } from '../platform/analytics';
 import { requestPostcard } from '../share/postcardBus';
 import { storage } from '@loro/core/storage';
+import { KNOWN_BOX } from '@loro/core/srs';
+import { whereItIs } from './whereItIs';
+import { getCatalog } from '@loro/core/catalog';
+import { spokenSurfacesCached } from '@loro/core/occurrences';
 
 /** The last city the Words tab celebrated arriving in (CityArrival). */
 export const TRIP_SEEN_KEY = 'loro.mobile.tripSeen';
@@ -103,17 +107,28 @@ function Lock() {
   );
 }
 
-/** "Tap to train": a play mark drawn from borders (no emoji, no font glyph). */
-function Play({ onMint }: { onMint: boolean }) {
+/**
+ * HOW FAR ALONG IT IS (2026-11-24): three pips, one per right answer, the
+ * same "of 3" the word card says. Replaced the play mark that meant "tap to
+ * train" — nothing is trained here now; the feed moves the word.
+ */
+function Pips({ word, onWhite }: { word: SavedWord; onWhite: boolean }) {
+  const have = word.state === 'lapsed' ? 0 : Math.min(Math.max(word.box, 0), KNOWN_BOX);
   return (
-    <View
-      style={[
-        styles.play,
-        { borderLeftColor: onMint ? '#06130d' : MINT },
-      ]}
-    />
+    <View style={styles.pips}>
+      {Array.from({ length: KNOWN_BOX }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.pip,
+            { backgroundColor: i < have ? (onWhite ? '#1f9e68' : MINT) : onWhite ? 'rgba(6,19,13,0.18)' : 'rgba(242,245,243,0.16)' },
+          ]}
+        />
+      ))}
+    </View>
   );
 }
+
 
 /**
  * LORO ON THE PATH, like Duo beside his. He stands in the empty half of the
@@ -124,10 +139,13 @@ function Mascot({
   side,
   line,
   waving = false,
+  action,
 }: {
   side: 'left' | 'right';
   line: React.ReactNode;
   waving?: boolean;
+  /** A button under the line — the bubble's one thing to do. */
+  action?: { label: string; onPress: () => void };
 }) {
   const bob = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -150,6 +168,16 @@ function Mascot({
       />
       <View style={[styles.bubble, side === 'left' ? styles.bubbleLeft : styles.bubbleRight]}>
         <Text style={styles.bubbleText}>{line}</Text>
+        {action && (
+          <Pressable
+            onPress={action.onPress}
+            accessibilityRole="button"
+            hitSlop={6}
+            style={({ pressed }) => [styles.bubbleCta, pressed && styles.pressed]}
+          >
+            <Text style={styles.bubbleCtaText}>{action.label}</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -169,7 +197,7 @@ function Coin({ node, here, blue }: { node: RoadmapNode; here: boolean; blue?: b
         ]}
       >
         {node.status === 'done' && <Text style={styles.check}>✓</Text>}
-        {node.status === 'open' && <Play onMint={here} />}
+        {node.status === 'open' && <Pips word={node.word} onWhite={here} />}
         {node.status === 'locked' && <Lock />}
       </View>
     </View>
@@ -273,7 +301,7 @@ function TripMap({
   blue?: ReadonlySet<string>;
   /** The stages themselves, so a tapped city can list what was learned there. */
   stages: RoadmapNode[][];
-  /** A learned word tapped in a city's panel: practise it. */
+  /** A learned word tapped in a city's panel: its card. */
   onPractise: (word: SavedWord) => void;
   stops: number;
   current: number;
@@ -736,7 +764,7 @@ function CityWords({
       </View>
       {open && learned.length > 0 && (
         <>
-          <Text style={styles.chipsHint}>Tap a word to practise it again.</Text>
+          <Text style={styles.chipsHint}>Tap a word to see it again.</Text>
           <View style={styles.chips}>
             {learned.map((n) => (
               <Pressable
@@ -992,7 +1020,10 @@ function Row({
   onHereLayout,
   blue,
   disabled,
+  now,
 }: {
+  /** For the "back tomorrow" line. Omitted: no line (the closed city). */
+  now?: number;
   /** A word in a closed city: drawn, not pressable. */
   disabled?: boolean;
   node: RoadmapNode;
@@ -1023,12 +1054,14 @@ function Row({
     status === 'done'
       ? `${word.translation} · ${blue ? '✓ knew it' : '✓ learned'}`
       : status === 'open'
-        ? `${word.translation} · ${word.state === 'lapsed' ? 'train again' : 'tap to train'}`
+        ? word.translation
         : null;
+  const where =
+    status === 'open' && now !== undefined ? whereItIs(word, now, spokenSurfacesCached(getCatalog())) : null;
   const a11y =
     status === 'locked'
       ? `${cleanWord(word.text)}. Waiting.`
-      : `${cleanWord(word.text)}, ${detail}. Saved ${shortDate(node.savedAt)}.`;
+      : `${cleanWord(word.text)}, ${detail}${where ? `. ${where}` : ''}. Saved ${shortDate(node.savedAt)}.`;
 
   return (
     <Pressable
@@ -1037,7 +1070,7 @@ function Row({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={a11y}
-      accessibilityHint='Train this word. Long press for its card.'
+      accessibilityHint="Opens its card."
       style={({ pressed }) => [{ height }, pressed && styles.pressed]}
       onLayout={here && onHereLayout ? (e) => onHereLayout(e.nativeEvent.layout.y) : undefined}
     >
@@ -1066,6 +1099,14 @@ function Row({
         {detail !== null && (
           <Text style={[styles.labelDetail, { textAlign: align }]} numberOfLines={1}>
             {detail}
+          </Text>
+        )}
+        {where !== null && (
+          <Text
+            style={[styles.labelWhere, where.includes('now') && styles.labelWhereNow, { textAlign: align }]}
+            numberOfLines={1}
+          >
+            {where}
           </Text>
         )}
       </View>
@@ -1111,14 +1152,23 @@ export function RoadmapPath({
   onAnchor,
   onArrive,
   onTourLayout,
+  now,
+  inVideos,
+  onPlay,
 }: {
+  /** The screen's minute clock, for each word's "back tomorrow" line. */
+  now: number;
+  /** Your words in today's videos (launchReview wordsInVideos) — Loro says it. */
+  inVideos: number;
+  /** Loro's Play: the feed, landed on the first of them. */
+  onPlay: () => void;
   /** Where the map and the current city sit inside this component — the
       walkthrough's Words beats spotlight them (tour/WordsTour.tsx). */
   onTourLayout?: (part: 'map' | 'stage', y: number, height: number) => void;
   /** The trip has reached a city the user has not been welcomed to yet. */
   onArrive?: (from: number, to: number, empty: boolean) => void;
   words: readonly SavedWord[];
-  /** Tap: train the word (the practice set). */
+  /** Tap: the word card (2026-11-24 — it used to start the practice set). */
   onOpen: (word: SavedWord) => void;
   /** Long press: the word card: hear it, see it explained, remove it. */
   onLongPress: (word: SavedWord) => void;
@@ -1330,19 +1380,32 @@ export function RoadmapPath({
               side={Math.sin((cityStart(s) + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
             />
           ) : null,
+          /**
+           * LORO'S LINE (2026-11-24). It said "Tap X to train it!" — and 11
+           * of 210 store installs ever trained one. Words move along this
+           * road from right answers in the feed now, so Loro says how many
+           * of yours are in today's videos and hands over the one button
+           * that lands on them; with none due, how the road moves. This
+           * bubble is the door, not a strip above the page (Radek removed
+           * the "N words ready · Review" strip on 2026-09-30).
+           */
           isCurrent && hereWord && i === mascotAt ? (
             <Mascot
               key="loro"
               side={Math.sin((cityStart(s) + i + 0.5) * 0.9) >= 0 ? 'left' : 'right'}
               line={
-                hereWord ? (
+                inVideos > 0 ? (
                   <>
-                    Tap <Text style={styles.bubbleWord}>{hereWord}</Text> to train it!
+                    <Text style={styles.bubbleWord}>
+                      {inVideos} of your {inVideos === 1 ? 'word is' : 'words are'}
+                    </Text>{' '}
+                    in today's videos. Get {inVideos === 1 ? 'it' : 'them'} right and you move on!
                   </>
                 ) : (
-                  `${toNext} more to ${tripStop(s + 1).city}!`
+                  `Your words come back in your videos. Get them right and you move on. ${toNext} more to ${tripStop(s + 1).city}!`
                 )
               }
+              action={inVideos > 0 ? { label: '▶ Play', onPress: onPlay } : undefined}
             />
           ) : null,
           <Row
@@ -1352,6 +1415,7 @@ export function RoadmapPath({
             here={node.key === hereKey}
             blue={trip.blue.has(node.key)}
             width={width}
+            now={now}
             onOpen={() => onOpen(node.word)}
             // A blue stop is not a saved word: no card to remove it from.
             onLongPress={() => (trip.blue.has(node.key) ? onOpen : onLongPress)(node.word)}
@@ -1372,9 +1436,9 @@ export function RoadmapPath({
             />
           ) : null,
         ])}
-        {/* A CITY WITH NOTHING TO TRAIN (just arrived, or everything saved
-            here is learned): the postcards and Loro still greet you, and he
-            says what to do next — save more words, then train them here. */}
+        {/* A CITY WITH NOTHING OPEN (just arrived, or everything saved here
+            is learned): the postcards and Loro still greet you, and he says
+            what to do next — save more words in your videos. */}
         {isCurrent && !hereWord && nodes.length < 2 && (
           <Postcard key="welcome-empty" kind="welcome" stop={stop} side="right" />
         )}
@@ -1382,7 +1446,7 @@ export function RoadmapPath({
           <Mascot
             key="loro-empty"
             side="left"
-            line={`Save new words in your videos, then train them here. ${toNext} more ${toNext === 1 ? 'word' : 'words'} and you reach ${tripStop(s + 1).city}!`}
+            line={`Save new words in your videos. Get them right when they come back, ${toNext} more ${toNext === 1 ? 'word' : 'words'}, and you reach ${tripStop(s + 1).city}!`}
           />
         )}
         {isCurrent && nodes.length === 0 && (
@@ -1917,16 +1981,8 @@ const styles = StyleSheet.create({
     width: COIN_W + 24,
   },
   check: { color: '#06130d', fontSize: 24, fontWeight: '900' },
-  play: {
-    borderBottomColor: 'transparent',
-    borderBottomWidth: 10,
-    borderLeftWidth: 16,
-    borderTopColor: 'transparent',
-    borderTopWidth: 10,
-    height: 0,
-    marginLeft: 5,
-    width: 0,
-  },
+  pips: { flexDirection: 'row', gap: 5 },
+  pip: { borderRadius: 999, height: 9, width: 9 },
   mascotRow: { alignItems: 'center', gap: 8, height: 150, marginVertical: 4, paddingHorizontal: 6 },
   mascot: { height: 128, width: 86 },
   mascotWaving: { height: 118, width: 105 },
@@ -1942,6 +1998,16 @@ const styles = StyleSheet.create({
   bubbleRight: { borderBottomRightRadius: 4 },
   bubbleText: { color: INK, fontSize: 13, fontWeight: '700', lineHeight: 18 },
   bubbleWord: { color: MINT, fontWeight: '900' },
+  bubbleCta: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: MINT,
+    borderRadius: 12,
+    marginTop: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  bubbleCtaText: { color: '#06130d', fontSize: 14, fontWeight: '900' },
   lock: { alignItems: 'center' },
   lockShackle: {
     borderBottomWidth: 0,
@@ -1961,6 +2027,8 @@ const styles = StyleSheet.create({
   labelWordDone: { color: MINT },
   labelWordBlue: { color: BLUE },
   labelDetail: { color: MUTED, fontSize: 12, marginTop: 2 },
+  labelWhere: { color: FAINT, fontSize: 11, fontWeight: '700', marginTop: 2 },
+  labelWhereNow: { color: MINT },
 
   hereTag: {
     alignItems: 'center',

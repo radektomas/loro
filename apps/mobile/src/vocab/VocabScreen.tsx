@@ -16,7 +16,7 @@ import { storage } from '@loro/core/storage';
 import { formatDue, KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
 import type { WordOccurrence } from '@loro/core/occurrences';
 import { distinctWords, isLearned, readyWords } from '@loro/core/progress';
-import { launchPracticeLearned, launchReview, launchReviewOfWord } from '../feed/launchReview';
+import { launchPracticeLearned, launchReview, launchReviewOfWord, wordsInVideos } from '../feed/launchReview';
 import { takeRequestedWordsView, takeWordFocus, type WordsView } from './wordsView';
 import { onLearnedFace } from '../feed/wordLearned';
 import { ReviewPickerSheet } from '../progress/ReviewPicker';
@@ -35,9 +35,6 @@ import { tierForLearned } from '@loro/core/levels';
 import { learnedTotal } from '../feed/wordLearned';
 import { storageDriver } from '../platform/storage';
 import { PracticeDrill } from './PracticeDrill';
-import { getCatalog } from '@loro/core/catalog';
-import { collectionVideos } from '@loro/core/catalog/collectionVideos';
-import { findWordOccurrences } from '@loro/core/occurrences';
 import { useTourStep } from '../tour/tour';
 import { WordsTour, type TourRect } from '../tour/WordsTour';
 import { HERE_ROW_H } from './RoadmapPath';
@@ -621,29 +618,13 @@ export function VocabScreen({
   const openDetail = (word: SavedWord) => setDetail(word);
 
   /**
-   * TAP A WORD ON THE PATH: train it. The clip that says it opens as
-   * exercise one (the same pick as the word sheet's review: the sentence it
-   * was saved from first), and the set carries on in PracticeDrill. No clip:
-   * the set runs on its own. Never the feed.
+   * YOUR WORDS IN TODAY'S VIDEOS — Loro's number on the road, the same one
+   * the tab-bar pill shows (launchReview wordsInVideos). Re-read on the
+   * minute tick and on every save or grade.
    */
-  const startTraining = (word: SavedWord) => {
-    // The shelves too: a word saved from a Peppa episode is said THERE, and
-    // getCatalog() is the reels feed only — searching it alone made every
-    // Peppa word look clip-less.
-    const catalog = [...getCatalog(), ...collectionVideos];
-    const occurrences = findWordOccurrences(catalog, word.text);
-    const occurrence =
-      occurrences.find(
-        (o) => o.videoId === word.videoId && o.cueIndex === word.cueIndex && o.youtubeId !== null
-      ) ??
-      occurrences.find((o) => o.videoId === word.videoId && o.youtubeId !== null) ??
-      occurrences.find((o) => o.youtubeId !== null) ??
-      null;
-    const video = occurrence ? catalog.find((v) => v.id === occurrence.videoId) ?? null : null;
-    setDetail(word);
-    if (occurrence && video) setPlaying({ occurrence, video, mode: 'review' });
-    else setDrillOnly(true);
-  };
+  const inVideos = useMemo(() => wordsInVideos(now).length, [words, now]);
+  /** Loro's ▶ Play: the feed, landed on the first of them (no window is up). */
+  const playInVideos = () => reviewWord(null);
 
   /**
    * REVIEW ONE SPECIFIC WORD — the Words tab pointing the feed at something,
@@ -763,7 +744,8 @@ export function VocabScreen({
             {/* The "N words ready · Review" strip is gone (Radek, 2026-09-30:
                 "not suiting there at all ... take that away completely"). The
                 Words tab is the path; reviewing happens in the feed, which
-                asks trained words on its own. */}
+                asks saved words on its own. Loro's bubble on the road carries
+                the one Play door. */}
             {searchGroups !== null ? (
               searchGroups.length === 0 ? (
                 <Text style={styles.noMatch}>No words match “{query.trim()}”.</Text>
@@ -793,10 +775,16 @@ export function VocabScreen({
               }}
             >
               {/* THE PATH replaces the four piles on this branch (words-roadmap).
-                  The piles still exist: search groups its results by them. */}
+                  The piles still exist: search groups its results by them.
+                  A tap opens the word's card (2026-11-24): it used to start
+                  the practice set, which 11 of 210 store installs ever did.
+                  Words move along the road from right answers in the feed. */}
               <RoadmapPath
                 words={words}
-                onOpen={startTraining}
+                now={now}
+                inVideos={inVideos}
+                onPlay={playInVideos}
+                onOpen={openDetail}
                 onLongPress={openDetail}
                 onArrive={onArrive}
                 onTourLayout={(part, y, height) => {

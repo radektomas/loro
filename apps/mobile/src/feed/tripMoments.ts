@@ -124,8 +124,8 @@ export function noteWordSaved(text: string, videoId: string | null): void {
         kind: 'firstSave',
         eyebrow: '¡Tu primera palabra!',
         word: cleanWord(text),
-        line: "It's waiting in Words. Train it there and your trip begins in Madrid.",
-        foot: 'Tap to train it',
+        line: "It comes back in your videos soon. Get it right and your trip begins in Madrid.",
+        foot: 'Tap to see it in Words',
         land: 'word',
       },
       videoId
@@ -210,7 +210,7 @@ export function devRaiseTripMoment(kind: TripMomentKind): void {
   const pos = tripSnapshot();
   const next = tripStop(pos.stage + 1).city;
   const samples: Record<TripMomentKind, TripMoment> = {
-    firstSave: { kind, eyebrow: '¡Tu primera palabra!', word: 'esposa', line: "It's waiting in Words. Train it there and your trip begins in Madrid.", foot: 'Tap to train it', land: 'word' },
+    firstSave: { kind, eyebrow: '¡Tu primera palabra!', word: 'esposa', line: "It comes back in your videos soon. Get it right and your trip begins in Madrid.", foot: 'Tap to see it in Words', land: 'word' },
     firstBlue: { kind, eyebrow: '¡Lo sabías!', word: 'tiempo', line: "It's on your map now, in blue. Words you already know fill your cities too.", foot: 'Tap to see it', land: 'city' },
     oneAway: { kind, eyebrow: 'Almost there', word: `1 word to ${next}`, line: `tiempo counted on your trip. One more and you fly to ${next}.`, foot: 'Tap to see your next word', land: 'word' },
     arrived: { kind, eyebrow: '¡Llegaste!', word: next, line: 'tiempo was the last word you needed. Come see your map.', foot: 'Tap to open your map', land: 'city' },

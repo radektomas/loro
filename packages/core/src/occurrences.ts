@@ -318,6 +318,21 @@ export function pickFirstBlankTarget(
  * audibility floor, embeds only — so a word this says is spoken is one the
  * feed would blank and the landing logic can find.
  */
+const spokenCache = new WeakMap<readonly Video[], Set<string>>();
+
+/**
+ * spokenSurfaces, remembered per catalog array — for the counts that re-read
+ * every minute (the Words tab pill). A new catalog is a new array, so a
+ * refresh recomputes on its own. Do not mutate the returned set.
+ */
+export function spokenSurfacesCached(videos: readonly Video[]): ReadonlySet<string> {
+  const hit = spokenCache.get(videos);
+  if (hit) return hit;
+  const spoken = spokenSurfaces(videos);
+  spokenCache.set(videos, spoken);
+  return spoken;
+}
+
 export function spokenSurfaces(videos: readonly Video[]): Set<string> {
   const spoken = new Set<string>();
   for (const video of videos) {

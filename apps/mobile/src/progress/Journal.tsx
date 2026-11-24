@@ -488,7 +488,7 @@ export function LearnedSection({
       <Heading right={`${allTime} all time`}>LEARNED THIS WEEK</Heading>
       {week.length === 0 ? (
         <Text style={styles.body}>
-          Nothing yet this week. Train a word in Words and it lands here.
+          Nothing yet this week. Get a saved word right three times in your videos and it lands here.
           {onTheWay > 0 ? ` ${onTheWay} on the way.` : ''}
         </Text>
       ) : (

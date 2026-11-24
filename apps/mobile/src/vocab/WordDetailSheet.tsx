@@ -23,7 +23,10 @@ import {
   pickReplayOccurrence,
   type WordOccurrence,
 } from '@loro/core/occurrences';
-import { formatDue, KNOWN_BOX } from '@loro/core/srs';
+import { KNOWN_BOX, normalizeAnswer } from '@loro/core/srs';
+import { isLocked } from '@loro/core/roadmap';
+import { spokenSurfacesCached } from '@loro/core/occurrences';
+import { whereItIs } from './whereItIs';
 import { storage } from '@loro/core/storage';
 import { getExplanations } from '../platform/explanations';
 import { SentenceWithHit, TranslationWithHit } from '../feed/SentenceWithHit';
@@ -194,12 +197,35 @@ export function WordDetailSheet({
   const lang = explanationLang();
   const now = Date.now();
 
+  /**
+   * WHERE IT IS (2026-11-24). The card used to lead with "Review it now":
+   * since training left the road, the feed moves a word and this says
+   * where it is on its way — the road's own line (whereItIs), plus the
+   * two cases the road cannot show: a word waiting behind the open window
+   * (locked) and a blue word, known from a video but never saved.
+   */
+  const where = useMemo(() => {
+    const all = storage.getSavedWords();
+    const key = normalizeAnswer(word.text);
+    const saved = all.some((w) => normalizeAnswer(w.text) === key);
+    if (!saved) return { saved, line: 'You knew it in a video ✓' };
+    const line = whereItIs(word, now, spokenSurfacesCached(getCatalog()));
+    // A learned word still comes back now and then, further apart each time.
+    if (word.state === 'known') return { saved, line: `Learned ✓ · ${line.charAt(0).toLowerCase()}${line.slice(1)}` };
+    if (isLocked(word, all)) return { saved, line: 'Waiting on your road. It opens as you learn the words before it.' };
+    return { saved, line };
+    // `now` is read at render; the card is short-lived.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [word]);
+
   const stateLabel: Record<SavedWord['state'], string> = {
-    lapsed: 'Missed, review soon',
+    lapsed: 'Missed',
     new: 'Just saved',
     learning: 'Getting it',
-    known: 'Learned ✓',
+    known: 'Learned',
   };
+  /** Hear it: somewhere new first (pickReplayOccurrence), else where it was saved. */
+  const listenOccurrence = derived.hearOccurrence ?? derived.reviewOccurrence;
 
   return (
     <>
@@ -221,21 +247,19 @@ export function WordDetailSheet({
               that" — see VocabScreen's ProgressCount): the sheet has room
               for the whole sentence, so it says it. Progress is measured
               against KNOWN_BOX, the exact threshold the state flips on. */}
-          <View style={styles.srsRow}>
-            <Text style={styles.srsState}>{stateLabel[word.state]}</Text>
-            {(word.state === 'new' || word.state === 'learning') && (
-              <Text style={styles.srsCount}>
-                {Math.min(word.box, KNOWN_BOX)} of {KNOWN_BOX} correct
-              </Text>
-            )}
-            <Text style={styles.srsDue}>
-              {word.state === 'new'
-                ? 'Comes up as a blank when a video says it'
-                : word.dueAt <= now
-                  ? 'Ready now'
-                  : `Review ${formatDue(word.dueAt, now)}`}
-            </Text>
-          </View>
+          {where.saved && word.state !== 'known' && (
+            <View style={styles.srsRow}>
+              <Text style={styles.srsState}>{stateLabel[word.state]}</Text>
+              {(word.state === 'new' || word.state === 'learning') && (
+                <Text style={styles.srsCount}>
+                  {Math.min(word.box, KNOWN_BOX)} of {KNOWN_BOX} right
+                </Text>
+              )}
+            </View>
+          )}
+          <Text style={[styles.where, where.line.includes('in your videos now') || where.line.startsWith('In your videos') ? styles.whereNow : null]}>
+            {where.line}
+          </Text>
 
           {/* The pregenerated explanation — absent without comment when the
               blob has nothing (or has not arrived). */}
@@ -293,44 +317,18 @@ export function WordDetailSheet({
         </ScrollView>
 
         <View style={styles.footer}>
-          {/* The primary action: practise it. Recall is what the app is FOR,
-              so it leads — hearing the word is the warm-up, not the goal. */}
-          <Pressable
-            onPress={() => {
-              const occ = derived.reviewOccurrence;
-              const clip = occ
-                ? (derived.catalog.find((v) => v.id === occ.videoId) ?? null)
-                : null;
-              onReview(word, occ && clip ? occ : null, clip);
-            }}
-            accessibilityRole="button"
-            accessibilityHint={
-              derived.reviewOccurrence
-                ? 'Hear it in the video, then type it from memory'
-                : 'Opens the feed with your due words as blanks'
-            }
-            style={({ pressed }) => [styles.reviewButton, pressed && styles.pressed]}
-          >
-            <Text style={styles.reviewLabel}>
-              {derived.reviewOccurrence ? 'Review it now' : 'Review in the feed'}
-            </Text>
-          </Pressable>
-
-          {/* Jump to a video that speaks this word. Hidden, not disabled, when
-              there is nowhere to jump: 67% of words occur in exactly one
-              video, and a dead button teaches people to stop pressing live
-              ones. */}
-          {derived.hearOccurrence && (
+          {/* HEAR IT LEADS (2026-11-24). Practising here used to be the
+              primary action; 11 of 210 store installs ever did it, and the
+              feed now brings the word back on its own. Hidden, not
+              disabled, when no video says it. */}
+          {listenOccurrence && (
             <Pressable
               onPress={() => {
-                const occ = derived.hearOccurrence;
-                const clip = occ
-                  ? (derived.catalog.find((v) => v.id === occ.videoId) ?? null)
-                  : null;
-                if (!occ || !clip) return;
+                const clip = derived.catalog.find((v) => v.id === listenOccurrence.videoId) ?? null;
+                if (!clip) return;
                 // A content swap inside the window that is already up —
                 // no dismissal, no second presentation, nothing to race.
-                onHear(occ, clip);
+                onHear(listenOccurrence, clip);
               }}
               accessibilityRole="button"
               accessibilityHint="Opens a video where this word is spoken"
@@ -339,17 +337,39 @@ export function WordDetailSheet({
               <Text style={styles.hearLabel}>▶ Hear it in a video</Text>
             </Pressable>
           )}
-          <Pressable
-            onPress={() => {
-              onRemove(word);
-              onClose();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Remove ${cleanWord(word.text)}`}
-            style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
-          >
-            <Text style={styles.removeLabel}>Remove from my words</Text>
-          </Pressable>
+
+          {/* Practice stays, small, for whoever wants it now: the clip that
+              says it as a flashcard, then the set (PracticeDrill). One paid
+              user ran 50 sets — it costs nothing to keep. */}
+          {where.saved && (
+            <Pressable
+              onPress={() => {
+                const occ = derived.reviewOccurrence;
+                const clip = occ
+                  ? (derived.catalog.find((v) => v.id === occ.videoId) ?? null)
+                  : null;
+                onReview(word, occ && clip ? occ : null, clip);
+              }}
+              accessibilityRole="button"
+              accessibilityHint="Type it from memory, a few times"
+              style={({ pressed }) => [styles.practiseButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.practiseLabel}>Practise now</Text>
+            </Pressable>
+          )}
+          {where.saved && (
+            <Pressable
+              onPress={() => {
+                onRemove(word);
+                onClose();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${cleanWord(word.text)}`}
+              style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.removeLabel}>Remove from my words</Text>
+            </Pressable>
+          )}
         </View>
 
       </View>
@@ -391,7 +411,8 @@ const styles = StyleSheet.create({
   srsRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 12 },
   srsState: { color: 'rgba(242,245,243,0.6)', fontSize: 12, fontWeight: '700' },
   srsCount: { color: 'rgba(242,245,243,0.45)', fontSize: 12, fontWeight: '600' },
-  srsDue: { color: 'rgba(242,245,243,0.45)', fontSize: 12, marginLeft: 'auto' },
+  where: { color: 'rgba(242,245,243,0.55)', fontSize: 13, fontWeight: '600', lineHeight: 18, marginTop: 8 },
+  whereNow: { color: '#5ee6a8' },
   explainBlock: {
     borderTopColor: 'rgba(242,245,243,0.08)',
     borderTopWidth: 1,
@@ -436,7 +457,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   explainLoading: { alignItems: 'flex-start', marginTop: 16 },
-  reviewButton: {
+  hearButton: {
     alignItems: 'center',
     backgroundColor: '#5ee6a8',
     borderRadius: 16,
@@ -444,16 +465,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 14,
   },
-  reviewLabel: { color: '#06130d', fontSize: 16, fontWeight: '800' },
-  hearButton: {
+  hearLabel: { color: '#06130d', fontSize: 16, fontWeight: '800' },
+  practiseButton: {
     alignItems: 'center',
     backgroundColor: 'rgba(242,245,243,0.10)',
     borderRadius: 16,
     justifyContent: 'center',
     marginTop: 8,
-    paddingVertical: 13,
+    paddingVertical: 12,
   },
-  hearLabel: { color: '#f2f5f3', fontSize: 15, fontWeight: '700' },
+  practiseLabel: { color: '#f2f5f3', fontSize: 14, fontWeight: '700' },
   removeButton: { alignItems: 'center', marginTop: 6, paddingVertical: 12 },
   removeLabel: { color: 'rgba(248,113,113,0.85)', fontSize: 13, fontWeight: '600' },
   pressed: { opacity: 0.7 },

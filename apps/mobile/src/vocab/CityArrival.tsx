@@ -131,7 +131,7 @@ export function CityArrival({
         )}
         <Text style={styles.sub}>
           {empty
-            ? `You finished ${prev.city}! Save new words in your videos, then train them here to reach ${after}.`
+            ? `You finished ${prev.city}! Save new words in your videos and get them right when they come back to reach ${after}.`
             : `You finished ${prev.city}. Your next words are waiting here.`}
         </Text>
         {/* The postcard of the leg you just travelled, to keep or post. */}

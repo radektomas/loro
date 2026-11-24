@@ -200,6 +200,46 @@ export function readyWords(words: readonly SavedWord[], now: number = Date.now()
   return words.filter((w) => isReady(w, now) && !locked.has(normalizeAnswer(w.text)));
 }
 
+/**
+ * YOUR WORDS IN TODAY'S VIDEOS (2026-11-24) — what the feed will ask right
+ * now: due, opened by the path, and said in some video (`spoken`, from
+ * occurrences.spokenSurfaces). One row per word, the most urgent: slipped
+ * first, then earliest due.
+ *
+ * Unlike readyWords this INCLUDES fresh saves: since 2026-11-24 the feed
+ * asks a save without it being trained first (srs.computeBlankPlan), so a
+ * new word due in the feed is a word coming back. And unlike readyWords it
+ * drops words no video says — those can never come back in the feed, so
+ * promising them would be the lie readyWords' own note warns about.
+ *
+ * The Words tab's Loro bubble, its tab-bar pill and every Review door
+ * (launchReview) read this one number.
+ */
+export function dueInVideos(
+  words: readonly SavedWord[],
+  spoken: ReadonlySet<string>,
+  now: number = Date.now()
+): SavedWord[] {
+  const locked = lockedKeys(words);
+  const byKey = new Map<string, SavedWord>();
+  for (const w of words) {
+    if (w.dueAt > now) continue;
+    const key = normalizeAnswer(w.text);
+    if (!key || locked.has(key) || !spoken.has(normalizeSurface(w.text))) continue;
+    const held = byKey.get(key);
+    if (!held) {
+      byKey.set(key, w);
+      continue;
+    }
+    const lapsedW = w.state === 'lapsed';
+    const lapsedHeld = held.state === 'lapsed';
+    if ((lapsedW && !lapsedHeld) || (lapsedW === lapsedHeld && w.dueAt < held.dueAt)) byKey.set(key, w);
+  }
+  return [...byKey.values()].sort(
+    (a, b) => Number(b.state === 'lapsed') - Number(a.state === 'lapsed') || a.dueAt - b.dueAt
+  );
+}
+
 export function dueCount(words: SavedWord[], now: number = Date.now()): number {
   return readyWords(words, now).length;
 }

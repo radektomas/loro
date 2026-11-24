@@ -95,6 +95,23 @@ export function orderVideosForLevel(
  */
 export const REVIEW_LIFT_MAX = 8;
 
+/**
+ * THE FIRST VIDEOS OF A LAUNCH CARRY YOUR WORDS (Radek, 2026-11-24).
+ *
+ * A review launch was the only thing that lifted due words, and almost
+ * nobody launches one (1 review_started in 210 store installs since
+ * 2026-10-14) — people open the app and watch. So the plain launch order
+ * lifts too: the first videos are ones that will ask a word you saved, and
+ * "¿Te acuerdas de X?" in the reminder is met within a swipe or two.
+ *
+ * Smaller than REVIEW_LIFT_MAX on purpose: nobody asked for a review here,
+ * and the feed must never open as a test. No review session starts (the
+ * implicit session was tried and reverted on 2026-09-07); it is order only.
+ * Pass the ranked list — liftDueVideos keeps its order inside each group,
+ * so unseen good videos still lead among the lifted ones.
+ */
+export const LAUNCH_LIFT_MAX = 3;
+
 export function liftDueVideos<V extends Video>(
   videos: readonly V[],
   words: readonly SavedWord[],

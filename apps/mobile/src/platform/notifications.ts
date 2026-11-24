@@ -547,7 +547,7 @@ export function trialReminderBody(
   nextCity: string
 ): string {
   const next = `${nextCity} is ${toNext} ${toNext === 1 ? 'word' : 'words'} away.`;
-  if (learned <= 0) return `Your trip starts in ${city}. Train a few words and you're on your way to ${nextCity}.`;
+  if (learned <= 0) return `Your trip starts in ${city}. Get a few saved words right in your videos and you're on your way to ${nextCity}.`;
   const words = `${learned} ${learned === 1 ? 'word' : 'words'}`;
   const where = stage > 0 ? `You've learned ${words} and made it to ${city}.` : `You've learned ${words} in ${city}.`;
   return `${where} ${next}`;
