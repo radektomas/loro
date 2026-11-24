@@ -387,17 +387,29 @@ export function LearnedToast({
   const activeRef = useRef(active);
   activeRef.current = active;
 
+  const fromTabRef = useRef(fromTab);
+  fromTabRef.current = fromTab;
   useEffect(
     () =>
       subscribeToWordLearned((next) => {
-        if (activeRef.current) setRaise(next);
+        if (!activeRef.current) return;
+        // In the feed a word earned is no longer a bubble (it rose over the
+        // subtitles, Radek 2026-11-03): the reveal goes gold in the line and
+        // the top strip names it (Karaoke RevealedWord, CollectionChips
+        // DayDots). Trip milestones keep the rising Loro; they are rare.
+        if (fromTabRef.current) return;
+        setRaise(next);
       }),
     []
   );
   useEffect(
     () =>
       subscribeToTripMoment((next) => {
-        if (activeRef.current) setTrip((cur) => cur ?? next);
+        if (!activeRef.current) return;
+        // In the feed, these two play in the top strip (CollectionChips
+        // DayDots) since 2026-11-03: rising here they covered the subtitles.
+        if (fromTabRef.current && (next.kind === 'oneAway' || next.kind === 'arrived')) return;
+        setTrip((cur) => cur ?? next);
       }),
     []
   );

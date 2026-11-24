@@ -1,10 +1,11 @@
 import { AppState, Linking } from 'react-native';
 import { cleanWord } from '@loro/core/dictionary';
+import type { SavedWord } from '@loro/core/types';
 import type * as NotificationsApi from 'expo-notifications';
 import { storage } from '@loro/core/storage';
 import { computeStreaks, dayKey } from '@loro/core/progress';
 import { nextUp, tripPosition, tripStop, withLevelKnown } from '@loro/core/roadmap';
-import { distinctWords, isLearned } from '@loro/core/progress';
+import { distinctWords, isLearned, readyWords } from '@loro/core/progress';
 import { localFor } from '../vocab/countries';
 import {
   atRiskCopy,
@@ -285,20 +286,26 @@ export async function getPermissionState(): Promise<PermissionState> {
 }
 
 /**
- * The system prompt. ONLY ever called from the explainer sheet's Allow button.
+ * The system prompt. ONLY ever called from an explainer's Allow button (the
+ * feed's NotificationPrompt, the post-purchase ReminderAsk) or the Progress
+ * toggle, never cold.
  *
  * iOS gives exactly one chance at this per install: once denied, every later
  * requestPermissionsAsync resolves denied without showing anything. That is the
  * entire reason the in-app explainer exists and the entire reason this is not
  * called on launch.
  */
-export async function requestPermission(): Promise<PermissionState> {
+export async function requestPermission(
+  /** Which ask led here, for the log: the feed explainer, the post-purchase
+      card (ReminderAsk.tsx), or the Progress settings toggle. */
+  from: 'feed' | 'purchase' | 'settings' = 'feed'
+): Promise<PermissionState> {
   await withSeam('requestPermissionsAsync', (api) => api.requestPermissionsAsync(), null);
   const state = await getPermissionState();
   // The one iOS answer per install, recorded where it is given. Fire and
   // forget: analytics never throws, so grading (which reaches this module
   // through noteCorrectRecall) cannot be hurt by it.
-  track('reminder_permission', { state });
+  track('reminder_permission', { state, from });
   await reconcile();
   return state;
 }
@@ -356,7 +363,25 @@ async function shouldAskForPermission(): Promise<boolean> {
 export async function maybeAskForPermission(): Promise<void> {
   if (!(await shouldAskForPermission())) return;
   promptedThisSession = true;
+  track('reminder_ask_shown', { from: 'feed' });
   for (const listener of promptListeners) listener();
+}
+
+/**
+ * THE POST-PURCHASE ASK HAS SPOKEN FOR THIS SESSION (ReminderAsk.tsx). A
+ * "Not now" there must not be followed by the feed's explainer two answers
+ * later; the feed's ask stays as the second chance on a LATER launch, which
+ * is why the post-purchase "Not now" records no snooze.
+ */
+export function notePermissionAskedThisSession(): void {
+  promptedThisSession = true;
+}
+
+/** Can the post-purchase card offer anything? Same gates as the feed's ask,
+    minus the snooze: buying is a fresh moment, not a repeat of one. */
+export async function canAskForPermission(): Promise<boolean> {
+  if (!isNotificationSeamAvailable() || !getPrefs().enabled) return false;
+  return (await getPermissionState()) === 'undetermined';
 }
 
 // ------------------------------------------------------------------- state
@@ -456,11 +481,56 @@ function dayNumber(ms: number): number {
  * ask back (a different one each day), the word they are on if it is not
  * trained yet, and where the trip is, with the city's local word.
  */
+/**
+ * THE WORDS BACK BY `at`, one row per word. The day-done pill and the
+ * reminder both read this, so the pill's promise and the morning's line are
+ * the same number. Two kinds, both of which the feed really does ask as
+ * green blanks:
+ *
+ *   answered before and due by `at`  (core readyWords: the schedule)
+ *   saved in the last RECENT_SAVE_DAYS and never asked yet  ('new' words are
+ *     due a minute after saving; readyWords leaves them out only so a heavy
+ *     saver's "N ready" is not 300, so RECENT keeps that cap here too)
+ *
+ * NOT a blue word typed right: storage.saveLevelWord files it as known and
+ * it never returns (checked 2026-11-18, after first counting it by mistake).
+ * Run through readyWords either way, so roadmap-locked words stay out.
+ */
+const RECENT_SAVE_DAYS = 2;
+
+export function wordsBackAt(at: number): SavedWord[] {
+  const seen = new Set<string>();
+  const out: SavedWord[] = [];
+  const recent = at - RECENT_SAVE_DAYS * 86_400_000;
+  const words = storage
+    .getSavedWords()
+    .map((w) => (w.state === 'new' && w.savedAt >= recent ? { ...w, state: 'learning' as const } : w));
+  for (const w of readyWords(words, at)) {
+    const key = cleanWord(w.text).toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(w);
+  }
+  return out;
+}
+
+/** How many come back by tomorrow's reminder time (the pill's number). */
+export function wordsBackTomorrow(now: number = Date.now()): number {
+  const { hour, minute } = getPrefs();
+  return wordsBackAt(reminderAt(now, 1, hour, minute).getTime()).length;
+}
+
+/** "First days" for the copy: within EARLY_DAYS of the first word saved or filled. */
+const EARLY_DAYS = 3;
+
 function copyContext(
   at: number,
   streaks: Pick<CopyContext, 'streak' | 'frozen' | 'endedRun'>
 ): CopyContext {
   const words = storage.getSavedWords();
+  const back = wordsBackAt(at);
+  const named = back.length > 0 ? back[dayNumber(at) % back.length] : null;
+  const firstAt = words.reduce((min, w) => Math.min(min, w.savedAt), Infinity);
   const learned = distinctWords(words)
     .filter(isLearned)
     .sort((a, b) => a.text.localeCompare(b.text));
@@ -486,6 +556,11 @@ function copyContext(
       local: localWord,
     },
     learned: learned.length,
+    back: {
+      count: back.length,
+      word: named ? { text: cleanWord(named.text), meaning: named.translation } : null,
+    },
+    early: Number.isFinite(firstAt) && at - firstAt < (EARLY_DAYS + 1) * 86_400_000,
   };
 }
 
@@ -510,6 +585,12 @@ export function noteTrialStarted(trialDays: number, now: number = Date.now()): v
   endsAt.setDate(endsAt.getDate() + trialDays);
   storageDriver.local.setItem(KEYS.trialEndsAt, String(endsAt.getTime()));
   void reconcile();
+}
+
+/** Is a trial reminder still ahead? The post-purchase card mentions it only
+    then (a paid-upfront annual has no trial to remind about). */
+export function trialReminderPending(now: number = Date.now()): boolean {
+  return trialReminderAt(now) !== null;
 }
 
 function trialReminderAt(now: number): Date | null {

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Animated, {
   cancelAnimation,
+  Easing,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
@@ -411,6 +412,7 @@ export const Karaoke = memo(function Karaoke({
                       result={blankResult}
                       kind={blank.kind}
                       celebrating={celebrating}
+                      learned={recall?.learned.has(cueIndex) ?? false}
                     />
                   );
                 }
@@ -754,17 +756,23 @@ function RevealedWord({
   result,
   kind,
   celebrating,
+  learned,
 }: {
   text: string;
   result: AnswerMatch;
   kind: 'recall' | 'level';
   /** Whether the burst should be thrown — owned by Karaoke, see `celebrating`. */
   celebrating: boolean;
+  /** This answer made the word LEARNED: gold instead of mint, a longer
+      bloom, and a star that rises off the word (Radek, 2026-11-03, "B"). */
+  learned: boolean;
 }) {
   const reduceMotion = useReduceMotion();
   const scale = useSharedValue(1);
   const shift = useSharedValue(0);
   const glow = useSharedValue(0);
+  const star = useSharedValue(0);
+  const gold = learned && result !== 'wrong';
 
   useEffect(() => {
     // globals.css drops .animate-correct/.animate-wrong to `animation: none`
@@ -791,7 +799,11 @@ function RevealedWord({
       // loro-bloom, 600ms. RN cannot animate textShadow, so the glow is a
       // fill behind the word — same read, and it was already built that way.
       glow.value = 1;
-      glow.value = withTiming(0, { duration: 600 });
+      glow.value = withTiming(0, { duration: gold ? 1100 : 600 });
+      if (gold) {
+        star.value = 0;
+        star.value = withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) });
+      }
       return;
     }
     shift.value = withSequence(
@@ -799,16 +811,22 @@ function RevealedWord({
       withTiming(3, { duration: 55 }),
       withTiming(0, { duration: 55 })
     );
-  }, [result, scale, shift, glow, reduceMotion]);
+  }, [result, gold, scale, shift, glow, star, reduceMotion]);
 
   const boxStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateX: shift.value }],
   }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const starStyle = useAnimatedStyle(() => ({
+    opacity: star.value < 0.15 ? star.value / 0.15 : 1 - (star.value - 0.15) / 0.85,
+    transform: [{ translateY: -6 - star.value * 22 }, { scale: 0.7 + star.value * 0.5 }],
+  }));
   const size = useContext(SizeContext);
 
   const tint =
-    result === 'wrong'
+    gold
+      ? styles.revealLearned
+      : result === 'wrong'
       ? styles.revealBad
       : result === 'almost'
         ? styles.revealAlmost
@@ -816,7 +834,7 @@ function RevealedWord({
           ? styles.revealOkLevel
           : styles.revealOk;
   const glowColor =
-    result === 'almost' ? ALMOST : kind === 'level' ? LEVEL : ACCENT;
+    gold ? GOLD : result === 'almost' ? ALMOST : kind === 'level' ? LEVEL : ACCENT;
 
   /**
    * TWO BOXES, AND THE OUTER ONE EXISTS ONLY SO THE FEATHERS CAN LEAVE.
@@ -839,6 +857,11 @@ function RevealedWord({
         <Text style={[styles.wordText, size, tint]}>{text}</Text>
       </Animated.View>
       {result !== 'wrong' && celebrating && <FeatherBurst variant={result} />}
+      {gold && (
+        <Animated.Text pointerEvents="none" style={[styles.learnedStar, starStyle]}>
+          ★
+        </Animated.Text>
+      )}
     </View>
   );
 }
@@ -848,6 +871,8 @@ const APPROX_CHAR_PT = 14;
 
 /** Green = your own saved word coming back (SRS recall). */
 const ACCENT = '#5ee6a8';
+/** Learned: a deeper, warmer gold than the near-miss yellow, so the two never read alike. */
+const GOLD = '#ffb627';
 /** The near-miss yellow — 'almost right', warmer than the wrong-answer red. */
 const ALMOST = '#f2c14e';
 /** Blue = level practice. `--level` from the web's globals.css:15, unchanged. */
@@ -965,6 +990,19 @@ const styles = StyleSheet.create({
     top: 0,
   },
   revealOk: { color: '#5ee6a8' },
+  revealLearned: { color: GOLD },
+  /** Rises off a word the answer just made learned; centred over it. */
+  learnedStar: {
+    alignSelf: 'center',
+    color: GOLD,
+    fontSize: 18,
+    fontWeight: '900',
+    position: 'absolute',
+    textShadowColor: 'rgba(255,182,39,0.6)',
+    textShadowOffset: { height: 0, width: 0 },
+    textShadowRadius: 6,
+    top: 0,
+  },
   revealOkLevel: { color: '#57b3f2' },
   revealAlmost: { color: '#f2c14e' },
   revealBad: { color: '#ff8b7a' },

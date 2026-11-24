@@ -8,6 +8,7 @@ import { storageDriver } from './storage';
 import { initAuth } from './supabaseInit';
 import { initNotifications } from './notifications';
 import { installDevMenu } from './devMenu';
+import { installLockWidget } from './lockWidget';
 import { captureCampaignAttribution, initPurchases } from './purchases';
 import { initAnalytics } from './analytics';
 import { installCachedCatalog, refreshCatalog, type CatalogSource } from './catalog';
@@ -144,6 +145,8 @@ export function finishBoot(): void {
   // The Madrid-pass switch (remoteFlags.ts). Same once-per-launch rhythm.
   void refreshRemoteFlags();
   initNotifications();
+  // The lock screen widget's last saved word (lockWidget.ts): reads words through core.
+  installLockWidget();
   // First-launch campaign capture + subscriber attribute. Here and not at
   // module scope because getInitialURL is async native work nothing waits on,
   // and the token can only matter once purchases are configured anyway.

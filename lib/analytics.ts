@@ -285,6 +285,17 @@ export type FeedbackRow = {
   appVersion: string;
 };
 
+/** One "How's Loro so far?" answer (loro_analytics_app_feedback). */
+export type AppFeedbackRow = {
+  answeredAt: string;
+  installId: string;
+  source: string; // day0 | progress
+  mood: string; // meh | ok | love | skipped
+  note: string | null;
+  videos: number | null;
+  appVersion: string;
+};
+
 /** One install in the paywall A/B test (loro_analytics_paywall_ab). */
 export type AbRow = {
   installId: string;
@@ -348,6 +359,7 @@ export type RadekDashboard = {
   windows: WallWindow[];
   subscribers: SubscriberRow[] | null; // null until the migration is applied
   feedback: FeedbackRow[] | null; // null until 20261009000000 is applied
+  appFeedback: AppFeedbackRow[] | null; // null until 20261118000000 is applied
   ab: AbRow[] | null; // null until 20261012000000 is applied
   retention: Retention;
   dau: DauPoint[];
@@ -416,6 +428,21 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
         reason: str(r.reason),
         note: r.note ? str(r.note) : null,
         packageId: r.package_id ? str(r.package_id) : null,
+        appVersion: str(r.app_version),
+      }));
+    } catch (err) {
+      if (!(err instanceof Error && /missing|does not exist|could not find/i.test(err.message))) throw err;
+    }
+    let appFeedback: AppFeedbackRow[] | null = null;
+    try {
+      const rows = await call('loro_analytics_app_feedback', { p_all_builds: allBuilds });
+      appFeedback = rows.map((r) => ({
+        answeredAt: str(r.answered_at),
+        installId: str(r.install_id),
+        source: str(r.source),
+        mood: str(r.mood),
+        note: r.note ? str(r.note) : null,
+        videos: r.videos == null ? null : num(r.videos),
         appVersion: str(r.app_version),
       }));
     } catch (err) {
@@ -496,6 +523,7 @@ export async function loadRadekDashboard(allBuilds = false): Promise<Loaded<Rade
         windows: [last7, last14, prev14],
         subscribers,
         feedback,
+        appFeedback,
         ab,
         retention: {
           d1Returned: num(rt.d1_returned),
